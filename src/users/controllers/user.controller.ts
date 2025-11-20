@@ -12,8 +12,12 @@ import {
   HttpCode,
   HttpStatus,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -28,13 +32,18 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
+import { ObjectStorageService } from '../../blob-storage/object-storage.service';
+import * as path from 'path';
 
 @ApiTags('Users')
 @Controller('v1/users')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly objectStorageService: ObjectStorageService,
+  ) {}
 
   @Post()
   @UseGuards(RolesGuard)
@@ -183,6 +192,99 @@ export class UserController {
     return {
       message: 'Profile updated successfully',
       profileData: updatedUser.profileData,
+    };
+  }
+
+  @Post('me/profile-picture')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload profile picture' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Profile picture file',
+    type: 'object',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (JPG, PNG, GIF, WebP) - Max size: 5MB',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Profile picture uploaded successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid file or validation error',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async uploadProfilePicture(
+    @CurrentUser() user: User,
+    @UploadedFile() file: any,
+    @Request() req: any,
+  ): Promise<{ message: string; profilePicture: string }> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    // Validate file type
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Only JPG, PNG, GIF, and WebP are allowed');
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size exceeds 5MB limit');
+    }
+
+    // Get file extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    // Get upload URL from object storage
+    const { uploadURL, objectKey } = await this.objectStorageService.getProfilePictureUploadURL(
+      user.id,
+      ext,
+    );
+
+    // Upload file to object storage
+    const response = await fetch(uploadURL, {
+      method: 'PUT',
+      body: file.buffer,
+      headers: {
+        'Content-Type': file.mimetype,
+      },
+    });
+
+    if (!response.ok) {
+      throw new BadRequestException('Failed to upload file to storage');
+    }
+
+    // Update user profile with new picture path
+    const ip = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.get('user-agent');
+
+    const updatedUser = await this.userService.updateProfileData(
+      user.id,
+      { profilePicture: objectKey },
+      {
+        ip,
+        userAgent,
+      },
+    );
+
+    return {
+      message: 'Profile picture uploaded successfully',
+      profilePicture: objectKey,
     };
   }
 

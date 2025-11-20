@@ -6,12 +6,14 @@ import { UserService } from './services/user.service';
 import { UserController } from './controllers/user.controller';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
+import { BlobStorageModule } from '../blob-storage/blob-storage.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     forwardRef(() => AuthModule),
     AuditModule,
+    BlobStorageModule,
     BullModule.registerQueue({
       name: 'supabase-user-deletion',
     }),
