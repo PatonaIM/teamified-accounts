@@ -135,9 +135,6 @@ const InternalUserInvitationModal: React.FC<InternalUserInvitationModalProps> = 
       const response = await internalInvitationService.generateShareableLink();
       setShareableLink(response.invitationUrl);
       setLinkExpiresAt(response.expiresAt);
-      if (onSuccess) {
-        onSuccess();
-      }
     } catch (err: any) {
       setShareableLinkError(err.response?.data?.message || 'Failed to generate link');
     } finally {
@@ -381,13 +378,6 @@ const InternalUserInvitationModal: React.FC<InternalUserInvitationModalProps> = 
                     {shareableCopied ? 'Copied!' : 'Copy Link'}
                   </Button>
                 </Paper>
-
-                <Alert severity="info" icon={false}>
-                  <Typography variant="caption">
-                    <strong>⏱️ Important:</strong> This link expires in {linkExpiresAt ? formatExpiryTime(linkExpiresAt) : '1 hour'}. 
-                    New members will need to use an approved @teamified.com email and can be promoted to other roles later.
-                  </Typography>
-                </Alert>
               </Box>
             ) : (
               <Button
