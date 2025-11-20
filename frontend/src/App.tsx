@@ -9,6 +9,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
 import SignupPathSelectionPage from './pages/SignupPathSelectionPage';
+import CandidateSignupPage from './pages/CandidateSignupPage';
+import ClientAdminSignupPage from './pages/ClientAdminSignupPage';
 import InvitationPreviewPage from './pages/InvitationPreviewPage';
 import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
 import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
@@ -68,6 +70,14 @@ function App() {
                 <Route 
                   path="/signup-select" 
                   element={<SignupPathSelectionPage />} 
+                />
+                <Route 
+                  path="/signup-candidate" 
+                  element={<CandidateSignupPage />} 
+                />
+                <Route 
+                  path="/signup-client-admin" 
+                  element={<ClientAdminSignupPage />} 
                 />
                 <Route 
                   path="/invitations/preview/:code" 

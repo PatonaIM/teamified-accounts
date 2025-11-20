@@ -351,6 +351,83 @@ export const getTokenExpirationTime = (): number | null => {
   }
 };
 
+// Signup Methods
+export interface CandidateSignupData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ClientAdminSignupData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  slug?: string;
+  industry?: string;
+  companySize?: string;
+}
+
+export interface SignupResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    roles: string[];
+  };
+  organization?: {
+    id: string;
+    name: string;
+    slug: string;
+    industry: string | null;
+    companySize: string | null;
+  };
+  message: string;
+}
+
+export const candidateSignup = async (data: CandidateSignupData): Promise<SignupResponse> => {
+  try {
+    const response = await api.post('/v1/auth/signup/candidate', data);
+    const { accessToken, refreshToken, user, message } = response.data;
+    
+    // Store tokens
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
+    
+    return { accessToken, refreshToken, user, message };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      const message = error.response.data?.message || 'Signup failed';
+      throw new Error(message);
+    }
+    throw new Error('Signup failed. Please try again.');
+  }
+};
+
+export const clientAdminSignup = async (data: ClientAdminSignupData): Promise<SignupResponse> => {
+  try {
+    const response = await api.post('/v1/auth/signup/client-admin', data);
+    const { accessToken, refreshToken, user, organization, message } = response.data;
+    
+    // Store tokens
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
+    
+    return { accessToken, refreshToken, user, organization, message };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      const message = error.response.data?.message || 'Signup failed';
+      throw new Error(message);
+    }
+    throw new Error('Signup failed. Please try again.');
+  }
+};
+
 // Enhanced session management across tabs
 export const setupTokenRefresh = (): void => {
   const checkAndRefreshToken = () => {
