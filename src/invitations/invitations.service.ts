@@ -312,23 +312,14 @@ export class InvitationsService {
       // Now handle user creation or reuse
       if (user) {
         this.logger.log(`Found existing user for ${email}: id=${user.id}, status=${user.status}, deletedAt=${user.deletedAt}`);
-        // If user exists but is already active (and not archived), throw error
-        if (user.status !== 'invited' && user.status !== 'archived') {
+        // If user exists but is not in 'invited' status, throw error
+        if (user.status !== 'invited') {
           this.logger.error(`Cannot invite ${createDto.email}: user already exists with status ${user.status}`);
           throw new BadRequestException(`User with email ${createDto.email} already exists and is ${user.status}`);
         }
-        // Reuse existing invited or archived user
+        // Reuse existing invited user
         invitedUserId = user.id;
-        if (user.status === 'archived') {
-          // Update archived user to invited status and clear deletedAt so they appear in the users table
-          user.status = 'invited';
-          user.isActive = false;
-          user.deletedAt = null;
-          await this.userRepository.save(user);
-          this.logger.log(`Re-inviting archived user: ${email} - updated status to 'invited' and cleared deletedAt`);
-        } else {
-          this.logger.log(`Reusing existing invited user: ${email}`);
-        }
+        this.logger.log(`Reusing existing invited user: ${email}`);
       } else {
         // Create new user with status='invited' and no password
         user = this.userRepository.create({

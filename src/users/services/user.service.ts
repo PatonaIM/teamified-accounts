@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, FindManyOptions } from 'typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, Like, FindManyOptions, DataSource } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { User } from '../../auth/entities/user.entity';
@@ -14,6 +14,7 @@ import { BulkOperationResponseDto, BulkOperationResult } from '../dto/bulk-opera
 import { PasswordService } from '../../auth/services/password.service';
 import { AuditService } from '../../audit/audit.service';
 import { SupabaseService } from '../../auth/services/supabase.service';
+import { Invitation, InvitationStatus } from '../../invitations/entities/invitation.entity';
 
 @Injectable()
 export class UserService {
@@ -22,6 +23,10 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Invitation)
+    private readonly invitationRepository: Repository<Invitation>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
     private readonly passwordService: PasswordService,
     private readonly auditService: AuditService,
     private readonly supabaseService: SupabaseService,
@@ -216,37 +221,95 @@ export class UserService {
 
   async remove(id: string, deletedBy?: string): Promise<void> {
     const user = await this.findOne(id);
-
-    // Soft delete: Set deletedAt timestamp and deactivate, but keep status for audit purposes
+    
+    // Preserve the original email before archiving
+    const originalEmail = user.email;
     const previousStatus = user.status;
     const previousIsActive = user.isActive;
-    user.deletedAt = new Date();
-    user.isActive = false;
-    await this.userRepository.save(user);
+    const deletedAt = new Date();
 
-    this.logger.log(`User ${user.email} soft deleted (status: ${previousStatus}, was active: ${previousIsActive}) by ${deletedBy || 'system'}`);
+    // Wrap all operations in a transaction to ensure atomicity
+    await this.dataSource.transaction(async (manager) => {
+      const userRepo = manager.getRepository(User);
+      const invitationRepo = manager.getRepository(Invitation);
 
-    // Create audit log for deletion
-    try {
-      await this.auditService.log({
-        actorUserId: deletedBy || 'system',
-        actorRole: 'admin',
-        action: 'user_deleted',
-        entityType: 'user',
-        entityId: user.id,
-        changes: {
-          email: user.email,
-          previousStatus,
-          previousIsActive,
-          deletedAt: user.deletedAt.toISOString(),
-          isActive: false,
+      // Cancel pending invitations using TWO separate bulk UPDATEs to avoid OR-clause issues in TypeORM
+      // Update 1: Cancel invitations linked by user ID
+      const cancelByUserId = await invitationRepo.update(
+        { 
+          invitedUserId: user.id, 
+          status: InvitationStatus.PENDING 
         },
-        ip: null,
-        userAgent: null,
-      });
-    } catch (auditError) {
-      this.logger.error('Failed to create audit log for user deletion:', auditError);
-    }
+        { status: InvitationStatus.CANCELLED }
+      );
+
+      // Update 2: Cancel invitations linked by email (for org/client invites where invitedUserId is null)
+      const cancelByEmail = await invitationRepo.update(
+        { 
+          email: originalEmail, 
+          status: InvitationStatus.PENDING 
+        },
+        { status: InvitationStatus.CANCELLED }
+      );
+
+      const cancelledCount = (cancelByUserId.affected || 0) + (cancelByEmail.affected || 0);
+      if (cancelledCount > 0) {
+        this.logger.log(`Cancelled ${cancelledCount} pending invitation(s) for user ${originalEmail} (${cancelByUserId.affected || 0} by user ID, ${cancelByEmail.affected || 0} by email)`);
+      }
+
+      // Soft delete: Set deletedAt timestamp, deactivate, and append timestamp to email to free it up for re-invitation
+      // Append timestamp to email to free up the original email for new invitations
+      // Format: original@email.com_deleted_1732102871858
+      const archivedEmail = `${originalEmail}_deleted_${deletedAt.getTime()}`;
+      user.email = archivedEmail;
+      user.deletedAt = deletedAt;
+      user.isActive = false;
+      await userRepo.save(user);
+
+      this.logger.log(`User ${originalEmail} soft deleted (email archived as ${archivedEmail}, status: ${previousStatus}, was active: ${previousIsActive}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+
+      // Enqueue Supabase user deletion with original email for external account cleanup
+      try {
+        await this.deletionQueue.add('delete-supabase-user', {
+          userId: user.id,
+          originalEmail,
+          archivedEmail,
+          deletedAt: deletedAt.toISOString(),
+        });
+        this.logger.log(`Enqueued Supabase deletion for user ${originalEmail}`);
+      } catch (queueError) {
+        this.logger.error(`Failed to enqueue Supabase deletion for user ${originalEmail}:`, queueError);
+        // Re-throw to rollback transaction
+        throw queueError;
+      }
+
+      // Create audit log for deletion
+      try {
+        await this.auditService.log({
+          actorUserId: deletedBy || 'system',
+          actorRole: 'admin',
+          action: 'user_deleted',
+          entityType: 'user',
+          entityId: user.id,
+          changes: {
+            originalEmail,
+            archivedEmail,
+            previousStatus,
+            previousIsActive,
+            cancelledInvitations: cancelledCount,
+            cancelledByUserId: cancelByUserId.affected || 0,
+            cancelledByEmail: cancelByEmail.affected || 0,
+            deletedAt: user.deletedAt.toISOString(),
+            isActive: false,
+          },
+          ip: null,
+          userAgent: null,
+        });
+      } catch (auditError) {
+        this.logger.error('Failed to create audit log for user deletion:', auditError);
+        // Audit log failure should not rollback the transaction, just log it
+      }
+    });
   }
 
   async updateStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {

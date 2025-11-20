@@ -55,6 +55,9 @@ export class Invitation {
   @Column({ name: 'invited_user_id', type: 'uuid', nullable: true })
   invitedUserId: string | null;
 
+  @Column({ name: 'email', type: 'varchar', length: 255, nullable: true })
+  email: string | null;
+
   @Column({ 
     name: 'role_type', 
     length: 50 
