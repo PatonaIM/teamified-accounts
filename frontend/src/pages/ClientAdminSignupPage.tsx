@@ -22,6 +22,8 @@ import {
   VisibilityOff,
   Business,
   ArrowBack,
+  CheckCircle,
+  Cancel,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { login } from '../services/authService';
@@ -44,6 +46,7 @@ const ClientAdminSignupPage: React.FC = () => {
     password: '',
     confirmPassword: '',
     companyName: '',
+    slug: '',
     industry: '',
     companySize: '',
   });
@@ -53,6 +56,9 @@ const ClientAdminSignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [serverError, setServerError] = useState('');
+  const [slugCheckLoading, setSlugCheckLoading] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   useEffect(() => {
     // If no email provided, redirect back to login
@@ -61,8 +67,81 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   }, [prefilledEmail, navigate]);
 
+  const generateSlugFromName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim()
+      .substring(0, 100);
+  };
+
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || slug.length < 2) {
+      setSlugAvailable(null);
+      return;
+    }
+
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      setSlugAvailable(null);
+      return;
+    }
+
+    setSlugCheckLoading(true);
+    try {
+      const response = await fetch(`/api/v1/organizations/check-slug/${encodeURIComponent(slug)}`);
+      const data = await response.json();
+      setSlugAvailable(data.available);
+    } catch (error) {
+      console.error('Slug availability check failed:', error);
+      setSlugAvailable(null);
+    } finally {
+      setSlugCheckLoading(false);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
+    // Handle slug field changes
+    if (field === 'slug') {
+      // Reset manual edit flag if slug is cleared, allowing auto-generation to resume
+      if (!value.trim()) {
+        setSlugManuallyEdited(false);
+      } else {
+        setSlugManuallyEdited(true);
+        checkSlugAvailability(value);
+      }
+      setFormData(prev => ({ ...prev, [field]: value }));
+      // Clear error when user starts typing
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+      }
+      if (serverError) {
+        setServerError('');
+      }
+      return;
+    }
+    
+    // Auto-generate slug from company name only if slug hasn't been manually edited
+    if (field === 'companyName' && !slugManuallyEdited) {
+      const suggestedSlug = generateSlugFromName(value);
+      setFormData(prev => ({ ...prev, companyName: value, slug: suggestedSlug }));
+      if (suggestedSlug) {
+        checkSlugAvailability(suggestedSlug);
+      }
+      // Clear error when user starts typing
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+      }
+      if (serverError) {
+        setServerError('');
+      }
+      return;
+    }
+    
+    // Standard field update
     setFormData(prev => ({ ...prev, [field]: value }));
+    
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -118,6 +197,16 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.companyName = 'Company name is required';
     }
 
+    if (!formData.slug.trim()) {
+      newErrors.slug = 'Organization slug is required';
+    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug)) {
+      newErrors.slug = 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)';
+    } else if (formData.slug.length < 2 || formData.slug.length > 100) {
+      newErrors.slug = 'Slug must be between 2 and 100 characters';
+    } else if (slugAvailable === false) {
+      newErrors.slug = 'This slug is already taken. Please choose a different one.';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -145,6 +234,7 @@ const ClientAdminSignupPage: React.FC = () => {
           email: formData.email,
           password: formData.password,
           companyName: formData.companyName,
+          slug: formData.slug || undefined,
           industry: formData.industry || undefined,
           companySize: formData.companySize || undefined,
         }),
@@ -372,6 +462,39 @@ const ClientAdminSignupPage: React.FC = () => {
                 error={!!errors.companyName}
                 helperText={errors.companyName}
                 disabled={isLoading}
+              />
+
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="slug"
+                label="Organization Slug (URL)"
+                name="slug"
+                placeholder="acme-corp"
+                value={formData.slug}
+                onChange={(e) => handleInputChange('slug', e.target.value)}
+                error={!!errors.slug}
+                helperText={
+                  errors.slug || 
+                  (slugAvailable === true && !errors.slug ? '✓ Slug is available' : '') ||
+                  (slugAvailable === false && !errors.slug ? '✗ Slug is already taken' : '') ||
+                  'Lowercase letters, numbers, and hyphens only. Used in your organization URL.'
+                }
+                disabled={isLoading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {slugCheckLoading && <CircularProgress size={20} />}
+                      {!slugCheckLoading && slugAvailable === true && (
+                        <CheckCircle sx={{ color: 'success.main' }} />
+                      )}
+                      {!slugCheckLoading && slugAvailable === false && (
+                        <Cancel sx={{ color: 'error.main' }} />
+                      )}
+                    </InputAdornment>
+                  ),
+                }}
               />
 
               <FormControl fullWidth margin="normal">

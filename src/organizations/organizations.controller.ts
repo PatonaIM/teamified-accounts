@@ -130,6 +130,43 @@ export class OrganizationsController {
     return this.organizationsService.getMyOrganization(user);
   }
 
+  @Get('check-slug/:slug')
+  @ApiOperation({ 
+    summary: 'Check if organization slug is available',
+    description: `
+      Check if a given slug is available for use.
+      
+      ## Use Case:
+      - Real-time validation during organization creation
+      - Client admin signup flow slug validation
+      
+      ## Response:
+      - Returns { available: true } if slug is available
+      - Returns { available: false } if slug is already taken
+    `
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'The slug to check for availability',
+    example: 'acme-corp',
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Slug availability check result',
+    schema: {
+      type: 'object',
+      properties: {
+        available: { type: 'boolean', example: true },
+        slug: { type: 'string', example: 'acme-corp' }
+      }
+    }
+  })
+  async checkSlugAvailability(
+    @Param('slug') slug: string,
+  ): Promise<{ available: boolean; slug: string }> {
+    return this.organizationsService.checkSlugAvailability(slug);
+  }
+
   @Get()
   @Roles('super_admin', 'internal_hr', 'internal_account_manager')
   @ApiOperation({ 

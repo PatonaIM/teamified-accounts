@@ -831,6 +831,17 @@ This is an automated message from Teamified.
   }
 
   /**
+   * Normalize slug: trim whitespace, convert to lowercase, collapse consecutive hyphens, remove trailing/leading hyphens
+   */
+  private normalizeSlug(slug: string): string {
+    return slug
+      .trim()
+      .toLowerCase()
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  /**
    * Generate a unique slug from company name
    */
   private async generateUniqueSlug(companyName: string): Promise<string> {
@@ -840,6 +851,7 @@ This is an automated message from Teamified.
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim()
+      .replace(/^-+|-+$/g, '')
       .substring(0, 50);
 
     if (!baseSlug) {
@@ -865,7 +877,7 @@ This is an automated message from Teamified.
     ip?: string,
     userAgent?: string,
   ): Promise<ClientAdminSignupResponseDto> {
-    const { email, password, firstName, lastName, companyName, industry, companySize } = signupDto;
+    const { email, password, firstName, lastName, companyName, slug: providedSlug, industry, companySize } = signupDto;
 
     const existingUser = await this.userRepository.findOne({
       where: { email },
@@ -883,8 +895,23 @@ This is an automated message from Teamified.
       });
     }
 
+    let slug: string;
+    
+    if (providedSlug) {
+      slug = this.normalizeSlug(providedSlug);
+      
+      const existingOrg = await this.organizationRepository.findOne({
+        where: { slug },
+      });
+      
+      if (existingOrg) {
+        throw new ConflictException(`Organization slug '${slug}' is already taken. Please choose a different slug.`);
+      }
+    } else {
+      slug = await this.generateUniqueSlug(companyName);
+    }
+
     const hashedPassword = await this.passwordService.hashPassword(password);
-    const slug = await this.generateUniqueSlug(companyName);
 
     const user = this.userRepository.create({
       email,
