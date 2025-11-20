@@ -121,19 +121,11 @@ export default function MyProfilePage() {
   const displayName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || 'User';
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        minHeight: '100vh',
-        p: 4,
-      }}
-    >
+    <Box sx={{ p: 4 }}>
       <Paper
         sx={{
-          width: '100%',
           maxWidth: 800,
+          mx: 'auto',
           p: 4,
           bgcolor: 'background.paper',
         }}
