@@ -246,8 +246,6 @@ async function bootstrap() {
       .addTag('authentication', 'Authentication and user management endpoints')
       .addTag('users', 'User profile and management endpoints')
       .addTag('invitations', 'Invitation management endpoints')
-      .addTag('documents', 'Document and CV management endpoints')
-      .addTag('salary-history', 'Salary history management endpoints')
       .addTag('health', 'Health check and monitoring endpoints')
       .build();
 
