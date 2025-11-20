@@ -1,292 +1,235 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { ClientProvider } from './contexts/ClientContext';
+import { CountryProvider } from './contexts/CountryContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
-import LoginPageMUI from './pages/LoginPageMUI'
-import AuthCallbackPage from './pages/AuthCallbackPage'
-import DashboardPageMUI from './pages/DashboardPageMUI'
-import ProfilePage from './pages/ProfilePage'
-import TimesheetsPage from './pages/TimesheetsPage'
-import LeavePage from './pages/LeavePage'
-import DocumentsPage from './pages/DocumentsPage'
-import MyDocumentsPage from './pages/MyDocumentsPage'
-import UserManagement from './pages/UserManagement'
-import ClientManagement from './pages/ClientManagement'
-import EmploymentRecordsPage from './pages/EmploymentRecordsPage'
-import UserEmploymentHistoryPage from './pages/UserEmploymentHistoryPage'
-import ClientEmploymentRecordsPage from './pages/ClientEmploymentRecordsPage'
-import SalaryHistoryPage from './pages/SalaryHistoryPage'
-import UnifiedThemeEditorPage from './pages/UnifiedThemeEditorPage'
-import SettingsPage from './pages/SettingsPage'
-import JobsPage from './pages/JobsPage'
-import JobDetailPage from './pages/JobDetailPage'
-import JobApplicationPage from './pages/JobApplicationPage'
-import OnboardingWizardPage from './pages/OnboardingWizardPage'
-import HROnboardingDashboardPage from './pages/HROnboardingDashboardPage'
-import DebugTokenPage from './pages/DebugTokenPage'
-import { SsoLaunch } from './pages/SsoLaunch'
-import { SsoCallbackTest } from './pages/SsoCallbackTest'
-import ProtectedRoute from './components/ProtectedRoute'
-import RoleBasedRoute from './components/RoleBasedRoute'
-import './App.css'
-
-// Full payroll administration page
-import PayrollAdministrationPage from './components/payroll-admin/PayrollAdministrationPage';
-
-// Hiring module pages
-import JobRequestsPage from './pages/hiring/JobRequestsPage';
-import InterviewsPage from './pages/hiring/InterviewsPage';
-import TalentPoolPage from './pages/hiring/TalentPoolPage';
-
-// Hiring auth bridge
-import hiringAuthBridge from './services/hiring/authBridge';
+import { ClientProvider } from './contexts/ClientContext';
+import LoginPageMUI from './pages/LoginPageMUI';
+import AuthCallbackPage from './pages/AuthCallbackPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
+import SignupPathSelectionPage from './pages/SignupPathSelectionPage';
+import CandidateSignupPage from './pages/CandidateSignupPage';
+import ClientAdminSignupPage from './pages/ClientAdminSignupPage';
+import InvitationPreviewPage from './pages/InvitationPreviewPage';
+import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
+import ClientInvitationManagementPage from './pages/ClientInvitationManagementPage';
+import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
+import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
+import DocsPage from './pages/DocsPage';
+import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
+import MultitenancyIntegrationPage from './pages/docs/MultitenancyIntegrationPage';
+import OAuthClientsPage from './pages/OAuthClientsPage';
+import UserManagement from './pages/UserManagement';
+import InternalUsersPage from './pages/InternalUsersPage';
+import TenantManagementPage from './pages/TenantManagementPage';
+import CandidateUsersPage from './pages/CandidateUsersPage';
+import UserProfilePage from './pages/UserProfilePage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import MyOrganizationPage from './pages/MyOrganizationPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import SuperAdminRoute from './components/SuperAdminRoute';
+import RoleBasedRoute from './components/RoleBasedRoute';
+import AccountLayout from './components/AccountLayout';
+import HomePage from './pages/account/HomePage';
+import MyAppsPage from './pages/account/MyAppsPage';
+import MyProfilePage from './pages/account/MyProfilePage';
+import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
+import './App.css';
 
 function App() {
-  // Initialize hiring auth bridge on app mount
-  useEffect(() => {
-    hiringAuthBridge.setupInterceptors();
-  }, []);
   return (
     <AuthProvider>
-      <ClientProvider>
+      <CountryProvider>
         <ThemeProvider>
           <SnackbarProvider>
             <Router>
-              <div className="App">
-                <Routes>
+            <div className="App">
+              <Routes>
+                <Route 
+                  path="/login" 
+                  element={<LoginPageMUI />} 
+                />
+                <Route 
+                  path="/callback" 
+                  element={<AuthCallbackPage />} 
+                />
+                <Route 
+                  path="/auth/callback" 
+                  element={<AuthCallbackPage />} 
+                />
+                <Route 
+                  path="/reset-password" 
+                  element={<ResetPasswordPage />} 
+                />
+                <Route 
+                  path="/verify-email" 
+                  element={<VerifyEmailPage />} 
+                />
+                <Route 
+                  path="/accept-invitation" 
+                  element={<AcceptInternalInvitationPage />} 
+                />
+                <Route 
+                  path="/signup-select" 
+                  element={<SignupPathSelectionPage />} 
+                />
+                <Route 
+                  path="/signup-candidate" 
+                  element={<CandidateSignupPage />} 
+                />
+                <Route 
+                  path="/signup-client-admin" 
+                  element={<ClientAdminSignupPage />} 
+                />
+                <Route 
+                  path="/invitations/preview/:code" 
+                  element={<InvitationPreviewPage />} 
+                />
+                <Route 
+                  path="/invitations/accept/:code" 
+                  element={<OrganizationInvitationAcceptPage />} 
+                />
+                <Route 
+                  path="/admin/invitations/client" 
+                  element={
+                    <ProtectedRoute>
+                      <ClientProvider>
+                        <ClientInvitationManagementPage />
+                      </ClientProvider>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/invitations/internal" 
+                  element={
+                    <ProtectedRoute>
+                      <ClientProvider>
+                        <InternalTeamInvitationManagementPage />
+                      </ClientProvider>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/account" 
+                  element={
+                    <ProtectedRoute>
+                      <ClientProvider>
+                        <AccountLayout />
+                      </ClientProvider>
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/account/profile" replace />} />
+                  <Route path="apps" element={<MyAppsPage />} />
+                  <Route path="profile" element={<MyProfilePage />} />
+                  <Route path="organization" element={
+                    <RoleBasedRoute allowedRoles={['client_admin']}>
+                      <MyOrganizationPage />
+                    </RoleBasedRoute>
+                  } />
+                </Route>
+                <Route 
+                  path="/admin" 
+                  element={
+                    <ProtectedRoute>
+                      <ClientProvider>
+                        <AccountLayout />
+                      </ClientProvider>
+                    </ProtectedRoute>
+                  }
+                >
                   <Route 
-                    path="/login" 
-                    element={<LoginPageMUI />} 
-                  />
-                  <Route 
-                    path="/auth/callback" 
-                    element={<AuthCallbackPage />} 
-                  />
-                  <Route 
-                    path="/debug/token" 
-                    element={<DebugTokenPage />} 
-                  />
-                  <Route 
-                    path="/sso/launch/:clientId" 
+                    path="tools" 
                     element={
-                      <ProtectedRoute>
-                        <SsoLaunch />
-                      </ProtectedRoute>
+                      <SuperAdminRoute>
+                        <SuperAdminToolsPage />
+                      </SuperAdminRoute>
                     } 
                   />
                   <Route 
-                    path="/sso/callback" 
-                    element={<SsoCallbackTest />} 
-                  />
-                  <Route 
-                    path="/forgot-password" 
-                    element={<div className="container" style={{ padding: 'var(--spacing-8)', textAlign: 'center' }}>
-                      <h1 className="h1">Forgot Password</h1>
-                      <p className="body-medium">Password reset functionality coming soon.</p>
-                      <a href="/login" className="btn btn-primary">Back to Login</a>
-                    </div>} 
-                  />
-                  <Route 
-                    path="/dashboard" 
+                    path="tools/oauth-configuration" 
                     element={
-                      <ProtectedRoute>
-                        <DashboardPageMUI />
-                      </ProtectedRoute>
+                      <SuperAdminRoute>
+                        <OAuthClientsPage />
+                      </SuperAdminRoute>
                     } 
                   />
                   <Route 
-                    path="/profile" 
+                    path="tools/internal-users" 
                     element={
-                      <ProtectedRoute>
-                        <ProfilePage />
-                      </ProtectedRoute>
+                      <SuperAdminRoute>
+                        <InternalUsersPage />
+                      </SuperAdminRoute>
                     } 
                   />
                   <Route 
-                    path="/onboarding" 
+                    path="tools/tenant-management" 
+                    element={<Navigate to="/admin/organizations" replace />}
+                  />
+                  <Route 
+                    path="audit-logs" 
                     element={
-                      <ProtectedRoute>
-                        <OnboardingWizardPage />
-                      </ProtectedRoute>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                        <AuditLogsPage />
+                      </RoleBasedRoute>
                     } 
                   />
                   <Route 
-                    path="/timesheets" 
+                    path="tools/candidate-users" 
                     element={
-                      <ProtectedRoute>
-                        <TimesheetsPage />
-                      </ProtectedRoute>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_hr', 'internal_account_manager', 'internal_recruiter']}>
+                        <CandidateUsersPage />
+                      </RoleBasedRoute>
                     } 
                   />
                   <Route 
-                    path="/leave" 
+                    path="organizations" 
                     element={
-                      <ProtectedRoute>
-                        <LeavePage />
-                      </ProtectedRoute>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
+                        <TenantManagementPage />
+                      </RoleBasedRoute>
                     } 
                   />
                   <Route 
-                    path="/documents" 
+                    path="users" 
                     element={
-                      <ProtectedRoute>
-                        <MyDocumentsPage />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route
-                    path="/users"
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr']}>
-                          <UserManagement />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/clients"
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr']}>
-                          <ClientManagement />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/hr/onboarding"
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr']}>
-                          <HROnboardingDashboardPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/employment-records"
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr', 'hr_manager_client', 'account_manager']}>
-                          <EmploymentRecordsPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route 
-                    path="/employment-records/user/:userId" 
-                    element={
-                      <ProtectedRoute>
-                        <UserEmploymentHistoryPage />
-                      </ProtectedRoute>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
+                        <UserManagement />
+                      </RoleBasedRoute>
                     } 
                   />
                   <Route 
-                    path="/employment-records/client/:clientId" 
+                    path="users/:userId" 
                     element={
-                      <ProtectedRoute>
-                        <ClientEmploymentRecordsPage />
-                      </ProtectedRoute>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
+                        <UserProfilePage />
+                      </RoleBasedRoute>
                     } 
                   />
-                  <Route 
-                    path="/salary-history" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr']}>
-                          <SalaryHistoryPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/settings" 
-                    element={
-                      <ProtectedRoute>
-                        <SettingsPage />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/payroll-administration" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr']}>
-                          <PayrollAdministrationPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/jobs" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['candidate', 'eor', 'admin', 'account_manager']}>
-                          <JobsPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/jobs/:shortcode" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['candidate', 'eor', 'admin', 'account_manager']}>
-                          <JobDetailPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/jobs/:shortcode/apply" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['candidate', 'eor', 'admin', 'account_manager']}>
-                          <JobApplicationPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/hiring/job-requests" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client']}>
-                          <JobRequestsPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/hiring/interviews" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client']}>
-                          <InterviewsPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/hiring/talent-pool" 
-                    element={
-                      <ProtectedRoute>
-                        <RoleBasedRoute allowedRoles={['admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client']}>
-                          <TalentPoolPage />
-                        </RoleBasedRoute>
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route path="/" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </div>
-            </Router>
-          </SnackbarProvider>
-        </ThemeProvider>
-      </ClientProvider>
+                </Route>
+                <Route path="/test" element={<IntegratedTestSuite />} />
+                <Route 
+                  path="/docs" 
+                  element={<DocsPage />} 
+                />
+                <Route 
+                  path="/docs/sso_integration" 
+                  element={<SsoIntegrationPage />} 
+                />
+                <Route 
+                  path="/docs/multitenancy_integration" 
+                  element={<MultitenancyIntegrationPage />} 
+                />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </div>
+          </Router>
+        </SnackbarProvider>
+      </ThemeProvider>
+      </CountryProvider>
     </AuthProvider>
   );
 }

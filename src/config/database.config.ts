@@ -30,6 +30,9 @@ import { OnboardingDocumentRequirements } from '../documents/entities/onboarding
 import { UserTheme } from '../themes/entities/user-theme.entity';
 import { OAuthClient } from '../oauth-clients/entities/oauth-client.entity';
 import { ApiKey } from '../api-keys/entities/api-key.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { OrganizationMember } from '../organizations/entities/organization-member.entity';
+import { UserAppPermission } from '../user-app-permissions/entities/user-app-permission.entity';
 
 export const databaseConfig = (configService: ConfigService): TypeOrmModuleOptions => {
   const postgresUrl = configService.get('POSTGRES_URL') || configService.get('DATABASE_URL');
@@ -77,6 +80,9 @@ export const databaseConfig = (configService: ConfigService): TypeOrmModuleOptio
     UserTheme,
     OAuthClient,
     ApiKey,
+    Organization,
+    OrganizationMember,
+    UserAppPermission,
   ],
   synchronize: false, // Use SQL scripts instead of migrations
   logging: configService.get('NODE_ENV') === 'development',

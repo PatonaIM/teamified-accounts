@@ -9,7 +9,7 @@ export class AppController {
   @ApiResponse({ status: 200, description: 'API information returned successfully' })
   getRoot() {
     return {
-      message: 'Teamified EOR Portal API',
+      message: 'Teamified API',
       version: '1.0.0',
       status: 'running',
       documentation: '/api/docs',

@@ -28,6 +28,8 @@ import { PayrollProcessingLog } from './payroll/entities/payroll-processing-log.
 import { PerformanceMetrics } from './payroll/entities/performance-metrics.entity';
 import { OnboardingDocumentRequirements } from './documents/entities/onboarding-document-requirements.entity';
 import { ApiKey } from './api-keys/entities/api-key.entity';
+import { Organization } from './organizations/entities/organization.entity';
+import { OrganizationMember } from './organizations/entities/organization-member.entity';
 
 // Load environment variables
 config();
@@ -74,6 +76,8 @@ export const AppDataSource = new DataSource({
     PerformanceMetrics,
     OnboardingDocumentRequirements,
     ApiKey,
+    Organization,
+    OrganizationMember,
   ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
