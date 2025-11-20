@@ -165,7 +165,16 @@ export default function IntegratedTestSuite() {
     }
   };
 
-  const handleClearSession = () => {
+  const handleClearSession = async () => {
+    try {
+      await fetch(`${apiUrl}/api/v1/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+    
     sessionStorage.removeItem('pkce_code_verifier');
     sessionStorage.removeItem('pkce_state');
     callbackProcessedRef.current = false;
