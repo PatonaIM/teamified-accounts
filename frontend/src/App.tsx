@@ -173,11 +173,11 @@ function App() {
                   element={<DocsPage />} 
                 />
                 <Route 
-                  path="/docs/sso_integration" 
+                  path="/docs/sso-integration" 
                   element={<SsoIntegrationPage />} 
                 />
                 <Route 
-                  path="/docs/multitenancy_integration" 
+                  path="/docs/multi-organization" 
                   element={<MultiOrganizationIntegrationPage />} 
                 />
                 <Route path="*" element={<Navigate to="/login" replace />} />
