@@ -16,7 +16,6 @@ import {
   InputLabel,
   CircularProgress,
   Chip,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -580,33 +579,33 @@ export default function IntegratedTestSuite() {
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
               User Information
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+              <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   User ID
                 </Typography>
                 <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
                   {userInfo.id}
                 </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   Email
                 </Typography>
                 <Typography variant="body1">
                   {userInfo.email}
                 </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   Name
                 </Typography>
                 <Typography variant="body1">
                   {userInfo.firstName} {userInfo.lastName}
                 </Typography>
-              </Grid>
+              </Box>
               {userInfo.roles && userInfo.roles.length > 0 && (
-                <Grid item xs={12} md={6}>
+                <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                     Roles
                   </Typography>
@@ -615,9 +614,9 @@ export default function IntegratedTestSuite() {
                       <Chip key={role} label={role} size="small" color="primary" />
                     ))}
                   </Box>
-                </Grid>
+                </Box>
               )}
-            </Grid>
+            </Box>
           </Paper>
 
           {accessToken && (
@@ -669,40 +668,36 @@ export default function IntegratedTestSuite() {
                   fullWidth
                   size="small"
                 />
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Industry</InputLabel>
-                      <Select
-                        value={orgTestData.industry}
-                        label="Industry"
-                        onChange={(e) => setOrgTestData(prev => ({ ...prev, industry: e.target.value }))}
-                      >
-                        <MenuItem value="Technology">Technology</MenuItem>
-                        <MenuItem value="Healthcare">Healthcare</MenuItem>
-                        <MenuItem value="Finance">Finance</MenuItem>
-                        <MenuItem value="Education">Education</MenuItem>
-                        <MenuItem value="Retail">Retail</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Company Size</InputLabel>
-                      <Select
-                        value={orgTestData.companySize}
-                        label="Company Size"
-                        onChange={(e) => setOrgTestData(prev => ({ ...prev, companySize: e.target.value }))}
-                      >
-                        <MenuItem value="1-10">1-10</MenuItem>
-                        <MenuItem value="11-50">11-50</MenuItem>
-                        <MenuItem value="51-200">51-200</MenuItem>
-                        <MenuItem value="201-500">201-500</MenuItem>
-                        <MenuItem value="500+">500+</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Industry</InputLabel>
+                    <Select
+                      value={orgTestData.industry}
+                      label="Industry"
+                      onChange={(e) => setOrgTestData(prev => ({ ...prev, industry: e.target.value }))}
+                    >
+                      <MenuItem value="Technology">Technology</MenuItem>
+                      <MenuItem value="Healthcare">Healthcare</MenuItem>
+                      <MenuItem value="Finance">Finance</MenuItem>
+                      <MenuItem value="Education">Education</MenuItem>
+                      <MenuItem value="Retail">Retail</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Company Size</InputLabel>
+                    <Select
+                      value={orgTestData.companySize}
+                      label="Company Size"
+                      onChange={(e) => setOrgTestData(prev => ({ ...prev, companySize: e.target.value }))}
+                    >
+                      <MenuItem value="1-10">1-10</MenuItem>
+                      <MenuItem value="11-50">11-50</MenuItem>
+                      <MenuItem value="51-200">51-200</MenuItem>
+                      <MenuItem value="201-500">201-500</MenuItem>
+                      <MenuItem value="500+">500+</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
 
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
@@ -716,26 +711,22 @@ export default function IntegratedTestSuite() {
                   fullWidth
                   size="small"
                 />
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      label="First Name"
-                      value={orgTestData.inviteFirstName}
-                      onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteFirstName: e.target.value }))}
-                      fullWidth
-                      size="small"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      label="Last Name"
-                      value={orgTestData.inviteLastName}
-                      onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteLastName: e.target.value }))}
-                      fullWidth
-                      size="small"
-                    />
-                  </Grid>
-                </Grid>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                  <TextField
+                    label="First Name"
+                    value={orgTestData.inviteFirstName}
+                    onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteFirstName: e.target.value }))}
+                    fullWidth
+                    size="small"
+                  />
+                  <TextField
+                    label="Last Name"
+                    value={orgTestData.inviteLastName}
+                    onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteLastName: e.target.value }))}
+                    fullWidth
+                    size="small"
+                  />
+                </Box>
                 <FormControl fullWidth size="small">
                   <InputLabel>Role</InputLabel>
                   <Select
@@ -770,7 +761,7 @@ export default function IntegratedTestSuite() {
                   <br />• Update organization profile
                   <br />• Send email invitation (if email provided)
                   <br />• Generate shareable invite link
-                  <br />• Get organization members
+                  <br />• Get organization members with metadata (ID, email, name, roles, join date, status)
                   <br />• Delete organization
                 </Typography>
               </Alert>
@@ -793,32 +784,28 @@ export default function IntegratedTestSuite() {
                   fullWidth
                   size="small"
                 />
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      label="Filter by Role"
-                      value={userTestData.filterRole}
-                      onChange={(e) => setUserTestData(prev => ({ ...prev, filterRole: e.target.value }))}
-                      fullWidth
-                      size="small"
-                      placeholder="e.g., super_admin, client_admin"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Filter by Status</InputLabel>
-                      <Select
-                        value={userTestData.filterStatus}
-                        label="Filter by Status"
-                        onChange={(e) => setUserTestData(prev => ({ ...prev, filterStatus: e.target.value }))}
-                      >
-                        <MenuItem value="active">Active</MenuItem>
-                        <MenuItem value="inactive">Inactive</MenuItem>
-                        <MenuItem value="archived">Archived</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                  <TextField
+                    label="Filter by Role"
+                    value={userTestData.filterRole}
+                    onChange={(e) => setUserTestData(prev => ({ ...prev, filterRole: e.target.value }))}
+                    fullWidth
+                    size="small"
+                    placeholder="e.g., super_admin, client_admin"
+                  />
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Filter by Status</InputLabel>
+                    <Select
+                      value={userTestData.filterStatus}
+                      label="Filter by Status"
+                      onChange={(e) => setUserTestData(prev => ({ ...prev, filterStatus: e.target.value }))}
+                    >
+                      <MenuItem value="active">Active</MenuItem>
+                      <MenuItem value="inactive">Inactive</MenuItem>
+                      <MenuItem value="archived">Archived</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
                 <TextField
                   label="User ID (Optional)"
                   value={userTestData.userId}
