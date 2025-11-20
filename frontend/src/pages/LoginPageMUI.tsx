@@ -182,10 +182,10 @@ const LoginPageMUI: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Left Panel - Purple Gradient */}
+      {/* Left Panel - Purple Gradient (50%) */}
       <Box
         sx={{
-          flex: 1,
+          width: '50%',
           background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
           display: 'flex',
           flexDirection: 'column',
@@ -245,17 +245,16 @@ const LoginPageMUI: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Right Panel - Dark Background */}
+      {/* Right Panel - Dark Background (50%) */}
       <Box
         sx={{
-          flex: 1,
+          width: '50%',
           bgcolor: '#1E1E1E',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           padding: 4,
           '@media (max-width: 900px)': {
-            flex: 'none',
             width: '100%',
           },
         }}
