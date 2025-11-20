@@ -53,7 +53,7 @@ const InternalUsersPage: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'invited'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'invited'>('active');
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
