@@ -237,24 +237,24 @@ export class HROnboardingService {
       employmentRecord.onboardingCompletedAt = new Date();
       await this.employmentRecordRepository.save(employmentRecord);
 
-      // Assign EOR role to the user
+      // Assign Client Employee role to the user
       const existingEorRole = await this.userRoleRepository.findOne({
-        where: { userId, roleType: 'eor' },
+        where: { userId, roleType: 'client_employee' },
       });
 
       if (!existingEorRole) {
         const eorRole = this.userRoleRepository.create({
           userId,
-          roleType: 'eor',
-          scope: 'user',
+          roleType: 'client_employee',
+          scope: 'individual',
           scopeEntityId: null,
           grantedBy: null, // System-granted during onboarding completion
           expiresAt: null,
         });
         await this.userRoleRepository.save(eorRole);
-        this.logger.log(`EOR role assigned to user ${userId}`);
+        this.logger.log(`Client Employee role assigned to user ${userId}`);
       } else {
-        this.logger.log(`User ${userId} already has EOR role`);
+        this.logger.log(`User ${userId} already has Client Employee role`);
       }
 
       this.logger.log(`Onboarding completed for user ${userId} - status changed to active`);

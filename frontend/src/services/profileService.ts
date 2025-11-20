@@ -581,3 +581,10 @@ class ProfileService {
 }
 
 export const profileService = new ProfileService();
+
+/**
+ * Resolve profile picture URL from user data
+ */
+export function resolveProfilePictureUrl(user: any): string | undefined {
+  return user?.profilePicture || user?.picture || undefined;
+}
