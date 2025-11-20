@@ -184,8 +184,9 @@ export class UserRolesService {
   }
 
   private getRolePermissions(): Record<string, string[]> {
-    return {
-      admin: [
+    const permissions = {
+      // Canonical multitenancy roles
+      super_admin: [
         'users.read',
         'users.create',
         'users.update',
@@ -201,8 +202,28 @@ export class UserRolesService {
         'timesheets.approve',
         'payroll.read',
         'payroll.manage',
+        'clients.read',
+        'clients.manage',
+        'organizations.read',
+        'organizations.manage',
       ],
-      hr: [
+      client_admin: [
+        'users.read',
+        'users.create',
+        'users.update',
+        'users.delete',
+        'roles.assign',
+        'roles.manage',
+        'employment.read',
+        'employment.update',
+        'documents.read',
+        'documents.manage',
+        'timesheets.read',
+        'timesheets.approve',
+        'payroll.read',
+        'payroll.manage',
+      ],
+      client_hr: [
         'users.read',
         'users.create',
         'users.update',
@@ -215,7 +236,7 @@ export class UserRolesService {
         'payroll.read',
         'payroll.manage',
       ],
-      account_manager: [
+      internal_account_manager: [
         'users.read',
         'employment.read',
         'documents.read',
@@ -223,8 +244,9 @@ export class UserRolesService {
         'timesheets.approve',
         'clients.read',
         'clients.manage',
+        'organizations.read',
       ],
-      recruiter: [
+      internal_recruiter: [
         'users.read',
         'users.create',
         'invitations.read',
@@ -233,15 +255,16 @@ export class UserRolesService {
         'candidates.read',
         'candidates.manage',
       ],
-      hr_manager_client: [
+      client_recruiter: [
         'users.read',
-        'employment.read',
-        'documents.read',
-        'timesheets.read',
-        'timesheets.approve',
-        'clients.read',
+        'users.create',
+        'invitations.read',
+        'invitations.create',
+        'invitations.manage',
+        'candidates.read',
+        'candidates.manage',
       ],
-      eor: [
+      client_employee: [
         'users.read',
         'employment.read',
         'employment.update',
@@ -259,7 +282,53 @@ export class UserRolesService {
         'profile.update',
         'documents.read',
       ],
+      internal_member: [
+        'users.read',
+        'employment.read',
+        'documents.read',
+      ],
+      internal_hr: [
+        'users.read',
+        'users.create',
+        'users.update',
+        'employment.read',
+        'employment.update',
+        'documents.read',
+        'documents.manage',
+        'timesheets.read',
+        'timesheets.approve',
+        'payroll.read',
+        'payroll.manage',
+      ],
+      client_finance: [
+        'payroll.read',
+        'payroll.manage',
+        'timesheets.read',
+        'timesheets.approve',
+        'employment.read',
+      ],
+      internal_finance: [
+        'payroll.read',
+        'payroll.manage',
+        'timesheets.read',
+        'employment.read',
+        'clients.read',
+      ],
+      internal_marketing: [
+        'users.read',
+        'clients.read',
+      ],
     };
+
+    // Add legacy role mappings for backward compatibility
+    permissions['admin'] = permissions['client_admin'];
+    permissions['hr'] = permissions['client_hr'];
+    permissions['eor'] = permissions['client_employee'];
+    permissions['account_manager'] = permissions['internal_account_manager'];
+    permissions['recruiter'] = permissions['client_recruiter'];
+    permissions['hr_manager_client'] = permissions['client_hr'];
+
+    return permissions;
   }
 
   private mapToResponseDto(role: UserRole): UserRoleResponseDto {
