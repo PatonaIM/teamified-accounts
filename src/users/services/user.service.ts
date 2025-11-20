@@ -58,7 +58,7 @@ export class UserService {
     // Use query builder for complex filtering with roles
     const queryBuilder = this.userRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.eorProfile', 'eorProfile')
-      .leftJoin('user.userRoles', 'userRole');
+      .leftJoinAndSelect('user.userRoles', 'userRole');
 
     // Filter by status
     if (status) {
