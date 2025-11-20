@@ -840,6 +840,210 @@ Authorization: Bearer <access_token>
 
             <Divider />
 
+            {/* Test Accounts */}
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <People color="primary" />
+                Test User Accounts
+              </Typography>
+
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  <strong>Important:</strong> These test accounts are for development and testing purposes only. 
+                  All test accounts use the password: <code>Admin123!</code>
+                </Typography>
+              </Alert>
+
+              <Stack spacing={3}>
+                {/* Internal Users */}
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Internal Team Users
+                  </Typography>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Access Level</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell><code>admin@teamified.com</code></TableCell>
+                          <TableCell>Admin User</TableCell>
+                          <TableCell><Chip label="Super Admin" color="error" size="small" /></TableCell>
+                          <TableCell>Global - Full Platform Access</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>czar.dy@teamified.com</code></TableCell>
+                          <TableCell>Czar Dy</TableCell>
+                          <TableCell><Chip label="Super Admin" color="error" size="small" /></TableCell>
+                          <TableCell>Global - Full Platform Access</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>michael.ang@teamified.com</code></TableCell>
+                          <TableCell>Michael Ang</TableCell>
+                          <TableCell><Chip label="Super Admin" color="error" size="small" /></TableCell>
+                          <TableCell>Global - Full Platform Access</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>wagtestnlwfinternal@teamified.com</code></TableCell>
+                          <TableCell>WagtestNLWFFirst WagtestNLWFLast</TableCell>
+                          <TableCell><Chip label="Internal HR" color="primary" size="small" /></TableCell>
+                          <TableCell>Global - HR Operations</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>wagtest.nlwf@teamified.com</code></TableCell>
+                          <TableCell>WagtestNLWFFirst WagtestNLWFLast</TableCell>
+                          <TableCell><Chip label="Internal Member" color="primary" size="small" /></TableCell>
+                          <TableCell>Global - General Access</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+
+                {/* Stark Industries Users */}
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Stark Industries Inc. (Client Organization)
+                  </Typography>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell><code>tony.stark@starkindustries.com</code></TableCell>
+                          <TableCell>Tony Stark</TableCell>
+                          <TableCell><Chip label="Client Admin" color="secondary" size="small" /></TableCell>
+                          <TableCell>Full organization access</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>nick.fury@starkindustries.com</code></TableCell>
+                          <TableCell>Nick Fury</TableCell>
+                          <TableCell><Chip label="Client Admin" color="secondary" size="small" /></TableCell>
+                          <TableCell>Full organization access</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>steve.rogers@starkindustries.com</code></TableCell>
+                          <TableCell>Steve Rogers</TableCell>
+                          <TableCell><Chip label="Client HR" color="secondary" size="small" /></TableCell>
+                          <TableCell>HR operations</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>clint.barton@starkindustries.com</code></TableCell>
+                          <TableCell>Clint Barton</TableCell>
+                          <TableCell><Chip label="Client Recruiter" color="secondary" size="small" /></TableCell>
+                          <TableCell>Recruitment management</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>natasha.romanoff@starkindustries.com</code></TableCell>
+                          <TableCell>Natasha Romanoff</TableCell>
+                          <TableCell><Chip label="Client Finance" color="secondary" size="small" /></TableCell>
+                          <TableCell>Finance operations</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>pepper.potts@starkindustries.com</code></TableCell>
+                          <TableCell>Pepper Potts</TableCell>
+                          <TableCell><Chip label="Client Employee" color="secondary" size="small" /></TableCell>
+                          <TableCell>Team member</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>peter.parker@starkindustries.com</code></TableCell>
+                          <TableCell>Peter Parker</TableCell>
+                          <TableCell><Chip label="Client Employee" color="secondary" size="small" /></TableCell>
+                          <TableCell>Team member</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>bruce.banner@starkindustries.com</code></TableCell>
+                          <TableCell>Bruce Banner</TableCell>
+                          <TableCell><Chip label="Client Employee" color="secondary" size="small" /></TableCell>
+                          <TableCell>Team member</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      Additional Stark Industries employees: Thor Odinson, Carol Danvers, Sam Wilson, Bucky Barnes, 
+                      Stephen Strange, Scott Lang, Hope Van Dyne, T'Challa, Shuri, James Rhodes, Gamora, and Peter Quill 
+                      (all Client Employees).
+                    </Typography>
+                  </Alert>
+                </Box>
+
+                {/* Candidate Users */}
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Candidate Users (Public Access)
+                  </Typography>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell><code>jones@jonesy.au</code></TableCell>
+                          <TableCell>Simon Jones</TableCell>
+                          <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
+                          <TableCell>Job applications & interviews</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>user10@teamified.com</code></TableCell>
+                          <TableCell>Kiran Gupta</TableCell>
+                          <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
+                          <TableCell>Job applications & interviews</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>user11@teamified.com</code></TableCell>
+                          <TableCell>Priya Sharma</TableCell>
+                          <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
+                          <TableCell>Job applications & interviews</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>user12@teamified.com</code></TableCell>
+                          <TableCell>Sneha Patel</TableCell>
+                          <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
+                          <TableCell>Job applications & interviews</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      Additional candidate accounts available: user13@teamified.com through user18@teamified.com 
+                      (Vikram Singh, Meera Kumar, Anita Gupta, Amit Sharma, Sneha Patel, Deepa Singh).
+                    </Typography>
+                  </Alert>
+                </Box>
+
+                <Alert severity="success">
+                  <Typography variant="body2">
+                    <strong>Testing Tip:</strong> Use these accounts to test different permission levels, organization scoping, 
+                    and SSO flows. All passwords are <code>Admin123!</code> for consistency across test accounts.
+                  </Typography>
+                </Alert>
+              </Stack>
+            </Box>
+
+            <Divider />
+
             {/* Additional Resources */}
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
