@@ -27,7 +27,7 @@ const LoginPageMUI: React.FC = () => {
   const { refreshUser } = useAuth();
   
   const searchParams = new URLSearchParams(window.location.search);
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+  const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
@@ -95,7 +95,7 @@ const LoginPageMUI: React.FC = () => {
       if (data.valid) {
         setStep('password');
       } else {
-        const signupUrl = `/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/dashboard' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
+        const signupUrl = `/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account/profile' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
         navigate(signupUrl);
       }
     } catch (error) {
@@ -131,7 +131,7 @@ const LoginPageMUI: React.FC = () => {
       
       await refreshUser();
       
-      if (returnUrl !== '/dashboard' && returnUrl.includes('/api/v1/sso/authorize')) {
+      if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
         try {
           const url = new URL(returnUrl, window.location.origin);
           const clientId = url.searchParams.get('client_id');
@@ -165,7 +165,7 @@ const LoginPageMUI: React.FC = () => {
         } catch (error) {
           console.error('SSO launch failed:', error);
           setErrors({ general: 'SSO authentication failed. Redirecting to dashboard...' });
-          setTimeout(() => navigate('/dashboard'), 2000);
+          setTimeout(() => navigate('/account/profile'), 2000);
         }
       } else {
         navigate(returnUrl);
