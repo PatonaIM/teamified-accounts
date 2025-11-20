@@ -400,7 +400,13 @@ const LoginPageMUI: React.FC = () => {
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          '&:hover': {
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                          },
+                        }}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -453,6 +459,10 @@ const LoginPageMUI: React.FC = () => {
                     '&:hover': {
                       borderColor: 'rgba(255, 255, 255, 0.5)',
                       bgcolor: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    '&:disabled': {
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'rgba(255, 255, 255, 0.5)',
                     },
                   }}
                 >
