@@ -17,7 +17,7 @@ import axios from 'axios';
 
 interface ProfileData {
   id?: string;
-  email?: string;
+  emailAddress?: string;
   firstName?: string;
   lastName?: string;
   profileData?: {
@@ -150,7 +150,7 @@ export default function MyProfilePage() {
             <Typography variant="body2" color="text.secondary">
               {isEditing 
                 ? 'Click "Save Changes" to update profile details' 
-                : profileData.email}
+                : profileData.emailAddress}
             </Typography>
           </Box>
         </Box>
@@ -181,7 +181,7 @@ export default function MyProfilePage() {
             {isEditing ? (
               <TextField
                 fullWidth
-                value={profileData.email || ''}
+                value={profileData.emailAddress || ''}
                 disabled
                 size="small"
                 variant="outlined"
@@ -192,7 +192,7 @@ export default function MyProfilePage() {
                 }}
               />
             ) : (
-              <Typography variant="body1">{profileData.email}</Typography>
+              <Typography variant="body1">{profileData.emailAddress}</Typography>
             )}
           </Box>
 
