@@ -59,6 +59,7 @@ const InternalUsersPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
 
   const INTERNAL_ROLES = 'super_admin,internal_hr,internal_finance,internal_account_manager,internal_recruiter,internal_marketing';
 
@@ -113,17 +114,25 @@ const InternalUsersPage: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
 
+    // Verify email confirmation (trim whitespace)
+    if (deleteConfirmEmail.trim() !== userToDelete.email) {
+      setError('Email confirmation does not match. Please type the exact email address.');
+      return;
+    }
+
     setDeleting(true);
     try {
       await userService.deleteUser(userToDelete.id);
       setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} deleted successfully!`);
       setShowDeleteDialog(false);
       setUserToDelete(null);
+      setDeleteConfirmEmail('');
       fetchUsers();
     } catch (err: any) {
       setError(err.message || 'Failed to delete user');
       setShowDeleteDialog(false);
       setUserToDelete(null);
+      setDeleteConfirmEmail('');
     } finally {
       setDeleting(false);
     }
@@ -132,6 +141,7 @@ const InternalUsersPage: React.FC = () => {
   const handleCancelDelete = () => {
     setShowDeleteDialog(false);
     setUserToDelete(null);
+    setDeleteConfirmEmail('');
   };
 
 
@@ -396,10 +406,30 @@ const InternalUsersPage: React.FC = () => {
       >
         <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email})?
-            This will hide them from the user list, but their data will be preserved for audit purposes.
+          <DialogContentText sx={{ mb: 2 }}>
+            Are you sure you want to delete {userToDelete?.firstName} {userToDelete?.lastName}?
           </DialogContentText>
+          <DialogContentText sx={{ mb: 3, fontWeight: 'bold' }}>
+            This action cannot be undone. The user and all their data will be permanently removed.
+          </DialogContentText>
+          <DialogContentText sx={{ mb: 2 }}>
+            To confirm, please type the user's email address: <strong>{userToDelete?.email}</strong>
+          </DialogContentText>
+          <TextField
+            fullWidth
+            label="Confirm email address"
+            value={deleteConfirmEmail}
+            onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+            placeholder={userToDelete?.email}
+            autoFocus
+            disabled={deleting}
+            error={deleteConfirmEmail !== '' && deleteConfirmEmail !== userToDelete?.email}
+            helperText={
+              deleteConfirmEmail !== '' && deleteConfirmEmail !== userToDelete?.email
+                ? 'Email does not match'
+                : ''
+            }
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCancelDelete} disabled={deleting}>
@@ -409,10 +439,10 @@ const InternalUsersPage: React.FC = () => {
             onClick={handleConfirmDelete}
             color="error"
             variant="contained"
-            disabled={deleting}
+            disabled={deleting || deleteConfirmEmail.trim() !== userToDelete?.email}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? 'Deleting...' : 'Delete Permanently'}
           </Button>
         </DialogActions>
       </Dialog>
