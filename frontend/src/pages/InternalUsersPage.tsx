@@ -61,7 +61,7 @@ const InternalUsersPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
 
-  const INTERNAL_ROLES = 'super_admin,internal_hr,internal_finance,internal_account_manager,internal_recruiter,internal_marketing';
+  const INTERNAL_ROLES = 'super_admin,internal_hr,internal_finance,internal_account_manager,internal_recruiter,internal_marketing,internal_member';
 
   useEffect(() => {
     fetchUsers();
@@ -168,6 +168,7 @@ const InternalUsersPage: React.FC = () => {
       internal_account_manager: 'Internal Account Manager',
       internal_recruiter: 'Internal Recruiter',
       internal_marketing: 'Internal Marketing',
+      internal_member: 'Internal Member',
     };
     
     return roleMap[primaryRole] || primaryRole;
