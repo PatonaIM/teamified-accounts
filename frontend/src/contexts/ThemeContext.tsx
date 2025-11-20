@@ -19,8 +19,26 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = 'teamified_theme';
-const CUSTOM_THEME_STORAGE_KEY = 'teamified_custom_theme';
+const THEME_STORAGE_KEY = 'teamified_theme_auth';
+const CUSTOM_THEME_STORAGE_KEY = 'teamified_custom_theme_auth';
+
+// Public routes that should always use light mode
+const PUBLIC_LIGHT_MODE_ROUTES = [
+  '/login',
+  '/docs',
+  '/test',
+  '/signup-select',
+  '/signup-candidate',
+  '/signup-client-admin',
+  '/reset-password',
+  '/verify-email',
+  '/invite',
+  '/invitations',
+];
+
+const isPublicLightModeRoute = (pathname: string): boolean => {
+  return PUBLIC_LIGHT_MODE_ROUTES.some(route => pathname.startsWith(route));
+};
 
 const getStoredTheme = (): ThemeMode | 'custom' => {
   if (typeof window === 'undefined') {
@@ -55,6 +73,18 @@ const isUserAuthenticated = (): boolean => {
     return !!token;
   } catch {
     return false;
+  }
+};
+
+export const clearThemePreferences = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    localStorage.removeItem(CUSTOM_THEME_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear theme preferences:', error);
   }
 };
 
@@ -231,6 +261,42 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentTheme, setCurrentTheme] = useState<ThemeMode | 'custom'>(getStoredTheme());
   const [customTheme, setCustomTheme] = useState<UserTheme | null>(getStoredCustomTheme());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentPath, setCurrentPath] = useState(
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+
+  // Check if we're on a public route that requires light mode
+  const isPublicRoute = isPublicLightModeRoute(currentPath);
+
+  // Listen for route changes
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    // Listen for popstate (browser back/forward)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Listen for pushState/replaceState (programmatic navigation)
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      handleLocationChange();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, []);
 
   useEffect(() => {
     const authStatus = isUserAuthenticated();
@@ -240,6 +306,13 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const newAuthStatus = isUserAuthenticated();
       if (newAuthStatus !== isAuthenticated) {
         setIsAuthenticated(newAuthStatus);
+        
+        // If user logged out, clear theme preferences and reset to light mode
+        if (isAuthenticated && !newAuthStatus) {
+          clearThemePreferences();
+          setCurrentTheme('teamified');
+          setCustomTheme(null);
+        }
       }
     }, 1000);
 
@@ -262,12 +335,17 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isPublicRoute) {
       refreshActiveTheme();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isPublicRoute]);
 
   const setTheme = (theme: ThemeMode) => {
+    // Only save theme preferences if user is authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+    
     setCurrentTheme(theme);
     if (typeof window !== 'undefined') {
       try {
@@ -279,6 +357,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const loadCustomTheme = (theme: UserTheme) => {
+    // Only save theme preferences if user is authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+    
     setCustomTheme(theme);
     setCurrentTheme('custom');
     if (typeof window !== 'undefined') {
@@ -305,16 +388,22 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  let theme = createAppTheme(currentTheme === 'custom' ? 'teamified' : currentTheme);
+  // Force light mode for public routes
+  let effectiveTheme: ThemeMode | 'custom' = currentTheme;
+  if (isPublicRoute || !isAuthenticated) {
+    effectiveTheme = 'teamified'; // Always use light mode for public routes
+  }
 
-  if (currentTheme === 'custom' && customTheme) {
+  let theme = createAppTheme(effectiveTheme === 'custom' ? 'teamified' : effectiveTheme);
+
+  if (effectiveTheme === 'custom' && customTheme && isAuthenticated && !isPublicRoute) {
     theme = applyCustomTheme(theme, customTheme.themeConfig);
   }
 
   return (
     <ThemeContext.Provider
       value={{
-        currentTheme,
+        currentTheme: effectiveTheme,
         setTheme,
         customTheme,
         loadCustomTheme,

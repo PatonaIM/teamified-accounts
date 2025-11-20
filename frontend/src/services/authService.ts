@@ -227,6 +227,14 @@ export const logout = async (): Promise<void> => {
   } finally {
     // Always remove local tokens
     removeTokens();
+    
+    // Clear theme preferences on logout
+    try {
+      const { clearThemePreferences } = await import('../contexts/ThemeContext');
+      clearThemePreferences();
+    } catch (error) {
+      console.warn('Failed to clear theme preferences:', error);
+    }
   }
 };
 
