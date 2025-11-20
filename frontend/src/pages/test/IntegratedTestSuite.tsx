@@ -6,319 +6,335 @@ import {
   Button,
   Stack,
   Alert,
-  Card,
-  CardContent,
-  TextField,
   Divider,
-  Chip,
 } from '@mui/material';
 import {
   CheckCircle,
   Login,
-  Refresh,
-  OpenInNew,
   Info,
+  Warning,
 } from '@mui/icons-material';
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
-interface CallbackData {
-  code?: string;
-  error?: string;
-  state?: string;
+interface UserInfo {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles?: string[];
 }
 
 export default function IntegratedTestSuite() {
-  const [callbackData, setCallbackData] = useState<CallbackData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [clientId, setClientId] = useState('demo_client');
-  const [redirectUri, setRedirectUri] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setRedirectUri(window.location.origin + '/test');
-    }
-  }, []);
+  const redirectUri = typeof window !== 'undefined' ? window.location.origin + '/test' : '';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    const error = urlParams.get('error');
+    const errorParam = urlParams.get('error');
     const state = urlParams.get('state');
 
-    if (code || error) {
-      setCallbackData({
-        code: code || undefined,
-        error: error || undefined,
-        state: state || undefined,
-      });
-      
+    if (errorParam) {
+      setError(`Authentication failed: ${errorParam}`);
       window.history.replaceState({}, document.title, '/test');
+    } else if (code) {
+      handleCallback(code, state);
     }
   }, []);
 
-  const handleLoginClick = () => {
+  const generateCodeChallenge = async (codeVerifier: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  };
+
+  const generateCodeVerifier = (): string => {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode(...array))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+  };
+
+  const handleLoginClick = async () => {
     if (typeof window === 'undefined') return;
 
     setLoading(true);
-    setCallbackData(null);
+    setError(null);
 
-    const state = Math.random().toString(36).substring(7);
-    sessionStorage.setItem('sso_state', state);
+    try {
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      const state = Math.random().toString(36).substring(7);
 
-    const authParams = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'openid profile email',
-      state: state,
-    });
+      sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+      sessionStorage.setItem('pkce_state', state);
 
-    const authUrl = `${apiUrl}/api/v1/sso/authorize?${authParams}`;
-    window.location.href = authUrl;
+      const authParams = new URLSearchParams({
+        client_id: DEVELOPER_SANDBOX_CLIENT_ID,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid profile email',
+        state: state,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+      });
+
+      const authUrl = `${apiUrl}/api/v1/sso/authorize?${authParams}`;
+      window.location.href = authUrl;
+    } catch (err: any) {
+      setError(err.message || 'Failed to initiate login');
+      setLoading(false);
+    }
   };
 
-  const handleReset = () => {
-    setCallbackData(null);
-    sessionStorage.removeItem('sso_state');
+  const handleCallback = async (code: string, returnedState: string | null) => {
+    if (typeof window === 'undefined') return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const savedState = sessionStorage.getItem('pkce_state');
+      const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+
+      if (returnedState !== savedState) {
+        throw new Error('Invalid state parameter - possible CSRF attack');
+      }
+
+      if (!codeVerifier) {
+        throw new Error('Code verifier not found');
+      }
+
+      const tokenResponse = await fetch(`${apiUrl}/api/v1/sso/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          grant_type: 'authorization_code',
+          code: code,
+          client_id: DEVELOPER_SANDBOX_CLIENT_ID,
+          redirect_uri: redirectUri,
+          code_verifier: codeVerifier,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.json();
+        throw new Error(errorData.message || 'Token exchange failed');
+      }
+
+      const tokenData = await tokenResponse.json();
+      const token = tokenData.access_token;
+      setAccessToken(token);
+
+      const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user information');
+      }
+
+      const user = await userResponse.json();
+      setUserInfo(user);
+
+      sessionStorage.removeItem('pkce_code_verifier');
+      sessionStorage.removeItem('pkce_state');
+
+      window.history.replaceState({}, document.title, '/test');
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearSession = () => {
+    setUserInfo(null);
+    setAccessToken(null);
+    setError(null);
+    sessionStorage.removeItem('pkce_code_verifier');
+    sessionStorage.removeItem('pkce_state');
   };
 
   return (
     <Box sx={{ p: 4, maxWidth: 900, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-        SSO Integration Test
+      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+        SSO Test Application
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Test the OAuth 2.0 Single Sign-On flow with automatic login redirect
+        This is a demo application to test the SSO authentication flow using OAuth 2.0 with PKCE.
       </Typography>
 
-      <Alert severity="info" icon={<Info />} sx={{ mb: 4 }}>
-        <Typography variant="body2" sx={{ mb: 1 }}>
-          <strong>How it works:</strong>
-        </Typography>
-        <Typography variant="body2" component="div">
-          <ol style={{ margin: 0, paddingLeft: 20 }}>
-            <li>Click "Login using SSO" below</li>
-            <li>If you're not logged in, you'll be redirected to the login page</li>
-            <li>After successful login, you'll be redirected back here with an authorization code</li>
-            <li>In a real integration, your app would exchange this code for an access token</li>
-          </ol>
-        </Typography>
-      </Alert>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          <Typography variant="body2">{error}</Typography>
+        </Alert>
+      )}
 
-      {!callbackData ? (
-        <Paper sx={{ p: 4 }}>
-          <Typography variant="h6" sx={{ mb: 3, textAlign: 'center' }}>
-            SSO Configuration
-          </Typography>
-          
-          <Stack spacing={3}>
-            <TextField
-              label="Client ID"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              fullWidth
-              helperText="Enter your OAuth client ID (default: demo_client)"
-            />
-            
-            <TextField
-              label="Redirect URI"
-              value={redirectUri}
-              onChange={(e) => setRedirectUri(e.target.value)}
-              fullWidth
-              helperText="Must match your registered redirect URI"
-            />
-            
-            <Divider />
-            
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              startIcon={<Login />}
-              onClick={handleLoginClick}
-              disabled={loading || !clientId || !redirectUri}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                py: 1.5,
-                fontSize: '1rem',
-                bgcolor: '#A16AE8',
-                '&:hover': { bgcolor: '#8f5cd9' },
-              }}
-            >
-              {loading ? 'Redirecting...' : 'Login using SSO'}
-            </Button>
-            
-            <Divider />
-            
-            <Stack spacing={1} alignItems="center">
+      {!userInfo ? (
+        <>
+          <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              Click the button below to test the SSO login flow. You'll be redirected to the SSO provider to authenticate, then redirected back here with your user information.
+            </Typography>
+          </Alert>
+
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            startIcon={<Login />}
+            onClick={handleLoginClick}
+            disabled={loading}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              py: 2,
+              fontSize: '1.1rem',
+              mb: 3,
+              bgcolor: '#60a5fa',
+              '&:hover': { bgcolor: '#3b82f6' },
+            }}
+          >
+            {loading ? 'Redirecting...' : 'Login with SSO'}
+          </Button>
+
+          <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              OAuth 2.0 Flow Details:
+            </Typography>
+            <Stack spacing={1} sx={{ pl: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Learn more about SSO integration
+                • Uses Authorization Code Flow with PKCE
               </Typography>
-              <Button
-                variant="text"
-                size="small"
-                endIcon={<OpenInNew />}
-                onClick={() => window.location.href = '/docs'}
-                sx={{ textTransform: 'none' }}
-              >
-                View Documentation
-              </Button>
+              <Typography variant="body2" color="text.secondary">
+                • Client ID: {DEVELOPER_SANDBOX_CLIENT_ID}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Client Type: Public (no secret required)
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Redirect URI: {redirectUri}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Code Challenge Method: S256 (SHA-256)
+              </Typography>
             </Stack>
-          </Stack>
-        </Paper>
+            <Alert severity="warning" icon={<Warning />} sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                This is a public client suitable for browser-based apps. Never embed client secrets in frontend code - use PKCE instead for security.
+              </Typography>
+            </Alert>
+          </Paper>
+        </>
       ) : (
         <Stack spacing={3}>
-          {callbackData.error ? (
-            <>
-              <Alert severity="error">
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  Authentication Failed
-                </Typography>
-                <Typography variant="body2">
-                  Error: {callbackData.error}
-                </Typography>
-              </Alert>
+          <Alert severity="success" icon={<CheckCircle />}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Successfully authenticated via SSO!
+            </Typography>
+          </Alert>
 
-              <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                  Error Details
+          <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              User Information
+            </Typography>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  User ID
                 </Typography>
-                <SyntaxHighlighter language="json" style={docco}>
-                  {JSON.stringify(callbackData, null, 2)}
-                </SyntaxHighlighter>
-              </Paper>
-            </>
-          ) : (
-            <>
-              <Alert severity="success" icon={<CheckCircle />}>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  Authorization Code Received!
+                <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
+                  {userInfo.id}
                 </Typography>
-                <Typography variant="body2">
-                  The SSO flow completed successfully. Your app can now exchange this code for an access token.
+              </Box>
+              <Divider />
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Email
                 </Typography>
-              </Alert>
-
-              <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
-                <CardContent>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Callback Data
+                <Typography variant="body1">
+                  {userInfo.email}
+                </Typography>
+              </Box>
+              <Divider />
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Name
+                </Typography>
+                <Typography variant="body1">
+                  {userInfo.firstName} {userInfo.lastName}
+                </Typography>
+              </Box>
+              {userInfo.roles && userInfo.roles.length > 0 && (
+                <>
+                  <Divider />
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      Roles
                     </Typography>
-                    <Chip label="Success" color="success" size="small" />
-                  </Stack>
+                    <Typography variant="body1">
+                      {userInfo.roles.join(', ')}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+            </Stack>
+          </Paper>
 
-                  <SyntaxHighlighter language="json" style={docco}>
-                    {JSON.stringify(callbackData, null, 2)}
-                  </SyntaxHighlighter>
-                </CardContent>
-              </Card>
-
-              <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                  Next Steps (In Your Application)
-                </Typography>
-                <Stack spacing={1.5}>
-                  <Typography variant="body2" color="text.secondary">
-                    1. <strong>Verify State</strong>: Confirm the state parameter matches what you sent to prevent CSRF attacks
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    2. <strong>Exchange Code</strong>: POST to <code>/api/v1/sso/token</code> with the authorization code
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" component="div">
-                    <div>3. <strong>Request Body</strong>:</div>
-                    <SyntaxHighlighter language="json" style={docco} customStyle={{ marginTop: 8, fontSize: '0.8rem' }}>
-                      {JSON.stringify({
-                        grant_type: "authorization_code",
-                        code: callbackData.code,
-                        client_id: clientId,
-                        client_secret: "YOUR_CLIENT_SECRET",
-                        redirect_uri: redirectUri
-                      }, null, 2)}
-                    </SyntaxHighlighter>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    4. <strong>Get User Info</strong>: Use the access token to call <code>/api/v1/sso/me</code>
-                  </Typography>
-                </Stack>
-              </Paper>
-
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  <strong>Note:</strong> To complete the token exchange, you'll need a valid OAuth client registered in the 
-                  OAuth Configuration admin panel with a matching client_secret.
-                </Typography>
-              </Alert>
-            </>
+          {accessToken && (
+            <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Access Token (Truncated)
+              </Typography>
+              <Box sx={{ 
+                p: 2, 
+                bgcolor: 'action.hover', 
+                borderRadius: 1,
+                fontFamily: 'monospace',
+                fontSize: '0.875rem',
+                wordBreak: 'break-all'
+              }}>
+                {accessToken.substring(0, 50)}...
+              </Box>
+            </Paper>
           )}
 
           <Button
             variant="outlined"
-            startIcon={<Refresh />}
-            onClick={handleReset}
             fullWidth
-            sx={{ textTransform: 'none', fontWeight: 600 }}
+            onClick={handleClearSession}
+            sx={{ 
+              textTransform: 'none', 
+              fontWeight: 600,
+              py: 1.5,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                bgcolor: 'action.hover',
+              }
+            }}
           >
-            Test Again
+            Clear Session & Test Again
           </Button>
         </Stack>
       )}
-
-      {/* Implementation Example */}
-      <Paper sx={{ p: 3, mt: 4, bgcolor: 'background.default' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-          Integration Example
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Here's how to implement this in your application:
-        </Typography>
-        <SyntaxHighlighter language="javascript" style={docco}>
-          {`// 1. Redirect user to authorization endpoint
-const authParams = new URLSearchParams({
-  client_id: 'YOUR_CLIENT_ID',
-  redirect_uri: 'https://your-app.com/callback',
-  response_type: 'code',
-  scope: 'openid profile email',
-  state: generateRandomState() // For CSRF protection
-});
-
-window.location.href = \`${apiUrl}/api/v1/sso/authorize?\${authParams}\`;
-
-// 2. Handle callback in your app
-const urlParams = new URLSearchParams(window.location.search);
-const code = urlParams.get('code');
-const state = urlParams.get('state');
-
-// 3. Exchange code for token
-const tokenResponse = await fetch('${apiUrl}/api/v1/sso/token', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    grant_type: 'authorization_code',
-    code: code,
-    client_id: 'YOUR_CLIENT_ID',
-    client_secret: 'YOUR_CLIENT_SECRET',
-    redirect_uri: 'https://your-app.com/callback'
-  })
-});
-
-const { access_token } = await tokenResponse.json();
-
-// 4. Get user information
-const userResponse = await fetch('${apiUrl}/api/v1/sso/me', {
-  headers: { 'Authorization': \`Bearer \${access_token}\` }
-});
-
-const userData = await userResponse.json();
-console.log('Logged in user:', userData);`}
-        </SyntaxHighlighter>
-      </Paper>
     </Box>
   );
 }

@@ -76,6 +76,22 @@ The user profile page (`/account/profile`) provides Material-UI 3 Expressive Des
 -   **Role Display**: Shows user roles (e.g., "super_admin") fetched from backend `/v1/users/me` endpoint
 -   **Design System**: Uses 16px rounded corners (borderRadius: 2) for buttons, 6 for cards, and purple gradient primary buttons
 
+#### SSO Integration Test Page
+
+The SSO test page (`/test`) provides a browser-based demonstration of the OAuth 2.0 + PKCE authentication flow. Implementation features include:
+
+-   **Developer Sandbox Client**: Hardcoded to use `test-client` OAuth client ID, pre-configured in the database as a public client
+-   **PKCE Flow**: Implements SHA-256 code challenge method for secure browser-based authentication without client secrets
+-   **Complete OAuth Cycle**: 
+    1. Generates code verifier and challenge
+    2. Redirects to `/api/v1/sso/authorize` endpoint
+    3. Handles login redirect for unauthenticated users
+    4. Exchanges authorization code for access token
+    5. Fetches and displays user information
+-   **User Info Display**: After successful authentication shows User ID, Email, Name, Roles, and truncated Access Token
+-   **Session Management**: "Clear Session & Test Again" button resets the test flow
+-   **Public Route**: Always uses light mode theme per public page routing rules
+
 ### Data Model Architecture
 
 The data model features flexible user profile data in a **JSONB field** within the User entity. Employment and salary histories are managed by normalized entities. Role management is facilitated by a `UserRole` entity supporting scope-based permissions. Multi-country payroll is supported via dedicated entities for `Country`, `Currency`, `TaxYear`, and `PayrollPeriod`. Document management is categorized for HR and onboarding processes.
