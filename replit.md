@@ -8,6 +8,16 @@ The Teamified Team Member Portal is an Employer of Record (EOR) management syste
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**November 20, 2025**: Completed comprehensive terminology refactoring from "tenant" to "organization" across the entire codebase. This included:
+- Renamed frontend page from `TenantManagementPage.tsx` to `OrganizationManagementPage.tsx`
+- Renamed documentation page from `MultitenancyIntegrationPage.tsx` to `MultiOrganizationIntegrationPage.tsx`
+- Updated all user-facing strings, API documentation, code comments, and variable names across frontend and backend
+- Updated route paths from `/admin/tenants` to `/admin/organizations`
+- Updated all documentation files (replit.md, PRD docs, architecture docs) to use "organization" terminology
+- System now consistently uses "organization" and "multi-organization" terminology throughout
+
 ## System Architecture
 
 ### Backend Architecture

@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-This document outlines the complete data model changes required to implement the new User Management System for the Teamified Team Member Portal. The new data model addresses user lifecycle management, multi-tenancy requirements, salary history tracking, and migration from existing systems (Zoho People and Client Portal).
+This document outlines the complete data model changes required to implement the new User Management System for the Teamified Team Member Portal. The new data model addresses user lifecycle management, multi-organization requirements, salary history tracking, and migration from existing systems (Zoho People and Client Portal).
 
 ## Current State Analysis
 
@@ -476,7 +476,7 @@ CREATE INDEX idx_migration_status ON migration_log(migration_status);
 
 ## Conclusion
 
-This data model provides a comprehensive foundation for the User Management System that addresses all current requirements while providing flexibility for future growth. The employment records approach elegantly solves multi-tenancy and user lifecycle challenges, while the salary history tracking ensures compliance and audit requirements are met.
+This data model provides a comprehensive foundation for the User Management System that addresses all current requirements while providing flexibility for future growth. The employment records approach elegantly solves multi-organization and user lifecycle challenges, while the salary history tracking ensures compliance and audit requirements are met.
 
 The migration strategy provides a clear path from existing systems with minimal risk, and the comprehensive indexing and performance considerations ensure the system will scale effectively.
 
