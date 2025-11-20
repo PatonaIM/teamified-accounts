@@ -13,7 +13,6 @@ export class ProfileCompletionService {
     'dateOfBirth',
     'addressLine1',
     'city',
-    'jobTitle',
     'department',
     'startDate',
     'emergencyContactName',

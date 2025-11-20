@@ -89,7 +89,7 @@ export class EORProfile {
   // Professional Information
   @IsOptional()
   @IsString()
-  @MaxLength(200)
+  @MaxLength(100)
   @Column({ name: 'job_title', nullable: true })
   jobTitle: string | null;
 

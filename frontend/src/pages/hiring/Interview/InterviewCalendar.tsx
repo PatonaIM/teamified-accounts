@@ -24,7 +24,6 @@ const InterviewCalendar = ({ filteredData, startDate, onNavigate }: Props) => {
       start: new Date(interview.meetingStartedOn),
       end: new Date(interview.meetingEndedOn),
       resource: {
-        jobTitle: interview.jobTitle || "N/A",
         interviewerName: interview.interviewerName || "N/A",
         candidateEmail: interview.candidateEmail || "",
         status: interview.status || "scheduled",

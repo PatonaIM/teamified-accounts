@@ -131,7 +131,7 @@ const TalentPoolCandidatePage = () => {
                       fontWeight: 600,
                       cursor: "pointer",
                     }}
-                    title={job.jobTitle || `Job ${job.jobId}`}
+                    title={`Job ${job.jobId}`}
                     onClick={() => {
                       if (jobRefs.current[job.jobId.toString()]) {
                         jobRefs.current[job.jobId.toString()]?.scrollIntoView({
@@ -141,8 +141,7 @@ const TalentPoolCandidatePage = () => {
                       }
                     }}
                   >
-                    {job.jobTitle?.charAt(0).toUpperCase() ||
-                      (index + 1).toString()}
+                    {(index + 1).toString()}
                   </Avatar>
                 ))}
               </Grid>

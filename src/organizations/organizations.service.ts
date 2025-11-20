@@ -797,8 +797,8 @@ export class OrganizationsService {
       await this.emailService.sendEmail({
         to: candidate.email,
         subject: `Welcome to ${organization.name} - You've Been Hired!`,
-        html: this.generateEmployeeWelcomeEmail(candidate, organization, dto.jobTitle, dto.startDate),
-        text: this.generateEmployeeWelcomeEmailText(candidate, organization, dto.jobTitle, dto.startDate),
+        html: this.generateEmployeeWelcomeEmail(candidate, organization, dto.startDate),
+        text: this.generateEmployeeWelcomeEmailText(candidate, organization, dto.startDate),
       });
     } catch (error) {
       this.logger.warn(`Failed to send welcome email to ${candidate.email}: ${error.message}`);
@@ -819,7 +819,6 @@ export class OrganizationsService {
         organizationName: organization.name,
         hiredBy: dto.hiredBy,
         startDate: dto.startDate,
-        jobTitle: dto.jobTitle,
       },
       ip,
       userAgent,
@@ -878,10 +877,8 @@ export class OrganizationsService {
   private generateEmployeeWelcomeEmail(
     user: User,
     organization: Organization,
-    jobTitle?: string,
     startDate?: string,
   ): string {
-    const jobTitleText = jobTitle ? ` as ${jobTitle}` : '';
     const startDateText = startDate ? ` starting ${new Date(startDate).toLocaleDateString()}` : '';
 
     return `
@@ -910,7 +907,7 @@ export class OrganizationsService {
             
             <div class="success-box">
                 <strong>✅ Your Application Was Successful!</strong><br>
-                You have been hired${jobTitleText}${startDateText}.
+                You have been hired${startDateText}.
             </div>
             
             <p>We're excited to have you join our team! Your candidate profile has been converted to an employee account, and you now have access to all employee features in the Teamified portal.</p>
@@ -948,10 +945,8 @@ export class OrganizationsService {
   private generateEmployeeWelcomeEmailText(
     user: User,
     organization: Organization,
-    jobTitle?: string,
     startDate?: string,
   ): string {
-    const jobTitleText = jobTitle ? ` as ${jobTitle}` : '';
     const startDateText = startDate ? ` starting ${new Date(startDate).toLocaleDateString()}` : '';
 
     return `
@@ -960,7 +955,7 @@ Congratulations ${user.firstName}!
 Welcome to ${organization.name}
 
 ✅ YOUR APPLICATION WAS SUCCESSFUL!
-You have been hired${jobTitleText}${startDateText}.
+You have been hired${startDateText}.
 
 We're excited to have you join our team! Your candidate profile has been converted to an employee account, and you now have access to all employee features in the Teamified portal.
 

@@ -58,7 +58,7 @@ const InterviewComponent = ({ interview }: { interview: any }) => {
         {isFetching ? (
           <Skeleton width={"30px"}></Skeleton>
         ) : (
-          <Typography variant="body1">{(data as any)?.title || data?.jobTitle}</Typography>
+          <Typography variant="body1">{(data as any)?.title || "Job"}</Typography>
         )}
       </Grid>
       <Grid size={{ xs: 1.5 }}>

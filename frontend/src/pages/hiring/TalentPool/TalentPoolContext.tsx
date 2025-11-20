@@ -12,7 +12,6 @@ import type { Candidate } from "../../../types/hiring/candidate";
 interface Filters {
   yearsOfExperience: [number, number];
   location: string[];
-  jobTitle: string[];
   type: "" | "active" | "disqualified" | null;
   stages: string[];
   clients: string[];
@@ -22,8 +21,6 @@ interface Filters {
 interface FiltersMeta {
   yearsOfExperience: string[];
   location: string[];
-  jobTitle: string[];
-
   stages: string[];
   clients: string[];
 }
@@ -76,7 +73,6 @@ interface TalentPoolContextType {
 const initialFilters: Filters = {
   yearsOfExperience: [0, 15],
   location: [],
-  jobTitle: [],
   type: null,
   stages: [],
   clients: [],
@@ -252,7 +248,6 @@ export const TalentPoolProvider: React.FC<{ children: ReactNode }> = ({
           filters: {
             yearsOfExperience: ``,
             location: currentState.filters.location,
-            jobTitle: currentState.filters.jobTitle,
             type:
               currentState.filters.type === null ||
               currentState.filters.type === ""

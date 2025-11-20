@@ -66,7 +66,7 @@ class JobRequestService {
         jobsCount: jobs.length,
         totalCount,
         hasMore: jobs.length === requestBody.pageSize,
-        firstJob: jobs[0] ? jobs[0].title || jobs[0].jobTitle || 'No title' : 'No jobs'
+        firstJob: jobs[0] ? jobs[0].title || 'No title' : 'No jobs'
       });
 
       // Transform response to match expected format

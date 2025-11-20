@@ -94,7 +94,7 @@ const JobRequestDetails = ({
               color: "text.primary",
             }}
           >
-            {(jobRequest as any).title || jobRequest.jobTitle}
+            {(jobRequest as any).title || "Job Request"}
           </Typography>
           <Typography
             variant="body2"

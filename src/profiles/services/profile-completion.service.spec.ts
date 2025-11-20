@@ -74,7 +74,7 @@ describe('ProfileCompletionService', () => {
       profile.dateOfBirth = new Date('1990-01-01');
       profile.addressLine1 = '123 Test Street';
       profile.city = 'Mumbai';
-      profile.jobTitle = 'Software Engineer';
+
       profile.department = 'Engineering';
       profile.startDate = new Date('2023-01-01');
       profile.emergencyContactName = 'John Doe';
@@ -107,7 +107,7 @@ describe('ProfileCompletionService', () => {
       profile.dateOfBirth = new Date('1990-01-01');
       profile.addressLine1 = '123 Test Street';
       profile.city = 'Mumbai';
-      profile.jobTitle = 'Software Engineer';
+
       profile.department = 'Engineering';
       profile.startDate = new Date('2023-01-01');
       profile.emergencyContactName = 'John Doe';
@@ -131,7 +131,7 @@ describe('ProfileCompletionService', () => {
       profile.dateOfBirth = new Date('1990-01-01');
       profile.addressLine1 = '123 Test Street';
       profile.city = 'Mumbai';
-      profile.jobTitle = 'Software Engineer';
+
       profile.department = 'Engineering';
       profile.startDate = new Date('2023-01-01');
       profile.emergencyContactName = 'Jane Doe';
@@ -151,7 +151,7 @@ describe('ProfileCompletionService', () => {
       profile.dateOfBirth = new Date('1990-01-01');
       profile.addressLine1 = '123 Test Street';
       profile.city = 'Mumbai';
-      profile.jobTitle = 'Software Engineer';
+
       profile.department = 'Engineering';
       profile.startDate = new Date('2023-01-01');
       profile.emergencyContactName = 'Jane Doe';
@@ -184,12 +184,12 @@ describe('ProfileCompletionService', () => {
       expect(missingFields).toContain('dateOfBirth');
       expect(missingFields).toContain('addressLine1');
       expect(missingFields).toContain('city');
-      expect(missingFields).toContain('jobTitle');
+
       expect(missingFields).toContain('department');
       expect(missingFields).toContain('startDate');
       expect(missingFields).toContain('emergencyContactName');
       expect(missingFields).toContain('emergencyContactPhone');
-      expect(missingFields).toHaveLength(9);
+      expect(missingFields).toHaveLength(8);
     });
 
     it('should return only missing mandatory fields', () => {
@@ -203,7 +203,7 @@ describe('ProfileCompletionService', () => {
       expect(missingFields).not.toContain('dateOfBirth');
       expect(missingFields).not.toContain('addressLine1');
       expect(missingFields).toContain('city');
-      expect(missingFields).toContain('jobTitle');
+
     });
 
     it('should return empty array when all mandatory fields are filled', () => {
@@ -211,7 +211,7 @@ describe('ProfileCompletionService', () => {
       profile.dateOfBirth = new Date('1990-01-01');
       profile.addressLine1 = '123 Test Street';
       profile.city = 'Mumbai';
-      profile.jobTitle = 'Software Engineer';
+
       profile.department = 'Engineering';
       profile.startDate = new Date('2023-01-01');
       profile.emergencyContactName = 'John Doe';

@@ -22,7 +22,6 @@ interface CandidateDetails {
   email: string;
   fileName: string;
   jobId: string;
-  jobTitle: string;
   jobDepartment: string;
   stage?: string;
   disqualified?: boolean;
@@ -128,7 +127,7 @@ const Job = ({ candidate }: Props) => {
                     to={`/job-request/${candidate.jobId}?stage=${candidate.stage}`}
                   >
                     <Typography fontWeight={600} fontSize={13}>
-                      {candidate.jobTitle || "Job"}
+                      {candidate.jobDepartment || "Job"}
                     </Typography>
                   </Link>
                 </Grid>

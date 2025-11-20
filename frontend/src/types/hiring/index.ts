@@ -18,7 +18,6 @@ export interface Stage {
 
 export interface JobRequest {
   jobRequestID: string;
-  jobTitle: string;
   jobDescription: string;
   status: 'Open' | 'Completed' | 'Cancelled';
   statusId: 1 | 2 | 3;
@@ -70,7 +69,6 @@ export interface InterviewMeeting {
   candidateName: string;
   candidateEmail: string;
   jobRequestId: string;
-  jobTitle: string;
   title: string;
   startTime: string;
   endTime: string;

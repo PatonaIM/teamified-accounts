@@ -311,7 +311,7 @@ export default function UserDetailPage() {
                   {user.firstName || 'Unknown'} {user.lastName || 'User'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {user.profileData?.title || user.eorProfile?.jobTitle || 'No title'}
+                  {user.profileData?.title || user.eorProfile?.department || 'No department'}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
@@ -510,12 +510,6 @@ export default function UserDetailPage() {
                         <TableRow>
                           <TableCell sx={{ fontWeight: 600, width: '30%' }}>Employee ID</TableCell>
                           <TableCell>{user.eorProfile.employeeId}</TableCell>
-                        </TableRow>
-                      )}
-                      {user.eorProfile.jobTitle && (
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Job Title</TableCell>
-                          <TableCell>{user.eorProfile.jobTitle}</TableCell>
                         </TableRow>
                       )}
                       {user.eorProfile.department && (

@@ -5,7 +5,6 @@ import type { Event } from "react-big-calendar";
 type Props = {
   event: Event & {
     resource?: {
-      jobTitle?: string;
       interviewerName?: string;
       candidateEmail?: string;
       status?: string;
@@ -40,11 +39,6 @@ const InterviewEvent = ({ event }: Props) => {
       <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
         {event.title}
       </Typography>
-      {event.resource?.jobTitle && (
-        <Typography variant="caption" display="block">
-          Job: {event.resource.jobTitle}
-        </Typography>
-      )}
       {event.resource?.interviewerName && (
         <Typography variant="caption" display="block">
           Interviewer: {event.resource.interviewerName}
@@ -112,20 +106,6 @@ const InterviewEvent = ({ event }: Props) => {
         >
           {event.title}
         </Typography>
-        {event.resource?.jobTitle && (
-          <Typography
-            variant="caption"
-            sx={{
-              fontSize: "0.65rem",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              opacity: 0.9,
-            }}
-          >
-            {event.resource.jobTitle}
-          </Typography>
-        )}
         <Typography
           variant="caption"
           sx={{

@@ -25,7 +25,7 @@ const InterviewBody = ({
           <Typography variant="h5">Date & Time</Typography>
         </Grid>
         <Grid size={{ xs: 2 }}>
-          <Typography variant="h5">Job Title</Typography>
+          <Typography variant="h5">Job</Typography>
         </Grid>
         <Grid size={{ xs: 1.5 }}>
           <Typography variant="h5">Candidate name</Typography>

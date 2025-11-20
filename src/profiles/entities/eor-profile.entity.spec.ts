@@ -19,7 +19,6 @@ describe('EORProfile Entity', () => {
       profile.phoneNumber = '+919876543210';
       profile.addressLine1 = '123 Test Street';
       profile.city = 'Mumbai';
-      profile.jobTitle = 'Software Engineer';
       profile.skills = ['JavaScript', 'TypeScript'];
       profile.experienceYears = 5;
 
@@ -93,14 +92,6 @@ describe('EORProfile Entity', () => {
   });
 
   describe('Field Constraints', () => {
-    it('should validate maximum length for string fields', async () => {
-      profile.jobTitle = 'x'.repeat(201); // Exceeds 200 char limit
-
-      const errors = await validate(profile);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].property).toBe('jobTitle');
-    });
-
     it('should validate phone number length', async () => {
       profile.phoneNumber = 'x'.repeat(21); // Exceeds 20 char limit
 

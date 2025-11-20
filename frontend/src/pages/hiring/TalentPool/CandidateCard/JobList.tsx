@@ -19,7 +19,6 @@ interface CandidateDetails {
   email: string;
   fileName: string;
   jobId: string;
-  jobTitle: string;
   jobDepartment: string;
 }
 
@@ -103,7 +102,7 @@ const JobList = ({ candidate }: Props) => {
                         fontSize: 10,
                         fontWeight: 600,
                         bgcolor: getAvatarColorFromTheme(
-                          job.jobTitle || job.jobDepartment,
+                          job.jobDepartment,
                           index,
                           theme,
                         ),

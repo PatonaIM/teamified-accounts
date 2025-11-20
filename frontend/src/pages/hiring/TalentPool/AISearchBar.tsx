@@ -40,7 +40,6 @@ const AISearchBar = (props: Props) => {
       setFilters({
         yearsOfExperience: [0, 15],
         location: [],
-        jobTitle: [],
         type: null,
         stages: [],
         clients: [],
@@ -49,7 +48,6 @@ const AISearchBar = (props: Props) => {
       setFiltersMeta({
         yearsOfExperience: [],
         location: [],
-        jobTitle: [],
         stages: [],
         clients: [],
       });

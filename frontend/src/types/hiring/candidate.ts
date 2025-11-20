@@ -6,7 +6,6 @@ export interface Candidate {
   country?: string;
   countryCode?: string;
   stage?: string;
-  jobTitle?: string;
   location?: string;
   yearsOfExperience?: number;
   salaryIOTF?: number;
@@ -18,7 +17,6 @@ export interface AISearchResponse {
   filtersMeta: {
     yearsOfExperience: string[];
     location: string[];
-    jobTitle: string[];
     stages: string[];
     clients: string[];
   };

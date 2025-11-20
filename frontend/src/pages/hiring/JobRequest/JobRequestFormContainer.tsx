@@ -36,7 +36,7 @@ const JobRequestFormContainer = ({ addNew = true }: Props) => {
               ? [{ label: "New Job Request", to: "/job-request/new" }]
               : [
                   {
-                    label: (data as any)?.title || data?.jobTitle || "Job Request",
+                    label: (data as any)?.title || "Job Request",
                     to: `/job-request/${id}`,
                   },
                   {

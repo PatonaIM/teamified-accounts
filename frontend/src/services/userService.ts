@@ -19,7 +19,6 @@ export interface User {
   updatedAt: string;
   eorProfile?: {
     employeeId: string | null;
-    jobTitle?: string | null;
     department?: string | null;
   };
 }

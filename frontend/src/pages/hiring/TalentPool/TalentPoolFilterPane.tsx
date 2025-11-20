@@ -4,7 +4,6 @@ import { useTalentPool } from "./TalentPoolContext";
 
 const TITLE_MAP = {
   location: "Location",
-  jobTitle: "Job Title",
   stages: "Stages",
   clients: "Clients",
   yearsOfExperience: "Years of Experience",
@@ -46,13 +45,6 @@ const TalentPoolFilterPane = () => {
           title="Location"
           options={filtersMeta.location}
           filterKey="location"
-        />
-      </Grid>
-      <Grid size={{ xs: 12 }}>
-        <GenericFilter
-          title="Job Title"
-          options={filtersMeta.jobTitle}
-          filterKey="jobTitle"
         />
       </Grid>
       <Grid size={{ xs: 12 }}>
