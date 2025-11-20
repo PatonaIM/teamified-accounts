@@ -3,26 +3,17 @@ import {
   Box,
   Typography,
   TextField,
-  FormControlLabel,
-  Checkbox,
   Button,
-  Grid,
   Link,
-  Paper,
-  Avatar,
   InputAdornment,
   IconButton,
   Alert,
   CircularProgress,
-  Fade,
-  Collapse,
+  Divider,
 } from '@mui/material';
 import {
   Visibility,
   VisibilityOff,
-  Email,
-  Lock,
-  Business,
   ArrowBack,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -35,7 +26,6 @@ const LoginPageMUI: React.FC = () => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   
-  // Check for returnUrl query parameter for SSO flows
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/dashboard';
   
@@ -43,15 +33,13 @@ const LoginPageMUI: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -59,30 +47,25 @@ const LoginPageMUI: React.FC = () => {
 
   const validateEmail = () => {
     const newErrors: { [key: string]: string } = {};
-
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
-
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-
     if (!formData.password) {
       newErrors.password = 'Password is required';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -97,7 +80,6 @@ const LoginPageMUI: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Check if email exists
       const response = await fetch('/api/v1/auth/check-email', {
         method: 'POST',
         headers: {
@@ -111,10 +93,8 @@ const LoginPageMUI: React.FC = () => {
       const data = await response.json();
       
       if (data.valid) {
-        // Email exists - show password field
         setStep('password');
       } else {
-        // Email doesn't exist - redirect to signup path selection
         const signupUrl = `/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/dashboard' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
         navigate(signupUrl);
       }
@@ -143,37 +123,25 @@ const LoginPageMUI: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Call the actual authentication service
       await login({
         email: formData.email,
         password: formData.password,
-        rememberMe: formData.rememberMe
+        rememberMe: false
       });
       
-      // Refresh user data in AuthContext before navigation
       await refreshUser();
       
-      // For SSO flows, extract client_id and use the SSO launch API
       if (returnUrl !== '/dashboard' && returnUrl.includes('/api/v1/sso/authorize')) {
-        console.log('SSO flow detected, using launch API');
-        console.log('Original SSO URL:', returnUrl);
-        
         try {
-          // Extract client_id from the authorize URL
           const url = new URL(returnUrl, window.location.origin);
           const clientId = url.searchParams.get('client_id');
           
           if (!clientId) {
-            console.error('No client_id found in SSO URL');
             setErrors({ general: 'Invalid SSO request. Please try again.' });
             setIsLoading(false);
             return;
           }
           
-          console.log('Calling SSO launch API for client:', clientId);
-          
-          // Use the SSO launch endpoint which returns the redirect URL as JSON
-          // This endpoint is authenticated and will generate the auth code and return the redirect URL
           const response = await fetch(`/api/v1/sso/launch/${clientId}`, {
             method: 'GET',
             headers: {
@@ -187,10 +155,8 @@ const LoginPageMUI: React.FC = () => {
           }
           
           const data = await response.json();
-          console.log('SSO launch response:', data);
           
           if (data.redirectUrl) {
-            console.log('Redirecting to:', data.redirectUrl);
             window.location.href = data.redirectUrl;
             return;
           } else {
@@ -198,315 +164,343 @@ const LoginPageMUI: React.FC = () => {
           }
         } catch (error) {
           console.error('SSO launch failed:', error);
-          setErrors({ general: 'SSO redirect failed. Please try again.' });
-          setIsLoading(false);
-          return;
+          setErrors({ general: 'SSO authentication failed. Redirecting to dashboard...' });
+          setTimeout(() => navigate('/dashboard'), 2000);
         }
-      } else if (returnUrl !== '/dashboard') {
-        console.log('Non-SSO redirect after login to:', returnUrl);
-        window.location.href = returnUrl;
       } else {
         navigate(returnUrl);
       }
-    } catch (error) {
-      setErrors({ 
-        general: error instanceof Error ? error.message : 'Login failed. Please try again.' 
-      });
-    } finally {
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        setErrors({ general: 'Invalid email or password. Please try again.' });
+      } else {
+        setErrors({ general: 'Login failed. Please try again.' });
+      }
       setIsLoading(false);
     }
   };
 
-  const handleTogglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
   return (
-    <>
-      {/* Global styles to prevent scrollbars */}
-      <style>
-        {`
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100vh !important;
-            width: 100vw !important;
-            overflow: hidden !important;
-          }
-          #root {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: 100vh !important;
-            width: 100vw !important;
-            overflow: hidden !important;
-          }
-        `}
-      </style>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Left Panel - Purple Gradient */}
       <Box
         sx={{
-          height: '100vh',
-          width: '100vw',
+          flex: 1,
+          background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
           display: 'flex',
-          bgcolor: 'background.default',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-          // Ensure no scrollbars
-          '& *': {
-            boxSizing: 'border-box',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 6,
+          color: 'white',
+          position: 'relative',
+          '@media (max-width: 900px)': {
+            display: 'none',
           },
         }}
       >
-        {/* Left Panel - Branding (Desktop Only) */}
-        <Box
-          sx={{
-            display: { xs: 'none', lg: 'flex' },
-            flex: 1,
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            bgcolor: 'background.paper',
-            color: 'text.primary',
-            padding: 4,
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          {/* Logo */}
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography variant="h1" sx={{ mb: 2, fontWeight: 600 }}>
-              teamified
-            </Typography>
-          </Box>
-
-          {/* Hero Content */}
-          <Box sx={{ maxWidth: 400, textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ mb: 3, opacity: 0.9, lineHeight: 1.6 }}>
-              Welcome to the teamified portal. Handle all your employment needs in one secure platform.
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Right Panel - Login Form */}
-        <Box
-          sx={{
-            flex: { xs: 1, lg: 0.6 },
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: { xs: 2, sm: 4 },
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          {/* Mobile Header (Mobile Only) */}
-          <Box
+        <Box sx={{ maxWidth: 500, textAlign: 'center' }}>
+          <Typography
+            variant="h2"
             sx={{
-              display: { xs: 'block', lg: 'none' },
-              textAlign: 'center',
+              fontWeight: 700,
+              mb: 1,
+              fontSize: '3rem',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              opacity: 0.95,
+              fontSize: '0.875rem',
               mb: 4,
-              color: 'text.primary',
+              fontWeight: 400,
             }}
           >
-            <Typography variant="h4" sx={{ mb: 1, fontWeight: 600 }}>
-              teamified
-            </Typography>
-            <Typography variant="body1" sx={{ opacity: 0.9 }}>
-              Team Member Portal
-            </Typography>
-          </Box>
-
-          {/* Login Form Card */}
-          <Paper
-            elevation={8}
+            Employ with us.
+          </Typography>
+          
+          <Typography
+            variant="h5"
             sx={{
-              width: '100%',
-              maxWidth: 400,
-              padding: { xs: 3, sm: 4 },
-              borderRadius: 3,
-              bgcolor: 'background.paper',
+              fontWeight: 600,
+              mb: 2,
+              fontSize: '1.5rem',
             }}
           >
-            {/* Form Header */}
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Typography variant="h4" sx={{ mb: 1, fontWeight: 600, color: 'text.primary' }}>
-                {step === 'email' ? 'Welcome' : 'Welcome Back'}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {step === 'email' 
-                  ? 'Sign in to your account or create a new one' 
-                  : `Signing in as ${formData.email}`}
-              </Typography>
-            </Box>
-
-            {/* Error Alert */}
-            {errors.general && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {errors.general}
-              </Alert>
-            )}
-
-            {/* Email Step */}
-            <Collapse in={step === 'email'}>
-              <form onSubmit={handleEmailContinue}>
-                <TextField
-                  fullWidth
-                  label="Email Address"
-                  variant="outlined"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  error={!!errors.email}
-                  helperText={errors.email}
-                  disabled={isLoading}
-                  sx={{ mb: 3 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Email color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  autoComplete="email"
-                  autoFocus
-                />
-
-                {/* Continue Button */}
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  disabled={isLoading}
-                  sx={{
-                    mb: 2,
-                    py: 1.5,
-                    textTransform: 'none',
-                    fontSize: '1.1rem',
-                  }}
-                >
-                  {isLoading ? <CircularProgress size={24} /> : 'Continue'}
-                </Button>
-
-                {/* SSO Divider */}
-                {isSupabaseConfigured() && (
-                  <>
-                    <Box sx={{ my: 3, display: 'flex', alignItems: 'center' }}>
-                      <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                      <Typography variant="body2" sx={{ mx: 2, color: 'text.secondary' }}>
-                        or
-                      </Typography>
-                      <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                    </Box>
-
-                    {/* SSO Button */}
-                    <SupabaseLoginButton />
-                  </>
-                )}
-              </form>
-            </Collapse>
-
-            {/* Password Step */}
-            <Collapse in={step === 'password'}>
-              <form onSubmit={handleSubmit}>
-                <TextField
-                  fullWidth
-                  label="Password"
-                  variant="outlined"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  error={!!errors.password}
-                  helperText={errors.password}
-                  disabled={isLoading}
-                  sx={{ mb: 2 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={handleTogglePasswordVisibility} edge="end">
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  autoComplete="current-password"
-                  autoFocus
-                />
-
-                {/* Remember Me & Forgot Password */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.rememberMe}
-                        onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
-                        disabled={isLoading}
-                        color="primary"
-                      />
-                    }
-                    label={<Typography variant="body2">Remember me</Typography>}
-                  />
-                  <Link
-                    href="/reset-password"
-                    variant="body2"
-                    sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-                  >
-                    Forgot password?
-                  </Link>
-                </Box>
-
-                {/* Sign In Button */}
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  disabled={isLoading}
-                  sx={{
-                    mb: 2,
-                    py: 1.5,
-                    textTransform: 'none',
-                    fontSize: '1.1rem',
-                  }}
-                >
-                  {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
-                </Button>
-
-                {/* Back to Email */}
-                <Button
-                  fullWidth
-                  variant="text"
-                  startIcon={<ArrowBack />}
-                  onClick={handleBackToEmail}
-                  disabled={isLoading}
-                  sx={{
-                    textTransform: 'none',
-                  }}
-                >
-                  Back to Email
-                </Button>
-              </form>
-            </Collapse>
-
-            {/* Footer Note */}
-            <Box sx={{ mt: 4, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                By signing in, you agree to our Terms of Service and Privacy Policy
-              </Typography>
-            </Box>
-          </Paper>
+            Welcome to Teamified Accounts
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              opacity: 0.9,
+              lineHeight: 1.6,
+            }}
+          >
+            One account for all Teamified apps: Recruits, events, and seamless employment.
+          </Typography>
         </Box>
       </Box>
-    </>
+
+      {/* Right Panel - Dark Background */}
+      <Box
+        sx={{
+          flex: 1,
+          bgcolor: '#1E1E1E',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 4,
+          '@media (max-width: 900px)': {
+            flex: 'none',
+            width: '100%',
+          },
+        }}
+      >
+        <Box sx={{ width: '100%', maxWidth: 400 }}>
+          {/* Sign in Header */}
+          <Typography
+            variant="h4"
+            sx={{
+              color: 'white',
+              fontWeight: 600,
+              mb: 4,
+              textAlign: 'center',
+            }}
+          >
+            Sign in
+          </Typography>
+
+          {/* Error Alert */}
+          {errors.general && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+              {errors.general}
+            </Alert>
+          )}
+
+          {/* Email Step */}
+          {step === 'email' && (
+            <form onSubmit={handleEmailContinue}>
+              <TextField
+                fullWidth
+                placeholder="Email or phone"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                error={!!errors.email}
+                helperText={errors.email}
+                disabled={isLoading}
+                sx={{
+                  mb: 3,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'transparent',
+                    borderRadius: 2,
+                    '& fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.23)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#A16AE8',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'white',
+                  },
+                  '& .MuiInputBase-input::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    opacity: 1,
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: '#ef4444',
+                  },
+                }}
+              />
+
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={isLoading}
+                sx={{
+                  borderRadius: 2,
+                  py: 1.5,
+                  mb: 3,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                  boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
+                    boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                  },
+                  '&:disabled': {
+                    background: 'rgba(161, 106, 232, 0.5)',
+                  },
+                }}
+              >
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
+              </Button>
+
+              {isSupabaseConfigured() && (
+                <>
+                  <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                      or
+                    </Typography>
+                  </Divider>
+
+                  <SupabaseLoginButton />
+                </>
+              )}
+
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Link
+                  href="/forgot-password"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    '&:hover': {
+                      color: '#A16AE8',
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  Need help? Contact support@teamified.com
+                </Link>
+              </Box>
+            </form>
+          )}
+
+          {/* Password Step */}
+          {step === 'password' && (
+            <form onSubmit={handleSubmit}>
+              <Box sx={{ mb: 3 }}>
+                <Button
+                  startIcon={<ArrowBack />}
+                  onClick={handleBackToEmail}
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textTransform: 'none',
+                    mb: 2,
+                    '&:hover': {
+                      color: '#A16AE8',
+                      bgcolor: 'transparent',
+                    },
+                  }}
+                >
+                  Back
+                </Button>
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                  {formData.email}
+                </Typography>
+              </Box>
+
+              <TextField
+                fullWidth
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                error={!!errors.password}
+                helperText={errors.password}
+                disabled={isLoading}
+                autoFocus
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  mb: 3,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'transparent',
+                    borderRadius: 2,
+                    '& fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.23)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#A16AE8',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'white',
+                  },
+                  '& .MuiInputBase-input::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    opacity: 1,
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: '#ef4444',
+                  },
+                }}
+              />
+
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={isLoading}
+                sx={{
+                  borderRadius: 2,
+                  py: 1.5,
+                  mb: 2,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                  boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
+                    boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                  },
+                  '&:disabled': {
+                    background: 'rgba(161, 106, 232, 0.5)',
+                  },
+                }}
+              >
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign in'}
+              </Button>
+
+              <Box sx={{ textAlign: 'center' }}>
+                <Link
+                  href="/forgot-password"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    '&:hover': {
+                      color: '#A16AE8',
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  Forgot password?
+                </Link>
+              </Box>
+            </form>
+          )}
+        </Box>
+      </Box>
+    </Box>
   );
 };
 
