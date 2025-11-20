@@ -55,36 +55,43 @@ export class UserService {
     const { page, limit, search, status, role, sortBy, sortOrder, clientId } = queryDto;
     const skip = (page - 1) * limit;
 
-    // Build where conditions
-    const whereConditions: any = {};
+    // Use query builder for complex filtering with roles
+    const queryBuilder = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.eorProfile', 'eorProfile')
+      .leftJoin('user.userRoles', 'userRole');
 
+    // Filter by status
     if (status) {
-      whereConditions.status = status;
+      queryBuilder.andWhere('user.status = :status', { status });
     }
 
+    // Filter by clientId
     if (clientId) {
-      whereConditions.clientId = clientId;
+      queryBuilder.andWhere('user.clientId = :clientId', { clientId });
     }
 
+    // Filter by search (firstName, lastName, or email)
     if (search) {
-      whereConditions.firstName = Like(`%${search}%`);
-      // Note: For email search, we'll need to handle this differently
-      // as we can't use OR conditions easily with the current approach
+      queryBuilder.andWhere(
+        '(user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${search}%` }
+      );
     }
 
-    // Build find options
-    const findOptions: FindManyOptions<User> = {
-      where: whereConditions,
-      skip,
-      take: limit,
-      order: {
-        [sortBy]: sortOrder,
-      },
-      relations: ['eorProfile'],
-    };
+    // Filter by role(s) - support comma-separated list
+    if (role) {
+      const roles = role.split(',').map(r => r.trim());
+      queryBuilder.andWhere('userRole.roleType IN (:...roles)', { roles });
+    }
+
+    // Add sorting
+    queryBuilder.orderBy(`user.${sortBy}`, sortOrder);
+
+    // Add pagination
+    queryBuilder.skip(skip).take(limit);
 
     // Get users and total count
-    const [users, total] = await this.userRepository.findAndCount(findOptions);
+    const [users, total] = await queryBuilder.getManyAndCount();
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / limit);
