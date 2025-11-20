@@ -15,6 +15,7 @@ import { PasswordService } from '../../auth/services/password.service';
 import { AuditService } from '../../audit/audit.service';
 import { SupabaseService } from '../../auth/services/supabase.service';
 import { Invitation, InvitationStatus } from '../../invitations/entities/invitation.entity';
+import { AuditLog } from '../../audit/entities/audit-log.entity';
 
 @Injectable()
 export class UserService {
@@ -219,21 +220,21 @@ export class UserService {
     return savedUser;
   }
 
-  async remove(id: string, deletedBy?: string): Promise<void> {
+  async remove(id: string, deletedBy?: string, actorRole: string = 'admin'): Promise<void> {
     const user = await this.findOne(id);
     
-    // Preserve the original email before archiving
-    const originalEmail = user.email;
-    const previousStatus = user.status;
-    const previousIsActive = user.isActive;
+    // Capture user data snapshot before deletion
+    const userEmail = user.email;
+    const userStatus = user.status;
     const deletedAt = new Date();
+    let cancelledCount = 0;
 
-    // Wrap all operations in a transaction to ensure atomicity
+    // Wrap database operations in a transaction
     await this.dataSource.transaction(async (manager) => {
       const userRepo = manager.getRepository(User);
       const invitationRepo = manager.getRepository(Invitation);
 
-      // Cancel pending invitations using TWO separate bulk UPDATEs to avoid OR-clause issues in TypeORM
+      // Cancel pending invitations to avoid blocking re-invitation with same email
       // Update 1: Cancel invitations linked by user ID
       const cancelByUserId = await invitationRepo.update(
         { 
@@ -243,73 +244,55 @@ export class UserService {
         { status: InvitationStatus.CANCELLED }
       );
 
-      // Update 2: Cancel invitations linked by email (for org/client invites where invitedUserId is null)
+      // Update 2: Cancel invitations linked by email
       const cancelByEmail = await invitationRepo.update(
         { 
-          email: originalEmail, 
+          email: userEmail, 
           status: InvitationStatus.PENDING 
         },
         { status: InvitationStatus.CANCELLED }
       );
 
-      const cancelledCount = (cancelByUserId.affected || 0) + (cancelByEmail.affected || 0);
-      if (cancelledCount > 0) {
-        this.logger.log(`Cancelled ${cancelledCount} pending invitation(s) for user ${originalEmail} (${cancelByUserId.affected || 0} by user ID, ${cancelByEmail.affected || 0} by email)`);
-      }
+      cancelledCount = (cancelByUserId.affected || 0) + (cancelByEmail.affected || 0);
 
-      // Soft delete: Set deletedAt timestamp, deactivate, and append timestamp to email to free it up for re-invitation
-      // Append timestamp to email to free up the original email for new invitations
-      // Format: original@email.com_deleted_1732102871858
-      const archivedEmail = `${originalEmail}_deleted_${deletedAt.getTime()}`;
-      user.email = archivedEmail;
-      user.deletedAt = deletedAt;
-      user.isActive = false;
-      await userRepo.save(user);
-
-      this.logger.log(`User ${originalEmail} soft deleted (email archived as ${archivedEmail}, status: ${previousStatus}, was active: ${previousIsActive}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
-
-      // Enqueue Supabase user deletion with original email for external account cleanup
-      try {
-        await this.deletionQueue.add('delete-supabase-user', {
-          userId: user.id,
-          originalEmail,
-          archivedEmail,
+      // Create audit log BEFORE deletion (user record will be gone)
+      // Use transaction manager's repository to ensure audit log participates in transaction
+      const auditRepo = manager.getRepository(AuditLog);
+      const auditLog = auditRepo.create({
+        actorUserId: deletedBy || 'system',
+        actorRole: actorRole,
+        action: 'user_deleted',
+        entityType: 'user',
+        entityId: user.id,
+        changes: {
+          email: userEmail,
+          status: userStatus,
+          cancelledInvitations: cancelledCount,
           deletedAt: deletedAt.toISOString(),
-        });
-        this.logger.log(`Enqueued Supabase deletion for user ${originalEmail}`);
-      } catch (queueError) {
-        this.logger.error(`Failed to enqueue Supabase deletion for user ${originalEmail}:`, queueError);
-        // Re-throw to rollback transaction
-        throw queueError;
-      }
+          hardDelete: true,
+        },
+        ip: null,
+        userAgent: null,
+      });
+      await auditRepo.save(auditLog);
 
-      // Create audit log for deletion
-      try {
-        await this.auditService.log({
-          actorUserId: deletedBy || 'system',
-          actorRole: 'admin',
-          action: 'user_deleted',
-          entityType: 'user',
-          entityId: user.id,
-          changes: {
-            originalEmail,
-            archivedEmail,
-            previousStatus,
-            previousIsActive,
-            cancelledInvitations: cancelledCount,
-            cancelledByUserId: cancelByUserId.affected || 0,
-            cancelledByEmail: cancelByEmail.affected || 0,
-            deletedAt: user.deletedAt.toISOString(),
-            isActive: false,
-          },
-          ip: null,
-          userAgent: null,
-        });
-      } catch (auditError) {
-        this.logger.error('Failed to create audit log for user deletion:', auditError);
-        // Audit log failure should not rollback the transaction, just log it
-      }
+      // Hard delete the user (cascades will handle related entities)
+      await userRepo.remove(user);
     });
+
+    // After successful commit, enqueue Supabase deletion
+    // This prevents inconsistency if transaction rolls back after queue enqueue
+    try {
+      await this.deletionQueue.add('delete-supabase-user', {
+        userId: user.id,
+        email: userEmail,
+        deletedAt: deletedAt.toISOString(),
+      });
+      this.logger.log(`User ${userEmail} hard deleted and Supabase deletion enqueued (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+    } catch (queueError) {
+      this.logger.error(`User ${userEmail} was deleted but Supabase deletion queue failed:`, queueError);
+      // User is already deleted from DB, log the error but don't fail
+    }
   }
 
   async updateStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {
