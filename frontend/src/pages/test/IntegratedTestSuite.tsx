@@ -7,12 +7,16 @@ import {
   Stack,
   Alert,
   Divider,
+  IconButton,
+  Snackbar,
 } from '@mui/material';
 import {
   CheckCircle,
   Login,
   Info,
   Warning,
+  ContentCopy,
+  OpenInNew,
 } from '@mui/icons-material';
 
 interface UserInfo {
@@ -28,6 +32,7 @@ export default function IntegratedTestSuite() {
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
   const callbackProcessedRef = useRef(false);
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
@@ -163,6 +168,20 @@ export default function IntegratedTestSuite() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCopyToken = async () => {
+    if (!accessToken) return;
+    try {
+      await navigator.clipboard.writeText(accessToken);
+      setCopySuccess(true);
+    } catch (err) {
+      console.error('Failed to copy token:', err);
+    }
+  };
+
+  const handleOpenSwagger = () => {
+    window.open(`${apiUrl}/api/docs`, '_blank');
   };
 
   const handleClearSession = async () => {
@@ -319,42 +338,82 @@ export default function IntegratedTestSuite() {
 
           {accessToken && (
             <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Access Token (Truncated)
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Access Token
+                </Typography>
+                <IconButton 
+                  onClick={handleCopyToken}
+                  size="small"
+                  sx={{ 
+                    color: 'primary.main',
+                    '&:hover': { bgcolor: 'action.hover' }
+                  }}
+                  title="Copy token"
+                >
+                  <ContentCopy fontSize="small" />
+                </IconButton>
+              </Box>
               <Box sx={{ 
                 p: 2, 
                 bgcolor: 'action.hover', 
                 borderRadius: 1,
                 fontFamily: 'monospace',
-                fontSize: '0.875rem',
-                wordBreak: 'break-all'
+                fontSize: '0.75rem',
+                wordBreak: 'break-all',
+                maxHeight: '200px',
+                overflowY: 'auto'
               }}>
-                {accessToken.substring(0, 50)}...
+                {accessToken}
               </Box>
             </Paper>
           )}
 
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={handleClearSession}
-            sx={{ 
-              textTransform: 'none', 
-              fontWeight: 600,
-              py: 1.5,
-              borderColor: 'primary.main',
-              color: 'primary.main',
-              '&:hover': {
-                borderColor: 'primary.dark',
-                bgcolor: 'action.hover',
-              }
-            }}
-          >
-            Clear Session & Test Again
-          </Button>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<OpenInNew />}
+              onClick={handleOpenSwagger}
+              sx={{ 
+                textTransform: 'none', 
+                fontWeight: 600,
+                py: 1.5,
+                bgcolor: '#60a5fa',
+                '&:hover': { bgcolor: '#3b82f6' },
+              }}
+            >
+              Open API Swagger UI
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={handleClearSession}
+              sx={{ 
+                textTransform: 'none', 
+                fontWeight: 600,
+                py: 1.5,
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                '&:hover': {
+                  borderColor: 'primary.dark',
+                  bgcolor: 'action.hover',
+                }
+              }}
+            >
+              Clear Session & Test Again
+            </Button>
+          </Stack>
         </Stack>
       )}
+
+      <Snackbar
+        open={copySuccess}
+        autoHideDuration={2000}
+        onClose={() => setCopySuccess(false)}
+        message="Token copied to clipboard!"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }
