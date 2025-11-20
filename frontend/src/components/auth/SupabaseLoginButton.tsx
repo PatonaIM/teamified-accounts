@@ -49,16 +49,24 @@ export const SupabaseLoginButton: React.FC<SupabaseLoginButtonProps> = ({ onErro
         fullWidth
         variant="outlined"
         size="large"
-        startIcon={isLoading ? <CircularProgress size={20} /> : <GoogleIcon />}
+        startIcon={isLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <GoogleIcon />}
         onClick={handleGoogleLogin}
         disabled={isLoading}
         sx={{
           py: 1.5,
-          borderColor: 'divider',
-          color: 'text.primary',
+          borderColor: 'rgba(255, 255, 255, 0.3)',
+          color: 'white',
+          fontWeight: 600,
+          textTransform: 'none',
+          fontSize: '1rem',
+          borderRadius: 2,
           '&:hover': {
-            borderColor: 'primary.main',
-            bgcolor: 'action.hover',
+            borderColor: 'rgba(255, 255, 255, 0.5)',
+            bgcolor: 'rgba(255, 255, 255, 0.05)',
+          },
+          '&:disabled': {
+            color: 'rgba(255, 255, 255, 0.5)',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
           },
         }}
       >
