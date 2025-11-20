@@ -83,8 +83,6 @@ export default function IntegratedTestSuite() {
       const authParams = new URLSearchParams({
         client_id: DEVELOPER_SANDBOX_CLIENT_ID,
         redirect_uri: redirectUri,
-        response_type: 'code',
-        scope: 'openid profile email',
         state: state,
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',
