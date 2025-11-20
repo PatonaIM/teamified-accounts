@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 
 // Types
 export interface CreateInvitationRequest {
@@ -37,31 +37,6 @@ export interface Client {
   name: string;
   code: string;
 }
-
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api';
-
-// Create axios instance
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('teamified_access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 // Invitation API methods
 export const invitationService = {

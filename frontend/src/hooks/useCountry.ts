@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 interface Country {
   id: string;
@@ -22,23 +22,6 @@ interface UseCountryReturn {
   getCountryByUUID: (uuid: string) => Country | undefined;
   getCountryByCode: (code: string) => Country | undefined;
 }
-
-// Create axios instance with auth interceptor
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('teamified_access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 export const useCountry = (): UseCountryReturn => {
   const [countries, setCountries] = useState<Country[]>([]);

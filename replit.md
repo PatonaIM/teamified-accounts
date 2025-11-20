@@ -16,7 +16,17 @@ The backend utilizes **NestJS (TypeScript)** with a modular design. **PostgreSQL
 
 ### Frontend Architecture
 
-The frontend is built with **React 19, TypeScript, and Vite**. **Material-UI (MUI v7)**, styled with a **Tailwind CSS**-based design system, provides a consistent and customizable UI through a dynamic theming system with 5 preset themes and a Theme Editor. **React Router v7** manages declarative and protected routing. State management relies on **React hooks**, and **Axios** handles API communication with interceptors.
+The frontend is built with **React 19, TypeScript, and Vite**. **Material-UI (MUI v7)**, styled with a **Tailwind CSS**-based design system, provides a consistent and customizable UI through a dynamic theming system with 5 preset themes and a Theme Editor. **React Router v7** manages declarative and protected routing. State management relies on **React hooks**.
+
+#### Centralized API Client
+
+All API communication uses a **single, centralized axios instance** (`frontend/src/services/api.ts`) with:
+- **Automatic Token Refresh:** Intercepts 401 errors and refreshes access tokens seamlessly
+- **CSRF Protection:** Built-in CSRF token support for mutating requests  
+- **Consistent Authentication:** All services share the same auth logic, preventing token reuse issues
+- **Request/Response Interceptors:** Automatically adds Authorization headers and handles errors
+
+**Architecture Decision:** After encountering token reuse issues with multiple axios instances, all services were consolidated to use a single client exported from `authService.ts`. This ensures reliable authentication and prevents premature logouts during API requests.
 
 #### Hiring Module
 

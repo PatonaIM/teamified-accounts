@@ -3,7 +3,7 @@
  * Handles all timesheet-related API calls
  */
 
-import axios from 'axios';
+import api from '../api';
 import type {
   Timesheet,
   CreateTimesheetDto,
@@ -20,30 +20,7 @@ import type {
 } from '../../types/timesheets/timesheet.types';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const TIMESHEETS_ENDPOINT = '/v1/timesheets';
-
-// Create axios instance with authentication
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('teamified_access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 // Helper function to build query string
 const buildQueryString = (params: TimesheetQueryParams): string => {

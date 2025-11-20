@@ -3,7 +3,7 @@
  * API service for multi-region payroll configuration
  */
 
-import axios from 'axios';
+import api from '../api';
 import type {
   Country,
   Currency,
@@ -34,42 +34,22 @@ import type {
   StatutoryComponentType,
 } from '../../types/payroll/payroll.types';
 
-// Use VITE_API_BASE_URL which already includes /api
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api';
-
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: `${API_BASE_URL}/v1/payroll`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('teamified_access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 // ==================== Country APIs ====================
 
 export const getCountries = async (includeInactive = false): Promise<Country[]> => {
-  const response = await api.get<Country[]>('/configuration/countries', {
+  const response = await api.get<Country[]>('/v1/payroll/configuration/countries', {
     params: { includeInactive },
   });
   return response.data;
 };
 
 export const getCountry = async (countryCode: string): Promise<Country> => {
-  const response = await api.get<Country>(`/configuration/countries/${countryCode}`);
+  const response = await api.get<Country>(`/v1/payroll/configuration/countries/${countryCode}`);
   return response.data;
 };
 
 export const createCountry = async (data: CreateCountryDto): Promise<Country> => {
-  const response = await api.post<Country>('/configuration/countries', data);
+  const response = await api.post<Country>('/v1/payroll/configuration/countries', data);
   return response.data;
 };
 

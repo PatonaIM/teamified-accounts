@@ -3,7 +3,7 @@
  * API integration for Story 7.8 - Advanced Payroll Administration & Monitoring
  */
 
-import axios from 'axios';
+import api from '../api';
 import type {
   PayrollPeriod,
   CreatePayrollPeriodDto,
@@ -23,30 +23,7 @@ import type {
   EmployeeListItem,
 } from '../../types/payroll-admin/payrollAdmin.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const BASE_URL = '/v1/payroll/admin';
-
-// Create axios instance with base URL
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('teamified_access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
 
 // ==================== Processing Control ====================
 
