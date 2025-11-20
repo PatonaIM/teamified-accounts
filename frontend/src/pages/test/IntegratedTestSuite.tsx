@@ -43,7 +43,6 @@ interface UserInfo {
 }
 
 interface TestResult {
-  name: string;
   status: 'pending' | 'running' | 'success' | 'error';
   message?: string;
   response?: any;
@@ -72,26 +71,53 @@ export default function IntegratedTestSuite() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const callbackProcessedRef = useRef(false);
   const [activeTab, setActiveTab] = useState(0);
-  const [testResults, setTestResults] = useState<TestResult[]>([]);
 
-  const [orgTestData, setOrgTestData] = useState({
-    organizationName: 'Test Org ' + Date.now(),
-    organizationSlug: 'test-org-' + Date.now(),
-    industry: 'Technology',
-    companySize: '11-50',
-    organizationId: '',
-    inviteEmail: '',
-    inviteFirstName: '',
-    inviteLastName: '',
-    inviteRole: 'client_employee',
-    updateName: '',
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+
+  const [fetchOrgsFilters, setFetchOrgsFilters] = useState({
+    page: '1',
+    limit: '10',
+    search: '',
+    industry: '',
+    companySize: '',
+    status: '',
   });
 
-  const [userTestData, setUserTestData] = useState({
-    searchTerm: '',
-    filterRole: '',
-    filterStatus: 'active',
+  const [getOrgId, setGetOrgId] = useState('');
+  
+  const [createOrgData, setCreateOrgData] = useState({
+    name: 'Test Org ' + Date.now(),
+    slug: 'test-org-' + Date.now(),
+    industry: 'Technology',
+    companySize: '11-50',
+  });
+
+  const [deleteOrgId, setDeleteOrgId] = useState('');
+
+  const [emailInviteData, setEmailInviteData] = useState({
+    organizationId: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    roleType: 'client_employee',
+  });
+
+  const [linkInviteData, setLinkInviteData] = useState({
+    organizationId: '',
+    roleType: 'client_employee',
+    maxUses: 1,
+  });
+
+  const [removeUserData, setRemoveUserData] = useState({
+    organizationId: '',
     userId: '',
+  });
+
+  const [editProfileData, setEditProfileData] = useState({
+    organizationId: '',
+    name: '',
+    industry: '',
+    companySize: '',
   });
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
@@ -253,26 +279,8 @@ export default function IntegratedTestSuite() {
     window.location.href = '/test';
   };
 
-  const updateTestResult = (name: string, status: 'pending' | 'running' | 'success' | 'error', message?: string, response?: any, error?: string) => {
-    setTestResults(prev => {
-      const existing = prev.find(r => r.name === name);
-      if (existing) {
-        return prev.map(r => r.name === name ? { ...r, status, message, response, error } : r);
-      }
-      return [...prev, { name, status, message, response, error }];
-    });
-  };
-
-  const runTest = async (testName: string, apiCall: () => Promise<any>) => {
-    updateTestResult(testName, 'running');
-    try {
-      const response = await apiCall();
-      updateTestResult(testName, 'success', 'Test completed successfully', response);
-      return response;
-    } catch (err: any) {
-      updateTestResult(testName, 'error', err.message, null, err.toString());
-      throw err;
-    }
+  const updateTestResult = (key: string, result: TestResult) => {
+    setTestResults(prev => ({ ...prev, [key]: result }));
   };
 
   const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
@@ -294,119 +302,23 @@ export default function IntegratedTestSuite() {
     return data;
   };
 
-  const runOrganizationTests = async () => {
-    setTestResults([]);
-
+  const runTest = async (key: string, apiCall: () => Promise<any>) => {
+    updateTestResult(key, { status: 'running' });
     try {
-      const listResult = await runTest('Fetch Organizations List', () =>
-        apiRequest('v1/organizations?page=1&limit=10')
-      );
-
-      const createResult = await runTest('Create New Organization', () =>
-        apiRequest('v1/organizations', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: orgTestData.organizationName,
-            slug: orgTestData.organizationSlug,
-            industry: orgTestData.industry,
-            companySize: orgTestData.companySize,
-          }),
-        })
-      );
-
-      const createdOrgId = createResult?.id;
-      if (createdOrgId) {
-        setOrgTestData(prev => ({ ...prev, organizationId: createdOrgId }));
-
-        await runTest('Get Organization Details', () =>
-          apiRequest(`v1/organizations/${createdOrgId}`)
-        );
-
-        await runTest('Update Organization Profile', () =>
-          apiRequest(`v1/organizations/${createdOrgId}`, {
-            method: 'PUT',
-            body: JSON.stringify({
-              name: orgTestData.organizationName + ' (Updated)',
-            }),
-          })
-        );
-
-        if (orgTestData.inviteEmail) {
-          await runTest('Send Email Invitation', () =>
-            apiRequest('v1/invitations/send-email', {
-              method: 'POST',
-              body: JSON.stringify({
-                organizationId: createdOrgId,
-                email: orgTestData.inviteEmail,
-                firstName: orgTestData.inviteFirstName,
-                lastName: orgTestData.inviteLastName,
-                roleType: orgTestData.inviteRole,
-              }),
-            })
-          );
-        }
-
-        await runTest('Generate Shareable Invite Link', () =>
-          apiRequest('v1/invitations/generate-link', {
-            method: 'POST',
-            body: JSON.stringify({
-              organizationId: createdOrgId,
-              roleType: orgTestData.inviteRole,
-              maxUses: 1,
-            }),
-          })
-        );
-
-        await runTest('Get Organization Members', () =>
-          apiRequest(`v1/organizations/${createdOrgId}/members`)
-        );
-
-        await runTest('Delete Organization', () =>
-          apiRequest(`v1/organizations/${createdOrgId}`, {
-            method: 'DELETE',
-          })
-        );
-      }
-    } catch (err) {
-      console.error('Test suite error:', err);
-    }
-  };
-
-  const runUserTests = async () => {
-    setTestResults([]);
-
-    try {
-      const listResult = await runTest('Fetch Users List', () => {
-        const params = new URLSearchParams({
-          page: '1',
-          limit: '10',
-          ...(userTestData.searchTerm && { search: userTestData.searchTerm }),
-          ...(userTestData.filterRole && { role: userTestData.filterRole }),
-          ...(userTestData.filterStatus && { status: userTestData.filterStatus }),
-        });
-        return apiRequest(`v1/users?${params}`);
+      const response = await apiCall();
+      updateTestResult(key, { 
+        status: 'success', 
+        message: 'Test completed successfully', 
+        response 
       });
-
-      await runTest('Get Current User Profile', () =>
-        apiRequest('v1/users/me')
-      );
-
-      if (userTestData.userId) {
-        await runTest('Get Specific User Details', () =>
-          apiRequest(`v1/users/${userTestData.userId}`)
-        );
-      }
-
-      if (listResult?.users?.length > 0) {
-        const firstUserId = listResult.users[0].id;
-        setUserTestData(prev => ({ ...prev, userId: firstUserId }));
-
-        await runTest('Get User by ID', () =>
-          apiRequest(`v1/users/${firstUserId}`)
-        );
-      }
-    } catch (err) {
-      console.error('User test suite error:', err);
+      return response;
+    } catch (err: any) {
+      updateTestResult(key, { 
+        status: 'error', 
+        message: err.message, 
+        error: err.toString() 
+      });
+      throw err;
     }
   };
 
@@ -414,84 +326,77 @@ export default function IntegratedTestSuite() {
     navigator.clipboard.writeText(text);
   };
 
-  const renderTestResults = () => {
-    if (testResults.length === 0) return null;
+  const renderTestResult = (key: string) => {
+    const result = testResults[key];
+    if (!result) return null;
 
     return (
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-          Test Results
-        </Typography>
-        <Stack spacing={2}>
-          {testResults.map((result, index) => (
-            <Accordion key={index}>
-              <AccordionSummary expandIcon={<ExpandMore />}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                  {result.status === 'running' && <CircularProgress size={20} />}
-                  {result.status === 'success' && <CheckCircle color="success" />}
-                  {result.status === 'error' && <ErrorIcon color="error" />}
-                  {result.status === 'pending' && <Info color="info" />}
-                  <Typography sx={{ fontWeight: 500 }}>{result.name}</Typography>
-                  <Chip 
-                    label={result.status} 
-                    size="small" 
-                    color={
-                      result.status === 'success' ? 'success' :
-                      result.status === 'error' ? 'error' :
-                      result.status === 'running' ? 'primary' : 'default'
-                    }
-                    sx={{ ml: 'auto' }}
-                  />
+      <Box sx={{ mt: 2 }}>
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+              {result.status === 'running' && <CircularProgress size={20} />}
+              {result.status === 'success' && <CheckCircle color="success" />}
+              {result.status === 'error' && <ErrorIcon color="error" />}
+              <Typography sx={{ fontWeight: 500 }}>Test Result</Typography>
+              <Chip 
+                label={result.status} 
+                size="small" 
+                color={
+                  result.status === 'success' ? 'success' :
+                  result.status === 'error' ? 'error' :
+                  result.status === 'running' ? 'primary' : 'default'
+                }
+                sx={{ ml: 'auto' }}
+              />
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={2}>
+              {result.message && (
+                <Typography variant="body2" color="text.secondary">
+                  {result.message}
+                </Typography>
+              )}
+              {result.error && (
+                <Alert severity="error">
+                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    {result.error}
+                  </Typography>
+                </Alert>
+              )}
+              {result.response && (
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography variant="subtitle2">Response:</Typography>
+                    <Button
+                      size="small"
+                      startIcon={<ContentCopy />}
+                      onClick={() => copyToClipboard(JSON.stringify(result.response, null, 2))}
+                    >
+                      Copy
+                    </Button>
+                  </Box>
+                  <Box
+                    sx={{
+                      p: 2,
+                      bgcolor: 'action.hover',
+                      borderRadius: 1,
+                      fontFamily: 'monospace',
+                      fontSize: '0.75rem',
+                      maxHeight: 300,
+                      overflow: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {JSON.stringify(result.response, null, 2)}
+                  </Box>
                 </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Stack spacing={2}>
-                  {result.message && (
-                    <Typography variant="body2" color="text.secondary">
-                      {result.message}
-                    </Typography>
-                  )}
-                  {result.error && (
-                    <Alert severity="error">
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                        {result.error}
-                      </Typography>
-                    </Alert>
-                  )}
-                  {result.response && (
-                    <Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Typography variant="subtitle2">Response:</Typography>
-                        <Button
-                          size="small"
-                          startIcon={<ContentCopy />}
-                          onClick={() => copyToClipboard(JSON.stringify(result.response, null, 2))}
-                        >
-                          Copy
-                        </Button>
-                      </Box>
-                      <Box
-                        sx={{
-                          p: 2,
-                          bgcolor: 'action.hover',
-                          borderRadius: 1,
-                          fontFamily: 'monospace',
-                          fontSize: '0.75rem',
-                          maxHeight: 300,
-                          overflow: 'auto',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-all',
-                        }}
-                      >
-                        {JSON.stringify(result.response, null, 2)}
-                      </Box>
-                    </Box>
-                  )}
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </Stack>
+              )}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
       </Box>
     );
   };
@@ -648,195 +553,480 @@ export default function IntegratedTestSuite() {
             </Tabs>
 
             <TabPanel value={activeTab} index={0}>
-              <Typography variant="h6" sx={{ mb: 2 }}>Organization Management Tests</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Test organization CRUD operations, invitations, and member management.
-              </Typography>
-
-              <Stack spacing={2} sx={{ mb: 3 }}>
-                <TextField
-                  label="Organization Name"
-                  value={orgTestData.organizationName}
-                  onChange={(e) => setOrgTestData(prev => ({ ...prev, organizationName: e.target.value }))}
-                  fullWidth
-                  size="small"
-                />
-                <TextField
-                  label="Organization Slug"
-                  value={orgTestData.organizationSlug}
-                  onChange={(e) => setOrgTestData(prev => ({ ...prev, organizationSlug: e.target.value }))}
-                  fullWidth
-                  size="small"
-                />
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Industry</InputLabel>
-                    <Select
-                      value={orgTestData.industry}
-                      label="Industry"
-                      onChange={(e) => setOrgTestData(prev => ({ ...prev, industry: e.target.value }))}
+              <Stack spacing={4}>
+                {/* 1. Fetch List of Organizations */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      1. Fetch List of Organizations
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      GET /api/v1/organizations
+                    </Typography>
+                    <Stack spacing={2}>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                        <TextField
+                          label="Page"
+                          type="number"
+                          value={fetchOrgsFilters.page}
+                          onChange={(e) => setFetchOrgsFilters(prev => ({ ...prev, page: e.target.value }))}
+                          size="small"
+                        />
+                        <TextField
+                          label="Limit"
+                          type="number"
+                          value={fetchOrgsFilters.limit}
+                          onChange={(e) => setFetchOrgsFilters(prev => ({ ...prev, limit: e.target.value }))}
+                          size="small"
+                        />
+                      </Box>
+                      <TextField
+                        label="Search"
+                        placeholder="Search by name or slug"
+                        value={fetchOrgsFilters.search}
+                        onChange={(e) => setFetchOrgsFilters(prev => ({ ...prev, search: e.target.value }))}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+                        <TextField
+                          label="Industry"
+                          value={fetchOrgsFilters.industry}
+                          onChange={(e) => setFetchOrgsFilters(prev => ({ ...prev, industry: e.target.value }))}
+                          size="small"
+                        />
+                        <TextField
+                          label="Company Size"
+                          value={fetchOrgsFilters.companySize}
+                          onChange={(e) => setFetchOrgsFilters(prev => ({ ...prev, companySize: e.target.value }))}
+                          size="small"
+                        />
+                        <FormControl size="small">
+                          <InputLabel>Status</InputLabel>
+                          <Select
+                            value={fetchOrgsFilters.status}
+                            label="Status"
+                            onChange={(e) => setFetchOrgsFilters(prev => ({ ...prev, status: e.target.value }))}
+                          >
+                            <MenuItem value="">All</MenuItem>
+                            <MenuItem value="active">Active</MenuItem>
+                            <MenuItem value="inactive">Inactive</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('fetchOrgs', () => {
+                        const params = new URLSearchParams({
+                          page: fetchOrgsFilters.page,
+                          limit: fetchOrgsFilters.limit,
+                          ...(fetchOrgsFilters.search && { search: fetchOrgsFilters.search }),
+                          ...(fetchOrgsFilters.industry && { industry: fetchOrgsFilters.industry }),
+                          ...(fetchOrgsFilters.companySize && { companySize: fetchOrgsFilters.companySize }),
+                          ...(fetchOrgsFilters.status && { status: fetchOrgsFilters.status }),
+                        });
+                        return apiRequest(`v1/organizations?${params}`);
+                      })}
                     >
-                      <MenuItem value="Technology">Technology</MenuItem>
-                      <MenuItem value="Healthcare">Healthcare</MenuItem>
-                      <MenuItem value="Finance">Finance</MenuItem>
-                      <MenuItem value="Education">Education</MenuItem>
-                      <MenuItem value="Retail">Retail</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Company Size</InputLabel>
-                    <Select
-                      value={orgTestData.companySize}
-                      label="Company Size"
-                      onChange={(e) => setOrgTestData(prev => ({ ...prev, companySize: e.target.value }))}
-                    >
-                      <MenuItem value="1-10">1-10</MenuItem>
-                      <MenuItem value="11-50">11-50</MenuItem>
-                      <MenuItem value="51-200">51-200</MenuItem>
-                      <MenuItem value="201-500">201-500</MenuItem>
-                      <MenuItem value="500+">500+</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('fetchOrgs')}
+                </Card>
 
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Email Invitation (Optional)
-                </Typography>
-                <TextField
-                  label="Invite Email"
-                  type="email"
-                  value={orgTestData.inviteEmail}
-                  onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteEmail: e.target.value }))}
-                  fullWidth
-                  size="small"
-                />
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                  <TextField
-                    label="First Name"
-                    value={orgTestData.inviteFirstName}
-                    onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteFirstName: e.target.value }))}
-                    fullWidth
-                    size="small"
-                  />
-                  <TextField
-                    label="Last Name"
-                    value={orgTestData.inviteLastName}
-                    onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteLastName: e.target.value }))}
-                    fullWidth
-                    size="small"
-                  />
-                </Box>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Role</InputLabel>
-                  <Select
-                    value={orgTestData.inviteRole}
-                    label="Role"
-                    onChange={(e) => setOrgTestData(prev => ({ ...prev, inviteRole: e.target.value }))}
-                  >
-                    <MenuItem value="client_employee">Employee</MenuItem>
-                    <MenuItem value="client_hr">HR</MenuItem>
-                    <MenuItem value="client_admin">Admin</MenuItem>
-                    <MenuItem value="client_recruiter">Recruiter</MenuItem>
-                  </Select>
-                </FormControl>
+                {/* 2. Get Organization Details */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      2. Get Organization Details
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      GET /api/v1/organizations/:id
+                    </Typography>
+                    <TextField
+                      label="Organization ID"
+                      placeholder="Enter organization UUID"
+                      value={getOrgId}
+                      onChange={(e) => setGetOrgId(e.target.value)}
+                      fullWidth
+                      size="small"
+                    />
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('getOrgDetails', () => 
+                        apiRequest(`v1/organizations/${getOrgId}`)
+                      )}
+                      disabled={!getOrgId}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('getOrgDetails')}
+                </Card>
+
+                {/* 3. Create New Organization */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      3. Create New Organization
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      POST /api/v1/organizations
+                    </Typography>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Organization Name"
+                        value={createOrgData.name}
+                        onChange={(e) => setCreateOrgData(prev => ({ ...prev, name: e.target.value }))}
+                        size="small"
+                      />
+                      <TextField
+                        label="Organization Slug"
+                        value={createOrgData.slug}
+                        onChange={(e) => setCreateOrgData(prev => ({ ...prev, slug: e.target.value }))}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                        <FormControl size="small">
+                          <InputLabel>Industry</InputLabel>
+                          <Select
+                            value={createOrgData.industry}
+                            label="Industry"
+                            onChange={(e) => setCreateOrgData(prev => ({ ...prev, industry: e.target.value }))}
+                          >
+                            <MenuItem value="Technology">Technology</MenuItem>
+                            <MenuItem value="Healthcare">Healthcare</MenuItem>
+                            <MenuItem value="Finance">Finance</MenuItem>
+                            <MenuItem value="Education">Education</MenuItem>
+                            <MenuItem value="Retail">Retail</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <FormControl size="small">
+                          <InputLabel>Company Size</InputLabel>
+                          <Select
+                            value={createOrgData.companySize}
+                            label="Company Size"
+                            onChange={(e) => setCreateOrgData(prev => ({ ...prev, companySize: e.target.value }))}
+                          >
+                            <MenuItem value="1-10">1-10</MenuItem>
+                            <MenuItem value="11-50">11-50</MenuItem>
+                            <MenuItem value="51-200">51-200</MenuItem>
+                            <MenuItem value="201-500">201-500</MenuItem>
+                            <MenuItem value="500+">500+</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('createOrg', () => 
+                        apiRequest('v1/organizations', {
+                          method: 'POST',
+                          body: JSON.stringify(createOrgData),
+                        })
+                      )}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('createOrg')}
+                </Card>
+
+                {/* 4. Delete Organization */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      4. Delete Organization
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      DELETE /api/v1/organizations/:id
+                    </Typography>
+                    <TextField
+                      label="Organization ID"
+                      placeholder="Enter organization UUID to delete"
+                      value={deleteOrgId}
+                      onChange={(e) => setDeleteOrgId(e.target.value)}
+                      fullWidth
+                      size="small"
+                    />
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      This action cannot be undone. All associated data will be permanently deleted.
+                    </Alert>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('deleteOrg', () => 
+                        apiRequest(`v1/organizations/${deleteOrgId}`, {
+                          method: 'DELETE',
+                        })
+                      )}
+                      disabled={!deleteOrgId}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('deleteOrg')}
+                </Card>
+
+                {/* 5. Invite User via Email */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      5. Invite User to Organization via Email
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      POST /api/v1/invitations/send-email
+                    </Typography>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Organization ID"
+                        placeholder="Enter organization UUID"
+                        value={emailInviteData.organizationId}
+                        onChange={(e) => setEmailInviteData(prev => ({ ...prev, organizationId: e.target.value }))}
+                        size="small"
+                      />
+                      <TextField
+                        label="Email"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={emailInviteData.email}
+                        onChange={(e) => setEmailInviteData(prev => ({ ...prev, email: e.target.value }))}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                        <TextField
+                          label="First Name"
+                          value={emailInviteData.firstName}
+                          onChange={(e) => setEmailInviteData(prev => ({ ...prev, firstName: e.target.value }))}
+                          size="small"
+                        />
+                        <TextField
+                          label="Last Name"
+                          value={emailInviteData.lastName}
+                          onChange={(e) => setEmailInviteData(prev => ({ ...prev, lastName: e.target.value }))}
+                          size="small"
+                        />
+                      </Box>
+                      <FormControl size="small">
+                        <InputLabel>Role</InputLabel>
+                        <Select
+                          value={emailInviteData.roleType}
+                          label="Role"
+                          onChange={(e) => setEmailInviteData(prev => ({ ...prev, roleType: e.target.value }))}
+                        >
+                          <MenuItem value="client_employee">Employee</MenuItem>
+                          <MenuItem value="client_hr">HR</MenuItem>
+                          <MenuItem value="client_admin">Admin</MenuItem>
+                          <MenuItem value="client_recruiter">Recruiter</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('inviteEmail', () => 
+                        apiRequest('v1/invitations/send-email', {
+                          method: 'POST',
+                          body: JSON.stringify(emailInviteData),
+                        })
+                      )}
+                      disabled={!emailInviteData.organizationId || !emailInviteData.email}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('inviteEmail')}
+                </Card>
+
+                {/* 6. Invite User via Link */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      6. Invite User to Organization via Generated Link
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      POST /api/v1/invitations/generate-link
+                    </Typography>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Organization ID"
+                        placeholder="Enter organization UUID"
+                        value={linkInviteData.organizationId}
+                        onChange={(e) => setLinkInviteData(prev => ({ ...prev, organizationId: e.target.value }))}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                        <FormControl size="small">
+                          <InputLabel>Role</InputLabel>
+                          <Select
+                            value={linkInviteData.roleType}
+                            label="Role"
+                            onChange={(e) => setLinkInviteData(prev => ({ ...prev, roleType: e.target.value }))}
+                          >
+                            <MenuItem value="client_employee">Employee</MenuItem>
+                            <MenuItem value="client_hr">HR</MenuItem>
+                            <MenuItem value="client_admin">Admin</MenuItem>
+                            <MenuItem value="client_recruiter">Recruiter</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <TextField
+                          label="Max Uses"
+                          type="number"
+                          value={linkInviteData.maxUses}
+                          onChange={(e) => setLinkInviteData(prev => ({ ...prev, maxUses: parseInt(e.target.value) || 1 }))}
+                          size="small"
+                        />
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('inviteLink', () => 
+                        apiRequest('v1/invitations/generate-link', {
+                          method: 'POST',
+                          body: JSON.stringify(linkInviteData),
+                        })
+                      )}
+                      disabled={!linkInviteData.organizationId}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('inviteLink')}
+                </Card>
+
+                {/* 7. Remove User from Organization */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      7. Remove User from Organization
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      DELETE /api/v1/organizations/:id/members/:userId
+                    </Typography>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Organization ID"
+                        placeholder="Enter organization UUID"
+                        value={removeUserData.organizationId}
+                        onChange={(e) => setRemoveUserData(prev => ({ ...prev, organizationId: e.target.value }))}
+                        size="small"
+                      />
+                      <TextField
+                        label="User ID"
+                        placeholder="Enter user UUID to remove"
+                        value={removeUserData.userId}
+                        onChange={(e) => setRemoveUserData(prev => ({ ...prev, userId: e.target.value }))}
+                        size="small"
+                      />
+                    </Stack>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<PlayArrow />}
+                      onClick={() => runTest('removeUser', () => 
+                        apiRequest(`v1/organizations/${removeUserData.organizationId}/members/${removeUserData.userId}`, {
+                          method: 'DELETE',
+                        })
+                      )}
+                      disabled={!removeUserData.organizationId || !removeUserData.userId}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('removeUser')}
+                </Card>
+
+                {/* 8. Edit Company Profile */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                      8. Edit Company Profile Details
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      PUT /api/v1/organizations/:id
+                    </Typography>
+                    <Stack spacing={2}>
+                      <TextField
+                        label="Organization ID"
+                        placeholder="Enter organization UUID"
+                        value={editProfileData.organizationId}
+                        onChange={(e) => setEditProfileData(prev => ({ ...prev, organizationId: e.target.value }))}
+                        size="small"
+                      />
+                      <TextField
+                        label="New Name (Optional)"
+                        value={editProfileData.name}
+                        onChange={(e) => setEditProfileData(prev => ({ ...prev, name: e.target.value }))}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                        <TextField
+                          label="New Industry (Optional)"
+                          value={editProfileData.industry}
+                          onChange={(e) => setEditProfileData(prev => ({ ...prev, industry: e.target.value }))}
+                          size="small"
+                        />
+                        <TextField
+                          label="New Company Size (Optional)"
+                          value={editProfileData.companySize}
+                          onChange={(e) => setEditProfileData(prev => ({ ...prev, companySize: e.target.value }))}
+                          size="small"
+                        />
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => {
+                        const updateData: any = {};
+                        if (editProfileData.name) updateData.name = editProfileData.name;
+                        if (editProfileData.industry) updateData.industry = editProfileData.industry;
+                        if (editProfileData.companySize) updateData.companySize = editProfileData.companySize;
+                        
+                        return runTest('editProfile', () => 
+                          apiRequest(`v1/organizations/${editProfileData.organizationId}`, {
+                            method: 'PUT',
+                            body: JSON.stringify(updateData),
+                          })
+                        );
+                      }}
+                      disabled={!editProfileData.organizationId}
+                    >
+                      Test Endpoint
+                    </Button>
+                  </CardActions>
+                  {renderTestResult('editProfile')}
+                </Card>
               </Stack>
-
-              <Button
-                variant="contained"
-                startIcon={<PlayArrow />}
-                onClick={runOrganizationTests}
-                fullWidth
-                sx={{ mb: 2 }}
-              >
-                Run All Organization Tests
-              </Button>
-
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  <strong>Tests to be executed:</strong>
-                  <br />• Fetch list of organizations (with filters)
-                  <br />• Create new organization
-                  <br />• Get organization details by ID
-                  <br />• Update organization profile
-                  <br />• Send email invitation (if email provided)
-                  <br />• Generate shareable invite link
-                  <br />• Get organization members with metadata (ID, email, name, roles, join date, status)
-                  <br />• Delete organization
-                </Typography>
-              </Alert>
-
-              {renderTestResults()}
             </TabPanel>
 
             <TabPanel value={activeTab} index={1}>
-              <Typography variant="h6" sx={{ mb: 2 }}>User Management Tests</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Test user listing, filtering, and profile operations.
-              </Typography>
-
-              <Stack spacing={2} sx={{ mb: 3 }}>
-                <TextField
-                  label="Search Users"
-                  placeholder="Search by name or email"
-                  value={userTestData.searchTerm}
-                  onChange={(e) => setUserTestData(prev => ({ ...prev, searchTerm: e.target.value }))}
-                  fullWidth
-                  size="small"
-                />
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-                  <TextField
-                    label="Filter by Role"
-                    value={userTestData.filterRole}
-                    onChange={(e) => setUserTestData(prev => ({ ...prev, filterRole: e.target.value }))}
-                    fullWidth
-                    size="small"
-                    placeholder="e.g., super_admin, client_admin"
-                  />
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Filter by Status</InputLabel>
-                    <Select
-                      value={userTestData.filterStatus}
-                      label="Filter by Status"
-                      onChange={(e) => setUserTestData(prev => ({ ...prev, filterStatus: e.target.value }))}
-                    >
-                      <MenuItem value="active">Active</MenuItem>
-                      <MenuItem value="inactive">Inactive</MenuItem>
-                      <MenuItem value="archived">Archived</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-                <TextField
-                  label="User ID (Optional)"
-                  value={userTestData.userId}
-                  onChange={(e) => setUserTestData(prev => ({ ...prev, userId: e.target.value }))}
-                  fullWidth
-                  size="small"
-                  placeholder="Leave empty to auto-select from list"
-                />
-              </Stack>
-
-              <Button
-                variant="contained"
-                startIcon={<PlayArrow />}
-                onClick={runUserTests}
-                fullWidth
-                sx={{ mb: 2 }}
-              >
-                Run All User Tests
-              </Button>
-
-              <Alert severity="info" sx={{ mb: 2 }}>
+              <Alert severity="info">
                 <Typography variant="body2">
-                  <strong>Tests to be executed:</strong>
-                  <br />• Fetch list of users (with filters)
-                  <br />• Get current user profile
-                  <br />• Get specific user details (if ID provided)
-                  <br />• Get user by ID (auto-selected from list)
+                  User Management tests will be added here in the future.
                 </Typography>
               </Alert>
-
-              {renderTestResults()}
             </TabPanel>
           </Paper>
 

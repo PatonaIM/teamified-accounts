@@ -81,7 +81,7 @@ The user profile page (`/account/profile`) provides Material-UI 3 Expressive Des
 
 #### SSO Integration Test Page
 
-The SSO test page (`/test`) provides a browser-based demonstration of the OAuth 2.0 + PKCE authentication flow. Implementation features include:
+The SSO test page (`/test`) provides a comprehensive API testing interface for Organization Management and User Management endpoints. Implementation features include:
 
 -   **Developer Sandbox Client**: Hardcoded to use `test-client` OAuth client ID, pre-configured in the database as a public client
 -   **PKCE Flow**: Implements SHA-256 code challenge method for secure browser-based authentication without client secrets
@@ -92,6 +92,17 @@ The SSO test page (`/test`) provides a browser-based demonstration of the OAuth 
     4. Exchanges authorization code for access token
     5. Fetches and displays user information
 -   **User Info Display**: After successful authentication shows User ID, Email, Name, Roles, and truncated Access Token
+-   **Organization Management Tests**: 8 individual test sections, each with its own form and test button:
+    1. Fetch list of organizations (with filters for search, industry, company size, status)
+    2. Get organization details by ID
+    3. Create new organization
+    4. Delete organization
+    5. Invite user to organization via email
+    6. Invite user to organization via generated link
+    7. Remove user from organization
+    8. Edit company profile details
+-   **User Management Tests**: Planned section (currently blank, to be outlined)
+-   **Test Result Display**: Each endpoint test shows expandable accordion with status indicator, response data, and copy-to-clipboard functionality
 -   **Session Management**: "Clear Session & Test Again" button resets the test flow
 -   **Public Route**: Always uses light mode theme per public page routing rules
 
