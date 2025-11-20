@@ -145,4 +145,26 @@ export class SsoController {
   async token(@Body() tokenDto: TokenExchangeDto) {
     return await this.ssoService.exchangeToken(tokenDto);
   }
+
+  /**
+   * User Info Endpoint
+   * GET /api/v1/sso/me
+   * 
+   * Returns authenticated user information using the access token
+   * Used by SSO client apps to fetch user details after authentication
+   */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getUserInfo(@Req() req: any) {
+    const userId = req.user.sub;
+    
+    // Return user information from JWT payload
+    return {
+      id: userId,
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      roles: req.user.roles || [],
+    };
+  }
 }
