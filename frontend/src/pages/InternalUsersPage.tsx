@@ -75,11 +75,13 @@ const InternalUsersPage: React.FC = () => {
         page: page + 1,
         limit: rowsPerPage,
         search: searchQuery || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        status: statusFilter !== 'all' ? statusFilter : 'active',
         role: INTERNAL_ROLES,
       });
 
-      setUsers(response.users || []);
+      // Filter out archived users from the results (soft deleted)
+      const filteredUsers = (response.users || []).filter(user => user.status !== 'archived');
+      setUsers(filteredUsers);
       setTotalCount(response.pagination?.total || 0);
     } catch (err: any) {
       setError(err.message || 'Failed to load internal users');
@@ -114,12 +116,12 @@ const InternalUsersPage: React.FC = () => {
     setDeleting(true);
     try {
       await userService.deleteUser(userToDelete.id);
-      setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} deleted successfully!`);
+      setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} archived successfully!`);
       setShowDeleteDialog(false);
       setUserToDelete(null);
       fetchUsers();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete user');
+      setError(err.message || 'Failed to archive user');
       setShowDeleteDialog(false);
       setUserToDelete(null);
     } finally {
@@ -392,11 +394,11 @@ const InternalUsersPage: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Delete User</DialogTitle>
+        <DialogTitle>Archive User</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email})?
-            This action cannot be undone and will remove all associated data including roles, sessions, and audit logs.
+            Are you sure you want to archive {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email})?
+            This will hide them from the active user list, but their data will be preserved for audit purposes.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -405,12 +407,12 @@ const InternalUsersPage: React.FC = () => {
           </Button>
           <Button
             onClick={handleConfirmDelete}
-            color="error"
+            color="warning"
             variant="contained"
             disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? 'Archiving...' : 'Archive'}
           </Button>
         </DialogActions>
       </Dialog>

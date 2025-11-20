@@ -214,56 +214,32 @@ export class UserService {
   async remove(id: string, deletedBy?: string): Promise<void> {
     const user = await this.findOne(id);
 
-    if (user.supabaseUserId) {
-      try {
-        await this.supabaseService.deleteSupabaseUser(user.supabaseUserId);
-        this.logger.log(`Successfully deleted Supabase user: ${user.email}`);
-      } catch (error) {
-        this.logger.warn(
-          `Failed to delete Supabase user ${user.email} immediately. Queueing for retry: ${error.message}`
-        );
+    // Soft delete: Set status to archived and isActive to false
+    user.status = 'archived';
+    user.isActive = false;
+    await this.userRepository.save(user);
 
-        await this.deletionQueue.add(
-          {
-            supabaseUserId: user.supabaseUserId,
-            email: user.email,
-            portalUserId: user.id,
-            deletedBy: deletedBy || 'system',
-          },
-          {
-            attempts: 3,
-            backoff: {
-              type: 'exponential',
-              delay: 60000,
-            },
-            removeOnComplete: true,
-            removeOnFail: false,
-          }
-        );
+    this.logger.log(`User ${user.email} archived (soft deleted) by ${deletedBy || 'system'}`);
 
-        this.logger.log(`Queued Supabase user deletion for retry: ${user.email}`);
-      }
-    }
-
-    await this.userRepository.remove(user);
-
+    // Create audit log for archival
     try {
       await this.auditService.log({
         actorUserId: deletedBy || 'system',
         actorRole: 'admin',
-        action: 'user_deletion',
+        action: 'user_archived',
         entityType: 'user',
         entityId: user.id,
         changes: {
           email: user.email,
-          supabaseUserId: user.supabaseUserId,
-          deletedAt: new Date().toISOString(),
+          previousStatus: user.status,
+          newStatus: 'archived',
+          archivedAt: new Date().toISOString(),
         },
         ip: null,
         userAgent: null,
       });
     } catch (auditError) {
-      this.logger.error('Failed to create audit log for user deletion:', auditError);
+      this.logger.error('Failed to create audit log for user archival:', auditError);
     }
   }
 
