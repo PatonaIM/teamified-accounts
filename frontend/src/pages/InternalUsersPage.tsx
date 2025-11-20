@@ -144,8 +144,9 @@ const InternalUsersPage: React.FC = () => {
 
   const getRoleDisplay = (user: User) => {
     // Get the primary role from userRoles array
-    const primaryRole = user.userRoles && user.userRoles.length > 0 
-      ? user.userRoles[0].roleType 
+    const userRoles = (user as any).userRoles;
+    const primaryRole = userRoles && userRoles.length > 0 
+      ? userRoles[0].roleType 
       : 'N/A';
     
     const roleMap: Record<string, string> = {
@@ -235,12 +236,12 @@ const InternalUsersPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>User</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Last Login</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell sx={{ width: '25%' }}>User</TableCell>
+              <TableCell sx={{ width: '25%' }}>Email</TableCell>
+              <TableCell sx={{ width: '15%' }}>Role</TableCell>
+              <TableCell sx={{ width: '12%' }}>Status</TableCell>
+              <TableCell sx={{ width: '15%' }}>Last Login</TableCell>
+              <TableCell align="right" sx={{ width: '8%' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -265,10 +266,10 @@ const InternalUsersPage: React.FC = () => {
                   hover
                   sx={{ cursor: 'pointer' }}
                 >
-                  <TableCell onClick={() => handleUserClick(user)}>
+                  <TableCell onClick={() => handleUserClick(user)} sx={{ width: '25%' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Avatar
-                        src={resolveProfilePictureUrl(user.profilePicture) || undefined}
+                        src={resolveProfilePictureUrl((user as any).profilePicture) || undefined}
                         alt={`${user.firstName} ${user.lastName}`}
                         sx={{
                           width: 36,
@@ -301,41 +302,29 @@ const InternalUsersPage: React.FC = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell onClick={() => handleUserClick(user)}>
+                  <TableCell onClick={() => handleUserClick(user)} sx={{ width: '25%' }}>
                     <Typography variant="body2">{user.email}</Typography>
                   </TableCell>
-                  <TableCell onClick={() => handleUserClick(user)}>
+                  <TableCell onClick={() => handleUserClick(user)} sx={{ width: '15%' }}>
                     <Chip
                       label={getRoleDisplay(user)}
                       size="small"
                       sx={{ bgcolor: '#e3f2fd', color: '#1976d2' }}
                     />
                   </TableCell>
-                  <TableCell onClick={() => handleUserClick(user)}>
+                  <TableCell onClick={() => handleUserClick(user)} sx={{ width: '12%' }}>
                     <Chip
-                      label={
-                        user.status === 'invited'
-                          ? 'Invited'
-                          : user.isActive
-                          ? 'Active'
-                          : 'Inactive'
-                      }
+                      label={user.isActive ? 'Active' : 'Inactive'}
                       size="small"
-                      color={
-                        user.status === 'invited'
-                          ? 'warning'
-                          : user.isActive
-                          ? 'success'
-                          : 'default'
-                      }
+                      color={user.isActive ? 'success' : 'default'}
                     />
                   </TableCell>
-                  <TableCell onClick={() => handleUserClick(user)}>
+                  <TableCell onClick={() => handleUserClick(user)} sx={{ width: '15%' }}>
                     <Typography variant="body2" color="text.secondary">
                       {formatLastLogin(user.lastLoginAt)}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="right" sx={{ width: '8%' }}>
                     {!(currentUser && user.email === currentUser.email) && (
                       <Tooltip title="Delete User">
                         <IconButton
