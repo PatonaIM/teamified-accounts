@@ -21,7 +21,7 @@ import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
 import DocsPage from './pages/DocsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultitenancyIntegrationPage from './pages/docs/MultitenancyIntegrationPage';
-import OAuthClientsPage from './pages/OAuthClientsPage';
+import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import InternalUsersPage from './pages/InternalUsersPage';
 import TenantManagementPage from './pages/TenantManagementPage';
@@ -153,7 +153,7 @@ function App() {
                     path="tools/oauth-configuration" 
                     element={
                       <SuperAdminRoute>
-                        <OAuthClientsPage />
+                        <OAuthConfigurationPage />
                       </SuperAdminRoute>
                     } 
                   />
