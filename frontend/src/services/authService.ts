@@ -38,7 +38,8 @@ let loginAttempts = 0;
 let lockoutUntil: number | null = null;
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api';
+// Use /api for production (same-origin) or VITE_API_BASE_URL for custom backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // Create axios instance with interceptors
 const api = axios.create({

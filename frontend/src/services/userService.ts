@@ -94,7 +94,7 @@ class UserService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api';
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
   }
 
   private getAuthHeaders() {

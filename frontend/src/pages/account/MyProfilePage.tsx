@@ -109,7 +109,7 @@ export default function MyProfilePage() {
       formData.append('file', file);
 
       const token = localStorage.getItem('teamified_access_token');
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
       const response = await axios.post(`${baseURL}/v1/users/me/profile-picture`, formData, {
         headers: {
@@ -145,7 +145,7 @@ export default function MyProfilePage() {
 
       // Update profile via API with proper authorization
       const token = localStorage.getItem('teamified_access_token');
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
       
       await axios.put(`${baseURL}/v1/users/me/profile`, {
         profileData: {
