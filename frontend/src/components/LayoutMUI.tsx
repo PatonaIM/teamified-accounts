@@ -6,23 +6,19 @@ import {
   IconButton,
   Typography,
   useMediaQuery,
-  useTheme as useMuiTheme,
+  useTheme,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
 import SidebarMUI from './SidebarMUI';
 import ClientPicker from './ClientPicker';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface LayoutMUIProps {
   children: React.ReactNode;
 }
 
 const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
-  const muiTheme = useMuiTheme();
-  const { mode, toggleColorMode } = useTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('lg'));
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -73,7 +69,7 @@ const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
           <AppBar
             position="fixed"
             sx={{
-              zIndex: muiTheme.zIndex.drawer + 1,
+              zIndex: theme.zIndex.drawer + 1,
               bgcolor: 'background.paper',
               color: 'text.primary',
               boxShadow: 1,
@@ -94,9 +90,6 @@ const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
               <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
                 teamified
               </Typography>
-              <IconButton onClick={toggleColorMode} color="inherit" sx={{ mr: 1 }}>
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
               <ClientPicker />
             </Toolbar>
           </AppBar>
@@ -116,9 +109,6 @@ const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
           >
             <Toolbar sx={{ minHeight: 64 }}>
               <Box sx={{ flexGrow: 1 }} />
-              <IconButton onClick={toggleColorMode} color="inherit" sx={{ mr: 1 }}>
-                {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-              </IconButton>
               <ClientPicker />
             </Toolbar>
           </AppBar>

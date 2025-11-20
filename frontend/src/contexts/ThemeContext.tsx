@@ -15,15 +15,12 @@ interface ThemeContextType {
   loadCustomTheme: (theme: UserTheme) => void;
   clearCustomTheme: () => void;
   refreshActiveTheme: () => Promise<void>;
-  mode: 'light' | 'dark';
-  toggleColorMode: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'teamified_theme';
 const CUSTOM_THEME_STORAGE_KEY = 'teamified_custom_theme';
-const MODE_STORAGE_KEY = 'teamified_color_mode';
 
 const getStoredTheme = (): ThemeMode | 'custom' => {
   if (typeof window === 'undefined') {
@@ -58,24 +55,6 @@ const isUserAuthenticated = (): boolean => {
     return !!token;
   } catch {
     return false;
-  }
-};
-
-const getStoredMode = (isAuthenticated: boolean): 'light' | 'dark' => {
-  // Default to light mode for unauthenticated users
-  if (!isAuthenticated) {
-    return 'light';
-  }
-  
-  if (typeof window === 'undefined') {
-    return 'light';
-  }
-  
-  try {
-    const stored = localStorage.getItem(MODE_STORAGE_KEY);
-    return (stored === 'dark' ? 'dark' : 'light');
-  } catch {
-    return 'light';
   }
 };
 
@@ -251,29 +230,16 @@ const applyCustomTheme = (baseTheme: Theme, customConfig: ThemeConfig): Theme =>
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentTheme, setCurrentTheme] = useState<ThemeMode | 'custom'>(getStoredTheme());
   const [customTheme, setCustomTheme] = useState<UserTheme | null>(getStoredCustomTheme());
-  const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated());
-  const [mode, setMode] = useState<'light' | 'dark'>(getStoredMode(isUserAuthenticated()));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const authStatus = isUserAuthenticated();
     setIsAuthenticated(authStatus);
 
-    // Reset to light mode when user logs out
-    if (!authStatus && isAuthenticated) {
-      setMode('light');
-    }
-
     const interval = setInterval(() => {
       const newAuthStatus = isUserAuthenticated();
       if (newAuthStatus !== isAuthenticated) {
         setIsAuthenticated(newAuthStatus);
-        // Reset to light mode on logout
-        if (!newAuthStatus) {
-          setMode('light');
-        } else {
-          // Load saved mode preference on login
-          setMode(getStoredMode(true));
-        }
       }
     }, 1000);
 
@@ -339,34 +305,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  const toggleColorMode = () => {
-    const newMode = mode === 'light' ? 'dark' : 'light';
-    setMode(newMode);
-    
-    // Only save preference for authenticated users
-    if (isAuthenticated && typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(MODE_STORAGE_KEY, newMode);
-      } catch (error) {
-        console.error('Failed to save mode preference:', error);
-      }
-    }
-  };
-
   let theme = createAppTheme(currentTheme === 'custom' ? 'teamified' : currentTheme);
 
   if (currentTheme === 'custom' && customTheme) {
     theme = applyCustomTheme(theme, customTheme.themeConfig);
   }
-
-  // Override the theme mode based on user preference
-  theme = createTheme({
-    ...theme,
-    palette: {
-      ...theme.palette,
-      mode,
-    },
-  });
 
   return (
     <ThemeContext.Provider
@@ -377,8 +320,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         loadCustomTheme,
         clearCustomTheme,
         refreshActiveTheme,
-        mode,
-        toggleColorMode,
       }}
     >
       <MuiThemeProvider theme={theme}>
