@@ -259,7 +259,7 @@ export class UserService {
       // Use transaction manager's repository to ensure audit log participates in transaction
       const auditRepo = manager.getRepository(AuditLog);
       const auditLog = auditRepo.create({
-        actorUserId: deletedBy || 'system',
+        actorUserId: deletedBy || null,
         actorRole: actorRole,
         action: 'user_deleted',
         entityType: 'user',
