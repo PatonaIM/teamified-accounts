@@ -6,6 +6,7 @@ import type { User } from '../services/authService';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isAuthenticated: boolean;
   refreshUser: () => Promise<void>;
   clearUser: () => void;
 }
@@ -54,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []); // Only run once on mount
 
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, clearUser }}>
+    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, refreshUser, clearUser }}>
       {children}
     </AuthContext.Provider>
   );
