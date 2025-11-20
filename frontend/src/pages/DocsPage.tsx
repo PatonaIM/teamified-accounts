@@ -847,10 +847,10 @@ Authorization: Bearer <access_token>
                 Test User Accounts
               </Typography>
 
-              <Alert severity="warning" sx={{ mb: 3 }}>
+              <Alert severity="info" sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  <strong>Important:</strong> These test accounts are for development and testing purposes only. 
-                  All test accounts use the password: <code>Admin123!</code>
+                  <strong>Note:</strong> These test accounts are for development and testing purposes only. 
+                  Contact your administrator for access credentials.
                 </Typography>
               </Alert>
 
@@ -878,28 +878,34 @@ Authorization: Bearer <access_token>
                           <TableCell>Global - Full Platform Access</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell><code>czar.dy@teamified.com</code></TableCell>
-                          <TableCell>Czar Dy</TableCell>
-                          <TableCell><Chip label="Super Admin" color="error" size="small" /></TableCell>
-                          <TableCell>Global - Full Platform Access</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell><code>michael.ang@teamified.com</code></TableCell>
-                          <TableCell>Michael Ang</TableCell>
-                          <TableCell><Chip label="Super Admin" color="error" size="small" /></TableCell>
-                          <TableCell>Global - Full Platform Access</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell><code>wagtestnlwfinternal@teamified.com</code></TableCell>
-                          <TableCell>WagtestNLWFFirst WagtestNLWFLast</TableCell>
+                          <TableCell><code>sarah.chen@teamified.com</code></TableCell>
+                          <TableCell>Sarah Chen</TableCell>
                           <TableCell><Chip label="Internal HR" color="primary" size="small" /></TableCell>
                           <TableCell>Global - HR Operations</TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell><code>wagtest.nlwf@teamified.com</code></TableCell>
-                          <TableCell>WagtestNLWFFirst WagtestNLWFLast</TableCell>
-                          <TableCell><Chip label="Internal Member" color="primary" size="small" /></TableCell>
-                          <TableCell>Global - General Access</TableCell>
+                          <TableCell><code>marcus.johnson@teamified.com</code></TableCell>
+                          <TableCell>Marcus Johnson</TableCell>
+                          <TableCell><Chip label="Internal Recruiter" color="primary" size="small" /></TableCell>
+                          <TableCell>Global - Recruiting & ATS</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>elena.rodriguez@teamified.com</code></TableCell>
+                          <TableCell>Elena Rodriguez</TableCell>
+                          <TableCell><Chip label="Internal Account Manager" color="primary" size="small" /></TableCell>
+                          <TableCell>Global - Client Management</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>david.kim@teamified.com</code></TableCell>
+                          <TableCell>David Kim</TableCell>
+                          <TableCell><Chip label="Internal Finance" color="primary" size="small" /></TableCell>
+                          <TableCell>Global - Financial Operations</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><code>lisa.wong@teamified.com</code></TableCell>
+                          <TableCell>Lisa Wong</TableCell>
+                          <TableCell><Chip label="Internal Marketing" color="primary" size="small" /></TableCell>
+                          <TableCell>Global - Marketing (View-only)</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -1036,7 +1042,7 @@ Authorization: Bearer <access_token>
                 <Alert severity="success">
                   <Typography variant="body2">
                     <strong>Testing Tip:</strong> Use these accounts to test different permission levels, organization scoping, 
-                    and SSO flows. All passwords are <code>Admin123!</code> for consistency across test accounts.
+                    and SSO flows. Contact your administrator for test account credentials.
                   </Typography>
                 </Alert>
               </Stack>
