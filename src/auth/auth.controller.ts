@@ -842,7 +842,7 @@ export class AuthController {
       6. Send welcome email
       
       ## What Gets Created:
-      - User account with client_admin role (tenant-scoped)
+      - User account with client_admin role (organization-scoped)
       - Organization with free tier subscription
       - Organization membership record
       - JWT access and refresh tokens

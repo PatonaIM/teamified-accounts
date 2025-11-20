@@ -38,7 +38,7 @@ export class JwtTokenService {
       email: user.email,
       roles: userRoles.length > 0 ? userRoles : ['EOR'], // Use actual roles or default to EOR
       ...(user.clientId && { clientId: user.clientId }), // Include clientId if user has one
-      ...(clientName && { clientName }), // Include clientName for multi-tenant apps
+      ...(clientName && { clientName }), // Include clientName for multi-organization apps
       jti: crypto.randomUUID(),
     };
 

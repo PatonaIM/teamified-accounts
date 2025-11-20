@@ -55,7 +55,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const TenantManagementPage: React.FC = () => {
+const OrganizationManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -1420,4 +1420,4 @@ const TenantManagementPage: React.FC = () => {
   );
 };
 
-export default TenantManagementPage;
+export default OrganizationManagementPage;

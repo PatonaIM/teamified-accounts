@@ -45,7 +45,7 @@ export class OrganizationsController {
   @ApiOperation({ 
     summary: 'Create a new organization',
     description: `
-      Create a new tenant organization (super_admin only).
+      Create a new organization (super_admin only).
       
       ## Process:
       1. Validate organization data and slug uniqueness
@@ -238,7 +238,7 @@ export class OrganizationsController {
       ## Authorization:
       - super_admin: Access any organization
       - internal_*: Access any organization
-      - client_admin: Access only their own organization (tenant scope validated)
+      - client_admin: Access only their own organization (organization scope validated)
     `
   })
   @ApiParam({
@@ -284,7 +284,7 @@ export class OrganizationsController {
       
       ## Authorization:
       - super_admin: Can update any organization
-      - client_admin: Can update only their own organization (tenant scope validated)
+      - client_admin: Can update only their own organization (organization scope validated)
       
       ## Validation:
       - Slug must be unique across all organizations
@@ -428,7 +428,7 @@ export class OrganizationsController {
       ## Authorization:
       - super_admin: Access any organization's members
       - internal_*: Access any organization's members
-      - client_admin/client_hr: Access only their own organization's members (tenant scope validated)
+      - client_admin/client_hr: Access only their own organization's members (organization scope validated)
       
       ## Response:
       - List of members with user details and roles
@@ -473,13 +473,13 @@ export class OrganizationsController {
       
       ## Authorization:
       - super_admin: Can add members to any organization
-      - client_admin: Can add members only to their own organization (tenant scope validated)
+      - client_admin: Can add members only to their own organization (organization scope validated)
       
       ## Process:
       1. Validate user exists and organization exists
       2. Check user is not already a member
       3. Create organization_member record
-      4. Create user_role record with tenant scope
+      4. Create user_role record with organization scope
       
       ## Role Restrictions:
       - Only client_* roles allowed (client_admin, client_hr, client_finance, client_recruiter, client_employee)
@@ -540,7 +540,7 @@ export class OrganizationsController {
       
       ## Authorization:
       - super_admin: Can update roles in any organization
-      - client_admin: Can update roles only in their own organization (tenant scope validated)
+      - client_admin: Can update roles only in their own organization (organization scope validated)
       
       ## Role Restrictions:
       - Only client_* roles allowed
@@ -604,11 +604,11 @@ export class OrganizationsController {
       
       ## Authorization:
       - super_admin: Can remove members from any organization
-      - client_admin: Can remove members only from their own organization (tenant scope validated)
+      - client_admin: Can remove members only from their own organization (organization scope validated)
       
       ## Process:
       1. Remove organization_member record
-      2. Remove associated user_role with tenant scope
+      2. Remove associated user_role with organization scope
       
       ## Note:
       - User's other roles and memberships remain unchanged
@@ -666,7 +666,7 @@ export class OrganizationsController {
       
       ## Authorization:
       - super_admin, internal_hr, internal_recruiter: Can convert for any organization
-      - client_admin, client_hr, client_recruiter: Can convert for their own organization only (tenant scope validated)
+      - client_admin, client_hr, client_recruiter: Can convert for their own organization only (organization scope validated)
       
       ## Process:
       1. Validates organization exists
@@ -674,7 +674,7 @@ export class OrganizationsController {
       3. Validates hiredBy user exists and is an active member of the organization
       4. Checks candidate is not already a member (prevents duplicates)
       5. Creates organization membership
-      6. Assigns client_employee role with tenant scope
+      6. Assigns client_employee role with organization scope
       7. Sends welcome email to the candidate
       8. Creates comprehensive audit logs
       

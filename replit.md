@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Teamified Team Member Portal is an Employer of Record (EOR) management system designed to streamline the entire employee lifecycle, from candidate onboarding to employment, payroll, timesheets, and leave management across India, Philippines, and Australia. It aims to consolidate fragmented HR processes into a single platform, offering self-service capabilities, robust audit trails, and compliance tracking, thereby providing significant market potential for EOR operations. The platform supports multi-tenant client management and granular role-based access control for Admins, HR Managers, Client Users, EOR employees, and Candidates.
+The Teamified Team Member Portal is an Employer of Record (EOR) management system designed to streamline the entire employee lifecycle, from candidate onboarding to employment, payroll, timesheets, and leave management across India, Philippines, and Australia. It aims to consolidate fragmented HR processes into a single platform, offering self-service capabilities, robust audit trails, and compliance tracking, thereby providing significant market potential for EOR operations. The platform supports multi-organization client management and granular role-based access control for Admins, HR Managers, Client Users, EOR employees, and Candidates.
 
 ## User Preferences
 

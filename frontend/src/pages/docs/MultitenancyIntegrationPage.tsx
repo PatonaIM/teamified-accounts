@@ -118,12 +118,12 @@ const MyComponent = () => {
         Multitenancy Integration Guide
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Understanding Teamified's multi-tenant architecture and client scoping
+        Understanding Teamified's multi-organization architecture and client scoping
       </Typography>
 
       <Alert severity="info" sx={{ mb: 4 }}>
         <Typography variant="body2">
-          Teamified implements a <strong>multi-tenant architecture</strong> where each client organization
+          Teamified implements a <strong>multi-organization architecture</strong> where each client organization
           has isolated data with automatic scoping based on JWT claims.
         </Typography>
       </Alert>

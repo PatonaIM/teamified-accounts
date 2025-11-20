@@ -180,7 +180,7 @@ async function bootstrap() {
         ### 🔐 Core Platform
         - **Authentication & Authorization** - JWT-based authentication with role-based access control (RBAC)
         - **OAuth 2.0 SSO Provider** - Federated authentication for third-party applications
-        - **Multi-Tenant Architecture** - Client scoping with granular permission management
+        - **Multi-Organization Architecture** - Client scoping with granular permission management
         - **Audit Trail** - Comprehensive logging of all critical operations for compliance
         
         ### 👥 HR Operations

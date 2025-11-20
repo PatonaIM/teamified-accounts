@@ -25,7 +25,7 @@ import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import InternalUsersPage from './pages/InternalUsersPage';
 import UserDetailPage from './pages/UserDetailPage';
-import TenantManagementPage from './pages/TenantManagementPage';
+import OrganizationManagementPage from './pages/OrganizationManagementPage';
 import CandidateUsersPage from './pages/CandidateUsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import MyOrganizationPage from './pages/MyOrganizationPage';
@@ -189,7 +189,7 @@ function App() {
                     path="organizations" 
                     element={
                       <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
-                        <TenantManagementPage />
+                        <OrganizationManagementPage />
                       </RoleBasedRoute>
                     } 
                   />

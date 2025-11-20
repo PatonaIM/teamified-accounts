@@ -596,7 +596,7 @@ app.get('/api/protected', verifyAuth, (req, res) => {
     "firstName": "John",
     "lastName": "Doe",
     "roles": ["admin", "hr_manager"],  // For RBAC
-    "clientId": "123",                 // Multi-tenant support
+    "clientId": "123",                 // Organization support
     "clientName": "Acme Corp"
   }
 }`}
