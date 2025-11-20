@@ -116,12 +116,12 @@ const InternalUsersPage: React.FC = () => {
     setDeleting(true);
     try {
       await userService.deleteUser(userToDelete.id);
-      setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} archived successfully!`);
+      setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} marked as NLWF successfully!`);
       setShowDeleteDialog(false);
       setUserToDelete(null);
       fetchUsers();
     } catch (err: any) {
-      setError(err.message || 'Failed to archive user');
+      setError(err.message || 'Failed to mark user as NLWF');
       setShowDeleteDialog(false);
       setUserToDelete(null);
     } finally {
@@ -210,7 +210,7 @@ const InternalUsersPage: React.FC = () => {
               >
                 <MenuItem value="all">All</MenuItem>
                 <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="inactive">NLWF</MenuItem>
                 <MenuItem value="invited">Invited</MenuItem>
               </Select>
             </FormControl>
@@ -316,7 +316,7 @@ const InternalUsersPage: React.FC = () => {
                   </TableCell>
                   <TableCell onClick={() => handleUserClick(user)} sx={{ width: '12%' }}>
                     <Chip
-                      label={user.isActive ? 'Active' : 'Inactive'}
+                      label={user.isActive ? 'Active' : 'NLWF'}
                       size="small"
                       color={user.isActive ? 'success' : 'default'}
                     />
@@ -394,10 +394,10 @@ const InternalUsersPage: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Archive User</DialogTitle>
+        <DialogTitle>Mark as NLWF</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to archive {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email})?
+            Are you sure you want to mark {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email}) as No Longer With Firm?
             This will hide them from the active user list, but their data will be preserved for audit purposes.
           </DialogContentText>
         </DialogContent>
@@ -412,7 +412,7 @@ const InternalUsersPage: React.FC = () => {
             disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
           >
-            {deleting ? 'Archiving...' : 'Archive'}
+            {deleting ? 'Processing...' : 'Mark as NLWF'}
           </Button>
         </DialogActions>
       </Dialog>
