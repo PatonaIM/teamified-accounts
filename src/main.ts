@@ -269,18 +269,28 @@ async function bootstrap() {
     const jwtService = app.get(JwtService);
     
     // JWT authentication middleware for Swagger endpoints
+    // Supports both Authorization header (for API calls) and httpOnly cookies (for browser access)
     const swaggerAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
       try {
+        // Extract token from Authorization header or cookie
+        let token: string | undefined;
         const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.substring(7);
+        } else if (req.cookies?.access_token) {
+          // Fallback to cookie for browser-based access
+          token = req.cookies.access_token;
+        }
+
+        if (!token) {
           return res.status(401).json({ message: 'Authentication required to access API documentation' });
         }
 
-        const token = authHeader.substring(7);
         const payload = await jwtService.verifyAsync(token);
         
-        // Check if user has admin role
-        if (!payload.roles || !payload.roles.includes('admin')) {
+        // Check if user has admin or super_admin role
+        if (!payload.roles || (!payload.roles.includes('admin') && !payload.roles.includes('super_admin'))) {
           return res.status(403).json({ message: 'Admin access required to view API documentation' });
         }
         
