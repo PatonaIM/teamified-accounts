@@ -6,7 +6,6 @@ import {
   Paper,
   CircularProgress,
   TextField,
-  Alert,
   IconButton,
   Tooltip,
 } from '@mui/material';
@@ -15,6 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useSnackbar } from '../../contexts/SnackbarContext';
 import { profileService } from '../../services/profileService';
 import axios from 'axios';
 
@@ -32,12 +32,11 @@ interface ProfileData {
 export default function MyProfilePage() {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
+  const { showSnackbar } = useSnackbar();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   
   // Form state
   const [secondaryEmail, setSecondaryEmail] = useState('');
@@ -49,15 +48,16 @@ export default function MyProfilePage() {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const data = await profileService.getProfileData();
+      const data = await profileService.getProfile();
       console.log('MyProfilePage: Loaded profile data:', data);
       console.log('MyProfilePage: Profile roles:', data.roles);
       console.log('MyProfilePage: Profile id:', data.id);
+      console.log('MyProfilePage: Secondary email from backend:', data.profileData?.secondaryEmail);
       setProfileData(data);
       setSecondaryEmail(data.profileData?.secondaryEmail || '');
     } catch (error) {
       console.error('Failed to load profile:', error);
-      setError('Failed to load profile data');
+      showSnackbar('Failed to load profile data', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -66,22 +66,16 @@ export default function MyProfilePage() {
 
   const handleEditClick = () => {
     setIsEditing(true);
-    setError(null);
-    setSuccess(null);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setSecondaryEmail(profileData?.profileData?.secondaryEmail || '');
-    setError(null);
-    setSuccess(null);
   };
 
   const handleSaveChanges = async () => {
     try {
       setIsSaving(true);
-      setError(null);
-      setSuccess(null);
 
       // Update profile via API with proper authorization
       const token = localStorage.getItem('teamified_access_token');
@@ -101,11 +95,11 @@ export default function MyProfilePage() {
       // Reload profile data to show updated values
       await loadProfile();
 
-      setSuccess('Profile updated successfully');
+      showSnackbar('Profile updated successfully', 'success');
       setIsEditing(false);
     } catch (error: any) {
       console.error('Failed to update profile:', error);
-      setError(error.response?.data?.message || 'Failed to update profile');
+      showSnackbar(error.response?.data?.message || 'Failed to update profile', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -213,18 +207,6 @@ export default function MyProfilePage() {
             )}
           </Box>
         </Box>
-
-        {/* Success/Error Messages */}
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
-            {success}
-          </Alert>
-        )}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
 
         {/* Email Addresses Section */}
         <Box sx={{ mb: 3 }}>
