@@ -29,6 +29,10 @@ const LoginPageMUI: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   
+  console.log('[LoginPageMUI] Current URL:', window.location.href);
+  console.log('[LoginPageMUI] Return URL from query params:', returnUrl);
+  console.log('[LoginPageMUI] Is SSO authorize URL?:', returnUrl.includes('/api/v1/sso/authorize'));
+  
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
     email: '',
@@ -131,9 +135,14 @@ const LoginPageMUI: React.FC = () => {
       
       await refreshUser();
       
+      console.log('[LoginPageMUI] Login successful, redirecting to:', returnUrl);
+      console.log('[LoginPageMUI] Using window.location.href?:', returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize'));
+      
       if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
+        console.log('[LoginPageMUI] Redirecting via window.location.href to:', returnUrl);
         window.location.href = returnUrl;
       } else {
+        console.log('[LoginPageMUI] Redirecting via navigate() to:', returnUrl);
         navigate(returnUrl);
       }
     } catch (error: any) {
