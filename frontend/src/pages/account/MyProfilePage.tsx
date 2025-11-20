@@ -98,9 +98,8 @@ export default function MyProfilePage() {
         },
       });
 
-      // Reload profile data
+      // Reload profile data to show updated values
       await loadProfile();
-      await refreshUser();
 
       setSuccess('Profile updated successfully');
       setIsEditing(false);

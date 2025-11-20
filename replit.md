@@ -45,6 +45,17 @@ The client management module enables admin/HR roles to manage Teamified's custom
 -   **International Address Fields**: Contact info uses `postalCode` (not "zip") for better recognition in India, Philippines, and Australia markets
 -   **JSONB Contact Storage**: Client contact information stored in flexible JSONB field, migrated to use standardized `postalCode` field naming
 
+#### Profile Management
+
+The user profile page (`/account/profile`) provides Material-UI 3 Expressive Design with icon-based editing interface. Implementation features include:
+
+-   **Icon-Based Editing**: Pencil icon to enter edit mode, X icon to cancel, check icon to save
+-   **Smooth UX**: Profile saves update local state only without triggering AuthContext refresh, preventing page reload feeling
+-   **Secondary Email**: Users can add a secondary email address stored in `profileData.secondaryEmail` JSONB field
+-   **Profile Picture**: Displays user avatar from Vercel Blob Storage
+-   **Role Display**: Shows user roles (e.g., "super_admin") fetched from backend `/v1/users/me` endpoint
+-   **Design System**: Uses 16px rounded corners (borderRadius: 2) for buttons, 6 for cards, and purple gradient primary buttons
+
 ### Data Model Architecture
 
 The data model features flexible user profile data in a **JSONB field** within the User entity. Employment and salary histories are managed by normalized entities. Role management is facilitated by a `UserRole` entity supporting scope-based permissions. Multi-country payroll is supported via dedicated entities for `Country`, `Currency`, `TaxYear`, and `PayrollPeriod`. Document management is categorized for HR and onboarding processes.
