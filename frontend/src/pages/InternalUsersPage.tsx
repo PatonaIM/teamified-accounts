@@ -75,7 +75,7 @@ const InternalUsersPage: React.FC = () => {
         page: page + 1,
         limit: rowsPerPage,
         search: searchQuery || undefined,
-        status: statusFilter !== 'all' ? statusFilter : 'active',
+        status: statusFilter !== 'all' ? statusFilter : undefined,
         role: INTERNAL_ROLES,
       });
 
