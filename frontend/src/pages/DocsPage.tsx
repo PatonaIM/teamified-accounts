@@ -223,6 +223,7 @@ export default function DocsPage() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
+                    {/* Internal Roles */}
                     <TableRow>
                       <TableCell>
                         <Chip label="Super Admin" color="error" size="small" />
@@ -233,11 +234,19 @@ export default function DocsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <Chip label="Internal Member" color="primary" size="small" />
+                        <Chip label="Internal HR" color="primary" size="small" />
                       </TableCell>
                       <TableCell>Internal</TableCell>
                       <TableCell>Global</TableCell>
-                      <TableCell>View and manage data across all organizations, limited administrative functions</TableCell>
+                      <TableCell>HR operations across all organizations with access to HRIS and Team Connect</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Internal Recruiter" color="primary" size="small" />
+                      </TableCell>
+                      <TableCell>Internal</TableCell>
+                      <TableCell>Global</TableCell>
+                      <TableCell>Recruiting operations across all organizations with access to ATS and Candidate Portal</TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell>
@@ -249,6 +258,23 @@ export default function DocsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
+                        <Chip label="Internal Finance" color="primary" size="small" />
+                      </TableCell>
+                      <TableCell>Internal</TableCell>
+                      <TableCell>Global</TableCell>
+                      <TableCell>Financial operations across all organizations with access to Finance and HRIS data</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Internal Marketing" color="primary" size="small" />
+                      </TableCell>
+                      <TableCell>Internal</TableCell>
+                      <TableCell>Global</TableCell>
+                      <TableCell>Marketing operations with view-only access to data dashboard across organizations</TableCell>
+                    </TableRow>
+                    {/* Client Roles */}
+                    <TableRow>
+                      <TableCell>
                         <Chip label="Client Admin" color="secondary" size="small" />
                       </TableCell>
                       <TableCell>Client</TableCell>
@@ -257,11 +283,44 @@ export default function DocsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <Chip label="Client Member" color="secondary" size="small" />
+                        <Chip label="Client Recruiter" color="secondary" size="small" />
                       </TableCell>
                       <TableCell>Client</TableCell>
                       <TableCell>Organization-Scoped</TableCell>
-                      <TableCell>View organization data, limited editing permissions based on assigned scope</TableCell>
+                      <TableCell>Recruitment management for their organization with access to ATS and Team Connect</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Client HR" color="secondary" size="small" />
+                      </TableCell>
+                      <TableCell>Client</TableCell>
+                      <TableCell>Organization-Scoped</TableCell>
+                      <TableCell>HR operations for their organization with access to HRIS and Team Connect</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Client Finance" color="secondary" size="small" />
+                      </TableCell>
+                      <TableCell>Client</TableCell>
+                      <TableCell>Organization-Scoped</TableCell>
+                      <TableCell>Limited HR data access for financial operations within their organization</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Client Employee" color="secondary" size="small" />
+                      </TableCell>
+                      <TableCell>Client</TableCell>
+                      <TableCell>Organization-Scoped</TableCell>
+                      <TableCell>Team collaboration with view-only access to own HR data</TableCell>
+                    </TableRow>
+                    {/* Public Role */}
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Candidate" color="info" size="small" />
+                      </TableCell>
+                      <TableCell>Public</TableCell>
+                      <TableCell>Limited</TableCell>
+                      <TableCell>Public access to Candidate Portal for job applications and interview participation</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
