@@ -4,14 +4,17 @@ import {
   Typography,
   Avatar,
   Paper,
-  Button,
   CircularProgress,
   TextField,
   Alert,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { logout } from '../../services/authService';
 import { profileService } from '../../services/profileService';
 import axios from 'axios';
 
@@ -57,10 +60,6 @@ export default function MyProfilePage() {
     }
   };
 
-  const handleSignOut = async () => {
-    await logout();
-    navigate('/login');
-  };
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -81,10 +80,18 @@ export default function MyProfilePage() {
       setError(null);
       setSuccess(null);
 
-      // Update profile via API
-      await axios.put('/api/v1/users/me/profile', {
+      // Update profile via API with proper authorization
+      const token = localStorage.getItem('teamified_access_token');
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      
+      await axios.put(`${baseURL}/v1/users/me/profile`, {
         profileData: {
           secondaryEmail: secondaryEmail || null,
+        },
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
@@ -129,29 +136,79 @@ export default function MyProfilePage() {
           borderRadius: 6,
         }}
       >
-        {/* User Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-          <Avatar
-            sx={{
-              width: 64,
-              height: 64,
-              bgcolor: '#90CAF9',
-              fontSize: '1.75rem',
-              fontWeight: 600,
-              color: '#1E1E1E',
-            }}
-          >
-            {displayName.charAt(0).toUpperCase()}
-          </Avatar>
-          <Box sx={{ ml: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-              {displayName}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {isEditing 
-                ? 'Click "Save Changes" to update profile details' 
-                : profileData.emailAddress}
-            </Typography>
+        {/* User Header with Edit Icons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar
+              sx={{
+                width: 64,
+                height: 64,
+                bgcolor: '#90CAF9',
+                fontSize: '1.75rem',
+                fontWeight: 600,
+                color: '#1E1E1E',
+              }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ ml: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {displayName}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {profileData.emailAddress}
+              </Typography>
+            </Box>
+          </Box>
+          
+          {/* Edit/Cancel/Save Icons */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {isEditing ? (
+              <>
+                <Tooltip title="Cancel">
+                  <IconButton
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': {
+                        bgcolor: 'rgba(0, 0, 0, 0.04)',
+                      },
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Save Changes">
+                  <IconButton
+                    onClick={handleSaveChanges}
+                    disabled={isSaving}
+                    sx={{
+                      color: 'primary.main',
+                      '&:hover': {
+                        bgcolor: 'rgba(161, 106, 232, 0.08)',
+                      },
+                    }}
+                  >
+                    {isSaving ? <CircularProgress size={24} /> : <CheckIcon />}
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip title="Edit Profile">
+                <IconButton
+                  onClick={handleEditClick}
+                  sx={{
+                    color: 'primary.main',
+                    '&:hover': {
+                      bgcolor: 'rgba(161, 106, 232, 0.08)',
+                    },
+                  }}
+                >
+                  <EditIcon />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         </Box>
 
@@ -246,111 +303,6 @@ export default function MyProfilePage() {
             </Typography>
           </Box>
         </Box>
-
-        {/* Action Buttons */}
-        {isEditing ? (
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <Button
-              variant="outlined"
-              onClick={handleCancelEdit}
-              disabled={isSaving}
-              sx={{
-                flex: 1,
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                textTransform: 'none',
-                borderColor: 'rgba(161, 106, 232, 0.5)',
-                color: 'primary.main',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  backgroundColor: 'rgba(161, 106, 232, 0.04)',
-                  boxShadow: '0 2px 8px rgba(161, 106, 232, 0.2)',
-                },
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-              sx={{
-                flex: 1,
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                textTransform: 'none',
-                background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                  boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
-                },
-              }}
-            >
-              {isSaving ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Save Changes'}
-            </Button>
-          </Box>
-        ) : (
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <Button
-              variant="contained"
-              onClick={handleEditClick}
-              sx={{
-                flex: 1,
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                textTransform: 'none',
-                background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                  boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
-                },
-              }}
-            >
-              Edit Profile
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={handleSignOut}
-              sx={{
-                flex: 1,
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                textTransform: 'none',
-                borderColor: '#f44336',
-                color: '#f44336',
-                '&:hover': {
-                  borderColor: '#d32f2f',
-                  bgcolor: 'rgba(244, 67, 54, 0.04)',
-                  boxShadow: '0 2px 8px rgba(244, 67, 54, 0.2)',
-                },
-              }}
-            >
-              Sign Out
-            </Button>
-          </Box>
-        )}
-
-        {/* Footer Note */}
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{
-            textAlign: 'center',
-            fontStyle: 'italic',
-          }}
-        >
-          This account is used for authentication across multiple applications
-        </Typography>
       </Paper>
     </Box>
   );
