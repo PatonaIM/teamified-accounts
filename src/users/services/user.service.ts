@@ -60,6 +60,9 @@ export class UserService {
       .leftJoinAndSelect('user.eorProfile', 'eorProfile')
       .leftJoinAndSelect('user.userRoles', 'userRole');
 
+    // Exclude soft-deleted users
+    queryBuilder.andWhere('user.deletedAt IS NULL');
+
     // Filter by status
     if (status) {
       queryBuilder.andWhere('user.status = :status', { status });
@@ -214,32 +217,35 @@ export class UserService {
   async remove(id: string, deletedBy?: string): Promise<void> {
     const user = await this.findOne(id);
 
-    // Soft delete: Set status to archived and isActive to false
-    user.status = 'archived';
+    // Soft delete: Set deletedAt timestamp and deactivate, but keep status for audit purposes
+    const previousStatus = user.status;
+    const previousIsActive = user.isActive;
+    user.deletedAt = new Date();
     user.isActive = false;
     await this.userRepository.save(user);
 
-    this.logger.log(`User ${user.email} archived (soft deleted) by ${deletedBy || 'system'}`);
+    this.logger.log(`User ${user.email} soft deleted (status: ${previousStatus}, was active: ${previousIsActive}) by ${deletedBy || 'system'}`);
 
-    // Create audit log for archival
+    // Create audit log for deletion
     try {
       await this.auditService.log({
         actorUserId: deletedBy || 'system',
         actorRole: 'admin',
-        action: 'user_archived',
+        action: 'user_deleted',
         entityType: 'user',
         entityId: user.id,
         changes: {
           email: user.email,
-          previousStatus: user.status,
-          newStatus: 'archived',
-          archivedAt: new Date().toISOString(),
+          previousStatus,
+          previousIsActive,
+          deletedAt: user.deletedAt.toISOString(),
+          isActive: false,
         },
         ip: null,
         userAgent: null,
       });
     } catch (auditError) {
-      this.logger.error('Failed to create audit log for user archival:', auditError);
+      this.logger.error('Failed to create audit log for user deletion:', auditError);
     }
   }
 
@@ -359,9 +365,10 @@ export class UserService {
   }
 
   async findActiveUsers(): Promise<User[]> {
-    return await this.userRepository.find({
-      where: { status: 'active' },
-      order: { createdAt: 'DESC' },
-    });
+    return await this.userRepository.createQueryBuilder('user')
+      .where('user.status = :status', { status: 'active' })
+      .andWhere('user.deletedAt IS NULL')
+      .orderBy('user.createdAt', 'DESC')
+      .getMany();
   }
 }

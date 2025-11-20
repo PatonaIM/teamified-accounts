@@ -79,8 +79,8 @@ const InternalUsersPage: React.FC = () => {
         role: INTERNAL_ROLES,
       });
 
-      // Filter out archived users from the results (soft deleted)
-      const filteredUsers = (response.users || []).filter(user => user.status !== 'archived');
+      // Filter out deleted users from the results (soft deleted)
+      const filteredUsers = (response.users || []).filter(user => !(user as any).deletedAt);
       setUsers(filteredUsers);
       setTotalCount(response.pagination?.total || 0);
     } catch (err: any) {
@@ -116,12 +116,12 @@ const InternalUsersPage: React.FC = () => {
     setDeleting(true);
     try {
       await userService.deleteUser(userToDelete.id);
-      setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} marked as NLWF successfully!`);
+      setSuccess(`User ${userToDelete.firstName} ${userToDelete.lastName} deleted successfully!`);
       setShowDeleteDialog(false);
       setUserToDelete(null);
       fetchUsers();
     } catch (err: any) {
-      setError(err.message || 'Failed to mark user as NLWF');
+      setError(err.message || 'Failed to delete user');
       setShowDeleteDialog(false);
       setUserToDelete(null);
     } finally {
@@ -394,11 +394,11 @@ const InternalUsersPage: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Mark as NLWF</DialogTitle>
+        <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to mark {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email}) as No Longer With Firm?
-            This will hide them from the active user list, but their data will be preserved for audit purposes.
+            Are you sure you want to delete {userToDelete?.firstName} {userToDelete?.lastName} ({userToDelete?.email})?
+            This will hide them from the user list, but their data will be preserved for audit purposes.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -407,12 +407,12 @@ const InternalUsersPage: React.FC = () => {
           </Button>
           <Button
             onClick={handleConfirmDelete}
-            color="warning"
+            color="error"
             variant="contained"
             disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
           >
-            {deleting ? 'Processing...' : 'Mark as NLWF'}
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
