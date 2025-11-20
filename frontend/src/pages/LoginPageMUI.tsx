@@ -390,26 +390,29 @@ const LoginPageMUI: React.FC = () => {
           {/* Password Step */}
           {step === 'password' && (
             <form onSubmit={handleSubmit}>
-              <Box sx={{ mb: 3 }}>
-                <Button
-                  startIcon={<ArrowBack />}
-                  onClick={handleBackToEmail}
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    textTransform: 'none',
-                    mb: 2,
-                    '&:hover': {
-                      color: '#A16AE8',
-                      bgcolor: 'transparent',
-                    },
-                  }}
-                >
-                  Back
-                </Button>
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                  {formData.email}
-                </Typography>
-              </Box>
+              {/* Welcome back Header */}
+              <Typography
+                variant="h4"
+                sx={{
+                  color: 'white',
+                  fontWeight: 600,
+                  mb: 2,
+                  textAlign: 'center',
+                }}
+              >
+                Welcome back
+              </Typography>
+              
+              <Typography
+                variant="body1"
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  textAlign: 'center',
+                  mb: 4,
+                }}
+              >
+                {formData.email}
+              </Typography>
 
               <TextField
                 fullWidth
@@ -463,31 +466,54 @@ const LoginPageMUI: React.FC = () => {
                 }}
               />
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={isLoading}
-                sx={{
-                  borderRadius: 2,
-                  py: 1.5,
-                  mb: 2,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                  boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                    boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
-                  },
-                  '&:disabled': {
-                    background: 'rgba(161, 106, 232, 0.5)',
-                  },
-                }}
-              >
-                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign in'}
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <Button
+                  onClick={handleBackToEmail}
+                  variant="outlined"
+                  disabled={isLoading}
+                  sx={{
+                    flex: 1,
+                    borderRadius: 2,
+                    py: 1.5,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    '&:hover': {
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                      bgcolor: 'rgba(255, 255, 255, 0.05)',
+                    },
+                  }}
+                >
+                  Back
+                </Button>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isLoading}
+                  sx={{
+                    flex: 1,
+                    borderRadius: 2,
+                    py: 1.5,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                    boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
+                      boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                    },
+                    '&:disabled': {
+                      background: 'rgba(161, 106, 232, 0.5)',
+                    },
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                </Button>
+              </Box>
 
               <Box sx={{ textAlign: 'center' }}>
                 <Link
