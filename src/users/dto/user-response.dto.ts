@@ -51,13 +51,29 @@ export class UserResponseDto {
   @Expose()
   profileData?: any | null;
 
+  @ApiPropertyOptional({
+    description: 'Profile picture path',
+    example: '/objects/profile-pictures/user-id/picture.jpg'
+  })
+  @Expose()
+  @Transform(({ obj }) => obj.profileData?.profilePicture || null)
+  profilePicture?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Secondary (backup) email address',
+    example: 'backup@example.com'
+  })
+  @Expose()
+  @Transform(({ obj }) => obj.profileData?.secondaryEmail || null)
+  secondaryEmail?: string | null;
+
   @ApiProperty({
     description: 'User status',
-    enum: ['active', 'inactive', 'archived'],
+    enum: ['active', 'inactive', 'archived', 'invited'],
     example: 'active'
   })
   @Expose()
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived' | 'invited';
 
   @ApiProperty({
     description: 'Whether user account is active',
@@ -102,6 +118,21 @@ export class UserResponseDto {
   @Expose()
   @Transform(({ value }) => value?.toISOString())
   updatedAt: Date;
+
+  @ApiPropertyOptional({
+    description: 'User roles',
+    example: ['super_admin', 'admin'],
+    type: [String]
+  })
+  @Expose()
+  @Transform(({ obj }) => {
+    // Extract roles from userRoles relation
+    if (obj.userRoles && Array.isArray(obj.userRoles)) {
+      return obj.userRoles.map((ur: any) => ur.roleType || ur.role).filter(Boolean);
+    }
+    return [];
+  })
+  roles?: string[];
 
   // Exclude sensitive fields
   @Exclude()

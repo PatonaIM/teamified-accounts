@@ -15,8 +15,23 @@ import {
 @Index(['roleType'])
 @Index(['scope'])
 @Index(['expiresAt'])
-@Check(`"role_type" IN ('candidate', 'eor', 'admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client')`)
-@Check(`"scope" IN ('user', 'group', 'client', 'all')`)
+@Index(['scopeEntityId'])
+@Check(`"role_type" IN (
+  'super_admin',
+  'internal_member',
+  'internal_hr',
+  'internal_recruiter',
+  'internal_account_manager',
+  'internal_finance',
+  'internal_marketing',
+  'client_admin',
+  'client_hr',
+  'client_finance',
+  'client_recruiter',
+  'client_employee',
+  'candidate'
+)`)
+@Check(`"scope" IN ('global', 'organization', 'individual', 'all')`)
 export class UserRole {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -28,13 +43,26 @@ export class UserRole {
     name: 'role_type', 
     length: 50 
   })
-  roleType: 'candidate' | 'eor' | 'admin' | 'hr' | 'account_manager' | 'recruiter' | 'hr_manager_client';
+  roleType: 
+    | 'super_admin'
+    | 'internal_member'
+    | 'internal_hr'
+    | 'internal_recruiter'
+    | 'internal_account_manager'
+    | 'internal_finance'
+    | 'internal_marketing'
+    | 'client_admin'
+    | 'client_hr'
+    | 'client_finance'
+    | 'client_recruiter'
+    | 'client_employee'
+    | 'candidate';
 
   @Column({ 
     name: 'scope', 
     length: 20 
   })
-  scope: 'user' | 'group' | 'client' | 'all';
+  scope: 'global' | 'organization' | 'individual' | 'all';
 
   @Column({ name: 'scope_entity_id', type: 'uuid', nullable: true })
   scopeEntityId: string | null;
