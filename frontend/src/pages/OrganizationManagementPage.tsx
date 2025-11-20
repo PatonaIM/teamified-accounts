@@ -637,6 +637,7 @@ const OrganizationManagementPage: React.FC = () => {
               bgcolor: '#4CAF50',
               '&:hover': { bgcolor: '#45a049' },
               whiteSpace: 'nowrap',
+              px: 3,
             }}
           >
             Create Organization
@@ -988,6 +989,7 @@ const OrganizationManagementPage: React.FC = () => {
                             bgcolor: '#4CAF50',
                             '&:hover': { bgcolor: '#45a049' },
                             whiteSpace: 'nowrap',
+                            px: 3,
                           }}
                         >
                           Invite User
