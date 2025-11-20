@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -35,6 +35,7 @@ import {
   CheckCircle,
   Cancel,
   Work,
+  ChevronRight,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import userService, { type User } from '../services/userService';
@@ -51,11 +52,18 @@ interface UserRole {
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get navigation context from location state
+  const navigationState = location.state as { 
+    organizationId?: string; 
+    organizationName?: string;
+  } | null;
 
   useEffect(() => {
     if (userId) {
@@ -185,17 +193,81 @@ export default function UserDetailPage() {
     );
   }
 
+  const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
+  const isFromOrganization = navigationState?.organizationId && navigationState?.organizationName;
+
+  const handleBackNavigation = () => {
+    if (isFromOrganization) {
+      navigate('/admin/organizations', {
+        state: { selectedOrganizationId: navigationState.organizationId }
+      });
+    } else {
+      navigate('/admin/tools/internal-users');
+    }
+  };
+
   return (
     <Box sx={{ p: 4, maxWidth: 1400, mx: 'auto' }}>
-      {/* Header */}
+      {/* Header with Breadcrumb */}
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
         <Stack direction="row" alignItems="center">
-          <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
+          <IconButton onClick={handleBackNavigation} sx={{ mr: 2 }}>
             <ArrowBack />
           </IconButton>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
-            User Details
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            {isFromOrganization ? (
+              <>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    cursor: 'pointer',
+                    '&:hover': { color: 'primary.main' }
+                  }}
+                  onClick={handleBackNavigation}
+                >
+                  Organization Management
+                </Typography>
+                <ChevronRight sx={{ color: 'text.secondary' }} />
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    cursor: 'pointer',
+                    '&:hover': { color: 'primary.main' }
+                  }}
+                  onClick={handleBackNavigation}
+                >
+                  {navigationState.organizationName}
+                </Typography>
+                <ChevronRight sx={{ color: 'text.secondary' }} />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {userFullName}
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    cursor: 'pointer',
+                    '&:hover': { color: 'primary.main' }
+                  }}
+                  onClick={handleBackNavigation}
+                >
+                  Internal Users
+                </Typography>
+                <ChevronRight sx={{ color: 'text.secondary' }} />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  {userFullName}
+                </Typography>
+              </>
+            )}
+          </Stack>
         </Stack>
         <Stack direction="row" spacing={2}>
           <Button
