@@ -46,12 +46,12 @@ export class User {
   @Column({ 
     name: 'status', 
     length: 20, 
-    default: 'active',
+    default: 'invited',
     type: 'varchar'
   })
   status: 'active' | 'inactive' | 'archived' | 'invited';
 
-  @Column({ name: 'is_active', default: true })
+  @Column({ name: 'is_active', default: false })
   isActive: boolean;
 
   @Column({ name: 'email_verified', default: false })
