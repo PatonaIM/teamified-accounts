@@ -259,7 +259,17 @@ const LoginPageMUI: React.FC = () => {
           },
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 400 }}>
+        {/* Sign-in Form Container */}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 400,
+            bgcolor: '#2A2A2A',
+            borderRadius: 3,
+            padding: 4,
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
           {/* Sign in Header */}
           <Typography
             variant="h4"
