@@ -44,30 +44,77 @@ const response = await fetch('/api/v1/employment-records', {
 
     roleMatrix: `// Role-based access with client scoping
 const ROLE_PERMISSIONS = {
-  // Global roles (no client scoping)
+  // Internal roles (global scope - access all organizations)
   'super_admin': {
     scope: 'all_orgs',
     canManageClients: true,
-    canViewAllData: true
+    canViewAllData: true,
+    canManageSystem: true
   },
   'internal_hr': {
     scope: 'all_orgs',
     canManageClients: false,
+    canViewAllData: true,
+    canManageHR: true
+  },
+  'internal_recruiter': {
+    scope: 'all_orgs',
+    canAccessATS: true,
     canViewAllData: true
   },
+  'internal_account_manager': {
+    scope: 'all_orgs',
+    canManageClients: true,
+    canViewAllData: true
+  },
+  'internal_finance': {
+    scope: 'all_orgs',
+    canManageFinance: true,
+    canViewAllData: true
+  },
+  'internal_marketing': {
+    scope: 'all_orgs',
+    canViewAllData: true,
+    readOnly: true
+  },
 
-  // Client-scoped roles
-  'hr_manager_client': {
+  // Client roles (organization-scoped)
+  'client_admin': {
     scope: 'own_org',
-    canManageEmployees: true,
-    canViewPayroll: true,
+    canManageTeam: true,
+    canViewOrgData: true,
     clientId: 'required'
   },
-  'eor': {
+  'client_recruiter': {
+    scope: 'own_org',
+    canAccessATS: true,
+    canViewOrgData: true,
+    clientId: 'required'
+  },
+  'client_hr': {
+    scope: 'own_org',
+    canManageHR: true,
+    canViewOrgData: true,
+    clientId: 'required'
+  },
+  'client_finance': {
+    scope: 'own_org',
+    canViewFinance: true,
+    limitedAccess: true,
+    clientId: 'required'
+  },
+  'client_employee': {
     scope: 'own_org',
     canViewOwnData: true,
     canEditProfile: true,
     clientId: 'required'
+  },
+
+  // Public role (limited access)
+  'candidate': {
+    scope: 'public',
+    canApplyJobs: true,
+    canViewInterviews: true
   }
 };`,
 
@@ -199,22 +246,51 @@ const MyComponent = () => {
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
               <Chip label="Global Scope" size="small" color="primary" />
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                Internal Roles
+                Internal Roles (6 roles)
               </Typography>
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-              <code>super_admin</code>, <code>internal_hr</code>, <code>internal_recruiter</code> - Can access data across all client organizations
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Can access data across all client organizations:
+            </Typography>
+            <Typography variant="body2" component="div" color="text.secondary" sx={{ pl: 2 }}>
+              • <code>super_admin</code> - Full platform access, system configuration<br/>
+              • <code>internal_hr</code> - HR operations across all organizations<br/>
+              • <code>internal_recruiter</code> - Recruiting operations with ATS access<br/>
+              • <code>internal_account_manager</code> - Client organization management<br/>
+              • <code>internal_finance</code> - Financial operations across all organizations<br/>
+              • <code>internal_marketing</code> - Marketing with view-only dashboard access
             </Typography>
           </Box>
           <Box>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <Chip label="Client Scope" size="small" color="secondary" />
+              <Chip label="Organization Scope" size="small" color="secondary" />
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                Client Roles
+                Client Roles (5 roles)
               </Typography>
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-              <code>hr_manager_client</code>, <code>eor</code>, <code>candidate</code> - Can only access data for their assigned client organization
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Can only access data for their assigned client organization:
+            </Typography>
+            <Typography variant="body2" component="div" color="text.secondary" sx={{ pl: 2 }}>
+              • <code>client_admin</code> - Full organization access, manage team members<br/>
+              • <code>client_recruiter</code> - Recruitment management for their organization<br/>
+              • <code>client_hr</code> - HR operations for their organization<br/>
+              • <code>client_finance</code> - Limited HR data access for finance<br/>
+              • <code>client_employee</code> - Team collaboration, view own data
+            </Typography>
+          </Box>
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <Chip label="Public Access" size="small" color="info" />
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Candidate Role (1 role)
+              </Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Limited public access:
+            </Typography>
+            <Typography variant="body2" component="div" color="text.secondary" sx={{ pl: 2 }}>
+              • <code>candidate</code> - Job applications and interview participation only
             </Typography>
           </Box>
         </Stack>
