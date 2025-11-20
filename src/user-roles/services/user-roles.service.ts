@@ -6,7 +6,14 @@ import { UpdateRoleDto } from '../dto/update-role.dto';
 import { UserRoleResponseDto } from '../dto/user-role-response.dto';
 import { PermissionResponseDto } from '../dto/permission-response.dto';
 import { EmploymentRecord } from '../../employment-records/entities/employment-record.entity';
-import { RoleType, RoleScope } from '../../common/types/role-types';
+import { 
+  RoleType, 
+  RoleScope, 
+  LegacyRoleType,
+  LegacyRoleScope,
+  ROLE_TYPE_MIGRATION_MAP,
+  SCOPE_MIGRATION_MAP
+} from '../../common/types/role-types';
 
 @Injectable()
 export class UserRolesService {
@@ -17,13 +24,19 @@ export class UserRolesService {
     private readonly employmentRecordRepository: Repository<EmploymentRecord>,
   ) {}
 
+  /**
+   * Get normalized canonical role types for a user
+   * Automatically translates legacy roles to canonical ones
+   */
   async getUserRoles(userId: string): Promise<string[]> {
     const userRoles = await this.userRoleRepository.find({
       where: { userId },
       select: ['roleType'],
     });
 
-    return userRoles.map(role => role.roleType);
+    return userRoles
+      .map(role => this.normalizeRoleType(role.roleType))
+      .filter(role => role !== null) as string[];
   }
 
   async getUserRolesWithScope(userId: string, scope?: string): Promise<UserRoleResponseDto[]> {
@@ -39,18 +52,44 @@ export class UserRolesService {
     return roles.map(role => this.mapToResponseDto(role));
   }
 
+  /**
+   * Check if user has a specific role (normalized canonical check)
+   * Works with both legacy and canonical role names
+   */
   async hasRole(userId: string, roleType: string, scope?: string): Promise<boolean> {
-    const query = this.userRoleRepository
-      .createQueryBuilder('userRole')
-      .where('userRole.userId = :userId', { userId })
-      .andWhere('userRole.roleType = :roleType', { roleType });
-
-    if (scope) {
-      query.andWhere('userRole.scope = :scope', { scope });
+    // Normalize the requested role type to canonical
+    const normalizedRequestedRole = this.normalizeRoleType(roleType);
+    
+    if (!normalizedRequestedRole) {
+      // Invalid/unknown role type requested
+      return false;
     }
 
-    const count = await query.getCount();
-    return count > 0;
+    // Get all user roles
+    const query = this.userRoleRepository
+      .createQueryBuilder('userRole')
+      .where('userRole.userId = :userId', { userId });
+
+    if (scope) {
+      // Normalize scope if provided
+      const normalizedScope = this.normalizeRoleScope(scope);
+      if (!normalizedScope) {
+        return false;
+      }
+      // Check for both legacy and canonical scope values
+      query.andWhere('(userRole.scope = :scope OR userRole.scope = :legacyScope)', {
+        scope: normalizedScope,
+        legacyScope: scope, // Check legacy value too
+      });
+    }
+
+    const userRoles = await query.getMany();
+
+    // Normalize all database roles and check if requested role exists
+    return userRoles.some(role => {
+      const normalizedDbRole = this.normalizeRoleType(role.roleType);
+      return normalizedDbRole === normalizedRequestedRole;
+    });
   }
 
   async assignRole(
@@ -167,14 +206,23 @@ export class UserRolesService {
         continue;
       }
 
-      const rolePerms = rolePermissions[userRole.roleType] || [];
+      // Validate and normalize role type/scope
+      const normalizedRole = this.normalizeRoleType(userRole.roleType);
+      const normalizedScope = this.normalizeRoleScope(userRole.scope);
+      
+      if (!normalizedRole || !normalizedScope) {
+        console.warn(`Skipping invalid role: ${userRole.roleType}/${userRole.scope} for user ${userId}`);
+        continue;
+      }
+
+      const rolePerms = rolePermissions[normalizedRole] || [];
       for (const permission of rolePerms) {
         permissions.push({
           permission,
-          scope: userRole.scope,
+          scope: normalizedScope,
           scopeId: userRole.scopeEntityId,
           granted: true,
-          grantedBy: userRole.roleType,
+          grantedBy: normalizedRole,
           expiresAt: userRole.expiresAt,
         });
       }
@@ -331,12 +379,77 @@ export class UserRolesService {
     return permissions;
   }
 
+  /**
+   * Normalize legacy role types to canonical ones
+   * Returns null for invalid/unknown role types
+   */
+  private normalizeRoleType(roleType: string): RoleType | null {
+    // Check if it's already a canonical role type
+    const canonicalRoles: RoleType[] = [
+      'candidate',
+      'client_admin',
+      'client_hr',
+      'client_finance',
+      'client_recruiter',
+      'client_employee',
+      'super_admin',
+      'internal_member',
+      'internal_hr',
+      'internal_recruiter',
+      'internal_account_manager',
+      'internal_finance',
+      'internal_marketing',
+    ];
+    
+    if (canonicalRoles.includes(roleType as RoleType)) {
+      return roleType as RoleType;
+    }
+    
+    // Try to migrate legacy role type
+    if (roleType in ROLE_TYPE_MIGRATION_MAP) {
+      return ROLE_TYPE_MIGRATION_MAP[roleType as LegacyRoleType];
+    }
+    
+    // Unknown role type
+    return null;
+  }
+
+  /**
+   * Normalize legacy scopes to canonical ones
+   * Returns null for invalid/unknown scopes
+   */
+  private normalizeRoleScope(scope: string): RoleScope | null {
+    // Check if it's already a canonical scope
+    const canonicalScopes: RoleScope[] = ['all', 'global', 'organization', 'individual'];
+    
+    if (canonicalScopes.includes(scope as RoleScope)) {
+      return scope as RoleScope;
+    }
+    
+    // Try to migrate legacy scope
+    if (scope in SCOPE_MIGRATION_MAP) {
+      return SCOPE_MIGRATION_MAP[scope as LegacyRoleScope];
+    }
+    
+    // Unknown scope
+    return null;
+  }
+
   private mapToResponseDto(role: UserRole): UserRoleResponseDto {
+    const normalizedRole = this.normalizeRoleType(role.roleType);
+    const normalizedScope = this.normalizeRoleScope(role.scope);
+    
+    if (!normalizedRole || !normalizedScope) {
+      // Log error-level alert for invalid role data
+      console.error(`CRITICAL: Invalid role data in database - roleType: ${role.roleType}, scope: ${role.scope}, roleId: ${role.id}, userId: ${role.userId}`);
+      throw new Error(`Invalid role data: ${role.roleType}/${role.scope} for user ${role.userId}`);
+    }
+    
     return {
       id: role.id,
       userId: role.userId,
-      role: role.roleType,
-      scope: role.scope,
+      role: normalizedRole,
+      scope: normalizedScope,
       scopeId: role.scopeEntityId,
       grantedBy: role.grantedBy,
       expiresAt: role.expiresAt,
@@ -393,34 +506,38 @@ export class UserRolesService {
   }
 
   /**
-   * Check if user has EOR role
+   * Check if user has EOR/Client Employee role
+   * Checks for canonical role name (legacy 'eor' is auto-translated to 'client_employee')
    */
   async isEOR(userId: string): Promise<boolean> {
     const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('eor');
+    return userRoles.includes('client_employee');
   }
 
   /**
    * Check if user has Account Manager role
+   * Checks for canonical role name (legacy 'account_manager' is auto-translated to 'internal_account_manager')
    */
   async isAccountManager(userId: string): Promise<boolean> {
     const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('account_manager');
+    return userRoles.includes('internal_account_manager');
   }
 
   /**
-   * Check if user has HR Manager (teamified) role
+   * Check if user has HR role
+   * Checks for canonical internal HR role (legacy 'hr' is auto-translated to 'internal_hr' or 'client_hr')
    */
   async isHRManagerTeamified(userId: string): Promise<boolean> {
     const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('hr');
+    return userRoles.includes('internal_hr');
   }
 
   /**
-   * Check if user has HR Manager (client) role
+   * Check if user has Client HR role
+   * Checks for canonical role name (legacy 'hr_manager_client' is auto-translated to 'client_hr')
    */
   async isHRManagerClient(userId: string): Promise<boolean> {
     const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('hr_manager_client');
+    return userRoles.includes('client_hr');
   }
 }

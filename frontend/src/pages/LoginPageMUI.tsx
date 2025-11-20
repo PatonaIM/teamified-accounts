@@ -14,6 +14,8 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Fade,
+  Collapse,
 } from '@mui/material';
 import {
   Visibility,
@@ -21,6 +23,7 @@ import {
   Email,
   Lock,
   Business,
+  ArrowBack,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { login, getAccessToken } from '../services/authService';
@@ -36,6 +39,7 @@ const LoginPageMUI: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/dashboard';
   
+  const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -53,6 +57,19 @@ const LoginPageMUI: React.FC = () => {
     }
   };
 
+  const validateEmail = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -68,6 +85,52 @@ const LoginPageMUI: React.FC = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleEmailContinue = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!validateEmail()) {
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Check if email exists
+      const response = await fetch('/api/v1/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.valid) {
+        // Email exists - show password field
+        setStep('password');
+      } else {
+        // Email doesn't exist - redirect to signup path selection
+        const signupUrl = `/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/dashboard' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
+        navigate(signupUrl);
+      }
+    } catch (error) {
+      setErrors({ 
+        general: 'Unable to check email. Please try again.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToEmail = () => {
+    setStep('email');
+    setFormData(prev => ({ ...prev, password: '' }));
+    setErrors({});
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -271,10 +334,12 @@ const LoginPageMUI: React.FC = () => {
             {/* Form Header */}
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <Typography variant="h4" sx={{ mb: 1, fontWeight: 600, color: 'text.primary' }}>
-                Welcome Back
+                {step === 'email' ? 'Welcome' : 'Welcome Back'}
               </Typography>
-              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                Sign in to your account
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {step === 'email' 
+                  ? 'Sign in to your account or create a new one' 
+                  : `Signing in as ${formData.email}`}
               </Typography>
             </Box>
 
@@ -285,152 +350,157 @@ const LoginPageMUI: React.FC = () => {
               </Alert>
             )}
 
-            {/* Login Form */}
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              {/* Email Field */}
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
-                helperText={errors.email}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end" sx={{ width: 48 }}>
-                      {/* Empty space to match password field height */}
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
+            {/* Email Step */}
+            <Collapse in={step === 'email'}>
+              <form onSubmit={handleEmailContinue}>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  variant="outlined"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  disabled={isLoading}
+                  sx={{ mb: 3 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  autoComplete="email"
+                  autoFocus
+                />
 
-              {/* Password Field */}
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                error={!!errors.password}
-                helperText={errors.password}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleTogglePasswordVisibility}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
+                {/* Continue Button */}
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  disabled={isLoading}
+                  sx={{
+                    mb: 2,
+                    py: 1.5,
+                    textTransform: 'none',
+                    fontSize: '1.1rem',
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={24} /> : 'Continue'}
+                </Button>
 
-              {/* Remember Me Checkbox */}
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    value="remember"
-                    color="primary"
-                    checked={formData.rememberMe}
-                    onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
-                  />
-                }
-                label="Remember me"
-                sx={{ mb: 2 }}
-              />
+                {/* SSO Divider */}
+                {isSupabaseConfigured() && (
+                  <>
+                    <Box sx={{ my: 3, display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                      <Typography variant="body2" sx={{ mx: 2, color: 'text.secondary' }}>
+                        or
+                      </Typography>
+                      <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                    </Box>
 
-              {/* Sign In Button */}
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                size="large"
-                disabled={isLoading}
-                sx={{
-                  mt: 2,
-                  mb: 3,
-                  py: 1.5,
-                  fontSize: '16px',
-                  fontWeight: 600,
-                }}
-              >
-                {isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  'Sign In'
+                    {/* SSO Button */}
+                    <SupabaseLoginButton />
+                  </>
                 )}
-              </Button>
+              </form>
+            </Collapse>
 
-              {/* Links */}
-              <Grid container>
-                <Grid size={{ xs: 12 }}>
+            {/* Password Step */}
+            <Collapse in={step === 'password'}>
+              <form onSubmit={handleSubmit}>
+                <TextField
+                  fullWidth
+                  label="Password"
+                  variant="outlined"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  disabled={isLoading}
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={handleTogglePasswordVisibility} edge="end">
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  autoComplete="current-password"
+                  autoFocus
+                />
+
+                {/* Remember Me & Forgot Password */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.rememberMe}
+                        onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
+                        disabled={isLoading}
+                        color="primary"
+                      />
+                    }
+                    label={<Typography variant="body2">Remember me</Typography>}
+                  />
                   <Link
-                    href="/forgot-password"
+                    href="/reset-password"
                     variant="body2"
-                    sx={{
-                      color: 'primary.main',
-                      textDecoration: 'none',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
+                    sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                   >
                     Forgot password?
                   </Link>
-                </Grid>
-              </Grid>
-            </Box>
-
-            {/* SSO Section */}
-            {isSupabaseConfigured() && (
-              <>
-                {/* Divider */}
-                <Box sx={{ display: 'flex', alignItems: 'center', my: 3 }}>
-                  <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-                  <Typography variant="body2" sx={{ mx: 2, color: 'text.secondary' }}>
-                    or continue with
-                  </Typography>
-                  <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
                 </Box>
 
-                {/* Google Sign-In Button */}
-                <SupabaseLoginButton 
-                  onError={(error) => setErrors({ general: error })}
-                />
-              </>
-            )}
+                {/* Sign In Button */}
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  disabled={isLoading}
+                  sx={{
+                    mb: 2,
+                    py: 1.5,
+                    textTransform: 'none',
+                    fontSize: '1.1rem',
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+                </Button>
 
-            {/* Footer */}
-            <Box sx={{ textAlign: 'center', mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Need help? Contact support@teamified.com
+                {/* Back to Email */}
+                <Button
+                  fullWidth
+                  variant="text"
+                  startIcon={<ArrowBack />}
+                  onClick={handleBackToEmail}
+                  disabled={isLoading}
+                  sx={{
+                    textTransform: 'none',
+                  }}
+                >
+                  Back to Email
+                </Button>
+              </form>
+            </Collapse>
+
+            {/* Footer Note */}
+            <Box sx={{ mt: 4, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                By signing in, you agree to our Terms of Service and Privacy Policy
               </Typography>
             </Box>
           </Paper>

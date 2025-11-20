@@ -16,22 +16,9 @@ import {
 @Index(['scope'])
 @Index(['expiresAt'])
 @Index(['scopeEntityId'])
-@Check(`"role_type" IN (
-  'super_admin',
-  'internal_member',
-  'internal_hr',
-  'internal_recruiter',
-  'internal_account_manager',
-  'internal_finance',
-  'internal_marketing',
-  'client_admin',
-  'client_hr',
-  'client_finance',
-  'client_recruiter',
-  'client_employee',
-  'candidate'
-)`)
-@Check(`"scope" IN ('global', 'organization', 'individual', 'all')`)
+// Note: CHECK constraints removed to support legacy role types during migration
+// Database allows both legacy (admin, eor, hr) and canonical (client_admin, client_employee, etc.) role types
+// Backward compatibility handled by permission matrix in UserRolesService
 export class UserRole {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -43,26 +30,13 @@ export class UserRole {
     name: 'role_type', 
     length: 50 
   })
-  roleType: 
-    | 'super_admin'
-    | 'internal_member'
-    | 'internal_hr'
-    | 'internal_recruiter'
-    | 'internal_account_manager'
-    | 'internal_finance'
-    | 'internal_marketing'
-    | 'client_admin'
-    | 'client_hr'
-    | 'client_finance'
-    | 'client_recruiter'
-    | 'client_employee'
-    | 'candidate';
+  roleType: string; // Accepts both legacy and canonical role types for backward compatibility
 
   @Column({ 
     name: 'scope', 
     length: 20 
   })
-  scope: 'global' | 'organization' | 'individual' | 'all';
+  scope: string; // Accepts both legacy and canonical scopes for backward compatibility
 
   @Column({ name: 'scope_entity_id', type: 'uuid', nullable: true })
   scopeEntityId: string | null;
