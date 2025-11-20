@@ -50,6 +50,9 @@ export default function MyProfilePage() {
     try {
       setIsLoading(true);
       const data = await profileService.getProfileData();
+      console.log('MyProfilePage: Loaded profile data:', data);
+      console.log('MyProfilePage: Profile roles:', data.roles);
+      console.log('MyProfilePage: Profile id:', data.id);
       setProfileData(data);
       setSecondaryEmail(data.profileData?.secondaryEmail || '');
     } catch (error) {

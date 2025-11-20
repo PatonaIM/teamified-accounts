@@ -107,9 +107,13 @@ export class UserController {
     console.log('getCurrentUser: hasOnboardingRecord:', hasOnboardingRecord);
     console.log('getCurrentUser: hasEmploymentRecord:', hasEmploymentRecord);
 
+    // Manually add roles property to response (extracted from userRoles)
+    const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
+
     return {
       user: {
         ...user,
+        roles,
         hasOnboardingRecord,
         hasEmploymentRecord
       }
