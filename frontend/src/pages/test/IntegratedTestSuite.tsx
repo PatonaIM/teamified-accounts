@@ -186,13 +186,13 @@ export default function IntegratedTestSuite() {
 
   const handleClearSession = async () => {
     try {
-      // Call logout endpoint to clear authentication cookie
-      await fetch(`${apiUrl}/api/v1/auth/logout`, {
+      // Call SSO clear-session endpoint to clear authentication cookie
+      await fetch(`${apiUrl}/api/v1/sso/clear-session`, {
         method: 'POST',
         credentials: 'include', // Include cookies
       });
     } catch (err) {
-      console.error('Logout failed:', err);
+      console.error('Clear session failed:', err);
     }
     
     // Clear SSO test session data

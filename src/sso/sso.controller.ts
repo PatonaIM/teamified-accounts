@@ -167,4 +167,24 @@ export class SsoController {
       roles: req.user.roles || [],
     };
   }
+
+  /**
+   * Clear SSO Session
+   * POST /api/v1/sso/clear-session
+   * 
+   * Clears the SSO authentication cookie for testing purposes
+   * Used by the SSO test application to reset authentication state
+   */
+  @Post('clear-session')
+  @HttpCode(HttpStatus.OK)
+  async clearSession(@Res() res: Response) {
+    // Clear the httpOnly cookie
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    
+    return res.json({ message: 'Session cleared successfully' });
+  }
 }
