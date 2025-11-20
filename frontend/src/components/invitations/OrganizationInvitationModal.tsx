@@ -220,10 +220,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
             <PersonAddIcon sx={{ color: 'primary.main', fontSize: 32 }} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                Invite User to Organization
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {organizationName}
+                Invite User to {organizationName}
               </Typography>
             </Box>
           </Box>
