@@ -11,16 +11,19 @@ import { Repository, MoreThan } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
-import { Invitation, InvitationStatus } from '../invitations/entities/invitation.entity';
+import { LegacyInvitation, InvitationStatus } from '../invitations/entities/legacy-invitation.entity';
 import { AcceptInvitationDto, AcceptInvitationResponseDto } from './dto/accept-invitation.dto';
 import { LoginDto, LoginResponseDto, RefreshTokenResponseDto, LogoutResponseDto, UserProfileDto } from './dto/login.dto';
+import { ClientAdminSignupDto, ClientAdminSignupResponseDto } from './dto/client-admin-signup.dto';
+import { CandidateSignupDto, CandidateSignupResponseDto } from './dto/candidate-signup.dto';
 import { PasswordService } from './services/password.service';
 import { JwtTokenService } from './services/jwt.service';
 import { SessionService, DeviceMetadata } from './services/session.service';
 import { EmailService } from '../email/services/email.service';
 import { AuditService } from '../audit/audit.service';
 import { UserRole } from '../user-roles/entities/user-role.entity';
-import { EmploymentRecordService } from '../employment-records/services/employment-record.service';
+import { Organization } from '../organizations/entities/organization.entity';
+import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 
 @Injectable()
 export class AuthService {
@@ -31,16 +34,19 @@ export class AuthService {
     private userRepository: Repository<User>,
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
-    @InjectRepository(Invitation)
-    private invitationRepository: Repository<Invitation>,
+    @InjectRepository(LegacyInvitation)
+    private invitationRepository: Repository<LegacyInvitation>,
     @InjectRepository(UserRole)
     private userRoleRepository: Repository<UserRole>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
+    @InjectRepository(OrganizationMember)
+    private organizationMemberRepository: Repository<OrganizationMember>,
     private passwordService: PasswordService,
     private jwtService: JwtTokenService,
     private sessionService: SessionService,
     private emailService: EmailService,
     private auditService: AuditService,
-    private employmentRecordService: EmploymentRecordService,
   ) {}
 
   private async getUserPrimaryRole(userId: string): Promise<string> {
@@ -51,8 +57,18 @@ export class AuthService {
     return userRole?.roleType || 'User';
   }
 
+  /**
+   * Legacy Invitation Acceptance (Pre-Multitenancy)
+   * 
+   * TODO: CLEANUP AFTER PHASE 3 - This method uses the old invitation system
+   * Once Phase 3 is complete and all invitations are migrated to the new multitenancy
+   * system, this method should be removed and replaced with organization-based acceptance.
+   * 
+   * See: docs/Multitenancy_Features_PRD.md - Section on Legacy Invitation Cleanup
+   */
   async acceptInvitation(
     acceptInvitationDto: AcceptInvitationDto,
+    baseUrl: string,
     ip?: string,
     userAgent?: string,
   ): Promise<AcceptInvitationResponseDto> {
@@ -77,13 +93,17 @@ export class AuthService {
       where: {
         token,
         status: InvitationStatus.PENDING,
-        expiresAt: MoreThan(new Date()),
-        deletedAt: null,
+        deletedAt: null as any,
       },
     });
 
     if (!invitation) {
       throw new NotFoundException('Invalid or expired invitation token');
+    }
+
+    // Check if expired
+    if (invitation.expiresAt < new Date()) {
+      throw new BadRequestException('Invitation has expired');
     }
 
     // Check if invitation was already accepted
@@ -134,7 +154,7 @@ export class AuthService {
 
     // Send email verification
     try {
-      await this.sendEmailVerification(savedUser);
+      await this.sendEmailVerification(savedUser, baseUrl);
     } catch (error) {
       this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
       // Don't fail the process if email sending fails
@@ -142,20 +162,18 @@ export class AuthService {
 
     // Create audit logs
     await Promise.all([
-      this.auditService.log({
-        actorUserId: savedUser.id,
-        actorRole: invitation.role,
-        action: 'invitation_accepted',
-        entityType: 'Invitation',
-        entityId: invitation.id,
-        changes: {
+      this.auditService.logInvitationAccepted(
+        savedUser.id,
+        invitation.role,
+        invitation.id,
+        {
           invitationId: invitation.id,
           email: invitation.email,
           acceptedAt: invitation.acceptedAt.toISOString(),
         },
         ip,
         userAgent,
-      }),
+      ),
       this.auditService.log({
         actorUserId: savedUser.id,
         actorRole: invitation.role,
@@ -194,15 +212,15 @@ export class AuthService {
     };
   }
 
-  private async sendEmailVerification(user: User): Promise<void> {
-    const verificationLink = this.generateEmailVerificationLink(user.emailVerificationToken);
+  private async sendEmailVerification(user: User, baseUrl: string): Promise<void> {
+    const verificationLink = this.generateEmailVerificationLink(user.emailVerificationToken, baseUrl);
     
     const htmlTemplate = this.generateEmailVerificationHtmlTemplate(user, verificationLink);
     const textTemplate = this.generateEmailVerificationTextTemplate(user, verificationLink);
 
     const emailSent = await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Verify Your Email - Teamified EOR Portal',
+      subject: 'Verify Your Email - Teamified',
       html: htmlTemplate,
       text: textTemplate,
     });
@@ -222,8 +240,7 @@ export class AuthService {
     }
   }
 
-  private generateEmailVerificationLink(token: string): string {
-    const baseUrl = process.env.FRONTEND_URL || 'https://portal.teamified.com';
+  private generateEmailVerificationLink(token: string, baseUrl: string): string {
     return `${baseUrl}/verify-email?token=${token}`;
   }
 
@@ -234,7 +251,7 @@ export class AuthService {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email - Teamified EOR Portal</title>
+    <title>Verify Your Email - Teamified</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -270,10 +287,10 @@ export class AuthService {
                 ${verificationLink}
             </p>
             
-            <p>Once your email is verified, you'll be able to access all features of the EOR Portal.</p>
+            <p>Once your email is verified, you'll be able to access all features of Teamified.</p>
         </div>
         <div class="footer">
-            <p>This is an automated message from Teamified EOR Portal.</p>
+            <p>This is an automated message from Teamified.</p>
             <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
@@ -283,7 +300,7 @@ export class AuthService {
 
   private generateEmailVerificationTextTemplate(user: User, verificationLink: string): string {
     return `
-Email Verification - Teamified EOR Portal
+Email Verification - Teamified
 
 Welcome ${user.firstName} ${user.lastName}!
 
@@ -291,11 +308,33 @@ Your account has been successfully created. To complete your setup, please verif
 
 ${verificationLink}
 
-Once your email is verified, you'll be able to access all features of the EOR Portal.
+Once your email is verified, you'll be able to access all features of Teamified.
 
-This is an automated message from Teamified EOR Portal.
+This is an automated message from Teamified.
 © ${new Date().getFullYear()} Teamified. All rights reserved.
 `;
+  }
+
+  async validateEmailForLogin(email: string, ip?: string): Promise<{ valid: boolean; message?: string }> {
+    // Add random timing jitter (200-400ms) to prevent timing attacks
+    const jitter = Math.floor(Math.random() * 200) + 200;
+    await new Promise(resolve => setTimeout(resolve, jitter));
+
+    // Check if user exists and is active
+    const user = await this.userRepository.findOne({
+      where: { email, isActive: true },
+    });
+
+    if (!user) {
+      return {
+        valid: false,
+        message: "Couldn't find your account"
+      };
+    }
+
+    return {
+      valid: true
+    };
   }
 
   async login(
@@ -348,6 +387,10 @@ This is an automated message from Teamified EOR Portal.
       });
       throw new UnauthorizedException('Invalid email or password');
     }
+
+    // Update last login timestamp
+    user.lastLoginAt = new Date();
+    await this.userRepository.save(user);
 
     // Generate tokens
     const tokens = await this.jwtService.generateTokenPair(user);
@@ -579,13 +622,441 @@ This is an automated message from Teamified EOR Portal.
     return { profileData: updatedProfileData };
   }
 
-  async getEmploymentRecords(userId: string): Promise<any[]> {
+  async forgotPassword(email: string, ip?: string, userAgent?: string): Promise<{ message: string }> {
+    // Always return the same message for security (prevent email enumeration)
+    const securityMessage = 'If an account exists with this email, a password reset link has been sent';
+
     try {
-      const employmentRecords = await this.employmentRecordService.findByUserId(userId);
-      return employmentRecords;
+      // Find user by email
+      const user = await this.userRepository.findOne({
+        where: { email: email.toLowerCase(), isActive: true },
+      });
+
+      // If user doesn't exist, still return success message (security)
+      if (!user) {
+        this.logger.warn(`Password reset requested for non-existent email: ${email}`);
+        await this.auditService.log({
+          actorUserId: null,
+          actorRole: 'anonymous',
+          action: 'password_reset_failed',
+          entityType: 'User',
+          entityId: null,
+          changes: {
+            email,
+            reason: 'User not found',
+          },
+          ip,
+          userAgent,
+        });
+        return { message: securityMessage };
+      }
+
+      // Generate reset token
+      const resetToken = uuidv4();
+      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Save reset token to user
+      await this.userRepository.update(user.id, {
+        passwordResetToken: resetToken,
+        passwordResetTokenExpiry: resetTokenExpiry,
+      });
+
+      // Send password reset email
+      try {
+        await this.emailService.sendPasswordResetEmail(user, resetToken);
+        this.logger.log(`Password reset email sent to ${user.email}`);
+      } catch (error) {
+        this.logger.error(`Failed to send password reset email to ${user.email}: ${error.message}`);
+        // Don't throw error - we don't want to reveal if user exists
+      }
+
+      // Log the password reset request
+      await this.auditService.log({
+        actorUserId: user.id,
+        actorRole: await this.getUserPrimaryRole(user.id),
+        action: 'password_reset_requested',
+        entityType: 'User',
+        entityId: user.id,
+        changes: {
+          resetTokenGenerated: true,
+          expiresAt: resetTokenExpiry.toISOString(),
+        },
+        ip,
+        userAgent,
+      });
+
+      return { message: securityMessage };
     } catch (error) {
-      this.logger.error(`Failed to get employment records for user ${userId}: ${error.message}`);
-      return [];
+      this.logger.error(`Error in forgotPassword: ${error.message}`);
+      return { message: securityMessage };
     }
+  }
+
+  async adminSendPasswordReset(
+    userId: string,
+    adminUserId: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    // Find the user
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Generate reset token and expiry
+    const resetToken = uuidv4();
+    const resetTokenExpiry = new Date();
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+
+    // Save reset token
+    await this.userRepository.update(user.id, {
+      passwordResetToken: resetToken,
+      passwordResetTokenExpiry: resetTokenExpiry,
+    });
+
+    // Send password reset email
+    try {
+      await this.emailService.sendPasswordResetEmail(user, resetToken);
+      this.logger.log(`Admin ${adminUserId} sent password reset email to ${user.email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send password reset email to ${user.email}: ${error.message}`);
+      throw new BadRequestException('Failed to send password reset email');
+    }
+
+    // Log the password reset request with admin as actor
+    await this.auditService.log({
+      actorUserId: adminUserId,
+      actorRole: await this.getUserPrimaryRole(adminUserId),
+      action: 'admin_password_reset_sent',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        targetUserEmail: user.email,
+        resetTokenGenerated: true,
+        expiresAt: resetTokenExpiry.toISOString(),
+      },
+      ip,
+      userAgent,
+    });
+
+    return { message: 'Password reset email sent successfully' };
+  }
+
+  async resetPassword(
+    token: string,
+    password: string,
+    confirmPassword: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    // Validate password confirmation
+    if (password !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    // Validate password policy
+    const passwordValidation = this.passwordService.validatePasswordPolicy(password);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    // Find user with valid reset token
+    const user = await this.userRepository.findOne({
+      where: {
+        passwordResetToken: token,
+        passwordResetTokenExpiry: MoreThan(new Date()),
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      // Log failed reset attempt
+      await this.auditService.log({
+        actorUserId: null,
+        actorRole: 'anonymous',
+        action: 'password_reset_failed',
+        entityType: 'User',
+        entityId: null,
+        changes: {
+          reason: 'Invalid or expired token',
+          token: token.substring(0, 8) + '...', // Log partial token for debugging
+        },
+        ip,
+        userAgent,
+      });
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+
+    // Hash the new password
+    const hashedPassword = await this.passwordService.hashPassword(password);
+
+    // Update user password and clear reset token
+    await this.userRepository.update(user.id, {
+      passwordHash: hashedPassword,
+      passwordResetToken: null,
+      passwordResetTokenExpiry: null,
+    });
+
+    // Invalidate all existing sessions for security
+    await this.sessionRepository.update(
+      { userId: user.id },
+      { revokedAt: new Date() },
+    );
+
+    // Log the password reset
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: await this.getUserPrimaryRole(user.id),
+      action: 'password_reset_completed',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        passwordChanged: true,
+        sessionsInvalidated: true,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Password successfully reset for user: ${user.email}`);
+
+    return { message: 'Your password has been reset successfully' };
+  }
+
+  /**
+   * Generate a unique slug from company name
+   */
+  private async generateUniqueSlug(companyName: string): Promise<string> {
+    let baseSlug = companyName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim()
+      .substring(0, 50);
+
+    if (!baseSlug) {
+      baseSlug = 'organization';
+    }
+
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (await this.organizationRepository.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    return slug;
+  }
+
+  /**
+   * Client Admin Signup - Create user and organization
+   */
+  async clientAdminSignup(
+    signupDto: ClientAdminSignupDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<ClientAdminSignupResponseDto> {
+    const { email, password, firstName, lastName, companyName, industry, companySize } = signupDto;
+
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const passwordValidation = this.passwordService.validatePasswordPolicy(password);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    const hashedPassword = await this.passwordService.hashPassword(password);
+    const slug = await this.generateUniqueSlug(companyName);
+
+    const user = this.userRepository.create({
+      email,
+      firstName,
+      lastName,
+      passwordHash: hashedPassword,
+      isActive: true,
+      emailVerified: false,
+    });
+
+    const savedUser = await this.userRepository.save(user);
+
+    const organization = this.organizationRepository.create({
+      name: companyName,
+      slug,
+      industry: industry || null,
+      companySize: companySize || null,
+      subscriptionTier: 'free',
+      subscriptionStatus: 'active',
+      settings: {},
+    });
+
+    const savedOrg = await this.organizationRepository.save(organization);
+
+    const clientAdminRole = this.userRoleRepository.create({
+      userId: savedUser.id,
+      roleType: 'client_admin',
+      scope: 'organization',
+      scopeEntityId: savedOrg.id,
+    });
+
+    await this.userRoleRepository.save(clientAdminRole);
+
+    const orgMember = this.organizationMemberRepository.create({
+      organizationId: savedOrg.id,
+      userId: savedUser.id,
+      status: 'active',
+      invitedBy: null,
+    });
+
+    await this.organizationMemberRepository.save(orgMember);
+
+    const tokens = await this.jwtService.generateTokenPair(savedUser);
+    
+    const deviceMetadata: DeviceMetadata = {
+      ip: ip || 'unknown',
+      userAgent: userAgent || 'unknown',
+    };
+
+    await this.sessionService.createSession(savedUser, tokens.refreshToken, deviceMetadata);
+
+    await this.auditService.log({
+      actorUserId: savedUser.id,
+      actorRole: 'client_admin',
+      action: 'client_admin_signup',
+      entityType: 'User',
+      entityId: savedUser.id,
+      changes: {
+        email: savedUser.email,
+        organizationId: savedOrg.id,
+        organizationName: savedOrg.name,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Client admin signup successful: ${savedUser.email}, Org: ${savedOrg.name}`);
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        id: savedUser.id,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        roles: ['client_admin'],
+      },
+      organization: {
+        id: savedOrg.id,
+        name: savedOrg.name,
+        slug: savedOrg.slug,
+        industry: savedOrg.industry,
+        companySize: savedOrg.companySize,
+      },
+      message: 'Account and organization created successfully',
+    };
+  }
+
+  /**
+   * Candidate Signup - Quick signup for job applicants
+   */
+  async candidateSignup(
+    signupDto: CandidateSignupDto,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<CandidateSignupResponseDto> {
+    const { email, password, firstName, lastName } = signupDto;
+
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const passwordValidation = this.passwordService.validatePasswordPolicy(password);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    const hashedPassword = await this.passwordService.hashPassword(password);
+
+    const user = this.userRepository.create({
+      email,
+      firstName,
+      lastName,
+      passwordHash: hashedPassword,
+      isActive: true,
+      emailVerified: false,
+    });
+
+    const savedUser = await this.userRepository.save(user);
+
+    const candidateRole = this.userRoleRepository.create({
+      userId: savedUser.id,
+      roleType: 'candidate',
+      scope: 'global',
+      scopeEntityId: null,
+    });
+
+    await this.userRoleRepository.save(candidateRole);
+
+    const tokens = await this.jwtService.generateTokenPair(savedUser);
+    
+    const deviceMetadata: DeviceMetadata = {
+      ip: ip || 'unknown',
+      userAgent: userAgent || 'unknown',
+    };
+
+    await this.sessionService.createSession(savedUser, tokens.refreshToken, deviceMetadata);
+
+    await this.auditService.log({
+      actorUserId: savedUser.id,
+      actorRole: 'candidate',
+      action: 'candidate_signup',
+      entityType: 'User',
+      entityId: savedUser.id,
+      changes: {
+        email: savedUser.email,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Candidate signup successful: ${savedUser.email}`);
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        id: savedUser.id,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        roles: ['candidate'],
+      },
+      message: 'Account created successfully',
+    };
   }
 }

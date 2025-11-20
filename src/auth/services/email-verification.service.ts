@@ -89,16 +89,17 @@ export class EmailVerificationService {
     await this.userRepository.save(user);
 
     // Log successful verification
-    await this.auditService.log({
-      action: 'email_verification_success',
-      entityType: 'User',
-      entityId: user.id,
-      actorUserId: user.id,
-      actorRole: 'EOR',
-      changes: { email: user.email, verified: true },
+    await this.auditService.logUserEmailVerified(
+      user.id,
+      'user',
+      user.id,
+      {
+        email: user.email,
+        verifiedAt: new Date().toISOString(),
+      },
       ip,
       userAgent,
-    });
+    );
 
     this.logger.log(`Email verification successful for user: ${user.email}`);
 

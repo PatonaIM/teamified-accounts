@@ -184,8 +184,8 @@ export class SupabaseAuthService {
       const candidateRole = this.userRolesRepository.create({
         userId: savedUser.id,
         roleType: 'candidate',
-        scope: 'all',
-        scopeEntityId: null,
+        scope: 'individual',
+        scopeEntityId: savedUser.id,
       });
       await this.userRolesRepository.save(candidateRole);
       

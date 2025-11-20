@@ -1,55 +1,45 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsString, IsUUID, MaxLength } from 'class-validator';
-import { Country, UserRole } from '../entities/invitation.entity';
+import { IsEnum, IsUUID, IsOptional, IsInt, Min } from 'class-validator';
+
+export enum RoleType {
+  CANDIDATE = 'candidate',
+  CLIENT_ADMIN = 'client_admin',
+  CLIENT_HR = 'client_hr',
+  CLIENT_FINANCE = 'client_finance',
+  CLIENT_RECRUITER = 'client_recruiter',
+  CLIENT_EMPLOYEE = 'client_employee',
+  SUPER_ADMIN = 'super_admin',
+  INTERNAL_HR = 'internal_hr',
+  INTERNAL_RECRUITER = 'internal_recruiter',
+  INTERNAL_ACCOUNT_MANAGER = 'internal_account_manager',
+  INTERNAL_FINANCE = 'internal_finance',
+  INTERNAL_MARKETING = 'internal_marketing',
+}
 
 export class CreateInvitationDto {
   @ApiProperty({ 
-    description: 'First name of the invitee',
-    maxLength: 100,
-    example: 'John'
-  })
-  @IsString()
-  @MaxLength(100)
-  firstName: string;
-
-  @ApiProperty({ 
-    description: 'Last name of the invitee',
-    maxLength: 100,
-    example: 'Doe'
-  })
-  @IsString()
-  @MaxLength(100)
-  lastName: string;
-
-  @ApiProperty({ 
-    description: 'Email address of the invitee',
-    format: 'email',
-    example: 'john.doe@example.com'
-  })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({ 
-    description: 'Country code',
-    enum: Country,
-    example: 'IN'
-  })
-  @IsEnum(Country)
-  country: Country;
-
-  @ApiProperty({ 
-    description: 'User role',
-    enum: UserRole,
-    example: 'EOR'
-  })
-  @IsEnum(UserRole)
-  role: UserRole;
-
-  @ApiProperty({ 
-    description: 'Client ID',
+    description: 'Organization ID to invite user to',
     format: 'uuid',
     example: '123e4567-e89b-12d3-a456-426614174000'
   })
   @IsUUID()
-  clientId: string;
+  organizationId: string;
+
+  @ApiProperty({ 
+    description: 'Role type to assign to the invited user',
+    enum: RoleType,
+    example: 'client_hr'
+  })
+  @IsEnum(RoleType)
+  roleType: RoleType;
+
+  @ApiProperty({ 
+    description: 'Maximum number of times this invitation can be used (null for unlimited)',
+    required: false,
+    example: 1
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxUses?: number;
 }

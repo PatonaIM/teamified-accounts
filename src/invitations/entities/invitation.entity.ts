@@ -3,13 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   Index,
+  Check,
 } from 'typeorm';
+import { Organization } from '../../organizations/entities/organization.entity';
 import { User } from '../../auth/entities/user.entity';
-import { Client } from '../../clients/entities/client.entity';
 
 export enum InvitationStatus {
   PENDING = 'pending',
@@ -18,89 +18,90 @@ export enum InvitationStatus {
   CANCELLED = 'cancelled',
 }
 
-export enum UserRole {
-  EOR = 'EOR',
-  ADMIN = 'Admin',
-}
-
-export enum Country {
-  IN = 'IN',
-  LK = 'LK',
-  PH = 'PH',
-}
-
 @Entity('invitations')
-@Index(['email'])
-@Index(['token'])
+@Index(['inviteCode'], { unique: true })
+@Index(['organizationId'])
+@Index(['status'])
+@Index(['expiresAt'])
+@Check(`"status" IN ('pending', 'accepted', 'expired', 'cancelled')`)
+@Check(`"role_type" IN (
+  'candidate',
+  'client_admin',
+  'client_hr',
+  'client_finance',
+  'client_recruiter',
+  'client_employee',
+  'super_admin',
+  'internal_member',
+  'internal_hr',
+  'internal_recruiter',
+  'internal_account_manager',
+  'internal_finance',
+  'internal_marketing'
+)`)
 export class Invitation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'first_name', length: 100 })
-  firstName: string;
+  @Column({ name: 'organization_id', type: 'uuid' })
+  organizationId: string;
 
-  @Column({ name: 'last_name', length: 100 })
-  lastName: string;
+  @Column({ name: 'invite_code', length: 100, unique: true })
+  inviteCode: string;
 
-  @Column({ unique: false }) // Allow multiple invites to same email (pending/expired)
-  email: string;
+  @Column({ name: 'invited_by', type: 'uuid' })
+  invitedBy: string;
 
-  @Column({
-    type: 'enum',
-    enum: Country,
+  @Column({ name: 'invited_user_id', type: 'uuid', nullable: true })
+  invitedUserId: string | null;
+
+  @Column({ 
+    name: 'role_type', 
+    length: 50 
   })
-  country: Country;
+  roleType: 
+    | 'candidate'
+    | 'client_admin'
+    | 'client_hr'
+    | 'client_finance'
+    | 'client_recruiter'
+    | 'client_employee'
+    | 'super_admin'
+    | 'internal_member'
+    | 'internal_hr'
+    | 'internal_recruiter'
+    | 'internal_account_manager'
+    | 'internal_finance'
+    | 'internal_marketing';
 
   @Column({
-    type: 'enum',
-    enum: UserRole,
-  })
-  role: UserRole;
-
-  @Column({ name: 'client_id', type: 'uuid' })
-  clientId: string;
-
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client: Client;
-
-  @Column({ unique: true })
-  token: string;
-
-  @Column({ name: 'expires_at', type: 'timestamp with time zone' })
-  expiresAt: Date;
-
-  @Column({
-    type: 'enum',
-    enum: InvitationStatus,
+    type: 'varchar',
+    length: 20,
     default: InvitationStatus.PENDING,
   })
   status: InvitationStatus;
 
-  @Column({ name: 'created_by', type: 'uuid' })
-  createdBy: string;
+  @Column({ name: 'expires_at', type: 'timestamptz', default: () => "NOW() + INTERVAL '7 days'" })
+  expiresAt: Date;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'created_by' })
-  creator: User;
+  @Column({ name: 'max_uses', type: 'integer', nullable: true })
+  maxUses: number | null;
+
+  @Column({ name: 'current_uses', type: 'integer', default: 0 })
+  currentUses: number;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'organization_id' })
+  organization: Organization;
 
-  @Column({ name: 'accepted_at', type: 'timestamp with time zone', nullable: true })
-  acceptedAt: Date | null;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'invited_by' })
+  inviter: User;
 
-  @Column({ name: 'accepted_by', type: 'uuid', nullable: true })
-  acceptedBy: string | null;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'accepted_by' })
-  acceptor: User | null;
-
-  // Soft delete for expired invitations
-  @Column({ name: 'deleted_at', type: 'timestamp with time zone', nullable: true })
-  deletedAt: Date | null;
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'invited_user_id' })
+  invitedUser: User | null;
 }

@@ -14,7 +14,7 @@ import {
 
 @Entity('users')
 @Index(['email'])
-@Check(`"status" IN ('active', 'inactive', 'archived')`)
+@Check(`"status" IN ('active', 'inactive', 'archived', 'invited')`)
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -22,8 +22,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column({ name: 'password_hash' })
-  passwordHash: string;
+  @Column({ name: 'password_hash', nullable: true })
+  passwordHash: string | null;
 
   @Column({ name: 'first_name', length: 100 })
   firstName: string;
@@ -49,7 +49,7 @@ export class User {
     default: 'active',
     type: 'varchar'
   })
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived' | 'invited';
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
@@ -66,6 +66,9 @@ export class User {
   @Column({ name: 'password_reset_token', nullable: true })
   passwordResetToken: string | null;
 
+  @Column({ name: 'password_reset_token_expiry', type: 'timestamptz', nullable: true })
+  passwordResetTokenExpiry: Date | null;
+
   @Column({ name: 'migrated_from_zoho', default: false })
   migratedFromZoho: boolean;
 
@@ -76,11 +79,20 @@ export class User {
   @Index()
   supabaseUserId: string | null;
 
+  @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
+  lastLoginAt: Date | null;
+
+  @Column({ name: 'theme_preference', length: 20, nullable: true, default: 'light' })
+  themePreference: 'light' | 'dark' | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
 
   // Relations
   @ManyToOne('Client', { nullable: true })
@@ -95,4 +107,7 @@ export class User {
 
   @OneToMany('UserRole', 'user')
   userRoles?: any[];
+
+  @OneToMany('OrganizationMember', 'user')
+  organizationMembers?: any[];
 }

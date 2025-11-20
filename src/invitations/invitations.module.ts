@@ -4,13 +4,17 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { InvitationsService } from './invitations.service';
 import { InvitationsController } from './invitations.controller';
 import { Invitation } from './entities/invitation.entity';
+import { OrganizationMember } from '../organizations/entities/organization-member.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { User } from '../auth/entities/user.entity';
+import { UserRole } from '../user-roles/entities/user-role.entity';
 import { AuditModule } from '../audit/audit.module';
-import { EmailModule } from '../email/email.module';
 import { AuthModule } from '../auth/auth.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Invitation]),
+    TypeOrmModule.forFeature([Invitation, OrganizationMember, Organization, User, UserRole]),
     AuditModule,
     EmailModule,
     ThrottlerModule,

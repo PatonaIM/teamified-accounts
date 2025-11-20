@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Country, UserRole, InvitationStatus } from '../entities/invitation.entity';
+import { InvitationStatus } from '../entities/invitation.entity';
+import { RoleType } from './create-invitation.dto';
 
 export class InvitationResponseDto {
   @ApiProperty({ 
@@ -9,37 +10,27 @@ export class InvitationResponseDto {
   id: string;
 
   @ApiProperty({ 
-    description: 'First name of the invitee'
-  })
-  firstName: string;
-
-  @ApiProperty({ 
-    description: 'Last name of the invitee'
-  })
-  lastName: string;
-
-  @ApiProperty({ 
-    description: 'Email address of the invitee'
-  })
-  email: string;
-
-  @ApiProperty({ 
-    description: 'Country code',
-    enum: Country
-  })
-  country: Country;
-
-  @ApiProperty({ 
-    description: 'User role',
-    enum: UserRole
-  })
-  role: UserRole;
-
-  @ApiProperty({ 
-    description: 'Client ID',
+    description: 'Organization ID',
     format: 'uuid'
   })
-  clientId: string;
+  organizationId: string;
+
+  @ApiProperty({ 
+    description: 'Unique invitation code'
+  })
+  inviteCode: string;
+
+  @ApiProperty({ 
+    description: 'User ID who created the invitation',
+    format: 'uuid'
+  })
+  invitedBy: string;
+
+  @ApiProperty({ 
+    description: 'Role type to assign',
+    enum: RoleType
+  })
+  roleType: RoleType;
 
   @ApiProperty({ 
     description: 'Invitation status',
@@ -53,13 +44,29 @@ export class InvitationResponseDto {
   expiresAt: Date;
 
   @ApiProperty({ 
+    description: 'Maximum uses (null for unlimited)'
+  })
+  maxUses: number | null;
+
+  @ApiProperty({ 
+    description: 'Current number of uses'
+  })
+  currentUses: number;
+
+  @ApiProperty({ 
     description: 'Creation date'
   })
   createdAt: Date;
 
   @ApiProperty({ 
-    description: 'Created by user ID',
-    format: 'uuid'
+    description: 'Organization name (joined from organization relation)',
+    required: false
   })
-  createdBy: string;
+  organizationName?: string;
+
+  @ApiProperty({ 
+    description: 'Full shareable invitation URL',
+    required: false
+  })
+  invitationUrl?: string;
 }

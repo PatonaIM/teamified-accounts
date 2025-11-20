@@ -14,10 +14,11 @@ import { SupabaseAuthService } from './services/supabase-auth.service';
 import { SupabaseAuthController } from './controllers/supabase-auth.controller';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
-import { Invitation } from '../invitations/entities/invitation.entity';
+import { LegacyInvitation } from '../invitations/entities/legacy-invitation.entity';
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { UserRolesModule } from '../user-roles/user-roles.module';
-import { EmploymentRecordsModule } from '../employment-records/employment-records.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { EmailModule } from '../email/email.module';
 import { AuditModule } from '../audit/audit.module';
@@ -25,7 +26,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Session, Invitation, UserRole]),
+    TypeOrmModule.forFeature([User, Session, LegacyInvitation, UserRole, Organization, OrganizationMember]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -35,9 +36,8 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
       inject: [ConfigService],
     }),
     EmailModule,
-    AuditModule,
+    forwardRef(() => AuditModule),
     forwardRef(() => UserRolesModule),
-    forwardRef(() => EmploymentRecordsModule),
     forwardRef(() => OAuthClientsModule),
     ThrottlerModule,
   ],

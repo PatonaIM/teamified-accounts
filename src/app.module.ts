@@ -3,29 +3,24 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { databaseConfig } from './config/database.config';
-import { InvitationsModule } from './invitations/invitations.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditModule } from './audit/audit.module';
+import { AuditControllerModule } from './audit/audit-controller.module';
 import { EmailModule } from './email/email.module';
-import { ProfilesModule } from './profiles/profiles.module';
-import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
-import { EmploymentRecordsModule } from './employment-records/employment-records.module';
-import { SalaryHistoryModule } from './salary-history/salary-history.module';
 import { UserRolesModule } from './user-roles/user-roles.module';
 import { UsersModule } from './users/users.module';
-import { ClientsModule } from './clients/clients.module';
-import { PayrollModule } from './payroll/payroll.module';
-import { TimesheetModule } from './timesheets/timesheet.module';
-import { LeaveModule } from './leave/leave.module';
-import { WorkableModule } from './workable/workable.module';
 import { SeedModule } from './seed/seed.module';
 import { AppController } from './app.controller';
-import { ThemesModule } from './themes/themes.module';
 import { QueueModule } from './queue/queue.module';
+import { ClientsModule } from './clients/clients.module';
 import { OAuthClientsModule } from './oauth-clients/oauth-clients.module';
 import { SsoModule } from './sso/sso.module';
-import { ApiKeysModule } from './api-keys/api-keys.module';
+import { BlobStorageModule } from './blob-storage/blob-storage.module';
+import { OrganizationsModule } from './organizations/organizations.module';
+import { InvitationsModule } from './invitations/invitations.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { UserAppPermissionsModule } from './user-app-permissions/user-app-permissions.module';
 
 @Module({
   imports: [
@@ -58,27 +53,22 @@ import { ApiKeysModule } from './api-keys/api-keys.module';
       ],
     }),
     QueueModule,
-    InvitationsModule,
     AuthModule,
     AuditModule,
+    AuditControllerModule,
     EmailModule,
-    ProfilesModule,
-    DocumentsModule,
     HealthModule,
-    EmploymentRecordsModule,
-    SalaryHistoryModule,
     UserRolesModule,
     UsersModule,
-    ClientsModule,
-    PayrollModule,
-    TimesheetModule,
-    LeaveModule,
-    WorkableModule,
     SeedModule,
-    ThemesModule,
+    ClientsModule,
     OAuthClientsModule,
     SsoModule,
-    ApiKeysModule,
+    BlobStorageModule,
+    OrganizationsModule, // Phase 2: Organization Management APIs
+    InvitationsModule, // Phase 3: New Invitation Flow
+    AnalyticsModule, // Analytics API for User Management
+    UserAppPermissionsModule, // App Permissions Management
   ],
   controllers: [AppController],
 })

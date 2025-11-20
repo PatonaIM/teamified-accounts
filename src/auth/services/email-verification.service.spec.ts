@@ -29,9 +29,13 @@ describe('EmailVerificationService', () => {
     emailVerificationToken: 'verification-token-123',
     emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
     passwordResetToken: null,
+    passwordResetTokenExpiry: null,
     migratedFromZoho: false,
     zohoUserId: null,
     supabaseUserId: null,
+    lastLoginAt: null,
+    themePreference: null,
+    deletedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     eorProfile: undefined,

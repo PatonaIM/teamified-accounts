@@ -37,6 +37,8 @@ import {
   VerifyEmailResponseDto, 
   ProfileCompletionStatusDto 
 } from './dto/verify-email.dto';
+import { ClientAdminSignupDto, ClientAdminSignupResponseDto } from './dto/client-admin-signup.dto';
+import { CandidateSignupDto, CandidateSignupResponseDto } from './dto/candidate-signup.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ErrorResponseDto, ValidationErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
 import { ApiResponseDto, CreatedResponseDto, UpdatedResponseDto } from '../common/dto/api-response.dto';
@@ -119,8 +121,15 @@ export class AuthController {
     @Body() acceptInvitationDto: AcceptInvitationDto,
     @Request() req: any,
   ): Promise<AcceptInvitationResponseDto> {
+    // Use frontend URL for email verification links
+    // Priority: FRONTEND_URL (custom/production) > REPLIT_DEV_DOMAIN (Replit) > request host (fallback)
+    const baseUrl = process.env.FRONTEND_URL 
+      || (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : `${req.protocol}://${req.get('host')}`);
     return this.authService.acceptInvitation(
       acceptInvitationDto,
+      baseUrl,
       req.ip,
       req.get('user-agent'),
     );
@@ -199,6 +208,69 @@ export class AuthController {
       req.ip,
       req.get('user-agent'),
     );
+  }
+
+  @Post('check-email')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Validate email for login',
+    description: `
+      Validate if an email exists for the two-step login flow.
+      This endpoint uses security measures to prevent email enumeration attacks.
+      
+      ## Security Features:
+      - Rate limited to 5 attempts per minute
+      - Random timing jitter to prevent timing attacks
+      - Audit logging of validation attempts
+      - Returns success for both existing and non-existing emails
+    `,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'user@teamified.com'
+        }
+      },
+      required: ['email']
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email validation completed',
+    schema: {
+      type: 'object',
+      properties: {
+        valid: {
+          type: 'boolean',
+          description: 'True if email exists and is active'
+        },
+        message: {
+          type: 'string',
+          description: 'User-friendly message'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid email format',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async checkEmail(
+    @Body() body: { email: string },
+    @Request() req: any,
+  ): Promise<{ valid: boolean; message?: string }> {
+    return this.authService.validateEmailForLogin(body.email, req.ip);
   }
 
   @Post('login')
@@ -582,49 +654,152 @@ export class AuthController {
     return this.authService.getProfileData(req.user.sub);
   }
 
-  @Get('me/employment')
-  @UseGuards(JwtAuthGuard)
+  @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get user employment records',
+    summary: 'Request password reset',
     description: `
-      Retrieve the current user's employment records and work history.
+      Request a password reset email for your account.
       
-      ## Employment Records Information:
-      - Current and historical employment positions
-      - Client assignments and project details
-      - Employment status and dates
-      - Role and responsibility information
-      - Performance and evaluation data
+      ## Process Flow:
+      1. User submits their email address
+      2. System validates the email format
+      3. If account exists, a password reset link is sent via email
+      4. Reset link expires after 1 hour
       
-      ## Data Privacy:
-      - Only returns user's own employment records
-      - Sensitive information may be filtered
-      - All access is logged for audit purposes
-      - Data is returned in chronological order
+      ## Security Features:
+      - Rate limited to 5 attempts per 5 minutes
+      - Returns same message whether email exists or not (prevents user enumeration)
+      - Reset tokens are single-use and time-limited
+      - All requests are logged for security monitoring
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/forgot-password.dto').ForgotPasswordDto,
+    description: 'Email address for password reset',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset email sent (if account exists)',
+    type: () => require('./dto/forgot-password.dto').ForgotPasswordResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid email format',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async forgotPassword(
+    @Body() forgotPasswordDto: { email: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    return this.authService.forgotPassword(
+      forgotPasswordDto.email,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Post('admin/send-password-reset')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Admin: Send password reset email on behalf of a user',
+    description: `
+      Admin endpoint to send a password reset email on behalf of a user.
+      This endpoint requires authentication and logs which admin initiated the reset.
+      
+      ## Process Flow:
+      1. Admin provides user ID
+      2. System validates admin permissions
+      3. Password reset email is sent to the user
+      4. Action is logged with admin as the actor
     `,
   })
   @ApiResponse({
     status: 200,
-    description: 'Employment records retrieved successfully',
-    type: ApiResponseDto<any[]>,
+    description: 'Password reset email sent successfully',
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized - Invalid or missing token',
-    type: AuthErrorResponseDto,
   })
   @ApiResponse({
     status: 404,
     description: 'User not found',
-    type: BusinessErrorResponseDto,
+  })
+  async adminSendPasswordReset(
+    @Body() body: { userId: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    return this.authService.adminSendPasswordReset(
+      body.userId,
+      req.user.id,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reset password with token',
+    description: `
+      Reset your password using the token received via email.
+      
+      ## Process Flow:
+      1. User clicks reset link from email (contains token)
+      2. User enters new password and confirms it
+      3. System validates token and password requirements
+      4. Password is updated and all sessions are invalidated
+      5. User must log in again with new password
+      
+      ## Security Features:
+      - Rate limited to 5 attempts per 5 minutes
+      - Token expires after 1 hour
+      - Password must meet security requirements
+      - All existing sessions are invalidated after reset
+      - All attempts are logged for security monitoring
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/reset-password.dto').ResetPasswordDto,
+    description: 'Password reset details including token and new password',
   })
   @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error - Employment records retrieval failed',
+    status: 200,
+    description: 'Password reset successfully',
+    type: () => require('./dto/reset-password.dto').ResetPasswordResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid token or password requirements not met',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
     type: ErrorResponseDto,
   })
-  async getEmploymentRecords(@Request() req: any): Promise<any[]> {
-    return this.authService.getEmploymentRecords(req.user.sub);
+  async resetPassword(
+    @Body() resetPasswordDto: { token: string; password: string; confirmPassword: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    return this.authService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.password,
+      resetPasswordDto.confirmPassword,
+      req.ip,
+      req.get('user-agent'),
+    );
   }
 
   @Get('debug/token')
@@ -647,6 +822,137 @@ export class AuthController {
       payload: req.user,
       note: 'If roles are missing or incorrect, log out and log in again to get a fresh token with updated roles'
     };
+  }
+
+  @Post('signup/client-admin')
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Client Admin Signup - Create account and organization',
+    description: `
+      Create a new client admin account with an organization. This is the self-service
+      signup flow for business owners and HR managers who want to create their own workspace.
+      
+      ## Process Flow:
+      1. Validate user doesn't already exist
+      2. Create user account with client_admin role
+      3. Create organization with auto-generated slug
+      4. Add user as organization member
+      5. Generate authentication tokens
+      6. Send welcome email
+      
+      ## What Gets Created:
+      - User account with client_admin role (tenant-scoped)
+      - Organization with free tier subscription
+      - Organization membership record
+      - JWT access and refresh tokens
+      
+      ## Security Features:
+      - Rate limited to 3 signups per 5 minutes per IP
+      - Password must meet security requirements
+      - Unique slug auto-generated from company name
+      - All actions logged for audit
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/client-admin-signup.dto').ClientAdminSignupDto,
+    description: 'Client admin signup details',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Account and organization created successfully',
+    type: () => require('./dto/client-admin-signup.dto').ClientAdminSignupResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid input or password requirements not met',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - User with this email already exists',
+    type: BusinessErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async clientAdminSignup(
+    @Body() signupDto: ClientAdminSignupDto,
+    @Request() req: any,
+  ): Promise<ClientAdminSignupResponseDto> {
+    return this.authService.clientAdminSignup(
+      signupDto,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Post('signup/candidate')
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Candidate Signup - Quick account creation for job applicants',
+    description: `
+      Create a new candidate account for job applicants. This is a streamlined
+      signup flow designed to be completed in under 30 seconds.
+      
+      ## Process Flow:
+      1. Validate user doesn't already exist
+      2. Create user account with candidate role (global scope)
+      3. Generate authentication tokens
+      4. Send welcome email
+      
+      ## What Gets Created:
+      - User account with candidate role
+      - JWT access and refresh tokens
+      - No organization membership (candidates are not tied to organizations)
+      
+      ## Security Features:
+      - Rate limited to 5 signups per 5 minutes per IP
+      - Password must meet security requirements
+      - All actions logged for audit
+      
+      ## Use Cases:
+      - Job seekers applying for positions
+      - Candidates accessing the Candidate Portal
+      - Users who will later be converted to employees
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/candidate-signup.dto').CandidateSignupDto,
+    description: 'Candidate signup details',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Candidate account created successfully',
+    type: () => require('./dto/candidate-signup.dto').CandidateSignupResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid input or password requirements not met',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - User with this email already exists',
+    type: BusinessErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async candidateSignup(
+    @Body() signupDto: CandidateSignupDto,
+    @Request() req: any,
+  ): Promise<CandidateSignupResponseDto> {
+    return this.authService.candidateSignup(
+      signupDto,
+      req.ip,
+      req.get('user-agent'),
+    );
   }
 }
 

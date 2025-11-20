@@ -1,4 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { User } from '../../auth/entities/user.entity';
 
 export interface CurrentUserData {
   id: string;
@@ -9,14 +10,21 @@ export interface CurrentUserData {
 }
 
 export const CurrentUser = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): CurrentUserData => {
+  (data: unknown, ctx: ExecutionContext): User | CurrentUserData => {
     const request = ctx.switchToHttp().getRequest();
-    console.log('CurrentUser decorator - request.user:', {
-      id: request.user?.id,
-      sub: request.user?.sub,
-      email: request.user?.email,
-      keys: request.user ? Object.keys(request.user) : 'no user',
-    });
-    return request.user;
+    
+    if (request.currentUserEntity) {
+      return request.currentUserEntity;
+    }
+    
+    const user = request.user;
+    
+    return {
+      id: user?.sub || user?.id,
+      email: user?.email,
+      role: user?.roles?.[0] || user?.role,
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+    };
   },
 );
