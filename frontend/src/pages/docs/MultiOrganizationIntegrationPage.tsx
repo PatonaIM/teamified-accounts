@@ -12,7 +12,7 @@ import { ContentCopy, CheckCircle } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
-export default function MultitenancyIntegrationPage() {
+export default function MultiOrganizationIntegrationPage() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const handleCopy = (text: string, index: number) => {
@@ -115,7 +115,7 @@ const MyComponent = () => {
   return (
     <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
       <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-        Multitenancy Integration Guide
+        Multi-Organization Integration Guide
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Understanding Teamified's multi-organization architecture and client scoping

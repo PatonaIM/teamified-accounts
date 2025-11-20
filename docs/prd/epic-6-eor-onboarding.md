@@ -151,7 +151,7 @@ Agent overlay (6.10–6.12): ChatKit UI and AgentKit vector memory assist across
  - Strictly reuse the existing document management system and endpoints for CVs/Identity/Employment/Education; no duplicate storage paths or services
  - HR‑verified documents must be immutable for candidate/EOR deletion; only HR/Admin may revoke verification or archive per policy; all actions audited
  - Role assignment must reuse existing `user_roles` with `role_type='eor'`; no schema or enum changes required
- - Agent integration must use OpenAI AgentKit/ChatKit; chat history persisted in a supported vector store with per‑tenant/record namespaces
+ - Agent integration must use OpenAI AgentKit/ChatKit; chat history persisted in a supported vector store with per‑organization/record namespaces
  - Do not store secrets or access tokens in chat history; mask/blacklist sensitive fields; document retention and export controls
  - Provide opt‑out/disable flags; ensure graceful degradation if vector store is unavailable
 

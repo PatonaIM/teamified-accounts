@@ -20,7 +20,7 @@ import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitation
 import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
 import DocsPage from './pages/DocsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
-import MultitenancyIntegrationPage from './pages/docs/MultitenancyIntegrationPage';
+import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import InternalUsersPage from './pages/InternalUsersPage';
@@ -166,10 +166,6 @@ function App() {
                     } 
                   />
                   <Route 
-                    path="tools/tenant-management" 
-                    element={<Navigate to="/admin/organizations" replace />}
-                  />
-                  <Route 
                     path="audit-logs" 
                     element={
                       <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
@@ -221,7 +217,7 @@ function App() {
                 />
                 <Route 
                   path="/docs/multitenancy_integration" 
-                  element={<MultitenancyIntegrationPage />} 
+                  element={<MultiOrganizationIntegrationPage />} 
                 />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
