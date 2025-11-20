@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -28,6 +28,7 @@ export default function IntegratedTestSuite() {
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const callbackProcessedRef = useRef(false);
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -35,6 +36,7 @@ export default function IntegratedTestSuite() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (callbackProcessedRef.current) return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
@@ -42,9 +44,11 @@ export default function IntegratedTestSuite() {
     const state = urlParams.get('state');
 
     if (errorParam) {
+      callbackProcessedRef.current = true;
       setError(`Authentication failed: ${errorParam}`);
       window.history.replaceState({}, document.title, '/test');
     } else if (code) {
+      callbackProcessedRef.current = true;
       handleCallback(code, state);
     }
   }, []);
@@ -162,11 +166,10 @@ export default function IntegratedTestSuite() {
   };
 
   const handleClearSession = () => {
-    setUserInfo(null);
-    setAccessToken(null);
-    setError(null);
     sessionStorage.removeItem('pkce_code_verifier');
     sessionStorage.removeItem('pkce_state');
+    callbackProcessedRef.current = false;
+    window.location.href = '/test';
   };
 
   return (
