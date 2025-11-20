@@ -11,7 +11,7 @@ export interface User {
   address?: any;
   profileData?: any;
   clientId?: string;
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived' | 'invited';
   isActive: boolean;
   emailVerified: boolean;
   lastLoginAt?: string;
@@ -43,7 +43,7 @@ export interface UpdateUserRequest {
   address?: any;
   profileData?: any;
   clientId?: string;
-  status?: 'active' | 'inactive' | 'archived';
+  status?: 'active' | 'inactive' | 'archived' | 'invited';
 }
 
 export interface UserQueryParams {

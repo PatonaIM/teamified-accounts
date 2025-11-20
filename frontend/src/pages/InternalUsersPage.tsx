@@ -327,9 +327,9 @@ const InternalUsersPage: React.FC = () => {
                   </TableCell>
                   <TableCell onClick={() => handleUserClick(user)} sx={{ width: '12%' }}>
                     <Chip
-                      label={user.isActive ? 'Active' : 'NLWF'}
+                      label={user.status === 'invited' ? 'Invited' : (user.isActive ? 'Active' : 'NLWF')}
                       size="small"
-                      color={user.isActive ? 'success' : 'default'}
+                      color={user.status === 'invited' ? 'warning' : (user.isActive ? 'success' : 'default')}
                     />
                   </TableCell>
                   <TableCell onClick={() => handleUserClick(user)} sx={{ width: '15%' }}>
