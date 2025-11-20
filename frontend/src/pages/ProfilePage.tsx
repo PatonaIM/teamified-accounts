@@ -15,8 +15,7 @@ import {
   Typography,
   LinearProgress,
   Paper,
-  CircularProgress,
-  Container
+  CircularProgress
 } from '@mui/material';
 import {
   Work as WorkIcon,
@@ -126,7 +125,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <LayoutMUI>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box sx={{ py: 4, px: 3 }}>
         {/* Profile Tabs Manager */}
         <Box sx={{ mb: 4 }}>
           <ProfileTabsManager
@@ -169,7 +168,7 @@ const ProfilePage: React.FC = () => {
             isLoading={isLoadingHistory}
           />
         </Paper>
-      </Container>
+      </Box>
     </LayoutMUI>
   );
 };

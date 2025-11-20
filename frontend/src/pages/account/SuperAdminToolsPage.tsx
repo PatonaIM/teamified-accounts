@@ -134,10 +134,6 @@ export default function SuperAdminToolsPage() {
 
   return (
     <Box sx={{ p: 4 }}>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 600 }}>
-        Admin Tools
-      </Typography>
-
       <Grid container spacing={3}>
         {tools.map((tool, index) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
