@@ -182,10 +182,10 @@ const LoginPageMUI: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Left Panel - Purple Gradient (50%) */}
+      {/* Left Panel - Purple Gradient (~42%) */}
       <Box
         sx={{
-          width: '50%',
+          flex: '0 0 clamp(320px, 42vw, 520px)',
           background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
           display: 'flex',
           flexDirection: 'column',
@@ -245,18 +245,15 @@ const LoginPageMUI: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Right Panel - Dark Background (50%) */}
+      {/* Right Panel - Dark Background (~58%) */}
       <Box
         sx={{
-          width: '50%',
+          flex: 1,
           bgcolor: '#1E1E1E',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           padding: 4,
-          '@media (max-width: 900px)': {
-            width: '100%',
-          },
         }}
       >
         {/* Sign-in Form Container */}
@@ -270,29 +267,28 @@ const LoginPageMUI: React.FC = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          {/* Sign in Header */}
-          <Typography
-            variant="h4"
-            sx={{
-              color: 'white',
-              fontWeight: 600,
-              mb: 4,
-              textAlign: 'center',
-            }}
-          >
-            Sign in
-          </Typography>
-
-          {/* Error Alert */}
-          {errors.general && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-              {errors.general}
-            </Alert>
-          )}
-
           {/* Email Step */}
           {step === 'email' && (
             <form onSubmit={handleEmailContinue}>
+              {/* Sign in Header */}
+              <Typography
+                variant="h4"
+                sx={{
+                  color: 'white',
+                  fontWeight: 600,
+                  mb: 4,
+                  textAlign: 'center',
+                }}
+              >
+                Sign in
+              </Typography>
+
+              {/* Error Alert */}
+              {errors.general && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                  {errors.general}
+                </Alert>
+              )}
               <TextField
                 fullWidth
                 placeholder="Email or phone"
