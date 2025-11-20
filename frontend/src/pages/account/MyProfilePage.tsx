@@ -126,7 +126,7 @@ export default function MyProfilePage() {
         sx={{
           p: 4,
           bgcolor: 'background.paper',
-          borderRadius: 4,
+          borderRadius: 6,
         }}
       >
         {/* User Header */}
