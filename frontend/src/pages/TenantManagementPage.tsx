@@ -800,11 +800,15 @@ const TenantManagementPage: React.FC = () => {
                         <Chip
                           label={org.subscriptionTier}
                           size="small"
-                          color={getSubscriptionColor(org.subscriptionTier)}
+                          color={org.subscriptionTier?.toLowerCase() === 'professional' ? undefined : getSubscriptionColor(org.subscriptionTier)}
                           sx={{ 
                             ml: 1,
                             fontWeight: 600,
                             textTransform: 'capitalize',
+                            ...(org.subscriptionTier?.toLowerCase() === 'professional' && {
+                              bgcolor: '#A16AE8',
+                              color: 'white',
+                            }),
                           }}
                         />
                       </Box>
@@ -916,10 +920,14 @@ const TenantManagementPage: React.FC = () => {
                           <Chip 
                             label={selectedOrg.subscriptionTier} 
                             size="small" 
-                            color={getSubscriptionColor(selectedOrg.subscriptionTier)}
+                            color={selectedOrg.subscriptionTier?.toLowerCase() === 'professional' ? undefined : getSubscriptionColor(selectedOrg.subscriptionTier)}
                             sx={{
                               fontWeight: 600,
                               textTransform: 'capitalize',
+                              ...(selectedOrg.subscriptionTier?.toLowerCase() === 'professional' && {
+                                bgcolor: '#A16AE8',
+                                color: 'white',
+                              }),
                             }}
                           />
                         </Box>
