@@ -48,7 +48,7 @@ export default function MyProfilePage() {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const data = await profileService.getProfile();
+      const data = await profileService.getProfileData();
       console.log('MyProfilePage: Loaded profile data:', data);
       console.log('MyProfilePage: Profile roles:', data.roles);
       console.log('MyProfilePage: Profile id:', data.id);
@@ -92,8 +92,14 @@ export default function MyProfilePage() {
         },
       });
 
-      // Reload profile data to show updated values
-      await loadProfile();
+      // Update local state without reloading the entire profile
+      setProfileData(prev => prev ? {
+        ...prev,
+        profileData: {
+          ...prev.profileData,
+          secondaryEmail: secondaryEmail || undefined,
+        },
+      } : prev);
 
       showSnackbar('Profile updated successfully', 'success');
       setIsEditing(false);
