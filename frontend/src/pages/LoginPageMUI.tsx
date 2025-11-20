@@ -132,41 +132,7 @@ const LoginPageMUI: React.FC = () => {
       await refreshUser();
       
       if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
-        try {
-          const url = new URL(returnUrl, window.location.origin);
-          const clientId = url.searchParams.get('client_id');
-          
-          if (!clientId) {
-            setErrors({ general: 'Invalid SSO request. Please try again.' });
-            setIsLoading(false);
-            return;
-          }
-          
-          const response = await fetch(`/api/v1/sso/launch/${clientId}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${getAccessToken()}`,
-              'Content-Type': 'application/json',
-            },
-          });
-          
-          if (!response.ok) {
-            throw new Error(`SSO launch failed: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          
-          if (data.redirectUrl) {
-            window.location.href = data.redirectUrl;
-            return;
-          } else {
-            throw new Error('No redirect URL received from SSO launch');
-          }
-        } catch (error) {
-          console.error('SSO launch failed:', error);
-          setErrors({ general: 'SSO authentication failed. Redirecting to dashboard...' });
-          setTimeout(() => navigate('/account/profile'), 2000);
-        }
+        window.location.href = returnUrl;
       } else {
         navigate(returnUrl);
       }
