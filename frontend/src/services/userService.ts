@@ -1,4 +1,5 @@
-import axios from 'axios';
+import api from './api';
+import axios from 'axios'; // Keep for utility functions
 
 // Types for user management
 export interface User {

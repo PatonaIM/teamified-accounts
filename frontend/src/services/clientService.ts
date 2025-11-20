@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api';
 import type { Client, CreateClientDto, UpdateClientDto } from '../types/client';
 
 export interface ClientQueryParams {
@@ -27,20 +27,6 @@ export interface ClientListResponse {
 }
 
 class ClientService {
-  private baseURL: string;
-
-  constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-  }
-
-  private getAuthHeaders() {
-    const token = localStorage.getItem('teamified_access_token');
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
   async getClients(params?: ClientQueryParams): Promise<ClientListResponse> {
     const queryParams = new URLSearchParams();
     
@@ -49,39 +35,29 @@ class ClientService {
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
 
-    const url = `${this.baseURL}/v1/clients${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await axios.get(url, {
-      headers: this.getAuthHeaders(),
-    });
+    const url = `/v1/clients${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await api.get(url);
     
     return response.data;
   }
 
   async getClientById(id: string): Promise<Client> {
-    const response = await axios.get(`${this.baseURL}/v1/clients/${id}`, {
-      headers: this.getAuthHeaders(),
-    });
+    const response = await api.get(`/v1/clients/${id}`);
     return response.data.client;
   }
 
   async createClient(dto: CreateClientDto): Promise<Client> {
-    const response = await axios.post(`${this.baseURL}/v1/clients`, dto, {
-      headers: this.getAuthHeaders(),
-    });
+    const response = await api.post(`/v1/clients`, dto);
     return response.data.client;
   }
 
   async updateClient(id: string, dto: UpdateClientDto): Promise<Client> {
-    const response = await axios.patch(`${this.baseURL}/v1/clients/${id}`, dto, {
-      headers: this.getAuthHeaders(),
-    });
+    const response = await api.patch(`/v1/clients/${id}`, dto);
     return response.data.client;
   }
 
   async deleteClient(id: string): Promise<void> {
-    await axios.delete(`${this.baseURL}/v1/clients/${id}`, {
-      headers: this.getAuthHeaders(),
-    });
+    await api.delete(`/v1/clients/${id}`);
   }
 }
 

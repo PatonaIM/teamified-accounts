@@ -1,4 +1,5 @@
-import axios from 'axios';
+import api from './api';
+import axios from 'axios'; // Keep for utility functions
 import type { EmploymentStatus, EmploymentRecord, EmploymentRecordFilters, EmploymentRecordResponse, PaginatedResponse, User, Client } from '../types/employmentRecords';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';

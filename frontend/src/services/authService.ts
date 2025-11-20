@@ -65,18 +65,12 @@ export const getCSRFToken = (): string | null => {
   return localStorage.getItem(CSRF_TOKEN_KEY);
 };
 
-// Request interceptor to add auth token and CSRF token
+// Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    // Add CSRF token for POST/PUT/DELETE requests
-    const csrfToken = getCSRFToken();
-    if (csrfToken && ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
-      config.headers['X-CSRF-Token'] = csrfToken;
     }
     
     return config;

@@ -1,4 +1,5 @@
-import axios from 'axios';
+import api from './api';
+import axios from 'axios'; // Keep for utility functions
 
 // Use environment variable for API URL (Vercel deployment)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api';

@@ -26,6 +26,7 @@ import { InvitationPreviewDto } from './dto/invitation-preview.dto';
 import { InternalInvitationResponseDto } from './dto/internal-invitation-response.dto';
 import { AcceptInvitationResponseDto } from '../auth/dto/accept-invitation.dto';
 import { ErrorResponseDto, ValidationErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUserGuard } from '../common/guards/current-user.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -289,7 +290,7 @@ export class InvitationsController {
   }
 
   @Post('internal')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -393,7 +394,7 @@ export class InvitationsController {
   }
 
   @Post('internal/generate-link')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
