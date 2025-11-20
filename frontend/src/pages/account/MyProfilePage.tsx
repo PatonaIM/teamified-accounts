@@ -121,7 +121,7 @@ export default function MyProfilePage() {
   const displayName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || 'User';
 
   return (
-    <Box sx={{ p: 4 }}>
+    <Box sx={{ p: 2 }}>
       <Paper
         sx={{
           p: 4,
