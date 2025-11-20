@@ -167,16 +167,26 @@ export default function IntegratedTestSuite() {
 
   const handleClearSession = async () => {
     try {
+      // Get refresh token from localStorage to send with logout request
+      const refreshToken = localStorage.getItem('teamified_refresh_token');
+      
       await fetch(`${apiUrl}/api/v1/auth/logout`, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'include', // Send httpOnly cookie for proper cookie clearing
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
       });
     } catch (err) {
       console.error('Logout failed:', err);
     }
     
+    // Clear local session data
     sessionStorage.removeItem('pkce_code_verifier');
     sessionStorage.removeItem('pkce_state');
+    localStorage.removeItem('teamified_access_token');
+    localStorage.removeItem('teamified_refresh_token');
     callbackProcessedRef.current = false;
     window.location.href = '/test';
   };

@@ -46,6 +46,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with requests for SSO cookie management
 });
 
 // Create separate axios instance for refresh calls (no interceptors to avoid circular loops)
@@ -54,6 +55,7 @@ const refreshApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with requests
 });
 
 // CSRF token management

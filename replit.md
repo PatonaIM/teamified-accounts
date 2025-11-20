@@ -103,16 +103,28 @@ The data model features flexible user profile data in a **JSONB field** within t
 
 Security measures include **Argon2** for password hashing, multi-tier **NestJS Throttler** for rate limiting, environment-aware **CORS configuration**, and **Redis-backed session storage** for refresh token management. Client scoping is implemented by embedding `clientId` in JWTs to enable efficient data filtering.
 
-#### Dual Authentication Approach
+#### Dual Token Approach (Bearer + Cookie)
 
-The platform implements a dual authentication strategy to support both API requests and OAuth redirect flows:
+The platform implements a dual-token strategy following industry OAuth 2.0 best practices:
 
--   **localStorage Tokens**: Primary method for API requests via axios Authorization headers
--   **HttpOnly Cookies**: Automatic session detection for OAuth redirects and cross-app navigation
--   **Unified JwtAuthGuard**: Reads tokens from Authorization header first, falls back to `access_token` cookie
--   **Cookie Settings**: `httpOnly: true`, `secure: true` (production), `sameSite: 'lax'`, 15-minute expiry
--   **Automatic Cookie Management**: Set on login/refresh, cleared on logout, synchronized with JWT token lifecycle
--   **Seamless Cross-App SSO**: Users navigate between Teamified Accounts and connected apps (Candidate Portal, ATS Portal, HRIS Portal, etc.) without re-authentication
+**Why Dual Tokens?**
+-   **API Calls**: Use Bearer tokens in Authorization headers (explicit, controlled, client-managed)
+-   **Browser Redirects**: Use httpOnly cookies for SSO authorize endpoint (required for OAuth front-channel redirects via `window.location`)
+-   **Problem**: Browser navigation (`window.location.href`) cannot send Authorization headers, only cookies work for OAuth authorize redirects
+
+**Implementation:**
+-   **Bearer Tokens (Primary)**: Stored in localStorage, sent via `Authorization: Bearer {token}` header for all API calls
+-   **HttpOnly Cookies (Fallback)**: Automatically set on login/refresh for browser-based SSO redirects to `/api/v1/sso/authorize`
+-   **JwtAuthGuard Priority**: Checks Authorization header first, falls back to `access_token` cookie only if header missing
+-   **Cookie Settings**: `httpOnly: true`, `secure: true` (production), `sameSite: 'lax'`, 15-minute expiry (matches JWT)
+-   **withCredentials**: Frontend axios configured with `withCredentials: true` to send cookies, enabling proper logout cookie clearing
+-   **Cookie Lifecycle**: Set on login/refresh, cleared on logout, synchronized with JWT token expiry
+
+**Security Benefits:**
+-   httpOnly cookies prevent XSS token theft for SSO flows
+-   SameSite=Lax protects against CSRF attacks
+-   Bearer tokens give explicit control for API calls
+-   Dual approach enables both OAuth redirects and modern API authentication
 
 #### Session Management & Inactivity Timeout
 

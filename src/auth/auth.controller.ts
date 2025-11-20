@@ -358,12 +358,22 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<LoginResponseDto> {
     const loginResponse = await this.authService.login(
       loginDto,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
+    // API calls use Bearer tokens in Authorization header
+    res.cookie('access_token', loginResponse.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
+    });
     
     return loginResponse;
   }
@@ -438,12 +448,21 @@ export class AuthController {
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<RefreshTokenResponseDto> {
     const refreshResponse = await this.authService.refresh(
       refreshTokenDto.refreshToken,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Update httpOnly cookie with new access token
+    res.cookie('access_token', refreshResponse.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
     
     return refreshResponse;
   }
@@ -517,12 +536,20 @@ export class AuthController {
   async logout(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<LogoutResponseDto> {
     const logoutResponse = await this.authService.logout(
       refreshTokenDto.refreshToken,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Clear the httpOnly cookie on logout
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
     
     return logoutResponse;
   }

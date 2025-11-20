@@ -18,17 +18,19 @@ export class JwtAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     
-    // Extract token from Authorization header
+    // Extract token from Authorization header (primary) or cookie (fallback for browser redirects)
+    let token: string | undefined;
     const authHeader = request.headers.authorization;
     
-    if (!authHeader) {
-      throw new UnauthorizedException('Missing authentication credentials');
+    if (authHeader) {
+      token = this.jwtService.extractTokenFromHeader(authHeader);
+    } else if (request.cookies?.access_token) {
+      // Fallback for browser redirects (like SSO authorize endpoint)
+      token = request.cookies.access_token;
     }
     
-    const token = this.jwtService.extractTokenFromHeader(authHeader);
-    
     if (!token) {
-      throw new UnauthorizedException('Invalid authorization header format');
+      throw new UnauthorizedException('Missing authentication credentials');
     }
 
     try {
