@@ -27,7 +27,6 @@ import InternalUsersPage from './pages/InternalUsersPage';
 import UserDetailPage from './pages/UserDetailPage';
 import TenantManagementPage from './pages/TenantManagementPage';
 import CandidateUsersPage from './pages/CandidateUsersPage';
-import UserProfilePage from './pages/UserProfilePage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import MyOrganizationPage from './pages/MyOrganizationPage';
 import ProtectedRoute from './components/ProtectedRoute';
