@@ -124,10 +124,9 @@ export default function MyProfilePage() {
     <Box sx={{ p: 4 }}>
       <Paper
         sx={{
-          maxWidth: 800,
-          mx: 'auto',
           p: 4,
           bgcolor: 'background.paper',
+          borderRadius: 4,
         }}
       >
         {/* User Header */}
