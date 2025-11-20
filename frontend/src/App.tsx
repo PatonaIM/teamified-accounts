@@ -24,6 +24,7 @@ import MultitenancyIntegrationPage from './pages/docs/MultitenancyIntegrationPag
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import InternalUsersPage from './pages/InternalUsersPage';
+import UserDetailPage from './pages/UserDetailPage';
 import TenantManagementPage from './pages/TenantManagementPage';
 import CandidateUsersPage from './pages/CandidateUsersPage';
 import UserProfilePage from './pages/UserProfilePage';
@@ -205,7 +206,7 @@ function App() {
                     path="users/:userId" 
                     element={
                       <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
-                        <UserProfilePage />
+                        <UserDetailPage />
                       </RoleBasedRoute>
                     } 
                   />
