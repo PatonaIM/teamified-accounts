@@ -136,13 +136,12 @@ const LoginPageMUI: React.FC = () => {
       await refreshUser();
       
       console.log('[LoginPageMUI] Login successful, redirecting to:', returnUrl);
-      console.log('[LoginPageMUI] Using window.location.href?:', returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize'));
       
       if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
-        console.log('[LoginPageMUI] Redirecting via window.location.href to:', returnUrl);
+        console.log('[LoginPageMUI] SSO flow - redirecting with cookies');
         window.location.href = returnUrl;
       } else {
-        console.log('[LoginPageMUI] Redirecting via navigate() to:', returnUrl);
+        console.log('[LoginPageMUI] Normal redirect');
         navigate(returnUrl);
       }
     } catch (error: any) {
