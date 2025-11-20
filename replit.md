@@ -11,6 +11,7 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 **November 20, 2025**: 
+- **HttpOnly Cookie Authentication for SSO**: Implemented dual authentication approach with httpOnly cookies alongside localStorage tokens to enable seamless cross-app SSO. The backend now sets secure, httpOnly cookies on login/refresh and reads from cookies OR Authorization headers, enabling automatic session detection across all connected applications without re-login.
 - **48-Hour Inactivity Timeout**: Implemented session inactivity timeout that automatically logs users out after 48 hours of inactivity. The timer resets on any token refresh across all connected SSO applications. Added `last_activity_at` column to sessions table to track user activity.
 - **Comprehensive Terminology Refactoring**: Completed refactoring from "tenant" to "organization" across the entire codebase, including:
   - Renamed frontend page from `TenantManagementPage.tsx` to `OrganizationManagementPage.tsx`
@@ -101,6 +102,17 @@ The data model features flexible user profile data in a **JSONB field** within t
 ### Security Architecture
 
 Security measures include **Argon2** for password hashing, multi-tier **NestJS Throttler** for rate limiting, environment-aware **CORS configuration**, and **Redis-backed session storage** for refresh token management. Client scoping is implemented by embedding `clientId` in JWTs to enable efficient data filtering.
+
+#### Dual Authentication Approach
+
+The platform implements a dual authentication strategy to support both API requests and OAuth redirect flows:
+
+-   **localStorage Tokens**: Primary method for API requests via axios Authorization headers
+-   **HttpOnly Cookies**: Automatic session detection for OAuth redirects and cross-app navigation
+-   **Unified JwtAuthGuard**: Reads tokens from Authorization header first, falls back to `access_token` cookie
+-   **Cookie Settings**: `httpOnly: true`, `secure: true` (production), `sameSite: 'lax'`, 15-minute expiry
+-   **Automatic Cookie Management**: Set on login/refresh, cleared on logout, synchronized with JWT token lifecycle
+-   **Seamless Cross-App SSO**: Users navigate between Teamified Accounts and connected apps (Candidate Portal, ATS Portal, HRIS Portal, etc.) without re-authentication
 
 #### Session Management & Inactivity Timeout
 
