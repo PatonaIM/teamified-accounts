@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { RoleType, RoleScope } from '../../common/types/role-types';
 
 export class UserRoleResponseDto {
   @ApiProperty({
@@ -15,17 +16,15 @@ export class UserRoleResponseDto {
 
   @ApiProperty({
     description: 'Role type',
-    enum: ['admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client', 'eor', 'candidate'],
-    example: 'hr',
+    example: 'client_hr',
   })
-  role: 'admin' | 'hr' | 'account_manager' | 'recruiter' | 'hr_manager_client' | 'eor' | 'candidate';
+  role: RoleType;
 
   @ApiProperty({
     description: 'Scope of the role',
-    enum: ['user', 'group', 'client', 'all'],
-    example: 'all',
+    example: 'organization',
   })
-  scope: 'user' | 'group' | 'client' | 'all';
+  scope: RoleScope;
 
   @ApiProperty({
     description: 'Scope entity ID',

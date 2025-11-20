@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { RoleScope } from '../../common/types/role-types';
 
 export class PermissionResponseDto {
   @ApiProperty({
@@ -9,10 +10,9 @@ export class PermissionResponseDto {
 
   @ApiProperty({
     description: 'Permission scope',
-    enum: ['user', 'group', 'client', 'all'],
-    example: 'all',
+    example: 'organization',
   })
-  scope: 'user' | 'group' | 'client' | 'all';
+  scope: RoleScope;
 
   @ApiProperty({
     description: 'Scope entity ID if applicable',

@@ -1,26 +1,35 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsDateString, IsUUID } from 'class-validator';
+import { RoleType, RoleScope } from '../../common/types/role-types';
+
+const ROLE_TYPES: RoleType[] = [
+  'candidate', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 
+  'client_employee', 'super_admin', 'internal_member', 'internal_hr', 
+  'internal_recruiter', 'internal_account_manager', 'internal_finance', 'internal_marketing'
+];
+
+const ROLE_SCOPES: RoleScope[] = ['all', 'global', 'organization', 'individual'];
 
 export class UpdateRoleDto {
   @ApiProperty({
     description: 'Role type to update to',
-    enum: ['admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client', 'eor', 'candidate'],
-    example: 'hr',
+    enum: ROLE_TYPES,
+    example: 'client_hr',
     required: false,
   })
   @IsOptional()
-  @IsEnum(['admin', 'hr', 'account_manager', 'recruiter', 'hr_manager_client', 'eor', 'candidate'])
-  role?: 'admin' | 'hr' | 'account_manager' | 'recruiter' | 'hr_manager_client' | 'eor' | 'candidate';
+  @IsEnum(ROLE_TYPES)
+  role?: RoleType;
 
   @ApiProperty({
     description: 'Scope of the role assignment',
-    enum: ['user', 'group', 'client', 'all'],
-    example: 'client',
+    enum: ROLE_SCOPES,
+    example: 'organization',
     required: false,
   })
   @IsOptional()
-  @IsEnum(['user', 'group', 'client', 'all'])
-  scope?: 'user' | 'group' | 'client' | 'all';
+  @IsEnum(ROLE_SCOPES)
+  scope?: RoleScope;
 
   @ApiProperty({
     description: 'Scope entity ID for scoped permissions',

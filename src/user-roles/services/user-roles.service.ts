@@ -6,6 +6,7 @@ import { UpdateRoleDto } from '../dto/update-role.dto';
 import { UserRoleResponseDto } from '../dto/user-role-response.dto';
 import { PermissionResponseDto } from '../dto/permission-response.dto';
 import { EmploymentRecord } from '../../employment-records/entities/employment-record.entity';
+import { RoleType, RoleScope } from '../../common/types/role-types';
 
 @Injectable()
 export class UserRolesService {
@@ -54,8 +55,8 @@ export class UserRolesService {
 
   async assignRole(
     userId: string,
-    roleType: 'candidate' | 'eor' | 'admin' | 'hr' | 'account_manager' | 'recruiter' | 'hr_manager_client',
-    scope: 'user' | 'group' | 'client' | 'all' = 'all',
+    roleType: RoleType,
+    scope: RoleScope = 'global',
     scopeEntityId?: string,
     grantedBy?: string,
     expiresAt?: Date,
