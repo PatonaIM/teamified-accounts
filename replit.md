@@ -10,13 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**November 20, 2025**: Completed comprehensive terminology refactoring from "tenant" to "organization" across the entire codebase. This included:
-- Renamed frontend page from `TenantManagementPage.tsx` to `OrganizationManagementPage.tsx`
-- Renamed documentation page from `MultitenancyIntegrationPage.tsx` to `MultiOrganizationIntegrationPage.tsx`
-- Updated all user-facing strings, API documentation, code comments, and variable names across frontend and backend
-- Updated route paths from `/admin/tenants` to `/admin/organizations`
-- Updated all documentation files (replit.md, PRD docs, architecture docs) to use "organization" terminology
-- System now consistently uses "organization" and "multi-organization" terminology throughout
+**November 20, 2025**: 
+- **48-Hour Inactivity Timeout**: Implemented session inactivity timeout that automatically logs users out after 48 hours of inactivity. The timer resets on any token refresh across all connected SSO applications. Added `last_activity_at` column to sessions table to track user activity.
+- **Comprehensive Terminology Refactoring**: Completed refactoring from "tenant" to "organization" across the entire codebase, including:
+  - Renamed frontend page from `TenantManagementPage.tsx` to `OrganizationManagementPage.tsx`
+  - Renamed documentation page from `MultitenancyIntegrationPage.tsx` to `MultiOrganizationIntegrationPage.tsx`
+  - Updated all user-facing strings, API documentation, code comments, and variable names across frontend and backend
+  - Updated route paths from `/admin/tenants` to `/admin/organizations`
+  - Updated all documentation files (replit.md, PRD docs, architecture docs) to use "organization" terminology
+  - System now consistently uses "organization" and "multi-organization" terminology throughout
 
 ## System Architecture
 
@@ -99,6 +101,16 @@ The data model features flexible user profile data in a **JSONB field** within t
 ### Security Architecture
 
 Security measures include **Argon2** for password hashing, multi-tier **NestJS Throttler** for rate limiting, environment-aware **CORS configuration**, and **Redis-backed session storage** for refresh token management. Client scoping is implemented by embedding `clientId` in JWTs to enable efficient data filtering.
+
+#### Session Management & Inactivity Timeout
+
+The platform implements robust session management with the following features:
+
+-   **48-Hour Inactivity Timeout**: Sessions automatically expire after 48 hours of inactivity to protect against unauthorized access
+-   **Activity Tracking**: `last_activity_at` timestamp is updated on every token refresh, tracking user activity across all connected SSO applications
+-   **Cross-App Activity**: Activity in any connected application (Candidate Portal, ATS Portal, HRIS Portal, etc.) resets the inactivity timer for the entire session
+-   **Automatic Logout**: Users receive "Session expired due to inactivity" message and must log in again after 48 hours of no activity
+-   **30-Day Absolute Expiry**: Sessions have a maximum lifetime of 30 days regardless of activity, after which re-authentication is required
 
 #### API Key Management
 
