@@ -4,6 +4,12 @@
 
 The Teamified Team Member Portal is an Employer of Record (EOR) management system designed to streamline the entire employee lifecycle, from candidate onboarding to employment, payroll, timesheets, and leave management across India, Philippines, and Australia. It aims to consolidate fragmented HR processes into a single platform, offering self-service capabilities, robust audit trails, and compliance tracking, thereby providing significant market potential for EOR operations. The platform supports multi-tenant client management and granular role-based access control for Admins, HR Managers, Client Users, EOR employees, and Candidates.
 
+## Recent Changes
+
+### November 20, 2025
+- **Theme Preference Persistence**: Implemented dark/light mode toggle with user preference storage. Unauthenticated users (login pages, /docs, /test) default to light mode. Authenticated users can toggle between modes via icon buttons in the header, and their preference is saved to localStorage. Mode preference resets to light on logout.
+- **Fixed Invitation Endpoint Bug**: Added missing `JwtAuthGuard` to `/v1/invitations/internal` endpoints. Guards must run in order: `JwtAuthGuard` → `CurrentUserGuard` → `RolesGuard` to ensure proper JWT authentication before user lookup.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

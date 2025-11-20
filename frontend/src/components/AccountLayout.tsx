@@ -36,16 +36,16 @@ const AccountLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { currentTheme, setTheme } = useTheme();
+  const { mode, toggleColorMode } = useTheme();
 
-  const isDarkMode = currentTheme === 'dark';
+  const isDarkMode = mode === 'dark';
 
   const isSuperAdmin = user?.roles?.some((role: string) =>
     ['super_admin', 'system_admin'].includes(role.toLowerCase())
   );
 
   const handleThemeToggle = () => {
-    setTheme(isDarkMode ? 'light' : 'dark');
+    toggleColorMode();
   };
 
   const navItems: NavItem[] = [
