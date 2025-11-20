@@ -256,8 +256,18 @@ export default function MyProfilePage() {
               disabled={isSaving}
               sx={{
                 flex: 1,
-                textTransform: 'none',
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
                 fontWeight: 600,
+                textTransform: 'none',
+                borderColor: 'rgba(161, 106, 232, 0.5)',
+                color: 'primary.main',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  backgroundColor: 'rgba(161, 106, 232, 0.04)',
+                  boxShadow: '0 2px 8px rgba(161, 106, 232, 0.2)',
+                },
               }}
             >
               Cancel
@@ -268,16 +278,20 @@ export default function MyProfilePage() {
               disabled={isSaving}
               sx={{
                 flex: 1,
-                bgcolor: '#90CAF9',
-                color: '#000',
-                '&:hover': {
-                  bgcolor: '#64B5F6',
-                },
-                textTransform: 'none',
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
                 fontWeight: 600,
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
+                  boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                },
               }}
             >
-              {isSaving ? <CircularProgress size={24} /> : 'Save Changes'}
+              {isSaving ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Save Changes'}
             </Button>
           </Box>
         ) : (
@@ -287,13 +301,17 @@ export default function MyProfilePage() {
               onClick={handleEditClick}
               sx={{
                 flex: 1,
-                bgcolor: '#90CAF9',
-                color: '#000',
-                '&:hover': {
-                  bgcolor: '#64B5F6',
-                },
-                textTransform: 'none',
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
                 fontWeight: 600,
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
+                  boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                },
               }}
             >
               Edit Profile
@@ -303,14 +321,18 @@ export default function MyProfilePage() {
               onClick={handleSignOut}
               sx={{
                 flex: 1,
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
+                fontWeight: 600,
+                textTransform: 'none',
                 borderColor: '#f44336',
                 color: '#f44336',
                 '&:hover': {
                   borderColor: '#d32f2f',
                   bgcolor: 'rgba(244, 67, 54, 0.04)',
+                  boxShadow: '0 2px 8px rgba(244, 67, 54, 0.2)',
                 },
-                textTransform: 'none',
-                fontWeight: 600,
               }}
             >
               Sign Out
