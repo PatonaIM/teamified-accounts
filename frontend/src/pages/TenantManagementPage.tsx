@@ -171,6 +171,7 @@ const TenantManagementPage: React.FC = () => {
       setIsEditingProfile(false);
       setDeleteConfirmSlug('');
       setDisplayedMembersCount(10);
+      setMemberSearchQuery(''); // Clear member search when switching organizations
     }
   }, [selectedOrg]);
 
