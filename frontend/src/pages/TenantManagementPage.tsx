@@ -178,6 +178,13 @@ const TenantManagementPage: React.FC = () => {
   useEffect(() => {
     if (organizations.length === 0) return;
 
+    // Get sorted organizations to select the first in display order
+    const sorted = [...organizations].sort((a, b) => {
+      const tierDiff = getSubscriptionPriority(b.subscriptionTier) - getSubscriptionPriority(a.subscriptionTier);
+      if (tierDiff !== 0) return tierDiff;
+      return (b.memberCount || 0) - (a.memberCount || 0);
+    });
+
     const navigationState = location.state as { selectedOrganizationId?: string } | null;
     
     if (navigationState?.selectedOrganizationId) {
@@ -186,14 +193,14 @@ const TenantManagementPage: React.FC = () => {
       if (orgToSelect) {
         setSelectedOrg(orgToSelect);
       } else if (!selectedOrg) {
-        // If org not found and nothing selected, select first one
-        setSelectedOrg(organizations[0]);
+        // If org not found and nothing selected, select first one from sorted list
+        setSelectedOrg(sorted[0]);
       }
       // Clear the state to avoid re-selecting on subsequent navigation
       window.history.replaceState({}, document.title);
     } else if (!selectedOrg) {
-      // Fresh page load with no navigation state - select the first organization
-      setSelectedOrg(organizations[0]);
+      // Fresh page load with no navigation state - select the first organization from sorted list
+      setSelectedOrg(sorted[0]);
     }
   }, [organizations]);
 
@@ -576,11 +583,13 @@ const TenantManagementPage: React.FC = () => {
   };
 
   // Sort organizations by subscription tier (descending) then by member count (descending)
-  const sortedOrganizations = [...organizations].sort((a, b) => {
-    const tierDiff = getSubscriptionPriority(b.subscriptionTier) - getSubscriptionPriority(a.subscriptionTier);
-    if (tierDiff !== 0) return tierDiff;
-    return (b.memberCount || 0) - (a.memberCount || 0);
-  });
+  const sortedOrganizations = React.useMemo(() => {
+    return [...organizations].sort((a, b) => {
+      const tierDiff = getSubscriptionPriority(b.subscriptionTier) - getSubscriptionPriority(a.subscriptionTier);
+      if (tierDiff !== 0) return tierDiff;
+      return (b.memberCount || 0) - (a.memberCount || 0);
+    });
+  }, [organizations]);
 
   return (
     <Box>
