@@ -318,7 +318,7 @@ class ProfileService {
   /**
    * Get current user's profile data
    */
-  async getProfileData(): Promise<ProfileData> {
+  async getProfileData(): Promise<ProfileData & { id?: string; roles?: string[] }> {
     try {
       // Get profile data first (this seems to work)
       const profileResponse = await axios.get(`${this.baseURL}/v1/auth/me/profile`, {
@@ -328,7 +328,7 @@ class ProfileService {
       const profileData = profileResponse.data.profileData;
 
       // Convert profile data
-      const convertedProfileData = this.convertToProfileData(profileData);
+      const convertedProfileData: any = this.convertToProfileData(profileData);
       
       // Try to get user data, but handle the case where it returns HTML
       let userData = null;
@@ -373,7 +373,7 @@ class ProfileService {
     } catch (error) {
       console.error('Failed to load profile data:', error);
       // Return empty profile data if API fails
-      return this.getEmptyProfileData();
+      return this.getEmptyProfileData() as any;
     }
   }
 
