@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, Like, FindManyOptions, DataSource } from 'typeorm';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 import { User } from '../../auth/entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -31,8 +29,6 @@ export class UserService {
     private readonly passwordService: PasswordService,
     private readonly auditService: AuditService,
     private readonly supabaseService: SupabaseService,
-    @InjectQueue('supabase-user-deletion')
-    private readonly deletionQueue: Queue,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -58,12 +54,11 @@ export class UserService {
   }
 
   async findAll(queryDto: UserQueryDto): Promise<UserListResponseDto> {
-    const { page, limit, search, status, role, sortBy, sortOrder, clientId } = queryDto;
+    const { page, limit, search, status, role, sortBy, sortOrder } = queryDto;
     const skip = (page - 1) * limit;
 
     // Use query builder for complex filtering with roles
     const queryBuilder = this.userRepository.createQueryBuilder('user')
-      .leftJoinAndSelect('user.eorProfile', 'eorProfile')
       .leftJoinAndSelect('user.userRoles', 'userRole');
 
     // Exclude soft-deleted users
@@ -72,11 +67,6 @@ export class UserService {
     // Filter by status
     if (status) {
       queryBuilder.andWhere('user.status = :status', { status });
-    }
-
-    // Filter by clientId
-    if (clientId) {
-      queryBuilder.andWhere('user.clientId = :clientId', { clientId });
     }
 
     // Filter by search (firstName, lastName, or email)
@@ -167,8 +157,6 @@ export class UserService {
     userId: string,
     profileData: any,
     auditContext?: {
-      employmentRecordId?: string;
-      clientId?: string;
       ip?: string;
       userAgent?: string;
     },
@@ -203,11 +191,6 @@ export class UserService {
         changes: {
           previous: previousData,
           updated: updatedProfileData,
-          context: {
-            employmentRecordId: auditContext?.employmentRecordId,
-            clientId: auditContext?.clientId,
-            source: 'onboarding_wizard',
-          },
         },
         ip: auditContext?.ip,
         userAgent: auditContext?.userAgent,
@@ -280,19 +263,16 @@ export class UserService {
       await userRepo.remove(user);
     });
 
-    // After successful commit, enqueue Supabase deletion
-    // This prevents inconsistency if transaction rolls back after queue enqueue
-    try {
-      await this.deletionQueue.add('delete-supabase-user', {
-        userId: user.id,
-        email: userEmail,
-        deletedAt: deletedAt.toISOString(),
+    // After successful commit, attempt Supabase deletion
+    // This is done asynchronously to not block the response
+    this.supabaseService.deleteSupabaseUser(user.id)
+      .then(() => {
+        this.logger.log(`User ${userEmail} hard deleted from database and Supabase (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+      })
+      .catch((error) => {
+        this.logger.error(`User ${userEmail} was deleted from database but Supabase deletion failed:`, error);
+        // User is already deleted from DB, log the error but don't fail
       });
-      this.logger.log(`User ${userEmail} hard deleted and Supabase deletion enqueued (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
-    } catch (queueError) {
-      this.logger.error(`User ${userEmail} was deleted but Supabase deletion queue failed:`, queueError);
-      // User is already deleted from DB, log the error but don't fail
-    }
   }
 
   async updateStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {

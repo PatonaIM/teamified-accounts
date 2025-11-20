@@ -99,22 +99,11 @@ export class UserController {
     status: 401,
     description: 'Unauthorized',
   })
-  async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto & { hasOnboardingRecord?: boolean; hasEmploymentRecord?: boolean } }> {
+  async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto }> {
     console.log('getCurrentUser: JWT payload:', req.user);
     console.log('getCurrentUser: Looking up user with ID:', req.user.sub);
     const user = await this.userService.findOne(req.user.sub);
     console.log('getCurrentUser: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
-
-    // Check if user has any employment record with onboarding status
-    const hasOnboardingRecord = user.employmentRecords?.some(
-      record => record.status === 'onboarding'
-    ) || false;
-
-    // Check if user has any employment record (current or past) - for payroll tabs visibility
-    const hasEmploymentRecord = user.employmentRecords && user.employmentRecords.length > 0;
-
-    console.log('getCurrentUser: hasOnboardingRecord:', hasOnboardingRecord);
-    console.log('getCurrentUser: hasEmploymentRecord:', hasEmploymentRecord);
 
     // Manually add roles property to response (extracted from userRoles)
     const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
@@ -123,8 +112,6 @@ export class UserController {
       user: {
         ...user,
         roles,
-        hasOnboardingRecord,
-        hasEmploymentRecord
       }
     };
   }
@@ -172,7 +159,7 @@ export class UserController {
   })
   async updateMyProfile(
     @CurrentUser() user: User,
-    @Body() profileData: { profileData: any; employmentRecordId?: string; clientId?: string },
+    @Body() profileData: { profileData: any },
     @Request() req: any,
   ): Promise<{ message: string; profileData: any }> {
     const ip = req.ip || req.connection?.remoteAddress;
@@ -182,8 +169,6 @@ export class UserController {
       user.id,
       profileData.profileData,
       {
-        employmentRecordId: profileData.employmentRecordId,
-        clientId: profileData.clientId,
         ip,
         userAgent,
       },
@@ -335,8 +320,6 @@ export class UserController {
       id,
       profileData,
       {
-        employmentRecordId: profileData.employmentRecordId,
-        clientId: profileData.clientId,
         ip,
         userAgent,
       },

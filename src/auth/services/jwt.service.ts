@@ -36,8 +36,7 @@ export class JwtTokenService {
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
       sub: user.id,
       email: user.email,
-      roles: userRoles.length > 0 ? userRoles : ['EOR'], // Use actual roles or default to EOR
-      ...(user.clientId && { clientId: user.clientId }), // Include clientId if user has one
+      roles: userRoles.length > 0 ? userRoles : ['client_member'], // Use actual roles or default to client_member
       ...(clientName && { clientName }), // Include clientName for multi-organization apps
       jti: crypto.randomUUID(),
     };

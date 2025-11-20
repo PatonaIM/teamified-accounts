@@ -1,20 +1,12 @@
 /**
- * Canonical Role Types for Multitenancy
+ * Canonical Role Types for SSO & User Management Platform
  */
 export type RoleType =
-  | 'candidate'
   | 'client_admin'
-  | 'client_hr'
-  | 'client_finance'
-  | 'client_recruiter'
-  | 'client_employee'
+  | 'client_member'
   | 'super_admin'
   | 'internal_member'
-  | 'internal_hr'
-  | 'internal_recruiter'
-  | 'internal_account_manager'
-  | 'internal_finance'
-  | 'internal_marketing';
+  | 'internal_account_manager';
 
 export type RoleScope =
   | 'all'
@@ -25,11 +17,8 @@ export type RoleScope =
 // Legacy role types for backward compatibility
 export type LegacyRoleType =
   | 'admin'
-  | 'eor'
-  | 'hr'
   | 'account_manager'
-  | 'recruiter'
-  | 'hr_manager_client';
+  | 'member';
 
 export type LegacyRoleScope =
   | 'client'
@@ -38,10 +27,7 @@ export type LegacyRoleScope =
 
 export const ROLE_TYPE_MIGRATION_MAP: Record<LegacyRoleType, RoleType> = {
   admin: 'client_admin',
-  eor: 'client_employee',
-  hr: 'client_hr',
-  hr_manager_client: 'client_hr',
-  recruiter: 'client_recruiter',
+  member: 'client_member',
   account_manager: 'internal_account_manager',
 };
 
