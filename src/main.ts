@@ -183,22 +183,11 @@ async function bootstrap() {
         - **Multi-Organization Architecture** - Client scoping with granular permission management
         - **Audit Trail** - Comprehensive logging of all critical operations for compliance
         
-        ### 👥 HR Operations
+        ### 👥 User Operations
         - **User Management** - Complete profile management with data validation
         - **Invitation System** - Email-based invitations with role assignment
         - **Document Management** - Upload, versioning, secure download, and verification workflows
         - **Hiring Module** - Job requests, interview scheduling with calendar view, talent pool tracking
-        
-        ### 💰 Payroll & Finance
-        - **Multi-Country Payroll** - Automated processing for India (IN), Philippines (PH), Australia (AU)
-        - **Tax Compliance** - Region-specific tax calculations and statutory components
-        - **Salary History** - Immutable tracking with audit trails and scheduled changes
-        - **Payslip Generation** - Automated creation with earnings, deductions, and contributions breakdown
-        - **Contribution Tracking** - Year-to-date summaries and compliance reporting
-        
-        ### ⏱️ Time & Leave
-        - **Timesheets** - Submission, approval workflows, and payroll integration
-        - **Leave Management** - Requests, balance tracking, approvals, and payroll impact calculation
         
         ### 🎨 Developer Experience
         - **API Key Management** - Programmatic access with read-only/full-access permissions (10 keys max)
@@ -229,7 +218,7 @@ async function bootstrap() {
         - \`POST /api/v1/sso/token\` - Token exchange endpoint for OAuth flow
         
         ### Protected Endpoints
-        All other endpoints require a valid JWT access token in the Authorization header. Protected endpoints include user management, payroll, timesheets, leave requests, hiring, documents, and administrative functions.
+        All other endpoints require a valid JWT access token in the Authorization header. Protected endpoints include user management, organization management, invitations, audit logs, and administrative functions.
         
         ## Rate Limiting
         Authentication endpoints are rate-limited to prevent abuse. Please respect the rate limits and implement appropriate retry logic.
