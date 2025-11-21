@@ -169,11 +169,11 @@ async function bootstrap() {
     // Swagger documentation - Always enabled, but protected by JWT
     logger.log('Setting up Swagger documentation...');
     const config = new DocumentBuilder()
-      .setTitle('Teamified EOR Portal API')
+      .setTitle('Teamified Accounts API')
       .setDescription(`
-        # Teamified EOR Portal API Documentation
+        # Teamified Accounts API Documentation
         
-        This API provides comprehensive endpoints for managing employment records, user profiles, invitations, document management, and salary history for the Teamified EOR Portal.
+        This API provides comprehensive endpoints for SSO authentication, user management, multi-organization support, and access control for the Teamified Accounts platform.
         
         ## Key Capabilities
         
@@ -311,7 +311,7 @@ async function bootstrap() {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Teamified EOR Portal API Documentation</title>
+  <title>Teamified Accounts API Documentation</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
   <link rel="icon" href="/favicon.ico" />
   <style>

@@ -1,8 +1,8 @@
-# Full‑Stack Architecture — Teamified EOR Portal (v1 patched)
+# Full‑Stack Architecture — Teamified Accounts
 
 ## Table of Contents
 
-- [Full‑Stack Architecture — Teamified EOR Portal (v1 patched)](#table-of-contents)
+- [Full‑Stack Architecture — Teamified Accounts](#table-of-contents)
   - [0) Executive Summary & Key Decisions](./0-executive-summary-key-decisions.md)
   - [1) NFRs & Constraints](./1-nfrs-constraints.md)
   - [2) System Context](./2-system-context.md)

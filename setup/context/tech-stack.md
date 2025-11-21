@@ -1,7 +1,7 @@
 # Technology Stack
 
 ## Overview
-This document outlines the complete technology stack used in the Teamified EOR Portal project, including backend, frontend, database, and development tools.
+This document outlines the complete technology stack used in the Teamified Accounts project, including backend, frontend, database, and development tools.
 
 ## Backend Stack
 

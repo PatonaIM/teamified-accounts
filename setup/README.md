@@ -1,6 +1,6 @@
 # Setup Folder
 
-This folder contains all the essential files and configurations needed to set up and maintain the Teamified EOR Portal development environment.
+This folder contains all the essential files and configurations needed to set up and maintain the Teamified Accounts development environment.
 
 ## Folder Structure
 

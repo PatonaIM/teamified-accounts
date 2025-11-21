@@ -1,12 +1,5 @@
-<<<<<<< HEAD
-# Teamified Accounts
-
-This repository contains the account management system for Teamified.
-test
-=======
-# Teamified Team Member Portal
-
-A comprehensive EOR (Employer of Record) portal built with NestJS backend and React frontend.
+# Teamified Accounts - SSO
+A comprehensive SSO, user management, and multi-organization platform built with NestJS backend and React frontend.
 
 ## Quick Start
 
