@@ -34,6 +34,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
+import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
 @ApiTags('Users')
@@ -126,7 +127,7 @@ export class UserController {
     return { user };
   }
 
-  @Get(':id([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})')
+  @Get(`:id(${UUID_PARAM_PATTERN})`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Get user by ID' })
@@ -278,7 +279,7 @@ export class UserController {
     };
   }
 
-  @Get(':id/profile')
+  @Get(`:id(${UUID_PARAM_PATTERN})/profile`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Get user profile data by ID (Admin only)' })
@@ -290,14 +291,14 @@ export class UserController {
     status: 404,
     description: 'User not found',
   })
-  async getUserProfile(@Param('id') id: string): Promise<{ profileData: any }> {
+  async getUserProfile(@Param('id', ParseUUIDPipe) id: string): Promise<{ profileData: any }> {
     const user = await this.userService.findOne(id);
     return {
       profileData: user.profileData || {},
     };
   }
 
-  @Put(':id/profile')
+  @Put(`:id(${UUID_PARAM_PATTERN})/profile`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Update user profile data by ID (Admin only)' })
@@ -314,7 +315,7 @@ export class UserController {
     description: 'User not found',
   })
   async updateUserProfile(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() profileData: any,
     @Request() req: any,
   ): Promise<{ message: string; profileData: any }> {
@@ -336,7 +337,7 @@ export class UserController {
     };
   }
 
-  @Patch(':id')
+  @Patch(`:id(${UUID_PARAM_PATTERN})`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Update user (partial update)' })
@@ -358,14 +359,14 @@ export class UserController {
     description: 'User with this email already exists',
   })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.update(id, updateUserDto);
     return { user };
   }
 
-  @Put(':id')
+  @Put(`:id(${UUID_PARAM_PATTERN})`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Update user (full update)' })
@@ -387,14 +388,14 @@ export class UserController {
     description: 'User with this email already exists',
   })
   async fullUpdate(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.update(id, updateUserDto);
     return { user };
   }
 
-  @Delete(':id')
+  @Delete(`:id(${UUID_PARAM_PATTERN})`)
   @UseGuards(RolesGuard)
   @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -407,11 +408,11 @@ export class UserController {
     status: 404,
     description: 'User not found',
   })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.userService.remove(id);
   }
 
-  @Patch(':id/status')
+  @Patch(`:id(${UUID_PARAM_PATTERN})/status`)
   @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Update user status' })
@@ -429,14 +430,14 @@ export class UserController {
     description: 'User not found',
   })
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { status: 'active' | 'inactive' | 'archived' },
   ): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.updateStatus(id, body.status);
     return { user };
   }
 
-  @Patch(':id/verify-email')
+  @Patch(`:id(${UUID_PARAM_PATTERN})/verify-email`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Mark user email as verified (Admin/HR only)' })
@@ -450,7 +451,7 @@ export class UserController {
     description: 'User not found',
   })
   async verifyUserEmail(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<{ user: UserResponseDto; message: string }> {
     const user = await this.userService.markEmailVerified(id);
     return {
