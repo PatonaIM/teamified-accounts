@@ -1,6 +1,7 @@
 import api from './api';
+import type { ThemeMode } from '../theme/themeConfig';
 
-export type ThemePreference = 'teamified' | 'dark' | 'light' | 'warm' | 'cool' | 'custom';
+export type ThemePreference = ThemeMode | 'custom';
 
 export interface ThemePreferenceData {
   themeMode: ThemePreference;

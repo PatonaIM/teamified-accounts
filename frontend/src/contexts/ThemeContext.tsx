@@ -343,33 +343,52 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (preference) {
         if (preference.themeMode === 'custom' && preference.customThemeId) {
           try {
-            const activeTheme = await themesApi.getActiveTheme();
-            if (activeTheme) {
-              setCustomTheme(activeTheme);
+            const customTheme = await themesApi.getThemeById(preference.customThemeId);
+            if (customTheme) {
+              setCustomTheme(customTheme);
               setCurrentTheme('custom');
               if (typeof window !== 'undefined') {
                 localStorage.setItem(THEME_STORAGE_KEY, 'custom');
-                localStorage.setItem(CUSTOM_THEME_STORAGE_KEY, JSON.stringify(activeTheme));
+                localStorage.setItem(CUSTOM_THEME_STORAGE_KEY, JSON.stringify(customTheme));
+              }
+            } else {
+              console.warn('Custom theme not found, falling back to teamified');
+              await clearStaleCustomThemePreference();
+              setCurrentTheme('teamified');
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(THEME_STORAGE_KEY, 'teamified');
               }
             }
-          } catch (error) {
-            console.error('Failed to load custom theme:', error);
-            const fallbackMode = preference.themeMode !== 'custom' ? preference.themeMode : 'teamified';
-            setCurrentTheme(fallbackMode);
+          } catch (error: any) {
+            const is404or403 = error?.response?.status === 404 || error?.response?.status === 403;
+            if (is404or403) {
+              console.warn('Custom theme not found or not accessible (ownership check failed), clearing stale preference');
+              await clearStaleCustomThemePreference();
+            } else {
+              console.error('Failed to load custom theme by ID:', error);
+            }
+            setCurrentTheme('teamified');
             if (typeof window !== 'undefined') {
-              localStorage.setItem(THEME_STORAGE_KEY, fallbackMode);
+              localStorage.setItem(THEME_STORAGE_KEY, 'teamified');
             }
           }
-        } else {
-          const themeMode = preference.themeMode === 'custom' ? 'teamified' : preference.themeMode;
-          setCurrentTheme(themeMode);
+        } else if (preference.themeMode) {
+          setCurrentTheme(preference.themeMode);
           if (typeof window !== 'undefined') {
-            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+            localStorage.setItem(THEME_STORAGE_KEY, preference.themeMode as string);
           }
         }
       }
     } catch (error) {
       console.error('Failed to load user theme preference:', error);
+    }
+  };
+
+  const clearStaleCustomThemePreference = async () => {
+    try {
+      await themePreferenceService.saveThemePreference('teamified');
+    } catch (error) {
+      console.error('Failed to clear stale custom theme preference:', error);
     }
   };
 
@@ -402,7 +421,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
     
-    themePreferenceService.saveThemePreference(theme).catch(error => {
+    themePreferenceService.saveThemePreference(theme as ThemeMode).catch(error => {
       console.error('Failed to save theme preference to backend:', error);
     });
   };
@@ -431,9 +450,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const clearCustomTheme = () => {
     setCustomTheme(null);
-    if (currentTheme === 'custom') {
-      setTheme('teamified');
-    }
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem(CUSTOM_THEME_STORAGE_KEY);
@@ -442,10 +458,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
     
-    if (isAuthenticated) {
-      themePreferenceService.saveThemePreference('teamified').catch(error => {
-        console.error('Failed to save theme preference to backend:', error);
-      });
+    if (currentTheme === 'custom') {
+      setTheme('teamified');
     }
   };
 
