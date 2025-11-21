@@ -286,19 +286,6 @@ const OAuthConfigurationPage: React.FC = () => {
         <Typography variant="h4" sx={{ fontWeight: 600, flex: 1 }}>
           OAuth Configuration
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDrawer()}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            bgcolor: '#A16AE8',
-            '&:hover': { bgcolor: '#8f5cd9' },
-          }}
-        >
-          Register New Client
-        </Button>
       </Stack>
 
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -329,6 +316,20 @@ const OAuthConfigurationPage: React.FC = () => {
               <MenuItem value="inactive">Inactive</MenuItem>
             </Select>
           </FormControl>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDrawer()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              bgcolor: '#4CAF50',
+              '&:hover': { bgcolor: '#45a049' },
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Register New Client
+          </Button>
         </Stack>
       </Paper>
 
