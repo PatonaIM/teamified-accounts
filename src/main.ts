@@ -63,60 +63,17 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
 
-    // Enable CORS for Replit and development
+    // Enable CORS - Allow all origins (CORS policy disabled)
     logger.log('Configuring CORS...');
-    const replitDomain = process.env.REPLIT_DEV_DOMAIN;
-    const isReplitProduction = process.env.REPLIT_ENVIRONMENT === 'production';
     
-    const allowedOrigins = [
-      'http://localhost',
-      'http://127.0.0.1',
-    ];
-
-    if (replitDomain) {
-      allowedOrigins.push(`https://${replitDomain}`);
-    }
-
-    if (process.env.FRONTEND_URL) {
-      allowedOrigins.push(process.env.FRONTEND_URL);
-    }
-
     app.enableCors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl, etc)
-        if (!origin) {
-          return callback(null, true);
-        }
-
-        // Allow all localhost origins (any port)
-        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-          return callback(null, true);
-        }
-
-        // In Replit, allow all *.replit.dev and *.replit.app domains for SSO
-        if (origin.match(/^https:\/\/.*\.replit\.(dev|app)$/)) {
-          return callback(null, true);
-        }
-
-        // Check against allowed origins list
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-
-        // Log rejected origins for debugging
-        logger.warn(`CORS rejected origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      },
+      origin: true, // Allow all origins
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
       credentials: true,
     });
     
-    if (isReplitProduction) {
-      logger.log(`✅ CORS configured for Replit production: allowing all *.replit.dev and *.replit.app domains + specific origins: ${allowedOrigins.join(', ')}`);
-    } else {
-      logger.log(`✅ CORS configured to allow all localhost ports, *.replit.dev, and *.replit.app domains. Specific origins: ${allowedOrigins.join(', ')}`);
-    }
+    logger.log('✅ CORS configured to allow ALL origins (CORS policy disabled)');
 
     // Global validation pipe
     logger.log('Setting up validation pipe...');
