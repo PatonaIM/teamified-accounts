@@ -71,3 +71,24 @@ The platform supports programmatic access via API keys, alternative to JWTs. Key
 ### Build & Deployment
 
 -   **Replit**: Used for development and production hosting, with Autoscale deployment.
+
+#### Production Deployment Configuration
+
+The platform uses **Replit Autoscale** for production deployments with the following configuration:
+
+**Port Configuration:**
+-   **Development (Preview)**: Backend runs on port 3000, Frontend runs on port 5000 (Vite dev server)
+-   **Production (Published App)**: NestJS listens on port 5000, serves both static frontend AND backend API from a single process
+-   **Environment Variables**: `PORT=5000` and `NODE_ENV=production` are set in the production environment
+
+**Build & Deployment Process:**
+1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production
+2. `npm run start:prod` - Starts NestJS which:
+   - Serves static frontend files from `frontend/dist` at root routes
+   - Serves backend API at `/api/*` routes
+   - Listens on port 5000 (mapped to external port 80 for HTTP traffic)
+
+**Critical Fix (November 21, 2025):**
+- Fixed `/me` endpoint failures in Published App by setting `PORT=5000` in production environment
+- Issue was NestJS defaulting to port 3000 while Replit Autoscale expected port 5000
+- Frontend proxy errors (`ECONNREFUSED 127.0.0.1:3000`) resolved by proper port configuration
