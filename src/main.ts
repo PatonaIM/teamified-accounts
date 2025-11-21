@@ -252,47 +252,16 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     
     // Create custom Swagger UI endpoint to avoid asset loading issues
+    // Note: Swagger UI is publicly accessible, but individual endpoints require OAuth/JWT authentication
     const expressApp = app.getHttpAdapter().getInstance();
-    const jwtService = app.get(JwtService);
     
-    // JWT authentication middleware for Swagger endpoints
-    // Supports both Authorization header (for API calls) and httpOnly cookies (for browser access)
-    const swaggerAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        // Extract token from Authorization header or cookie
-        let token: string | undefined;
-        const authHeader = req.headers.authorization;
-        
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-          token = authHeader.substring(7);
-        } else if (req.cookies?.access_token) {
-          // Fallback to cookie for browser-based access
-          token = req.cookies.access_token;
-        }
-
-        if (!token) {
-          return res.status(401).json({ message: 'Authentication required to access API documentation' });
-        }
-
-        const payload = await jwtService.verifyAsync(token);
-        
-        // Check if user has admin or super_admin role
-        if (!payload.roles || (!payload.roles.includes('admin') && !payload.roles.includes('super_admin'))) {
-          return res.status(403).json({ message: 'Admin access required to view API documentation' });
-        }
-        
-        next();
-      } catch (error) {
-        return res.status(401).json({ message: 'Invalid or expired token' });
-      }
-    };
-    
-    // Setup Swagger JSON endpoint with auth
-    expressApp.get('/api/docs-json', swaggerAuthMiddleware, (req: Request, res: Response) => {
+    // Setup public Swagger JSON endpoint
+    expressApp.get('/api/docs-json', (req: Request, res: Response) => {
       res.json(document);
     });
     
-    expressApp.get('/api/docs', swaggerAuthMiddleware, (req: Request, res: Response) => {
+    // Setup public Swagger UI endpoint
+    expressApp.get('/api/docs', (req: Request, res: Response) => {
       const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -353,7 +322,7 @@ async function bootstrap() {
       res.send(html);
     });
 
-      logger.log('✅ Swagger documentation configured at: /api/docs (admin-only access)');
+      logger.log('✅ Swagger documentation configured at: /api/docs (public access, endpoints require OAuth)');
 
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');

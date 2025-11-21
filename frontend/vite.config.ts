@@ -8,7 +8,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: false,
-    allowedHosts: ['.replit.dev'],
+    hmr: {
+      clientPort: 443,
+    },
     proxy: {
       // Portal API (existing) - NestJS backend
       '/api': {
