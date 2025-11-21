@@ -118,9 +118,24 @@ api.interceptors.response.use(
 const ACCESS_TOKEN_KEY = 'teamified_access_token';
 const REFRESH_TOKEN_KEY = 'teamified_refresh_token';
 const CSRF_TOKEN_KEY = 'teamified_csrf_token';
+const USER_DATA_KEY = 'teamified_user_data';
 
 export const setAccessToken = (token: string): void => {
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
+};
+
+export const setUserData = (user: User): void => {
+  localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+};
+
+export const getUserData = (): User | null => {
+  const userData = localStorage.getItem(USER_DATA_KEY);
+  if (!userData) return null;
+  try {
+    return JSON.parse(userData);
+  } catch {
+    return null;
+  }
 };
 
 export const getAccessToken = (): string | null => {
@@ -139,6 +154,7 @@ export const removeTokens = (): void => {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(CSRF_TOKEN_KEY);
+  localStorage.removeItem(USER_DATA_KEY);
 };
 
 // Rate limiting functions
@@ -196,6 +212,11 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     setAccessToken(accessToken);
     setRefreshToken(refreshToken);
     
+    // Store user data for offline access
+    if (user) {
+      setUserData(user);
+    }
+    
     // Reset failed attempts on successful login
     resetLoginAttempts();
     
@@ -251,75 +272,74 @@ export const refreshAccessToken = async (refreshToken: string): Promise<{ data: 
 };
 
 export const getCurrentUser = async (): Promise<User> => {
-  try {
-    console.log('authService.getCurrentUser: Making request to /v1/users/me');
-    const response = await api.get('/v1/users/me');
-    console.log('authService.getCurrentUser: Response:', response.data);
-    console.log('authService.getCurrentUser: Response type:', typeof response.data);
-    console.log('authService.getCurrentUser: Response keys:', Object.keys(response.data || {}));
-    
-    // Check if response is HTML (nginx routing issue)
-    if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-      console.log('authService.getCurrentUser: Received HTML response, trying JWT fallback');
+  console.log('authService.getCurrentUser: Starting user retrieval');
+  
+  // First, try to get cached user data from localStorage (NO API CALL NEEDED!)
+  const cachedUser = getUserData();
+  if (cachedUser) {
+    console.log('authService.getCurrentUser: Using cached user data:', cachedUser);
+    return cachedUser;
+  }
+  
+  console.log('authService.getCurrentUser: No cached data, trying JWT fallback');
+  
+  // Second fallback: Parse JWT token to get user info (NO API CALL NEEDED!)
+  const token = getAccessToken();
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('authService.getCurrentUser: JWT payload:', payload);
       
-      // Fallback to JWT token parsing
-      const token = getAccessToken();
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          console.log('authService.getCurrentUser: JWT payload:', payload);
-          
-          const fallbackUser: User = {
-            id: payload.sub || '',
-            email: payload.email || '',
-            firstName: payload.firstName || '',
-            lastName: payload.lastName || '',
-            isActive: true,
-            emailVerified: true,
-            roles: payload.roles || []
-          };
-          
-          console.log('authService.getCurrentUser: Using JWT fallback user:', fallbackUser);
-          return fallbackUser;
-        } catch (jwtError) {
-          console.error('authService.getCurrentUser: JWT parsing failed:', jwtError);
-          throw new Error('Failed to parse JWT token');
-        }
-      }
+      const jwtUser: User = {
+        id: payload.sub || '',
+        email: payload.email || '',
+        firstName: payload.firstName || '',
+        lastName: payload.lastName || '',
+        isActive: true,
+        emailVerified: true,
+        roles: payload.roles || []
+      };
       
-      throw new Error('No valid user data available');
+      console.log('authService.getCurrentUser: Using JWT-based user:', jwtUser);
+      
+      // Cache for future use
+      setUserData(jwtUser);
+      
+      return jwtUser;
+    } catch (jwtError) {
+      console.error('authService.getCurrentUser: JWT parsing failed:', jwtError);
     }
+  }
+  
+  // Third fallback: Try API call to /me endpoint (only if previous methods failed)
+  console.log('authService.getCurrentUser: Attempting API call to /v1/users/me as last resort');
+  try {
+    const response = await api.get('/v1/users/me');
+    console.log('authService.getCurrentUser: API Response:', response.data);
+    
+    let user = response.data;
     
     // Check if response has user wrapped in user property
     if (response.data && response.data.user) {
-      console.log('authService.getCurrentUser: Extracting user from response.data.user');
-      const user = response.data.user;
-      console.log('authService.getCurrentUser: Raw user object:', user);
-      console.log('authService.getCurrentUser: User userRoles:', user.userRoles);
+      user = response.data.user;
       
       // Transform userRoles to roles array of strings
       if (user.userRoles && Array.isArray(user.userRoles)) {
-        console.log('authService.getCurrentUser: userRoles structure:', JSON.stringify(user.userRoles, null, 2));
         user.roles = user.userRoles.map(roleObj => {
-          console.log('authService.getCurrentUser: Processing role object:', roleObj);
-          // The backend returns roleType directly in the userRoles array
-          const roleName = roleObj.roleType || roleObj.role?.name || roleObj.role || roleObj.name || String(roleObj);
-          console.log('authService.getCurrentUser: Extracted role name:', roleName);
-          return roleName;
+          return roleObj.roleType || roleObj.role?.name || roleObj.role || roleObj.name || String(roleObj);
         });
-        console.log('authService.getCurrentUser: Mapped roles:', user.roles);
       } else {
         user.roles = [];
-        console.log('authService.getCurrentUser: No userRoles found, setting empty roles array');
       }
-      
-      return user;
     }
     
-    return response.data;
+    // Cache for future use
+    setUserData(user);
+    
+    return user;
   } catch (error) {
-    console.error('authService.getCurrentUser: Error:', error);
-    throw new Error('Failed to get current user');
+    console.error('authService.getCurrentUser: All methods failed:', error);
+    throw new Error('Failed to get current user - no cached data, JWT parsing failed, and API call failed');
   }
 };
 
