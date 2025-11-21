@@ -19,6 +19,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { plainToInstance } from 'class-transformer';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -131,16 +132,15 @@ export class UserController {
       }
 
       this.logger.log(`Step 9: User has ${user.userRoles?.length || 0} roles and ${user.organizationMembers?.length || 0} org memberships`);
-      const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
-      this.logger.log(`Step 10: Mapped roles: ${roles.join(', ')}`);
       
-      this.logger.log(`Step 11: Building response object`);
-      const response = {
-        user: {
-          ...user,
-          roles,
-        }
-      };
+      this.logger.log(`Step 10: Transforming to UserResponseDto...`);
+      const userDto = plainToInstance(UserResponseDto, user, {
+        excludeExtraneousValues: true,
+        enableImplicitConversion: true,
+      });
+      
+      this.logger.log(`Step 11: DTO created - excluded sensitive fields, transformed relations`);
+      const response = { user: userDto };
       
       this.logger.log(`Step 12: Response ready, returning...`);
       return response;

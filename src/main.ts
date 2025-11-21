@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger, UnauthorizedException } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ValidationPipe, Logger, UnauthorizedException, ClassSerializerInterceptor } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
@@ -131,6 +131,11 @@ async function bootstrap() {
       }),
     );
     logger.log('✅ Validation pipe configured');
+
+    // Global serializer interceptor for transforming responses
+    logger.log('Setting up ClassSerializerInterceptor...');
+    app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+    logger.log('✅ ClassSerializerInterceptor configured - responses will be transformed using DTOs');
 
     // API versioning
     // Global prefix 'api' is prepended to all routes
