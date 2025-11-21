@@ -15,6 +15,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -125,7 +126,7 @@ export class UserController {
     return { user };
   }
 
-  @Get(':id')
+  @Get(':id([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})')
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Get user by ID' })
@@ -135,10 +136,14 @@ export class UserController {
     type: UserResponseDto,
   })
   @ApiResponse({
+    status: 400,
+    description: 'Invalid UUID format',
+  })
+  @ApiResponse({
     status: 404,
     description: 'User not found',
   })
-  async findOne(@Param('id') id: string): Promise<{ user: UserResponseDto }> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.findOne(id);
     return { user };
   }
