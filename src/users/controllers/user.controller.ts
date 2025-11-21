@@ -15,11 +15,9 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
-  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { plainToInstance } from 'class-transformer';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -42,8 +40,6 @@ import * as path from 'path';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UserController {
-  private readonly logger = new Logger('UserController');
-
   constructor(
     private readonly userService: UserService,
     private readonly objectStorageService: ObjectStorageService,
@@ -104,50 +100,20 @@ export class UserController {
     description: 'Unauthorized',
   })
   async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto }> {
-    this.logger.log('=== /me ENDPOINT CALLED ===');
-    this.logger.log('Step 1: Request received');
-    this.logger.log(`Step 2: JWT payload exists: ${!!req.user}`);
-    
-    if (!req.user) {
-      this.logger.error('Step 3: ERROR - No JWT payload in request');
-      return null;
-    }
+    console.log('getCurrentUser: JWT payload:', req.user);
+    console.log('getCurrentUser: Looking up user with ID:', req.user.sub);
+    const user = await this.userService.findOne(req.user.sub);
+    console.log('getCurrentUser: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
 
-    this.logger.log(`Step 3: JWT payload sub (user ID): ${req.user.sub}`);
-    const userId = req.user.sub;
-    this.logger.log(`Step 4: About to call userService.findOne with ID: ${userId}`);
+    // Manually add roles property to response (extracted from userRoles)
+    const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
 
-    try {
-      this.logger.log(`Step 5: Starting database query...`);
-      const startTime = Date.now();
-      const user = await this.userService.findOne(userId);
-      const queryTime = Date.now() - startTime;
-      
-      this.logger.log(`Step 6: Database query completed in ${queryTime}ms`);
-      this.logger.log(`Step 7: User found - ID: ${user?.id}, Email: ${user?.email}`);
-      
-      if (!user) {
-        this.logger.error('Step 8: ERROR - User not found in database');
-        return null;
+    return {
+      user: {
+        ...user,
+        roles,
       }
-
-      this.logger.log(`Step 9: User has ${user.userRoles?.length || 0} roles and ${user.organizationMembers?.length || 0} org memberships`);
-      
-      this.logger.log(`Step 10: Transforming to UserResponseDto...`);
-      const userDto = plainToInstance(UserResponseDto, user, {
-        excludeExtraneousValues: true,
-        enableImplicitConversion: true,
-      });
-      
-      this.logger.log(`Step 11: DTO created - excluded sensitive fields, transformed relations`);
-      const response = { user: userDto };
-      
-      this.logger.log(`Step 12: Response ready, returning...`);
-      return response;
-    } catch (error) {
-      this.logger.error(`ERROR at unknown step: ${error.message}`, error.stack);
-      throw error;
-    }
+    };
   }
 
   @Get('debug/:id')
@@ -304,23 +270,6 @@ export class UserController {
     return {
       message: 'Profile picture uploaded successfully',
       profilePicture: objectKey,
-    };
-  }
-
-  @Get('me/profile')
-  @ApiOperation({ summary: 'Get current user profile data' })
-  @ApiResponse({
-    status: 200,
-    description: 'Profile data retrieved successfully',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  async getMyProfile(@CurrentUser() user: User): Promise<{ profileData: any }> {
-    const currentUser = await this.userService.findOne(user.id);
-    return {
-      profileData: currentUser.profileData || {},
     };
   }
 

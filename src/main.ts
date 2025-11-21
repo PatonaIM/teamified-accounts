@@ -1,5 +1,5 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe, Logger, UnauthorizedException, ClassSerializerInterceptor } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, Logger, UnauthorizedException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
@@ -132,11 +132,6 @@ async function bootstrap() {
     );
     logger.log('✅ Validation pipe configured');
 
-    // Global serializer interceptor for transforming responses
-    logger.log('Setting up ClassSerializerInterceptor...');
-    app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-    logger.log('✅ ClassSerializerInterceptor configured - responses will be transformed using DTOs');
-
     // API versioning
     // Global prefix 'api' is prepended to all routes
     // Controllers should use pattern: @Controller('v1/module/resource')
@@ -257,16 +252,47 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     
     // Create custom Swagger UI endpoint to avoid asset loading issues
-    // Note: Swagger UI is publicly accessible, but individual endpoints require OAuth/JWT authentication
     const expressApp = app.getHttpAdapter().getInstance();
+    const jwtService = app.get(JwtService);
     
-    // Setup public Swagger JSON endpoint
-    expressApp.get('/api/docs-json', (req: Request, res: Response) => {
+    // JWT authentication middleware for Swagger endpoints
+    // Supports both Authorization header (for API calls) and httpOnly cookies (for browser access)
+    const swaggerAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // Extract token from Authorization header or cookie
+        let token: string | undefined;
+        const authHeader = req.headers.authorization;
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.substring(7);
+        } else if (req.cookies?.access_token) {
+          // Fallback to cookie for browser-based access
+          token = req.cookies.access_token;
+        }
+
+        if (!token) {
+          return res.status(401).json({ message: 'Authentication required to access API documentation' });
+        }
+
+        const payload = await jwtService.verifyAsync(token);
+        
+        // Check if user has admin or super_admin role
+        if (!payload.roles || (!payload.roles.includes('admin') && !payload.roles.includes('super_admin'))) {
+          return res.status(403).json({ message: 'Admin access required to view API documentation' });
+        }
+        
+        next();
+      } catch (error) {
+        return res.status(401).json({ message: 'Invalid or expired token' });
+      }
+    };
+    
+    // Setup Swagger JSON endpoint with auth
+    expressApp.get('/api/docs-json', swaggerAuthMiddleware, (req: Request, res: Response) => {
       res.json(document);
     });
     
-    // Setup public Swagger UI endpoint
-    expressApp.get('/api/docs', (req: Request, res: Response) => {
+    expressApp.get('/api/docs', swaggerAuthMiddleware, (req: Request, res: Response) => {
       const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -327,27 +353,22 @@ async function bootstrap() {
       res.send(html);
     });
 
-      logger.log('✅ Swagger documentation configured at: /api/docs (public access, endpoints require OAuth)');
+      logger.log('✅ Swagger documentation configured at: /api/docs (admin-only access)');
 
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');
     
-    // Check if we're in Replit environment (dev or deployed)
-    const isReplit = !!process.env.REPL_ID || !!process.env.REPLIT_DEV_DOMAIN;
-    
     // In production (Vercel), don't call listen - return Express instance
-    // But in Replit deployments, we MUST call listen
-    if (configService.get('NODE_ENV') === 'production' && !isReplit) {
-      logger.log('Production mode: Initializing app for serverless (Vercel)...');
+    if (configService.get('NODE_ENV') === 'production' && !process.env.REPLIT_DEV_DOMAIN) {
+      logger.log('Production mode: Initializing app for serverless...');
       await app.init();
       const expressApp = app.getHttpAdapter().getInstance();
       logger.log('✅ Express app instance ready for serverless');
       logger.log('✅ Bootstrap completed successfully');
       return expressApp;
     } else {
-      // In development or Replit (dev & deployed), start the server normally
-      const environment = isReplit ? 'Replit' : 'Development';
-      logger.log(`${environment} mode: Starting server on ${host}:${port}...`);
+      // In development or Replit, start the server normally
+      logger.log(`Starting server on ${host}:${port}...`);
       await app.listen(port, host);
       logger.log(`🚀 Application is running on: http://${host}:${port}`);
       logger.log(`📚 API documentation: http://${host}:${port}/api/docs`);
@@ -381,19 +402,15 @@ export default async function handler(req: any, res: any) {
   return cachedApp(req, res);
 }
 
-// Check if we're in Replit environment (dev or deployed)
-const isReplit = !!process.env.REPL_ID || !!process.env.REPLIT_DEV_DOMAIN;
-
-// For local development and Replit (dev & deployed)
-if (process.env.NODE_ENV !== 'production' || isReplit) {
+// For local development and Replit
+if (process.env.NODE_ENV !== 'production' || process.env.REPLIT_DEV_DOMAIN) {
   const logger = new Logger('Main');
-  const environment = isReplit ? 'Replit' : 'Development';
-  logger.log(`Running in ${environment} mode, starting bootstrap...`);
+  logger.log('Running in development mode, starting bootstrap...');
   bootstrap().catch(err => {
     logger.error('Failed to start application:', err);
     process.exit(1);
   });
 } else {
   const logger = new Logger('Main');
-  logger.log('Running in production mode (serverless - Vercel)');
+  logger.log('Running in production mode (serverless)');
 }
