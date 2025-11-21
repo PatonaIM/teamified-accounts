@@ -358,17 +358,22 @@ async function bootstrap() {
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');
     
+    // Check if we're in Replit environment (dev or deployed)
+    const isReplit = !!process.env.REPL_ID || !!process.env.REPLIT_DEV_DOMAIN;
+    
     // In production (Vercel), don't call listen - return Express instance
-    if (configService.get('NODE_ENV') === 'production' && !process.env.REPLIT_DEV_DOMAIN) {
-      logger.log('Production mode: Initializing app for serverless...');
+    // But in Replit deployments, we MUST call listen
+    if (configService.get('NODE_ENV') === 'production' && !isReplit) {
+      logger.log('Production mode: Initializing app for serverless (Vercel)...');
       await app.init();
       const expressApp = app.getHttpAdapter().getInstance();
       logger.log('✅ Express app instance ready for serverless');
       logger.log('✅ Bootstrap completed successfully');
       return expressApp;
     } else {
-      // In development or Replit, start the server normally
-      logger.log(`Starting server on ${host}:${port}...`);
+      // In development or Replit (dev & deployed), start the server normally
+      const environment = isReplit ? 'Replit' : 'Development';
+      logger.log(`${environment} mode: Starting server on ${host}:${port}...`);
       await app.listen(port, host);
       logger.log(`🚀 Application is running on: http://${host}:${port}`);
       logger.log(`📚 API documentation: http://${host}:${port}/api/docs`);
@@ -402,15 +407,19 @@ export default async function handler(req: any, res: any) {
   return cachedApp(req, res);
 }
 
-// For local development and Replit
-if (process.env.NODE_ENV !== 'production' || process.env.REPLIT_DEV_DOMAIN) {
+// Check if we're in Replit environment (dev or deployed)
+const isReplit = !!process.env.REPL_ID || !!process.env.REPLIT_DEV_DOMAIN;
+
+// For local development and Replit (dev & deployed)
+if (process.env.NODE_ENV !== 'production' || isReplit) {
   const logger = new Logger('Main');
-  logger.log('Running in development mode, starting bootstrap...');
+  const environment = isReplit ? 'Replit' : 'Development';
+  logger.log(`Running in ${environment} mode, starting bootstrap...`);
   bootstrap().catch(err => {
     logger.error('Failed to start application:', err);
     process.exit(1);
   });
 } else {
   const logger = new Logger('Main');
-  logger.log('Running in production mode (serverless)');
+  logger.log('Running in production mode (serverless - Vercel)');
 }
