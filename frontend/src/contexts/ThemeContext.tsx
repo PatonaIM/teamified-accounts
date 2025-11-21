@@ -7,6 +7,7 @@ import type { ThemeMode } from '../theme/themeConfig';
 import { createAppTheme } from '../theme/themeConfig';
 import { themesApi } from '../api/themes';
 import type { UserTheme, ThemeConfig } from '../api/themes';
+import { themePreferenceService } from '../services/themePreferenceService';
 
 interface ThemeContextType {
   currentTheme: ThemeMode | 'custom';
@@ -313,25 +314,71 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           setCurrentTheme('teamified');
           setCustomTheme(null);
         }
+        
+        // If user logged in, load their theme preference from backend
+        if (!isAuthenticated && newAuthStatus) {
+          loadUserThemePreference();
+        }
       }
     }, 1000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  const refreshActiveTheme = async () => {
+  // Load user's theme preference from backend on initial mount if authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isPublicRoute) {
+      loadUserThemePreference();
+    }
+  }, []);
+
+  const loadUserThemePreference = async () => {
     if (!isAuthenticated) {
       return;
     }
 
     try {
-      const activeTheme = await themesApi.getActiveTheme();
-      if (activeTheme) {
-        loadCustomTheme(activeTheme);
+      const preference = await themePreferenceService.loadThemePreference();
+      
+      if (preference) {
+        if (preference.themeMode === 'custom' && preference.customThemeId) {
+          try {
+            const activeTheme = await themesApi.getActiveTheme();
+            if (activeTheme) {
+              setCustomTheme(activeTheme);
+              setCurrentTheme('custom');
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(THEME_STORAGE_KEY, 'custom');
+                localStorage.setItem(CUSTOM_THEME_STORAGE_KEY, JSON.stringify(activeTheme));
+              }
+            }
+          } catch (error) {
+            console.error('Failed to load custom theme:', error);
+            const fallbackMode = preference.themeMode !== 'custom' ? preference.themeMode : 'teamified';
+            setCurrentTheme(fallbackMode);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(THEME_STORAGE_KEY, fallbackMode);
+            }
+          }
+        } else {
+          const themeMode = preference.themeMode === 'custom' ? 'teamified' : preference.themeMode;
+          setCurrentTheme(themeMode);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
       }
     } catch (error) {
-      console.error('Failed to load active theme:', error);
+      console.error('Failed to load user theme preference:', error);
     }
+  };
+
+  const refreshActiveTheme = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    await loadUserThemePreference();
   };
 
   useEffect(() => {
@@ -354,6 +401,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('Failed to save theme to localStorage:', error);
       }
     }
+    
+    themePreferenceService.saveThemePreference(theme).catch(error => {
+      console.error('Failed to save theme preference to backend:', error);
+    });
   };
 
   const loadCustomTheme = (theme: UserTheme) => {
@@ -372,6 +423,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('Failed to save custom theme to localStorage:', error);
       }
     }
+    
+    themePreferenceService.saveThemePreference('custom', theme.id).catch(error => {
+      console.error('Failed to save custom theme preference to backend:', error);
+    });
   };
 
   const clearCustomTheme = () => {
@@ -385,6 +440,12 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       } catch (error) {
         console.error('Failed to clear custom theme from localStorage:', error);
       }
+    }
+    
+    if (isAuthenticated) {
+      themePreferenceService.saveThemePreference('teamified').catch(error => {
+        console.error('Failed to save theme preference to backend:', error);
+      });
     }
   };
 
