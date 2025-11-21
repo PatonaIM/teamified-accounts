@@ -216,6 +216,15 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     // Store user data for offline access
     if (user) {
       setUserData(user);
+      
+      // Cache theme preference immediately to prevent flash of wrong theme
+      if (user.themePreference) {
+        try {
+          localStorage.setItem('teamified_theme_auth', user.themePreference);
+        } catch (error) {
+          console.warn('Failed to cache theme preference:', error);
+        }
+      }
     }
     
     // Reset failed attempts on successful login

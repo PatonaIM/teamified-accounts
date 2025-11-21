@@ -423,6 +423,9 @@ This is an automated message from Teamified.
     // Extract roles from userRoles relation
     const roles = user.userRoles?.map(userRole => userRole.roleType) || [];
 
+    // Extract theme preference from profileData if available
+    const themePreference = user.profileData?.themePreference?.themeMode || 'light';
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -434,6 +437,7 @@ This is an automated message from Teamified.
         isActive: user.isActive,
         emailVerified: user.emailVerified,
         roles: roles,
+        themePreference: themePreference,
       },
     };
   }

@@ -47,7 +47,13 @@ const getStoredTheme = (): ThemeMode | 'custom' => {
   }
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return (stored as ThemeMode | 'custom') || 'teamified';
+    if (stored) {
+      return stored as ThemeMode | 'custom';
+    }
+    
+    // If no theme is stored but user is authenticated, default to dark mode
+    const isAuth = !!localStorage.getItem('teamified_access_token');
+    return isAuth ? 'dark' : 'teamified';
   } catch {
     return 'teamified';
   }
