@@ -15,6 +15,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -40,6 +41,8 @@ import * as path from 'path';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UserController {
+  private readonly logger = new Logger('UserController');
+
   constructor(
     private readonly userService: UserService,
     private readonly objectStorageService: ObjectStorageService,
@@ -100,20 +103,51 @@ export class UserController {
     description: 'Unauthorized',
   })
   async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto }> {
-    console.log('getCurrentUser: JWT payload:', req.user);
-    console.log('getCurrentUser: Looking up user with ID:', req.user.sub);
-    const user = await this.userService.findOne(req.user.sub);
-    console.log('getCurrentUser: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
+    this.logger.log('=== /me ENDPOINT CALLED ===');
+    this.logger.log('Step 1: Request received');
+    this.logger.log(`Step 2: JWT payload exists: ${!!req.user}`);
+    
+    if (!req.user) {
+      this.logger.error('Step 3: ERROR - No JWT payload in request');
+      return null;
+    }
 
-    // Manually add roles property to response (extracted from userRoles)
-    const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
+    this.logger.log(`Step 3: JWT payload sub (user ID): ${req.user.sub}`);
+    const userId = req.user.sub;
+    this.logger.log(`Step 4: About to call userService.findOne with ID: ${userId}`);
 
-    return {
-      user: {
-        ...user,
-        roles,
+    try {
+      this.logger.log(`Step 5: Starting database query...`);
+      const startTime = Date.now();
+      const user = await this.userService.findOne(userId);
+      const queryTime = Date.now() - startTime;
+      
+      this.logger.log(`Step 6: Database query completed in ${queryTime}ms`);
+      this.logger.log(`Step 7: User found - ID: ${user?.id}, Email: ${user?.email}`);
+      
+      if (!user) {
+        this.logger.error('Step 8: ERROR - User not found in database');
+        return null;
       }
-    };
+
+      this.logger.log(`Step 9: User has ${user.userRoles?.length || 0} roles`);
+      const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
+      this.logger.log(`Step 10: Mapped roles: ${roles.join(', ')}`);
+      
+      this.logger.log(`Step 11: Building response object`);
+      const response = {
+        user: {
+          ...user,
+          roles,
+        }
+      };
+      
+      this.logger.log(`Step 12: Response ready, returning...`);
+      return response;
+    } catch (error) {
+      this.logger.error(`ERROR at unknown step: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   @Get('debug/:id')
