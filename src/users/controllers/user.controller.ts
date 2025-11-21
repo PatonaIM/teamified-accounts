@@ -118,9 +118,9 @@ export class UserController {
     this.logger.log(`Step 4: About to call userService.findOne with ID: ${userId}`);
 
     try {
-      this.logger.log(`Step 5: Starting OPTIMIZED database query...`);
+      this.logger.log(`Step 5: Starting database query...`);
       const startTime = Date.now();
-      const user = await this.userService.findOneForCurrentUser(userId);
+      const user = await this.userService.findOne(userId);
       const queryTime = Date.now() - startTime;
       
       this.logger.log(`Step 6: Database query completed in ${queryTime}ms`);
