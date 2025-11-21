@@ -10,6 +10,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**November 21, 2025**:
+- **Vite Replit Compatibility Fix**: Set `allowedHosts: true` and `hmr.clientPort: 443` in vite.config.ts to fix "Blocked request" errors in Replit iframe previews. This disables Vite's host checking to support all Replit subdomains (*.pike.replit.dev, *.replit.dev, *.replit.app).
+- **Public Swagger UI**: Made API documentation publicly accessible at `/api/docs` by removing JWT authentication middleware from Swagger endpoints. Individual API endpoints remain protected by OAuth/JWT authentication via NestJS guards, maintaining security while allowing anyone to view the API documentation.
+
 **November 20, 2025**: 
 - **HttpOnly Cookie Authentication for SSO**: Implemented dual authentication approach with httpOnly cookies alongside localStorage tokens to enable seamless cross-app SSO. The backend now sets secure, httpOnly cookies on login/refresh and reads from cookies OR Authorization headers, enabling automatic session detection across all connected applications without re-login.
 - **48-Hour Inactivity Timeout**: Implemented session inactivity timeout that automatically logs users out after 48 hours of inactivity. The timer resets on any token refresh across all connected SSO applications. Added `last_activity_at` column to sessions table to track user activity.
