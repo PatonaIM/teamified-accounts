@@ -540,14 +540,24 @@ This is an automated message from Teamified.
     // Extract roles from userRoles relation
     const roles = user.userRoles?.map(userRole => userRole.roleType) || [];
 
+    // Extract profile picture URL from profileData JSONB
+    const profilePictureUrl = user.profileData?.profilePictureUrl || null;
+
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
+      status: user.status,
       isActive: user.isActive,
       emailVerified: user.emailVerified,
       roles,
+      themePreference: user.themePreference,
+      profilePictureUrl,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
     };
   }
 

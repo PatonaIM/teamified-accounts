@@ -56,24 +56,45 @@ export class LogoutResponseDto {
 }
 
 export class UserProfileDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'User unique identifier' })
   id: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'User email address' })
   email: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'User first name' })
   firstName: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'User last name' })
   lastName: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'User phone number', required: false })
+  phone: string | null;
+
+  @ApiProperty({ description: 'User account status', enum: ['active', 'inactive', 'archived', 'invited'] })
+  status: string;
+
+  @ApiProperty({ description: 'Whether the user account is active' })
   isActive: boolean;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Whether the user email is verified' })
   emailVerified: boolean;
 
-  @ApiProperty({ type: [String], description: 'User roles' })
+  @ApiProperty({ type: [String], description: 'User roles (e.g., super_admin, admin, hr, etc.)' })
   roles: string[];
+
+  @ApiProperty({ description: 'User theme preference', enum: ['light', 'dark'], required: false })
+  themePreference: 'light' | 'dark' | null;
+
+  @ApiProperty({ description: 'Profile picture URL', required: false })
+  profilePictureUrl: string | null;
+
+  @ApiProperty({ description: 'Account creation timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Last account update timestamp' })
+  updatedAt: Date;
+
+  @ApiProperty({ description: 'Last login timestamp', required: false })
+  lastLoginAt: Date | null;
 }
