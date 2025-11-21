@@ -131,21 +131,21 @@ export class UserService {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.userRoles', 'userRole')
-      .leftJoinAndSelect('user.organizationMembers', 'orgMember')
-      .leftJoinAndSelect('orgMember.organization', 'org')
+      .leftJoinAndSelect('user.organizationMembers', 'organizationMember')
+      .leftJoinAndSelect('organizationMember.organization', 'organization')
       .where('user.id = :id', { id })
       .select([
         'user',
         'userRole.id',
         'userRole.roleType',
         'userRole.scope',
-        'orgMember.id',
-        'orgMember.organizationId',
-        'orgMember.roleType',
-        'orgMember.createdAt',
-        'org.id',
-        'org.name',
-        'org.slug',
+        'organizationMember.id',
+        'organizationMember.organizationId',
+        'organizationMember.roleType',
+        'organizationMember.createdAt',
+        'organization.id',
+        'organization.name',
+        'organization.slug',
       ])
       .getOne();
 
