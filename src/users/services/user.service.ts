@@ -113,7 +113,7 @@ export class UserService {
     console.log('UserService.findOne: Looking for user with ID:', id);
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ['userRoles'],
+      relations: ['userRoles', 'organizationMembers', 'organizationMembers.organization'],
     });
 
     if (!user) {

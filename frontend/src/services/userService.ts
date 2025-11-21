@@ -2,6 +2,14 @@ import api from './api';
 import axios from 'axios'; // Keep for utility functions
 
 // Types for user management
+export interface UserOrganization {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  roleType: string;
+  joinedAt: string | null;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -17,6 +25,7 @@ export interface User {
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
+  organizations?: UserOrganization[];
   eorProfile?: {
     employeeId: string | null;
     department?: string | null;
