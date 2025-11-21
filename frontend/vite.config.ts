@@ -11,6 +11,7 @@ export default defineConfig({
     hmr: {
       clientPort: 443,
     },
+    allowedHosts: true,
     proxy: {
       // Portal API (existing) - NestJS backend
       '/api': {
