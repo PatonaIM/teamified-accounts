@@ -125,6 +125,39 @@ export class UserService {
     return user;
   }
 
+  async findOneForCurrentUser(id: string): Promise<User> {
+    this.logger.log(`findOneForCurrentUser: Optimized query for user ID: ${id}`);
+    
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userRoles', 'userRole')
+      .leftJoinAndSelect('user.organizationMembers', 'orgMember')
+      .leftJoinAndSelect('orgMember.organization', 'org')
+      .where('user.id = :id', { id })
+      .select([
+        'user',
+        'userRole.id',
+        'userRole.roleType',
+        'userRole.scope',
+        'orgMember.id',
+        'orgMember.organizationId',
+        'orgMember.roleType',
+        'orgMember.createdAt',
+        'org.id',
+        'org.name',
+        'org.slug',
+      ])
+      .getOne();
+
+    if (!user) {
+      this.logger.error(`findOneForCurrentUser: User not found for ID: ${id}`);
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    this.logger.log(`findOneForCurrentUser: Found user with ${user.userRoles?.length || 0} roles and ${user.organizationMembers?.length || 0} org memberships`);
+    return user;
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 

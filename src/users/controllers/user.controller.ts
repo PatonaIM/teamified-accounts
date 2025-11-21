@@ -117,9 +117,9 @@ export class UserController {
     this.logger.log(`Step 4: About to call userService.findOne with ID: ${userId}`);
 
     try {
-      this.logger.log(`Step 5: Starting database query...`);
+      this.logger.log(`Step 5: Starting OPTIMIZED database query...`);
       const startTime = Date.now();
-      const user = await this.userService.findOne(userId);
+      const user = await this.userService.findOneForCurrentUser(userId);
       const queryTime = Date.now() - startTime;
       
       this.logger.log(`Step 6: Database query completed in ${queryTime}ms`);
@@ -130,7 +130,7 @@ export class UserController {
         return null;
       }
 
-      this.logger.log(`Step 9: User has ${user.userRoles?.length || 0} roles`);
+      this.logger.log(`Step 9: User has ${user.userRoles?.length || 0} roles and ${user.organizationMembers?.length || 0} org memberships`);
       const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
       this.logger.log(`Step 10: Mapped roles: ${roles.join(', ')}`);
       
