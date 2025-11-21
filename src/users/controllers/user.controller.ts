@@ -186,6 +186,26 @@ export class UserController {
     return { user };
   }
 
+  @Get('me/profile')
+  @ApiOperation({ summary: 'Get current user profile data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile data retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getMyProfile(
+    @CurrentUser() user: User,
+  ): Promise<{ profileData: any }> {
+    const fullUser = await this.userService.findOne(user.id);
+    
+    return {
+      profileData: fullUser.profileData || {},
+    };
+  }
+
   @Put('me/profile')
   @ApiOperation({ summary: 'Update current user profile data' })
   @ApiResponse({
