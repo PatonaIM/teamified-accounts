@@ -344,9 +344,10 @@ This is an automated message from Teamified.
   ): Promise<LoginResponseDto> {
     const { email, password } = loginDto;
 
-    // Find user by email
+    // Find user by email with roles
     const user = await this.userRepository.findOne({
       where: { email, isActive: true },
+      relations: ['userRoles'],
     });
 
     if (!user) {
@@ -419,6 +420,9 @@ This is an automated message from Teamified.
       userAgent,
     });
 
+    // Extract roles from userRoles relation
+    const roles = user.userRoles?.map(userRole => userRole.roleType) || [];
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -429,6 +433,7 @@ This is an automated message from Teamified.
         lastName: user.lastName,
         isActive: user.isActive,
         emailVerified: user.emailVerified,
+        roles: roles,
       },
     };
   }

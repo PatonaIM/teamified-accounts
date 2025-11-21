@@ -32,6 +32,7 @@ export class LoginResponseDto {
     lastName: string;
     isActive: boolean;
     emailVerified: boolean;
+    roles: string[];
   };
 }
 
