@@ -273,6 +273,23 @@ export class UserController {
     };
   }
 
+  @Get('me/profile')
+  @ApiOperation({ summary: 'Get current user profile data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile data retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getMyProfile(@CurrentUser() user: User): Promise<{ profileData: any }> {
+    const currentUser = await this.userService.findOne(user.id);
+    return {
+      profileData: currentUser.profileData || {},
+    };
+  }
+
   @Get(':id/profile')
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
