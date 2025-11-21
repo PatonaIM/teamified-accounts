@@ -118,6 +118,43 @@ export class UserController {
     };
   }
 
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update current user settings (e.g., theme preference)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User settings updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async updateCurrentUser(
+    @CurrentUser() currentUser: User,
+    @Body() updateData: Partial<UpdateUserDto>,
+    @Request() req: any,
+  ): Promise<{ message: string; user: UserResponseDto }> {
+    const ip = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.get('user-agent');
+
+    const updatedUser = await this.userService.update(currentUser.id, updateData);
+
+    // Manually add roles property to response
+    const roles = updatedUser.userRoles?.map(r => r.roleType).filter(Boolean) || [];
+
+    return {
+      message: 'User settings updated successfully',
+      user: {
+        ...updatedUser,
+        roles,
+      },
+    };
+  }
+
   @Get('debug/:id')
   @ApiOperation({ summary: 'Debug user lookup' })
   async debugUser(@Param('id') id: string): Promise<{ user: any }> {
