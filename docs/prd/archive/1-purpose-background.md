@@ -1,0 +1,2 @@
+# 1. Purpose & Background
+Teamified will replace Zoho People with an in‑house portal for Employer‑of‑Record (EOR) team members and Teamified operations staff. The portal focuses on self‑service profile management, timesheets, leave requests, and access to payslips/documents, plus an admin console for invitations, role management, and client roster administration. EORs work full‑time for a single client at any time; they may transition between clients but never hold simultaneous multi‑client assignments.

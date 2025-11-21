@@ -1,0 +1,105 @@
+2025-11-07 14:58:20.01
+58169ee4
+User
+[Nest] 39 - 11/07/2025, 3:58:20 AM WARN [Bootstrap] CORS rejected origin: https://teamified-team-member-portal-simonjones10.replit.app
+
+2025-11-07 14:58:20.02
+58169ee4
+User
+[Nest] 39 - 11/07/2025, 3:58:20 AM ERROR [ExceptionsHandler] Not allowed by CORS
+2025-11-07 14:58:20.02
+58169ee4
+User
+Error: Not allowed by CORS
+2025-11-07 14:58:20.02
+58169ee4
+User
+at origin (/home/runner/workspace/dist/main.js:283656:26)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at /home/runner/workspace/dist/main.js:56908:13
+2025-11-07 14:58:20.02
+58169ee4
+User
+at optionsCallback (/home/runner/workspace/dist/main.js:56888:9)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at corsMiddleware (/home/runner/workspace/dist/main.js:56893:7)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/dist/main.js:61472:5)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at trim_prefix (/home/runner/workspace/dist/main.js:59890:13)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at /home/runner/workspace/dist/main.js:59848:9
+2025-11-07 14:58:20.02
+58169ee4
+User
+at Function.process_params (/home/runner/workspace/dist/main.js:59908:12)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at next (/home/runner/workspace/dist/main.js:59842:10)
+2025-11-07 14:58:20.02
+58169ee4
+User
+at expressInit (/home/runner/workspace/dist/main.js:61879:5)
+2025-11-07 14:58:20.02
+58169ee4
+User
+[Nest] 39 - 11/07/2025, 3:58:20 AM WARN [Bootstrap] CORS rejected origin: https://teamified-team-member-portal-simonjones10.replit.app
+2025-11-07 14:58:20.03
+58169ee4
+User
+[Nest] 39 - 11/07/2025, 3:58:20 AM ERROR [ExceptionsHandler] Not allowed by CORS
+2025-11-07 14:58:20.03
+58169ee4
+User
+Error: Not allowed by CORS
+2025-11-07 14:58:20.03
+58169ee4
+User
+at origin (/home/runner/workspace/dist/main.js:283656:26)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at /home/runner/workspace/dist/main.js:56908:13
+2025-11-07 14:58:20.03
+58169ee4
+User
+at optionsCallback (/home/runner/workspace/dist/main.js:56888:9)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at corsMiddleware (/home/runner/workspace/dist/main.js:56893:7)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/dist/main.js:61472:5)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at trim_prefix (/home/runner/workspace/dist/main.js:59890:13)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at /home/runner/workspace/dist/main.js:59848:9
+2025-11-07 14:58:20.03
+58169ee4
+User
+at Function.process_params (/home/runner/workspace/dist/main.js:59908:12)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at next (/home/runner/workspace/dist/main.js:59842:10)
+2025-11-07 14:58:20.03
+58169ee4
+User
+at expressInit (/home/runner/workspace/dist/main.js:61879:5)

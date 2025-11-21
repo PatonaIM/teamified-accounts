@@ -1,0 +1,133 @@
+services:
+  # PostgreSQL Database (same as production)
+  postgres:
+    image: postgres:15-alpine
+    container_name: teamified_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: teamified_portal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - teamified_network_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d teamified_portal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for rate limiting and caching
+  redis:
+    image: redis:7-alpine
+    container_name: teamified_redis_dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - redis_data_dev:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - teamified_network_dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Backend API (production-like setup)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: teamified_backend_dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: password
+      DATABASE_NAME: teamified_portal
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_password
+      JWT_SECRET: dev-jwt-secret-key
+      JWT_REFRESH_SECRET: dev-refresh-secret-key
+      PORT: 3000
+      FRONTEND_URL: http://localhost
+      WORKABLE_SUBDOMAIN: ${WORKABLE_SUBDOMAIN}
+      WORKABLE_API_TOKEN: ${WORKABLE_API_TOKEN}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teamified_network_dev
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend (production-like setup)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost/api
+        VITE_API_URL: http://localhost/api
+    container_name: teamified_frontend_dev
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost/api
+      VITE_API_URL: http://localhost/api
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - teamified_network_dev
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy (production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: teamified_nginx_dev
+    restart: unless-stopped
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - teamified_network_dev
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+
+networks:
+  teamified_network_dev:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

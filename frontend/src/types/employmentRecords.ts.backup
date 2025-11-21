@@ -1,0 +1,177 @@
+// Employment Record Types
+
+export type EmploymentStatus = 'active' | 'inactive' | 'terminated' | 'completed';
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  address?: any;
+  profileData?: any;
+  status: string;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  description?: string;
+  contactInfo?: any;
+  status: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmploymentRecord {
+  id: string;
+  userId: string;
+  clientId: string;
+  startDate: string;
+  endDate?: string;
+  role: string;
+  status: EmploymentStatus;
+  migratedFromZoho: boolean;
+  zohoEmploymentId?: string;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Populated fields (when included in response)
+  user?: User;
+  client?: Client;
+}
+
+export interface CreateEmploymentRecordDto {
+  userId: string;
+  clientId: string;
+  startDate: string;
+  endDate?: string;
+  role: string;
+  status?: EmploymentStatus;
+}
+
+export interface UpdateEmploymentRecordDto {
+  userId?: string;
+  clientId?: string;
+  startDate?: string;
+  endDate?: string;
+  role?: string;
+  status?: EmploymentStatus;
+}
+
+export interface TerminateEmploymentRecordDto {
+  endDate: string;
+  reason?: string;
+}
+
+export interface EmploymentRecordResponse {
+  employmentRecord: EmploymentRecord;
+}
+
+export interface EmploymentRecordFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: EmploymentStatus | '';
+  clientId?: string;
+  userId?: string;
+  startDateFrom?: string;
+  startDateTo?: string;
+  endDateFrom?: string;
+  endDateTo?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  employmentRecords: T[];
+  pagination: PaginationInfo;
+}
+
+export interface EmploymentRecordSearchResponse {
+  employmentRecords: EmploymentRecord[];
+  pagination: PaginationInfo;
+}
+
+export interface EmploymentStatistics {
+  total: number;
+  active: number;
+  inactive: number;
+  terminated: number;
+  completed: number;
+  recentHires: number;
+  recentTerminations: number;
+}
+
+export interface BulkUpdateRequest {
+  ids: string[];
+  data: Partial<UpdateEmploymentRecordDto>;
+}
+
+export interface BulkUpdateResponse {
+  employmentRecords: EmploymentRecord[];
+  updatedCount: number;
+}
+
+// Form validation types
+export interface EmploymentRecordFormData {
+  userId: string;
+  clientId: string;
+  role: string;
+  startDate: Date | null;
+  endDate: Date | null;
+  status: EmploymentStatus;
+}
+
+export interface EmploymentRecordFormErrors {
+  userId?: string;
+  clientId?: string;
+  role?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  general?: string;
+}
+
+// API Error types
+export interface EmploymentRecordError {
+  message: string;
+  code?: string;
+  field?: string;
+  details?: any;
+}
+
+export interface ApiErrorResponse {
+  message: string;
+  error: string;
+  statusCode: number;
+  timestamp: string;
+  path: string;
+}
+
+// Export types
+export interface ExportOptions {
+  format: 'csv' | 'excel';
+  filters?: EmploymentRecordFilters;
+  fields?: string[];
+}
+
+export interface ExportResponse {
+  data: Blob;
+  filename: string;
+  contentType: string;
+}

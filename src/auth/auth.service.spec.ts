@@ -1,0 +1,583 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { BadRequestException, NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { User } from './entities/user.entity';
+import { Session } from './entities/session.entity';
+import { Invitation, InvitationStatus, Country, UserRole } from '../invitations/entities/invitation.entity';
+import { UserRole as UserRoleEntity } from '../user-roles/entities/user-role.entity';
+import { PasswordService } from './services/password.service';
+import { JwtTokenService } from './services/jwt.service';
+import { SessionService } from './services/session.service';
+import { EmailService } from '../email/services/email.service';
+import { AuditService } from '../audit/audit.service';
+import { AcceptInvitationDto } from './dto/accept-invitation.dto';
+import { LoginDto } from './dto/login.dto';
+
+describe('AuthService', () => {
+  let service: AuthService;
+  let userRepository: jest.Mocked<Repository<User>>;
+  let sessionRepository: jest.Mocked<Repository<Session>>;
+  let invitationRepository: jest.Mocked<Repository<Invitation>>;
+  let userRoleRepository: jest.Mocked<Repository<UserRoleEntity>>;
+  let passwordService: jest.Mocked<PasswordService>;
+  let jwtService: jest.Mocked<JwtTokenService>;
+  let sessionService: jest.Mocked<SessionService>;
+  let emailService: jest.Mocked<EmailService>;
+  let auditService: jest.Mocked<AuditService>;
+
+  const mockUserRepository = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockSessionRepository = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockInvitationRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockUserRoleRepository = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockPasswordService = {
+    validatePasswordPolicy: jest.fn(),
+    hashPassword: jest.fn(),
+    verifyPassword: jest.fn(),
+  };
+
+  const mockJwtService = {
+    generateTokenPair: jest.fn(),
+    validateRefreshToken: jest.fn(),
+    hashRefreshToken: jest.fn(),
+  };
+
+  const mockSessionService = {
+    createSession: jest.fn(),
+    rotateRefreshToken: jest.fn(),
+    revokeSessionByRefreshToken: jest.fn(),
+  };
+
+  const mockEmailService = {
+    sendEmail: jest.fn(),
+  };
+
+  const mockAuditService = {
+    log: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
+        },
+        {
+          provide: getRepositoryToken(Session),
+          useValue: mockSessionRepository,
+        },
+        {
+          provide: getRepositoryToken(Invitation),
+          useValue: mockInvitationRepository,
+        },
+        {
+          provide: getRepositoryToken(UserRoleEntity),
+          useValue: mockUserRoleRepository,
+        },
+        {
+          provide: PasswordService,
+          useValue: mockPasswordService,
+        },
+        {
+          provide: JwtTokenService,
+          useValue: mockJwtService,
+        },
+        {
+          provide: SessionService,
+          useValue: mockSessionService,
+        },
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<AuthService>(AuthService);
+    userRepository = module.get(getRepositoryToken(User));
+    sessionRepository = module.get(getRepositoryToken(Session));
+    invitationRepository = module.get(getRepositoryToken(Invitation));
+    userRoleRepository = module.get(getRepositoryToken(UserRoleEntity));
+    passwordService = module.get(PasswordService);
+    jwtService = module.get(JwtTokenService);
+    sessionService = module.get(SessionService);
+    emailService = module.get(EmailService);
+    auditService = module.get(AuditService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('acceptInvitation', () => {
+    const validAcceptInvitationDto: AcceptInvitationDto = {
+      token: 'valid-invitation-token',
+      password: 'ValidPassword123!',
+      confirmPassword: 'ValidPassword123!',
+    };
+
+    const mockInvitation: Partial<Invitation> = {
+      id: 'invitation-id',
+      email: 'test@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: UserRole.EOR,
+      token: 'valid-invitation-token',
+      status: InvitationStatus.PENDING,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day from now
+      acceptedAt: null,
+      acceptedBy: null,
+      acceptor: null,
+    };
+
+    it('should successfully accept invitation with valid data', async () => {
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        isActive: true,
+        emailVerified: false,
+        emailVerificationToken: 'verification-token',
+      };
+
+      const freshInvitation = { ...mockInvitation };
+      invitationRepository.findOne.mockResolvedValue(freshInvitation as Invitation);
+      userRepository.findOne.mockResolvedValue(null);
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      passwordService.hashPassword.mockResolvedValue('hashed-password');
+      userRepository.create.mockReturnValue(mockUser as any);
+      userRepository.save.mockResolvedValue(mockUser as any);
+      invitationRepository.save.mockResolvedValue(freshInvitation as any);
+      emailService.sendEmail.mockResolvedValue(true);
+      auditService.log.mockResolvedValue({} as any);
+
+      const result = await service.acceptInvitation(validAcceptInvitationDto);
+
+      expect(result).toEqual({
+        userId: 'user-id',
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        isActive: true,
+        emailVerified: false,
+        message: 'Account activated successfully. Please check your email to verify your email address.',
+      });
+
+      expect(invitationRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: InvitationStatus.ACCEPTED,
+          acceptedAt: expect.any(Date),
+          acceptedBy: 'user-id',
+        }),
+      );
+
+      expect(auditService.log).toHaveBeenCalledTimes(4); // acceptance, password_set, account_activated, email_verification_sent
+    });
+
+    it('should throw BadRequestException when passwords do not match', async () => {
+      const invalidDto = {
+        ...validAcceptInvitationDto,
+        confirmPassword: 'DifferentPassword123!',
+      };
+
+      await expect(service.acceptInvitation(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException when password policy validation fails', async () => {
+      invitationRepository.findOne.mockResolvedValue(mockInvitation as Invitation);
+      userRepository.findOne.mockResolvedValue(null);
+      passwordService.validatePasswordPolicy.mockReturnValue({
+        isValid: false,
+        errors: ['Password is too weak'],
+      });
+
+      await expect(service.acceptInvitation(validAcceptInvitationDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw NotFoundException when invitation is not found', async () => {
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      invitationRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.acceptInvitation(validAcceptInvitationDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw ConflictException when invitation is already accepted', async () => {
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      const acceptedInvitation = {
+        ...mockInvitation,
+        acceptedAt: new Date(),
+      };
+
+      invitationRepository.findOne.mockResolvedValue(acceptedInvitation as Invitation);
+
+      await expect(service.acceptInvitation(validAcceptInvitationDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should throw ConflictException when user already exists and is active', async () => {
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      const existingUser = {
+        id: 'existing-user-id',
+        email: 'test@example.com',
+        isActive: true,
+      };
+
+      invitationRepository.findOne.mockResolvedValue(mockInvitation as Invitation);
+      userRepository.findOne.mockResolvedValue(existingUser as any);
+
+      await expect(service.acceptInvitation(validAcceptInvitationDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should handle expired invitation token', async () => {
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      const expiredInvitation = {
+        ...mockInvitation,
+        expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+      };
+
+      invitationRepository.findOne.mockResolvedValue(null); // Repository won't find expired tokens
+
+      await expect(service.acceptInvitation(validAcceptInvitationDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should update existing inactive user instead of creating new one', async () => {
+      const existingInactiveUser = {
+        id: 'existing-user-id',
+        email: 'test@example.com',
+        isActive: false,
+      };
+
+      const freshInvitation = { ...mockInvitation };
+      invitationRepository.findOne.mockResolvedValue(freshInvitation as Invitation);
+      userRepository.findOne.mockResolvedValue(existingInactiveUser as any);
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      passwordService.hashPassword.mockResolvedValue('hashed-password');
+      userRepository.save.mockResolvedValue({
+        ...existingInactiveUser,
+        isActive: true,
+        passwordHash: 'hashed-password',
+      } as any);
+      invitationRepository.save.mockResolvedValue(freshInvitation as any);
+      emailService.sendEmail.mockResolvedValue(true);
+      auditService.log.mockResolvedValue({} as any);
+
+      await service.acceptInvitation(validAcceptInvitationDto);
+
+      expect(userRepository.create).not.toHaveBeenCalled();
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isActive: true,
+          passwordHash: 'hashed-password',
+        }),
+      );
+    });
+
+    it('should handle email sending failure gracefully', async () => {
+      const freshInvitation = { ...mockInvitation };
+      invitationRepository.findOne.mockResolvedValue(freshInvitation as Invitation);
+      userRepository.findOne.mockResolvedValue(null);
+      passwordService.validatePasswordPolicy.mockReturnValue({ isValid: true, errors: [] });
+      passwordService.hashPassword.mockResolvedValue('hashed-password');
+      userRepository.create.mockReturnValue({ id: 'user-id' } as any);
+      userRepository.save.mockResolvedValue({ id: 'user-id' } as any);
+      invitationRepository.save.mockResolvedValue(freshInvitation as any);
+      emailService.sendEmail.mockResolvedValue(false); // Email fails
+      auditService.log.mockResolvedValue({} as any);
+
+      const result = await service.acceptInvitation(validAcceptInvitationDto);
+
+      expect(result).toBeDefined();
+      // Should still complete successfully even if email fails
+    });
+  });
+
+  describe('login', () => {
+    const loginDto: LoginDto = {
+      email: 'test@example.com',
+      password: 'ValidPassword123!',
+    };
+
+    const mockUser = {
+      id: 'user-id',
+      email: 'test@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      passwordHash: 'hashed-password',
+      isActive: true,
+      emailVerified: true,
+    };
+
+    it('should login successfully with valid credentials', async () => {
+      const mockTokens = {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      };
+
+      userRepository.findOne.mockResolvedValue(mockUser as any);
+      passwordService.verifyPassword.mockResolvedValue(true);
+      jwtService.generateTokenPair.mockResolvedValue(mockTokens);
+      sessionService.createSession.mockResolvedValue({} as any);
+      auditService.log.mockResolvedValue({} as any);
+
+      const result = await service.login(loginDto, '127.0.0.1', 'Mozilla/5.0');
+
+      expect(result).toEqual({
+        accessToken: mockTokens.accessToken,
+        refreshToken: mockTokens.refreshToken,
+        user: {
+          id: mockUser.id,
+          email: mockUser.email,
+          firstName: mockUser.firstName,
+          lastName: mockUser.lastName,
+          isActive: mockUser.isActive,
+          emailVerified: mockUser.emailVerified,
+        },
+      });
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { email: loginDto.email, isActive: true },
+      });
+      expect(passwordService.verifyPassword).toHaveBeenCalledWith(
+        loginDto.password,
+        mockUser.passwordHash,
+      );
+      expect(jwtService.generateTokenPair).toHaveBeenCalledWith(mockUser);
+      expect(sessionService.createSession).toHaveBeenCalledWith(
+        mockUser,
+        mockTokens.refreshToken,
+        {
+          ip: '127.0.0.1',
+          userAgent: 'Mozilla/5.0',
+        },
+      );
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'login_success',
+          actorUserId: mockUser.id,
+        }),
+      );
+    });
+
+    it('should throw UnauthorizedException for non-existent user', async () => {
+      userRepository.findOne.mockResolvedValue(null);
+      auditService.log.mockResolvedValue({} as any);
+
+      await expect(service.login(loginDto, '127.0.0.1', 'Mozilla/5.0'))
+        .rejects.toThrow(UnauthorizedException);
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'login_failure',
+          changes: expect.objectContaining({
+            reason: 'user_not_found',
+          }),
+        }),
+      );
+    });
+
+    it('should throw UnauthorizedException for invalid password', async () => {
+      userRepository.findOne.mockResolvedValue(mockUser as any);
+      passwordService.verifyPassword.mockResolvedValue(false);
+      auditService.log.mockResolvedValue({} as any);
+
+      await expect(service.login(loginDto, '127.0.0.1', 'Mozilla/5.0'))
+        .rejects.toThrow(UnauthorizedException);
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'login_failure',
+          changes: expect.objectContaining({
+            reason: 'invalid_password',
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('refresh', () => {
+    const refreshToken = 'valid-refresh-token';
+    const mockUser = {
+      id: 'user-id',
+      email: 'test@example.com',
+      isActive: true,
+    };
+
+    it('should refresh tokens successfully', async () => {
+      const mockTokens = {
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+      };
+
+      const mockPayload = {
+        sub: mockUser.id,
+        tokenFamily: 'family-uuid',
+      };
+
+      jwtService.validateRefreshToken.mockReturnValue(mockPayload);
+      userRepository.findOne.mockResolvedValue(mockUser as any);
+      sessionService.rotateRefreshToken.mockResolvedValue({
+        session: {} as any,
+        newTokens: mockTokens,
+      });
+      auditService.log.mockResolvedValue({} as any);
+
+      const result = await service.refresh(refreshToken, '127.0.0.1', 'Mozilla/5.0');
+
+      expect(result).toEqual(mockTokens);
+      expect(jwtService.validateRefreshToken).toHaveBeenCalledWith(refreshToken);
+      expect(sessionService.rotateRefreshToken).toHaveBeenCalledWith(
+        refreshToken,
+        mockUser,
+        {
+          ip: '127.0.0.1',
+          userAgent: 'Mozilla/5.0',
+        },
+      );
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'token_refresh',
+        }),
+      );
+    });
+
+    it('should throw UnauthorizedException for invalid refresh token', async () => {
+      jwtService.validateRefreshToken.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+
+      await expect(service.refresh(refreshToken, '127.0.0.1', 'Mozilla/5.0'))
+        .rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException for non-existent user', async () => {
+      const mockPayload = {
+        sub: 'non-existent-user',
+        tokenFamily: 'family-uuid',
+      };
+
+      jwtService.validateRefreshToken.mockReturnValue(mockPayload);
+      userRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.refresh(refreshToken, '127.0.0.1', 'Mozilla/5.0'))
+        .rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('logout', () => {
+    const refreshToken = 'valid-refresh-token';
+
+    it('should logout successfully', async () => {
+      const mockPayload = {
+        sub: 'user-id',
+        tokenFamily: 'family-uuid',
+      };
+
+      const mockUser = {
+        id: 'user-id',
+        email: 'test@example.com',
+      };
+
+      jwtService.validateRefreshToken.mockReturnValue(mockPayload);
+      userRepository.findOne.mockResolvedValue(mockUser as any);
+      sessionService.revokeSessionByRefreshToken.mockResolvedValue();
+      auditService.log.mockResolvedValue({} as any);
+
+      const result = await service.logout(refreshToken, '127.0.0.1', 'Mozilla/5.0');
+
+      expect(result).toEqual({ message: 'Logout successful' });
+      expect(sessionService.revokeSessionByRefreshToken).toHaveBeenCalledWith(refreshToken);
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'logout',
+        }),
+      );
+    });
+
+    it('should handle logout with invalid token gracefully', async () => {
+      jwtService.validateRefreshToken.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+
+      const result = await service.logout(refreshToken, '127.0.0.1', 'Mozilla/5.0');
+
+      expect(result).toEqual({ message: 'Logout successful' });
+      // Should not throw error even with invalid token
+    });
+  });
+
+  describe('getProfile', () => {
+    const userId = 'user-id';
+
+    it('should return user profile', async () => {
+      const mockUser = {
+        id: userId,
+        email: 'test@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        isActive: true,
+        emailVerified: true,
+      };
+
+      userRepository.findOne.mockResolvedValue(mockUser as any);
+
+      const result = await service.getProfile(userId);
+
+      expect(result).toEqual({
+        id: mockUser.id,
+        email: mockUser.email,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        isActive: mockUser.isActive,
+        emailVerified: mockUser.emailVerified,
+      });
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: userId, isActive: true },
+      });
+    });
+
+    it('should throw NotFoundException for non-existent user', async () => {
+      userRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.getProfile(userId)).rejects.toThrow(NotFoundException);
+    });
+  });
+});

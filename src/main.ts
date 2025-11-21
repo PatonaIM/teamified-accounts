@@ -1,0 +1,419 @@
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, Logger, UnauthorizedException } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { AppModule } from './app.module';
+import { Request, Response, NextFunction } from 'express';
+import * as express from 'express';
+import * as path from 'path';
+import { JwtService } from '@nestjs/jwt';
+
+async function bootstrap() {
+  const logger = new Logger('Bootstrap');
+  
+  try {
+    logger.log('🚀 Starting NestJS application...');
+    logger.log(`Environment: ${process.env.NODE_ENV}`);
+    
+    // Database configuration logging
+    logger.log('📊 Database Configuration:');
+    const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+    logger.log(`  Database URL exists: ${!!dbUrl}`);
+    if (dbUrl) {
+      const urlParts = dbUrl.split('@');
+      if (urlParts.length > 1) {
+        const hostPart = urlParts[1];
+        logger.log(`  Database host: ${hostPart.split('/')[0]}`);
+      }
+    }
+    
+    // Redis configuration logging
+    logger.log('🔴 Redis Configuration:');
+    const hasVercelKV = !!process.env.KV_URL;
+    const hasRedisUrl = !!process.env.REDIS_URL;
+    
+    logger.log(`  Vercel KV_URL exists: ${hasVercelKV}`);
+    logger.log(`  Standard REDIS_URL exists: ${hasRedisUrl}`);
+    
+    if (hasRedisUrl) {
+      logger.log('  Using standard REDIS_URL configuration');
+      try {
+        const url = new URL(process.env.REDIS_URL);
+        logger.log(`  Redis host: ${url.hostname}`);
+        logger.log(`  Redis port: ${url.port}`);
+        logger.log(`  Redis username: ${url.username || 'default'}`);
+      } catch (e) {
+        logger.warn('  Could not parse REDIS_URL');
+      }
+    } else if (hasVercelKV) {
+      logger.log('  Using Vercel KV configuration');
+      logger.log(`  KV_REST_API_TOKEN exists: ${!!process.env.KV_REST_API_TOKEN}`);
+      logger.log(`  KV_REST_API_URL exists: ${!!process.env.KV_REST_API_URL}`);
+      if (process.env.KV_REST_API_URL) {
+        logger.log(`  Redis host: ${process.env.KV_REST_API_URL.replace('https://', '')}`);
+      }
+    } else {
+      logger.warn('  ⚠️ No Redis configuration found (neither REDIS_URL nor KV_URL)');
+    }
+    
+    logger.log('Creating NestJS application...');
+    const app = await NestFactory.create(AppModule);
+    logger.log('✅ NestJS application created successfully');
+    
+    const configService = app.get(ConfigService);
+    logger.log('✅ ConfigService initialized');
+
+    // Enable CORS for Replit and development
+    logger.log('Configuring CORS...');
+    const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+    const isReplitProduction = process.env.REPLIT_ENVIRONMENT === 'production';
+    
+    const allowedOrigins = [
+      'http://localhost',
+      'http://127.0.0.1',
+    ];
+
+    if (replitDomain) {
+      allowedOrigins.push(`https://${replitDomain}`);
+    }
+
+    if (process.env.FRONTEND_URL) {
+      allowedOrigins.push(process.env.FRONTEND_URL);
+    }
+
+    app.enableCors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin) {
+          return callback(null, true);
+        }
+
+        // Allow all localhost origins (any port)
+        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+          return callback(null, true);
+        }
+
+        // In Replit, allow all *.replit.dev and *.replit.app domains for SSO
+        if (origin.match(/^https:\/\/.*\.replit\.(dev|app)$/)) {
+          return callback(null, true);
+        }
+
+        // Check against allowed origins list
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        // Log rejected origins for debugging
+        logger.warn(`CORS rejected origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      },
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
+      credentials: true,
+    });
+    
+    if (isReplitProduction) {
+      logger.log(`✅ CORS configured for Replit production: allowing all *.replit.dev and *.replit.app domains + specific origins: ${allowedOrigins.join(', ')}`);
+    } else {
+      logger.log(`✅ CORS configured to allow all localhost ports, *.replit.dev, and *.replit.app domains. Specific origins: ${allowedOrigins.join(', ')}`);
+    }
+
+    // Global validation pipe
+    logger.log('Setting up validation pipe...');
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: {
+          enableImplicitConversion: true,
+        },
+      }),
+    );
+    logger.log('✅ Validation pipe configured');
+
+    // API versioning
+    // Global prefix 'api' is prepended to all routes
+    // Controllers should use pattern: @Controller('v1/module/resource')
+    // This results in final route: /api/v1/module/resource
+    logger.log('Setting global API prefix...');
+    app.setGlobalPrefix('api');
+    logger.log('✅ Global prefix set to /api');
+
+    // Cookie parser middleware
+    logger.log('Setting up cookie parser...');
+    const cookieParser = require('cookie-parser');
+    app.use(cookieParser());
+    logger.log('✅ Cookie parser configured');
+
+    // Serve static frontend files in production
+    const isProduction = configService.get('NODE_ENV') === 'production';
+    if (isProduction) {
+      logger.log('Setting up static file serving for production...');
+      const expressApp = app.getHttpAdapter().getInstance();
+      const frontendPath = path.join(__dirname, '..', 'frontend', 'dist');
+      
+      // Serve static assets
+      expressApp.use(express.static(frontendPath));
+      
+      // Handle SPA routing - serve index.html for all non-API routes
+      expressApp.get('*', (req: Request, res: Response) => {
+        if (!req.url.startsWith('/api')) {
+          res.sendFile(path.join(frontendPath, 'index.html'));
+        }
+      });
+      
+      logger.log(`✅ Static files configured to serve from: ${frontendPath}`);
+    }
+
+    // Swagger documentation - Always enabled, but protected by JWT
+    logger.log('Setting up Swagger documentation...');
+    const config = new DocumentBuilder()
+      .setTitle('Teamified EOR Portal API')
+      .setDescription(`
+        # Teamified EOR Portal API Documentation
+        
+        This API provides comprehensive endpoints for managing employment records, user profiles, invitations, document management, and salary history for the Teamified EOR Portal.
+        
+        ## Key Capabilities
+        
+        ### 🔐 Core Platform
+        - **Authentication & Authorization** - JWT-based authentication with role-based access control (RBAC)
+        - **OAuth 2.0 SSO Provider** - Federated authentication for third-party applications
+        - **Multi-Tenant Architecture** - Client scoping with granular permission management
+        - **Audit Trail** - Comprehensive logging of all critical operations for compliance
+        
+        ### 👥 HR Operations
+        - **User Management** - Complete profile management with data validation
+        - **Invitation System** - Email-based invitations with role assignment
+        - **Document Management** - Upload, versioning, secure download, and verification workflows
+        - **Hiring Module** - Job requests, interview scheduling with calendar view, talent pool tracking
+        
+        ### 💰 Payroll & Finance
+        - **Multi-Country Payroll** - Automated processing for India (IN), Philippines (PH), Australia (AU)
+        - **Tax Compliance** - Region-specific tax calculations and statutory components
+        - **Salary History** - Immutable tracking with audit trails and scheduled changes
+        - **Payslip Generation** - Automated creation with earnings, deductions, and contributions breakdown
+        - **Contribution Tracking** - Year-to-date summaries and compliance reporting
+        
+        ### ⏱️ Time & Leave
+        - **Timesheets** - Submission, approval workflows, and payroll integration
+        - **Leave Management** - Requests, balance tracking, approvals, and payroll impact calculation
+        
+        ### 🎨 Developer Experience
+        - **API Key Management** - Programmatic access with read-only/full-access permissions (10 keys max)
+        - **Theme System** - Customizable UI with 5 preset themes and custom theme editor
+        - **OpenAPI Documentation** - Interactive API exploration with this Swagger UI
+        - **Health Monitoring** - System health checks and service status endpoints
+        
+        ## Authentication
+        Most endpoints require JWT authentication. Use the \`/api/v1/auth/login\` endpoint to obtain a token, then include it in the Authorization header as \`Bearer <token>\`.
+        
+        ### Public Endpoints (No Authentication Required)
+        The following endpoints are publicly accessible without JWT authentication:
+        
+        **Health Monitoring:**
+        - \`GET /api/health\` - Basic health check for monitoring and load balancers
+        - \`GET /api/health/detailed\` - Detailed health check with service status
+        
+        **Authentication:**
+        - \`POST /api/v1/auth/login\` - User login to obtain access and refresh tokens
+        - \`POST /api/v1/auth/accept-invitation\` - Accept invitation and create user account
+        - \`POST /api/v1/auth/verify-email\` - Verify email address with verification token
+        - \`POST /api/v1/auth/refresh\` - Refresh access token using refresh token
+        - \`POST /api/v1/auth/logout\` - Logout and invalidate session
+        - \`POST /api/v1/auth/supabase/exchange\` - Exchange Supabase token for JWT
+        
+        **OAuth 2.0 / SSO:**
+        - \`GET /api/v1/sso/authorize\` - OAuth authorization endpoint for federated authentication
+        - \`POST /api/v1/sso/token\` - Token exchange endpoint for OAuth flow
+        
+        ### Protected Endpoints
+        All other endpoints require a valid JWT access token in the Authorization header. Protected endpoints include user management, payroll, timesheets, leave requests, hiring, documents, and administrative functions.
+        
+        ## Rate Limiting
+        Authentication endpoints are rate-limited to prevent abuse. Please respect the rate limits and implement appropriate retry logic.
+        
+        ## Support
+        For technical support or questions about this API, please contact the development team.
+      `)
+      .setVersion('1.0.0')
+      .setContact('Teamified Development Team', 'https://teamified.com', 'dev@teamified.com')
+      .setLicense('Proprietary', 'https://teamified.com/license')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'JWT',
+          description: 'Enter JWT token',
+          in: 'header',
+        },
+        'JWT-auth'
+      )
+      .addServer('http://localhost:3000', 'Development server')
+      .addServer('https://api.teamified.com', 'Production server')
+      .addServer('https://staging-api.teamified.com', 'Staging server')
+      .addTag('authentication', 'Authentication and user management endpoints')
+      .addTag('users', 'User profile and management endpoints')
+      .addTag('invitations', 'Invitation management endpoints')
+      .addTag('documents', 'Document and CV management endpoints')
+      .addTag('salary-history', 'Salary history management endpoints')
+      .addTag('health', 'Health check and monitoring endpoints')
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    
+    // Create custom Swagger UI endpoint to avoid asset loading issues
+    const expressApp = app.getHttpAdapter().getInstance();
+    const jwtService = app.get(JwtService);
+    
+    // JWT authentication middleware for Swagger endpoints
+    const swaggerAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return res.status(401).json({ message: 'Authentication required to access API documentation' });
+        }
+
+        const token = authHeader.substring(7);
+        const payload = await jwtService.verifyAsync(token);
+        
+        // Check if user has admin role
+        if (!payload.roles || !payload.roles.includes('admin')) {
+          return res.status(403).json({ message: 'Admin access required to view API documentation' });
+        }
+        
+        next();
+      } catch (error) {
+        return res.status(401).json({ message: 'Invalid or expired token' });
+      }
+    };
+    
+    // Setup Swagger JSON endpoint with auth
+    expressApp.get('/api/docs-json', swaggerAuthMiddleware, (req: Request, res: Response) => {
+      res.json(document);
+    });
+    
+    expressApp.get('/api/docs', swaggerAuthMiddleware, (req: Request, res: Response) => {
+      const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teamified EOR Portal API Documentation</title>
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    html {
+      box-sizing: border-box;
+      overflow: -moz-scrollbars-vertical;
+      overflow-y: scroll;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    body {
+      margin:0;
+      background: #fafafa;
+    }
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui .info .title { color: #2c3e50; }
+    .swagger-ui .scheme-container { background: #f8f9fa; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: '/api/docs-json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout",
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        showExtensions: true,
+        showCommonExtensions: true,
+        docExpansion: 'list',
+        filter: true,
+        showRequestHeaders: true,
+        tryItOutEnabled: true
+      });
+    };
+  </script>
+</body>
+</html>`;
+      res.send(html);
+    });
+
+      logger.log('✅ Swagger documentation configured at: /api/docs (admin-only access)');
+
+    const port = configService.get('PORT', 3000);
+    const host = configService.get('HOST', '0.0.0.0');
+    
+    // In production (Vercel), don't call listen - return Express instance
+    if (configService.get('NODE_ENV') === 'production' && !process.env.REPLIT_DEV_DOMAIN) {
+      logger.log('Production mode: Initializing app for serverless...');
+      await app.init();
+      const expressApp = app.getHttpAdapter().getInstance();
+      logger.log('✅ Express app instance ready for serverless');
+      logger.log('✅ Bootstrap completed successfully');
+      return expressApp;
+    } else {
+      // In development or Replit, start the server normally
+      logger.log(`Starting server on ${host}:${port}...`);
+      await app.listen(port, host);
+      logger.log(`🚀 Application is running on: http://${host}:${port}`);
+      logger.log(`📚 API documentation: http://${host}:${port}/api/docs`);
+      logger.log('✅ Bootstrap completed successfully');
+      return app;
+    }
+    
+  } catch (error) {
+    logger.error('❌ Failed to bootstrap application');
+    logger.error(`Error: ${error.message}`);
+    logger.error(`Stack: ${error.stack}`);
+    throw error;
+  }
+}
+
+// Cached app instance for Vercel
+let cachedApp: any = null;
+
+// For Vercel serverless functions
+export default async function handler(req: any, res: any) {
+  if (!cachedApp) {
+    const logger = new Logger('VercelHandler');
+    logger.log('🥶 Cold start - initializing full app...');
+    const startTime = Date.now();
+    cachedApp = await bootstrap();
+    const duration = Date.now() - startTime;
+    logger.log(`✅ App initialized in ${duration}ms`);
+  }
+  
+  // Handle the request with the Express app
+  return cachedApp(req, res);
+}
+
+// For local development and Replit
+if (process.env.NODE_ENV !== 'production' || process.env.REPLIT_DEV_DOMAIN) {
+  const logger = new Logger('Main');
+  logger.log('Running in development mode, starting bootstrap...');
+  bootstrap().catch(err => {
+    logger.error('Failed to start application:', err);
+    process.exit(1);
+  });
+} else {
+  const logger = new Logger('Main');
+  logger.log('Running in production mode (serverless)');
+}

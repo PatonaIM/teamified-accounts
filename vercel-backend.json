@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "name": "teamified_team_member_portal_backend",
+  "builds": [
+    {
+      "src": "src/main.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/**", "src/**"],
+        "maxDuration": 30
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/src/main.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/src/main.ts"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "regions": ["iad1"],
+  "framework": null
+}

@@ -1,0 +1,289 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { CVService } from './cv.service';
+import { StorageService } from './storage.service';
+import { AuditService } from '../../audit/audit.service';
+import { ProfileCompletionService } from '../../profiles/services/profile-completion.service';
+import { Document, DocumentType } from '../entities/document.entity';
+import { EORProfile } from '../../profiles/entities/eor-profile.entity';
+
+describe('CVService', () => {
+  let service: CVService;
+  let documentRepository: jest.Mocked<Repository<Document>>;
+  let eorProfileRepository: jest.Mocked<Repository<EORProfile>>;
+  let storageService: jest.Mocked<StorageService>;
+  let auditService: jest.Mocked<AuditService>;
+  let profileCompletionService: jest.Mocked<ProfileCompletionService>;
+
+  const mockUploadResult = {
+    filePath: 'cv/eor-123/v123456789-abcd.pdf',
+    sha256Checksum: 'abc123def456',
+    fileSize: 1024000,
+  };
+
+  const mockDocument = {
+    id: 'doc-123',
+    eorProfileId: 'eor-123',
+    documentType: DocumentType.CV,
+    fileName: 'john-doe-cv.pdf',
+    filePath: 'cv/eor-123/v123456789-abcd.pdf',
+    contentType: 'application/pdf',
+    fileSize: 1024000,
+    sha256Checksum: 'abc123def456',
+    versionId: 'v123456789-abcd',
+    isCurrent: true,
+    uploadedAt: new Date('2025-08-28T10:00:00Z'),
+  } as Document;
+
+  const mockFile = {
+    buffer: Buffer.from('fake pdf content'),
+    originalname: 'john-doe-cv.pdf',
+    mimetype: 'application/pdf',
+    size: 1024000,
+  } as any;
+
+  const mockEORProfile = {
+    id: 'eor-123',
+    profileCompletionPercentage: 70,
+    isProfileComplete: false,
+    profileStatus: 'pending',
+  } as EORProfile;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CVService,
+        {
+          provide: getRepositoryToken(Document),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+            findOne: jest.fn(),
+            count: jest.fn(),
+            update: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(EORProfile),
+          useValue: {
+            findOne: jest.fn(),
+            update: jest.fn(),
+          },
+        },
+        {
+          provide: StorageService,
+          useValue: {
+            uploadCV: jest.fn(),
+            generateSignedUrl: jest.fn(),
+            generateVersionId: jest.fn(),
+            isValidFileSize: jest.fn(),
+            isValidCVFileType: jest.fn(),
+          },
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            log: jest.fn(),
+          },
+        },
+        {
+          provide: ProfileCompletionService,
+          useValue: {
+            calculateCompletion: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<CVService>(CVService);
+    documentRepository = module.get(getRepositoryToken(Document));
+    eorProfileRepository = module.get(getRepositoryToken(EORProfile));
+    storageService = module.get(StorageService);
+    auditService = module.get(AuditService);
+    profileCompletionService = module.get(ProfileCompletionService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('uploadCV', () => {
+    beforeEach(() => {
+      storageService.isValidFileSize.mockReturnValue(true);
+      storageService.isValidCVFileType.mockReturnValue(true);
+      storageService.generateVersionId.mockReturnValue('v123456789-abcd');
+      storageService.uploadCV.mockResolvedValue(mockUploadResult);
+      documentRepository.create.mockReturnValue(mockDocument);
+      documentRepository.save.mockResolvedValue(mockDocument);
+      documentRepository.update.mockResolvedValue({ affected: 1, generatedMaps: [], raw: [] });
+      eorProfileRepository.findOne.mockResolvedValue(mockEORProfile);
+      eorProfileRepository.update.mockResolvedValue({ affected: 1, generatedMaps: [], raw: [] });
+      profileCompletionService.calculateCompletion.mockResolvedValue({
+        percentage: 85,
+        status: 'complete',
+        isComplete: true,
+      });
+      auditService.log.mockResolvedValue({} as any);
+    });
+
+    it('should upload CV successfully', async () => {
+      const result = await service.uploadCV('eor-123', mockFile, 'user-123', 'EOR');
+
+      expect(result).toEqual({
+        id: 'doc-123',
+        versionId: 'v123456789-abcd',
+        fileName: 'john-doe-cv.pdf',
+        isCurrent: true,
+        uploadedAt: mockDocument.uploadedAt,
+      });
+
+      expect(storageService.uploadCV).toHaveBeenCalledWith(
+        'eor-123',
+        'v123456789-abcd',
+        mockFile.buffer,
+        mockFile.originalname,
+        mockFile.mimetype,
+      );
+      expect(documentRepository.update).toHaveBeenCalledWith(
+        { eorProfileId: 'eor-123', documentType: DocumentType.CV, isCurrent: true },
+        { isCurrent: false },
+      );
+      expect(documentRepository.save).toHaveBeenCalled();
+      expect(auditService.log).toHaveBeenCalledWith({
+        actorUserId: 'user-123',
+        actorRole: 'EOR',
+        action: 'cv_uploaded',
+        entityType: 'Document',
+        entityId: 'doc-123',
+        changes: {
+          fileName: 'john-doe-cv.pdf',
+          fileSize: 1024000,
+          contentType: 'application/pdf',
+          versionId: 'v123456789-abcd',
+        },
+      });
+    });
+
+    it('should throw BadRequestException for invalid file size', async () => {
+      storageService.isValidFileSize.mockReturnValue(false);
+
+      await expect(service.uploadCV('eor-123', mockFile, 'user-123', 'EOR'))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.uploadCV('eor-123', mockFile, 'user-123', 'EOR'))
+        .rejects.toThrow('File size exceeds 10MB limit');
+    });
+
+    it('should throw BadRequestException for invalid file type', async () => {
+      storageService.isValidCVFileType.mockReturnValue(false);
+
+      await expect(service.uploadCV('eor-123', mockFile, 'user-123', 'EOR'))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.uploadCV('eor-123', mockFile, 'user-123', 'EOR'))
+        .rejects.toThrow('Invalid file type. Only PDF and DOCX files are allowed');
+    });
+
+    it('should throw BadRequestException when no file provided', async () => {
+      await expect(service.uploadCV('eor-123', null as any, 'user-123', 'EOR'))
+        .rejects.toThrow(BadRequestException);
+      await expect(service.uploadCV('eor-123', null as any, 'user-123', 'EOR'))
+        .rejects.toThrow('No file provided');
+    });
+  });
+
+  describe('listCVs', () => {
+    it('should return list of CVs ordered by upload date', async () => {
+      const mockCVs = [mockDocument];
+      documentRepository.find.mockResolvedValue(mockCVs);
+
+      const result = await service.listCVs('eor-123');
+
+      expect(result).toEqual([{
+        id: 'doc-123',
+        versionId: 'v123456789-abcd',
+        fileName: 'john-doe-cv.pdf',
+        isCurrent: true,
+        uploadedAt: mockDocument.uploadedAt,
+      }]);
+      expect(documentRepository.find).toHaveBeenCalledWith({
+        where: { eorProfileId: 'eor-123', documentType: DocumentType.CV },
+        order: { uploadedAt: 'DESC' },
+      });
+    });
+
+    it('should return empty array when no CVs found', async () => {
+      documentRepository.find.mockResolvedValue([]);
+
+      const result = await service.listCVs('eor-123');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getDownloadUrl', () => {
+    const mockSignedUrlResult = {
+      downloadUrl: 'https://storage.example.com/cv/eor-123/v123456789-abcd.pdf?expires=123456789',
+      expiresAt: new Date('2025-08-28T11:00:00Z'),
+    };
+
+    beforeEach(() => {
+      documentRepository.findOne.mockResolvedValue(mockDocument);
+      storageService.generateSignedUrl.mockResolvedValue(mockSignedUrlResult);
+      auditService.log.mockResolvedValue({} as any);
+    });
+
+    it('should generate download URL successfully', async () => {
+      const result = await service.getDownloadUrl('eor-123', 'v123456789-abcd', 'user-123', 'EOR');
+
+      expect(result).toEqual(mockSignedUrlResult);
+      expect(documentRepository.findOne).toHaveBeenCalledWith({
+        where: { eorProfileId: 'eor-123', versionId: 'v123456789-abcd', documentType: DocumentType.CV },
+      });
+      expect(storageService.generateSignedUrl).toHaveBeenCalledWith('cv/eor-123/v123456789-abcd.pdf');
+      expect(auditService.log).toHaveBeenCalledWith({
+        actorUserId: 'user-123',
+        actorRole: 'EOR',
+        action: 'cv_downloaded',
+        entityType: 'Document',
+        entityId: 'doc-123',
+        changes: {
+          fileName: 'john-doe-cv.pdf',
+          versionId: 'v123456789-abcd',
+          expiresAt: mockSignedUrlResult.expiresAt.toISOString(),
+        },
+      });
+    });
+
+    it('should throw NotFoundException when CV not found', async () => {
+      documentRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.getDownloadUrl('eor-123', 'invalid-version', 'user-123', 'EOR'))
+        .rejects.toThrow(NotFoundException);
+      await expect(service.getDownloadUrl('eor-123', 'invalid-version', 'user-123', 'EOR'))
+        .rejects.toThrow('CV version invalid-version not found');
+    });
+  });
+
+  describe('hasCurrentCV', () => {
+    it('should return true when current CV exists', async () => {
+      documentRepository.count.mockResolvedValue(1);
+
+      const result = await service.hasCurrentCV('eor-123');
+
+      expect(result).toBe(true);
+      expect(documentRepository.count).toHaveBeenCalledWith({
+        where: { eorProfileId: 'eor-123', documentType: DocumentType.CV, isCurrent: true },
+      });
+    });
+
+    it('should return false when no current CV exists', async () => {
+      documentRepository.count.mockResolvedValue(0);
+
+      const result = await service.hasCurrentCV('eor-123');
+
+      expect(result).toBe(false);
+    });
+  });
+});

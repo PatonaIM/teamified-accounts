@@ -1,0 +1,27 @@
+/* Custom App Styles */
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+/* Override any conflicting styles */
+.App {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden; /* Prevents horizontal scrolling */
+}
+
+/* Ensure proper content width on different screen sizes */
+@media (min-width: 1025px) and (max-width: 1440px) {
+  .App {
+    max-width: 100vw;
+  }
+}
+
+@media (min-width: 1441px) {
+  .App {
+    max-width: 100vw;
+  }
+}

@@ -1,0 +1,384 @@
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Like, FindManyOptions } from 'typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { User } from '../../auth/entities/user.entity';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { UserQueryDto } from '../dto/user-query.dto';
+import { UserListResponseDto, PaginationInfo } from '../dto/user-list-response.dto';
+import { BulkStatusUpdateDto } from '../dto/bulk-status-update.dto';
+import { BulkRoleAssignmentDto } from '../dto/bulk-role-assignment.dto';
+import { BulkOperationResponseDto, BulkOperationResult } from '../dto/bulk-operation-response.dto';
+import { PasswordService } from '../../auth/services/password.service';
+import { AuditService } from '../../audit/audit.service';
+import { SupabaseService } from '../../auth/services/supabase.service';
+
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly passwordService: PasswordService,
+    private readonly auditService: AuditService,
+    private readonly supabaseService: SupabaseService,
+    @InjectQueue('supabase-user-deletion')
+    private readonly deletionQueue: Queue,
+  ) {}
+
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    // Check if user with email already exists
+    const existingUser = await this.userRepository.findOne({
+      where: { email: createUserDto.email }
+    });
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    // Hash password
+    const passwordHash = await this.passwordService.hashPassword(createUserDto.password);
+
+    // Create user
+    const user = this.userRepository.create({
+      ...createUserDto,
+      passwordHash,
+    });
+
+    return await this.userRepository.save(user);
+  }
+
+  async findAll(queryDto: UserQueryDto): Promise<UserListResponseDto> {
+    const { page, limit, search, status, role, sortBy, sortOrder, clientId } = queryDto;
+    const skip = (page - 1) * limit;
+
+    // Build where conditions
+    const whereConditions: any = {};
+
+    if (status) {
+      whereConditions.status = status;
+    }
+
+    if (clientId) {
+      whereConditions.clientId = clientId;
+    }
+
+    if (search) {
+      whereConditions.firstName = Like(`%${search}%`);
+      // Note: For email search, we'll need to handle this differently
+      // as we can't use OR conditions easily with the current approach
+    }
+
+    // Build find options
+    const findOptions: FindManyOptions<User> = {
+      where: whereConditions,
+      skip,
+      take: limit,
+      order: {
+        [sortBy]: sortOrder,
+      },
+      relations: ['eorProfile'],
+    };
+
+    // Get users and total count
+    const [users, total] = await this.userRepository.findAndCount(findOptions);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+    const pagination: PaginationInfo = {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    };
+
+    return {
+      users,
+      pagination,
+    };
+  }
+
+  async findOne(id: string): Promise<User> {
+    console.log('UserService.findOne: Looking for user with ID:', id);
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['employmentRecords', 'userRoles'],
+    });
+
+    if (!user) {
+      console.log('UserService.findOne: User not found for ID:', id);
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    console.log('UserService.findOne: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
+    return user;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findOne(id);
+
+    // Check for email conflicts if email is being updated
+    if (updateUserDto.email && updateUserDto.email !== user.email) {
+      const existingUser = await this.userRepository.findOne({
+        where: { email: updateUserDto.email }
+      });
+
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = { ...updateUserDto };
+
+    // Hash password if it's being updated
+    if (updateUserDto.password) {
+      updateData.passwordHash = await this.passwordService.hashPassword(updateUserDto.password);
+      delete updateData.password;
+    }
+
+    // Update user
+    Object.assign(user, updateData);
+    return await this.userRepository.save(user);
+  }
+
+  async updateProfileData(
+    userId: string,
+    profileData: any,
+    auditContext?: {
+      employmentRecordId?: string;
+      clientId?: string;
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<User> {
+    const user = await this.findOne(userId);
+    
+    // Store previous profile data for audit comparison
+    const previousData = user.profileData || {};
+    
+    // Merge new profile data with existing
+    const updatedProfileData = {
+      ...previousData,
+      ...profileData,
+      metadata: {
+        ...previousData.metadata,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+    
+    // Update user profile
+    user.profileData = updatedProfileData;
+    const savedUser = await this.userRepository.save(user);
+    
+    // Create audit log entry
+    try {
+      await this.auditService.log({
+        actorUserId: userId,
+        actorRole: user.userRoles?.[0]?.roleType || 'user',
+        action: 'profile_update',
+        entityType: 'user_profile',
+        entityId: userId,
+        changes: {
+          previous: previousData,
+          updated: updatedProfileData,
+          context: {
+            employmentRecordId: auditContext?.employmentRecordId,
+            clientId: auditContext?.clientId,
+            source: 'onboarding_wizard',
+          },
+        },
+        ip: auditContext?.ip,
+        userAgent: auditContext?.userAgent,
+      });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+      // Don't fail the update if audit logging fails
+    }
+    
+    return savedUser;
+  }
+
+  async remove(id: string, deletedBy?: string): Promise<void> {
+    const user = await this.findOne(id);
+
+    if (user.supabaseUserId) {
+      try {
+        await this.supabaseService.deleteSupabaseUser(user.supabaseUserId);
+        this.logger.log(`Successfully deleted Supabase user: ${user.email}`);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete Supabase user ${user.email} immediately. Queueing for retry: ${error.message}`
+        );
+
+        await this.deletionQueue.add(
+          {
+            supabaseUserId: user.supabaseUserId,
+            email: user.email,
+            portalUserId: user.id,
+            deletedBy: deletedBy || 'system',
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 60000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
+          }
+        );
+
+        this.logger.log(`Queued Supabase user deletion for retry: ${user.email}`);
+      }
+    }
+
+    await this.userRepository.remove(user);
+
+    try {
+      await this.auditService.log({
+        actorUserId: deletedBy || 'system',
+        actorRole: 'admin',
+        action: 'user_deletion',
+        entityType: 'user',
+        entityId: user.id,
+        changes: {
+          email: user.email,
+          supabaseUserId: user.supabaseUserId,
+          deletedAt: new Date().toISOString(),
+        },
+        ip: null,
+        userAgent: null,
+      });
+    } catch (auditError) {
+      this.logger.error('Failed to create audit log for user deletion:', auditError);
+    }
+  }
+
+  async updateStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {
+    const user = await this.findOne(id);
+    user.status = status;
+    user.isActive = status === 'active';
+    return await this.userRepository.save(user);
+  }
+
+  async markEmailVerified(id: string): Promise<User> {
+    const user = await this.findOne(id);
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationTokenExpiry = null;
+
+    const savedUser = await this.userRepository.save(user);
+
+    // Log the action for audit trail
+    try {
+      await this.auditService.log({
+        action: 'email_verification_marked_by_admin',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: null, // Admin action
+        actorRole: 'admin',
+        changes: { emailVerified: true },
+        ip: null,
+        userAgent: null,
+      });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
+
+    return savedUser;
+  }
+
+  async bulkUpdateStatus(bulkStatusUpdateDto: BulkStatusUpdateDto): Promise<BulkOperationResponseDto> {
+    const { userIds, status } = bulkStatusUpdateDto;
+    const results: BulkOperationResult[] = [];
+    let processed = 0;
+    let failed = 0;
+
+    for (const userId of userIds) {
+      try {
+        const user = await this.findOne(userId);
+        user.status = status;
+        user.isActive = status === 'active';
+        await this.userRepository.save(user);
+        
+        results.push({
+          userId,
+          success: true,
+        });
+        processed++;
+      } catch (error) {
+        results.push({
+          userId,
+          success: false,
+          error: error.message,
+        });
+        failed++;
+      }
+    }
+
+    return {
+      processed,
+      failed,
+      results,
+    };
+  }
+
+  async bulkAssignRole(bulkRoleAssignmentDto: BulkRoleAssignmentDto): Promise<BulkOperationResponseDto> {
+    const { userIds, role, scope, scopeId } = bulkRoleAssignmentDto;
+    const results: BulkOperationResult[] = [];
+    let processed = 0;
+    let failed = 0;
+
+    // Note: This is a simplified implementation
+    // In a real scenario, you would need to interact with the UserRole entity
+    // and handle role assignment logic properly
+
+    for (const userId of userIds) {
+      try {
+        const user = await this.findOne(userId);
+        
+        // Here you would create/update UserRole records
+        // For now, we'll just mark as processed
+        // TODO: Implement actual role assignment logic
+        
+        results.push({
+          userId,
+          success: true,
+        });
+        processed++;
+      } catch (error) {
+        results.push({
+          userId,
+          success: false,
+          error: error.message,
+        });
+        failed++;
+      }
+    }
+
+    return {
+      processed,
+      failed,
+      results,
+    };
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({
+      where: { email }
+    });
+  }
+
+  async findActiveUsers(): Promise<User[]> {
+    return await this.userRepository.find({
+      where: { status: 'active' },
+      order: { createdAt: 'DESC' },
+    });
+  }
+}

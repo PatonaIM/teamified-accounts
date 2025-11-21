@@ -1,0 +1,136 @@
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Session } from '../entities/session.entity';
+import { User } from '../entities/user.entity';
+import { JwtTokenService } from './jwt.service';
+import * as crypto from 'crypto';
+
+export interface DeviceMetadata {
+  ip: string;
+  userAgent: string;
+  deviceFingerprint?: string;
+}
+
+@Injectable()
+export class SessionService {
+  private readonly logger = new Logger(SessionService.name);
+
+  constructor(
+    @InjectRepository(Session)
+    private readonly sessionRepository: Repository<Session>,
+    private readonly jwtService: JwtTokenService,
+  ) {}
+
+  async createSession(
+    user: User,
+    refreshToken: string,
+    deviceMetadata: DeviceMetadata,
+  ): Promise<Session> {
+    const tokenFamily = this.jwtService.generateTokenFamily();
+    const refreshTokenHash = this.jwtService.hashRefreshToken(refreshToken);
+    
+    const session = this.sessionRepository.create({
+      userId: user.id,
+      refreshTokenHash,
+      tokenFamily,
+      deviceMetadata,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    });
+
+    return await this.sessionRepository.save(session);
+  }
+
+  async rotateRefreshToken(
+    oldRefreshToken: string,
+    user: User,
+    deviceMetadata: DeviceMetadata,
+  ): Promise<{ session: Session; newTokens: { accessToken: string; refreshToken: string } }> {
+    const payload = this.jwtService.validateRefreshToken(oldRefreshToken);
+    const oldTokenHash = this.jwtService.hashRefreshToken(oldRefreshToken);
+
+    // Find the session with this token
+    const session = await this.sessionRepository.findOne({
+      where: {
+        userId: user.id,
+        refreshTokenHash: oldTokenHash,
+        tokenFamily: payload.tokenFamily,
+        revokedAt: null,
+      },
+    });
+
+    if (!session) {
+      // Token reuse detected - revoke entire token family
+      await this.revokeTokenFamily(payload.tokenFamily);
+      this.logger.warn(`Token reuse detected for user ${user.id}, family ${payload.tokenFamily}`);
+      throw new UnauthorizedException('Token reuse detected');
+    }
+
+    if (session.expiresAt < new Date()) {
+      await this.revokeSession(session.id);
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    // Generate new tokens with same family
+    const newTokens = await this.jwtService.generateTokenPair(user, payload.tokenFamily);
+    const newTokenHash = this.jwtService.hashRefreshToken(newTokens.refreshToken);
+
+    // Update session with new token hash
+    session.refreshTokenHash = newTokenHash;
+    session.deviceMetadata = deviceMetadata;
+    session.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Extend expiry
+
+    await this.sessionRepository.save(session);
+
+    return { session, newTokens };
+  }
+
+  async revokeSession(sessionId: string): Promise<void> {
+    await this.sessionRepository.update(sessionId, {
+      revokedAt: new Date(),
+    });
+  }
+
+  async revokeAllUserSessions(userId: string): Promise<void> {
+    await this.sessionRepository.update(
+      { userId, revokedAt: null },
+      { revokedAt: new Date() },
+    );
+  }
+
+  async revokeTokenFamily(tokenFamily: string): Promise<void> {
+    await this.sessionRepository.update(
+      { tokenFamily, revokedAt: null },
+      { revokedAt: new Date() },
+    );
+  }
+
+  async revokeSessionByRefreshToken(refreshToken: string): Promise<void> {
+    const tokenHash = this.jwtService.hashRefreshToken(refreshToken);
+    
+    const session = await this.sessionRepository.findOne({
+      where: { refreshTokenHash: tokenHash, revokedAt: null },
+    });
+
+    if (session) {
+      await this.revokeSession(session.id);
+    }
+  }
+
+  async cleanupExpiredSessions(): Promise<void> {
+    await this.sessionRepository.delete({
+      expiresAt: new Date(),
+    });
+  }
+
+  async getUserActiveSessions(userId: string): Promise<Session[]> {
+    return await this.sessionRepository.find({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: new Date(),
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+}

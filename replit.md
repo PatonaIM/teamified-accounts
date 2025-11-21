@@ -1,0 +1,87 @@
+# Teamified Team Member Portal
+
+## Overview
+
+The Teamified Team Member Portal is an Employer of Record (EOR) management system designed to streamline the entire employee lifecycle, from candidate onboarding to employment, payroll, timesheets, and leave management across India, Philippines, and Australia. It aims to consolidate fragmented HR processes into a single platform, offering self-service capabilities, robust audit trails, and compliance tracking, thereby providing significant market potential for EOR operations. The platform supports multi-tenant client management and granular role-based access control for Admins, HR Managers, Client Users, EOR employees, and Candidates.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Backend Architecture
+
+The backend utilizes **NestJS (TypeScript)** with a modular design. **PostgreSQL** with **TypeORM** serves as the robust data store, employing JSONB for flexible user profile data. Authentication is **JWT-based** with refresh tokens and comprehensive role-based access control (RBAC). **Vercel Blob Storage** handles production file uploads. API documentation is generated via **Swagger/OpenAPI**. Core features include a centralized audit module for compliance and extensive data validation.
+
+### Frontend Architecture
+
+The frontend is built with **React 19, TypeScript, and Vite**. **Material-UI (MUI v7)**, styled with a **Tailwind CSS**-based design system, provides a consistent and customizable UI through a dynamic theming system with 5 preset themes and a Theme Editor. **React Router v7** manages declarative and protected routing. State management relies on **React hooks**, and **Axios** handles API communication with interceptors.
+
+#### Hiring Module
+
+The hiring module integrates Job Request, Interview, and Talent Pool features. It employs a **service-layer pattern** with custom React hooks for data fetching and implements **infinite scroll pagination** with race condition protection. Authentication uses a consistent `useAuth` hook. Dedicated routes are protected with role-based access. A **Calendar View** leveraging `react-big-calendar` is integrated for interviews, supporting various views and theme-aware styling. All styling adheres to `theme.palette` for seamless dark/light mode transitions.
+
+#### Salary History Module
+
+The salary history module provides organization-wide salary tracking for admin/HR roles with comprehensive pagination and filtering capabilities. Implementation features include:
+
+-   **Server-Side Pagination**: Uses shared `PaginatedResponseDto<T>` pattern with TypeORM's `getManyAndCount()` for accurate total counts
+-   **Default Page Size**: 50 records per page with options for 10, 25, 50, or 100 records
+-   **Always-Visible Controls**: Pagination controls remain visible at table bottom regardless of result count
+-   **Filter Reset Protection**: Ref-based guard prevents race conditions by resetting page to 0 when filters change, ensuring exactly one API call at offset=0
+-   **Organization Summary**: Aggregated statistics across all active employment records without user filtering
+-   **Role-Based Access**: Restricted to admin/hr roles via RoleBasedRoute wrapper; regular EOR employees access salary info via profile page only
+
+#### Client Management Module
+
+The client management module enables admin/HR roles to manage Teamified's customer organizations (clients) with full CRUD operations. Implementation features include:
+
+-   **Native MUI Tables**: Uses MUI Table components (not DataGrid) for design consistency with UserList, Employment Records, and Salary History
+-   **Centered Typography**: All table cells use centered alignment with `body2` variant (0.875rem font size)
+-   **Theme-Aware Status Chips**: Status indicators use semantic colors from theme palette for dark/light mode compatibility
+-   **Standard Pagination**: TablePagination with 10, 25, 50, 100 rows per page options
+-   **Drawer Form UI**: Create/edit clients via slide-in drawer with Stack-based form layout (MUI v7 compatible)
+-   **International Address Fields**: Contact info uses `postalCode` (not "zip") for better recognition in India, Philippines, and Australia markets
+-   **JSONB Contact Storage**: Client contact information stored in flexible JSONB field, migrated to use standardized `postalCode` field naming
+
+### Data Model Architecture
+
+The data model features flexible user profile data in a **JSONB field** within the User entity. Employment and salary histories are managed by normalized entities. Role management is facilitated by a `UserRole` entity supporting scope-based permissions. Multi-country payroll is supported via dedicated entities for `Country`, `Currency`, `TaxYear`, and `PayrollPeriod`. Document management is categorized for HR and onboarding processes.
+
+### Security Architecture
+
+Security measures include **Argon2** for password hashing, multi-tier **NestJS Throttler** for rate limiting, environment-aware **CORS configuration**, and **Redis-backed session storage** for refresh token management. Client scoping is implemented by embedding `clientId` in JWTs to enable efficient data filtering.
+
+#### API Key Management
+
+The platform supports programmatic access through API keys as an alternative to JWT-based authentication. API keys enable automation, CLI tools, and third-party integrations to securely access the portal. Key features include:
+
+-   **Dual Authentication Methods**: JWT tokens for browser sessions and API keys for programmatic access
+-   **Bcrypt-Hashed Keys**: Full API keys are hashed using bcrypt before storage, ensuring security
+-   **Prefix Indexing**: Keys use indexed 10-character prefixes (format: `tmf_<random_hex>`) for fast lookup and validation
+-   **Access Types**: 
+    -   `read_only`: View-only access to data
+    -   `full_access`: Read and write permissions
+-   **10-Key Limit**: Each user can create up to 10 active API keys
+-   **Audit Logging**: All API key creation, deletion, and usage events are logged in the centralized audit trail
+-   **MUI Settings UI**: Theme-aware management interface in Settings → API Keys tab with full CRUD operations
+-   **TypeORM Entity**: Database table with indexed prefix column for performance optimization
+
+## External Dependencies
+
+### Third-Party Services
+
+-   **Vercel Blob Storage**: Cloud storage for production file uploads.
+-   **Redis/Vercel KV**: Used for session management and caching.
+-   **Workable API**: Integrates for syncing candidates and job postings.
+-   **Email Service (Nodemailer)**: For transactional email functionalities.
+-   **Supabase**: Provides authentication services including Google OAuth.
+
+### Database
+
+-   **PostgreSQL**: The primary relational database, configured with TypeORM and SSL for production.
+
+### Build & Deployment
+
+-   **Replit**: Utilized for both development and production hosting, with Autoscale deployment serving both frontend and backend from a single instance.

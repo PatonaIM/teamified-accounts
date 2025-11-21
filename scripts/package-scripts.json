@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "seed:db": "node scripts/seed-database.js",
+    "seed:db:reset": "node scripts/seed-database.js --reset",
+    "seed:db:help": "node scripts/seed-database.js --help",
+    "db:seed": "node scripts/seed-database.js",
+    "db:reset": "node scripts/seed-database.js --reset"
+  }
+}
