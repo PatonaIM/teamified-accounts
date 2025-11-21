@@ -34,6 +34,28 @@ import organizationsService, { type Organization, type OrganizationMember, type 
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
 
+const COMPANY_SIZES = [
+  '1-10',
+  '11-50',
+  '51-200',
+  '201-500',
+  '501-1000',
+  '1001+',
+];
+
+const INDUSTRIES = [
+  'Technology',
+  'Healthcare',
+  'Finance',
+  'Manufacturing',
+  'Retail',
+  'Education',
+  'Consulting',
+  'Real Estate',
+  'Media & Entertainment',
+  'Other',
+];
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -1144,20 +1166,52 @@ const OrganizationManagementPage: React.FC = () => {
                       disabled={!isEditingProfile}
                       helperText="Only lowercase letters, numbers, and hyphens"
                     />
-                    <TextField
-                      fullWidth
-                      label="Industry"
-                      value={editOrgData?.industry || ''}
-                      onChange={(e) => setEditOrgData(prev => prev ? { ...prev, industry: e.target.value } : null)}
-                      disabled={!isEditingProfile}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Company Size"
-                      value={editOrgData?.companySize || ''}
-                      onChange={(e) => setEditOrgData(prev => prev ? { ...prev, companySize: e.target.value } : null)}
-                      disabled={!isEditingProfile}
-                    />
+                    <FormControl fullWidth disabled={!isEditingProfile}>
+                      <InputLabel>Industry</InputLabel>
+                      <Select
+                        value={editOrgData?.industry || ''}
+                        onChange={(e) => setEditOrgData(prev => prev ? { ...prev, industry: e.target.value } : null)}
+                        label="Industry"
+                      >
+                        <MenuItem value="">
+                          <em>None</em>
+                        </MenuItem>
+                        {/* Show existing value if it's not in the predefined list */}
+                        {editOrgData?.industry && !INDUSTRIES.includes(editOrgData.industry) && (
+                          <MenuItem value={editOrgData.industry}>
+                            {editOrgData.industry} (Custom)
+                          </MenuItem>
+                        )}
+                        {INDUSTRIES.map((industry) => (
+                          <MenuItem key={industry} value={industry}>
+                            {industry}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl fullWidth disabled={!isEditingProfile}>
+                      <InputLabel>Company Size</InputLabel>
+                      <Select
+                        value={editOrgData?.companySize || ''}
+                        onChange={(e) => setEditOrgData(prev => prev ? { ...prev, companySize: e.target.value } : null)}
+                        label="Company Size"
+                      >
+                        <MenuItem value="">
+                          <em>None</em>
+                        </MenuItem>
+                        {/* Show existing value if it's not in the predefined list */}
+                        {editOrgData?.companySize && !COMPANY_SIZES.includes(editOrgData.companySize) && (
+                          <MenuItem value={editOrgData.companySize}>
+                            {editOrgData.companySize} (Custom)
+                          </MenuItem>
+                        )}
+                        {COMPANY_SIZES.map((size) => (
+                          <MenuItem key={size} value={size}>
+                            {size}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                     <TextField
                       fullWidth
                       label="Website"
