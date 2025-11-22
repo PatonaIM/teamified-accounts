@@ -54,15 +54,15 @@ build = ["npm", "run", "build:all"]
 
 [[ports]]
 localPort = 3000
-externalPort = 3000
+externalPort = 3001
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 42255
-externalPort = 3002
+localPort = 5001
+externalPort = 3000
 
 [userenv]
 
