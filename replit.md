@@ -77,9 +77,9 @@ The platform supports programmatic access via API keys, alternative to JWTs. Key
 The platform uses **Replit Reserved VM** for production deployments with the following configuration:
 
 **Port Configuration:**
--   **Development (Preview)**: NestJS listens on port 5000, serves both static frontend AND backend API from a single process (unified architecture)
+-   **Development (Preview)**: Backend runs on port 3000, Frontend runs on port 5000 (Vite dev server)
 -   **Production (Published App)**: NestJS listens on port 5000, serves both static frontend AND backend API from a single process
--   **Environment Variables**: `PORT=5000` is set globally, `NODE_ENV=development` for dev, `NODE_ENV=production` for production
+-   **Environment Variables**: `PORT=5000` and `NODE_ENV=production` are set in the production environment
 
 **Build & Deployment Process:**
 1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production, then copies frontend files to `dist/public/` (runs automatically on publish)
@@ -117,21 +117,3 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
    - Backend serves static files from `dist/public/` with proper cache headers in production mode
    - SPA fallback route registered after all API routes to ensure API endpoints work correctly
    - Frontend assets and API requests now both work correctly in production deployment
-
-5. **Development Environment Configuration** - Fixed Preview App "Frontend not found" error (November 22, 2025)
-   - Issue: Global `PORT=5000` and `NODE_ENV=production` secrets were overriding development environment
-   - Backend was running in production mode during development, trying to serve static files from `dist/public/`
-   - Fix: Updated `npm run start:dev` script to explicitly set `NODE_ENV=development PORT=3000`
-   - Backend now correctly runs in development mode on port 3000, skipping production static file serving
-
-6. **Unified Development Architecture** - Simplified dev/prod consistency (November 22, 2025)
-   - Eliminated separate Vite dev server workflow to reduce complexity and improve dev/prod parity
-   - Both development and production now use identical architecture: NestJS serves frontend from `dist/public/` on port 5000
-   - Single "Server" workflow runs `npm run dev:full` which builds frontend, builds backend, copies files, then starts NestJS in watch mode
-   - Smart startup script available (`scripts/start-dev.sh`) with error handling that checks if frontend exists before building
-   - Disabled `deleteOutDir` in nest-cli.json to preserve frontend files during backend hot reloads
-   - Trade-off: Lost Vite hot module replacement (HMR) for frontend, but gained perfect dev/prod consistency
-   - Development now mirrors production exactly, eliminating deployment-related surprises
-   - Scripts: `npm run dev` (smart script with conditional build), `npm run dev:full` (always rebuild everything)
-   - Workflow uses `dev:full` to guarantee fresh builds on every startup
-   - Backend changes are picked up by watch mode automatically; frontend changes require manual rebuild with `npm run build:frontend && npm run copy:frontend`
