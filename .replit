@@ -56,8 +56,6 @@ build = ["npm", "run", "build:all"]
 localPort = 5000
 externalPort = 80
 
-[userenv]
-
-[userenv.production]
-PORT = "5000"
+[deployment.env]
 NODE_ENV = "production"
+PORT = "5000"
