@@ -19,7 +19,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { plainToInstance } from 'class-transformer';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -67,14 +66,7 @@ export class UserController {
   })
   async create(@Body() createUserDto: CreateUserDto): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.create(createUserDto);
-    
-    // Use plainToInstance to properly serialize the entity to DTO
-    const userDto = plainToInstance(UserResponseDto, user, {
-      excludeExtraneousValues: false,
-      enableImplicitConversion: true,
-    });
-    
-    return { user: userDto };
+    return { user };
   }
 
   @Get()
@@ -115,15 +107,14 @@ export class UserController {
     const user = await this.userService.findOne(req.user.sub);
     console.log('getCurrentUser: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
 
-    // Use plainToInstance to properly serialize the entity to DTO
-    // This ensures all @Transform() decorators are applied and @Expose() fields are included
-    const userDto = plainToInstance(UserResponseDto, user, {
-      excludeExtraneousValues: false,
-      enableImplicitConversion: true,
-    });
+    // Manually add roles property to response (extracted from userRoles)
+    const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
 
     return {
-      user: userDto,
+      user: {
+        ...user,
+        roles,
+      }
     };
   }
 
@@ -152,15 +143,15 @@ export class UserController {
 
     const updatedUser = await this.userService.update(currentUser.id, updateData);
 
-    // Use plainToInstance to properly serialize the entity to DTO
-    const userDto = plainToInstance(UserResponseDto, updatedUser, {
-      excludeExtraneousValues: false,
-      enableImplicitConversion: true,
-    });
+    // Manually add roles property to response
+    const roles = updatedUser.userRoles?.map(r => r.roleType).filter(Boolean) || [];
 
     return {
       message: 'User settings updated successfully',
-      user: userDto,
+      user: {
+        ...updatedUser,
+        roles,
+      },
     };
   }
 
@@ -192,14 +183,7 @@ export class UserController {
   })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.findOne(id);
-    
-    // Use plainToInstance to properly serialize the entity to DTO
-    const userDto = plainToInstance(UserResponseDto, user, {
-      excludeExtraneousValues: false,
-      enableImplicitConversion: true,
-    });
-    
-    return { user: userDto };
+    return { user };
   }
 
   @Get('me/profile')
