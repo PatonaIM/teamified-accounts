@@ -315,16 +315,19 @@ async function bootstrap() {
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');
     
-    // In production (Vercel), don't call listen - return Express instance
-    if (configService.get('NODE_ENV') === 'production' && !process.env.REPLIT_DEV_DOMAIN) {
-      logger.log('Production mode: Initializing app for serverless...');
+    // Check if running in Vercel serverless environment
+    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+    
+    // In Vercel serverless, don't call listen - return Express instance
+    if (isVercel) {
+      logger.log('Vercel serverless mode: Initializing app without listening...');
       await app.init();
       const expressApp = app.getHttpAdapter().getInstance();
       logger.log('✅ Express app instance ready for serverless');
       logger.log('✅ Bootstrap completed successfully');
       return expressApp;
     } else {
-      // In development or Replit, start the server normally
+      // In all other environments (dev, Replit Preview, Replit Published VM), start the server normally
       logger.log(`Starting server on ${host}:${port}...`);
       await app.listen(port, host);
       logger.log(`🚀 Application is running on: http://${host}:${port}`);
@@ -359,8 +362,8 @@ export default async function handler(req: any, res: any) {
   return cachedApp(req, res);
 }
 
-// For local development and Replit
-if (process.env.NODE_ENV !== 'production' || process.env.REPLIT_DEV_DOMAIN) {
+// For local development and Replit (not Vercel)
+if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
   const logger = new Logger('Main');
   logger.log('Running in development mode, starting bootstrap...');
   bootstrap().catch(err => {
