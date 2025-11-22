@@ -538,7 +538,7 @@ const OrganizationManagementPage: React.FC = () => {
     const query = memberSearchQuery.toLowerCase();
     const name = (member.userName || '').toLowerCase();
     const email = (member.userEmail || '').toLowerCase();
-    const role = (member.roleType || '').toLowerCase().replace('client_', '');
+    const role = (member.roleType || '').toLowerCase().replace('client_', '').replace('internal_', '');
     
     return name.includes(query) || email.includes(query) || role.includes(query);
   });

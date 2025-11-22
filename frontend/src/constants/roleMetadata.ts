@@ -23,9 +23,9 @@ export const ROLE_COLOR_MAP: Record<string, RoleColor> = {
   super_admin: 'error',
   internal_hr: 'secondary',
   internal_finance: 'warning',
-  internal_account_manager: 'success',
+  internal_account_manager: 'info',
   internal_recruiter: 'info',
-  internal_marketing: 'success',
+  internal_marketing: 'secondary',
   internal_member: 'primary',
   
   // Client roles
