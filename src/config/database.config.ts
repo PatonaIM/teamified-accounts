@@ -48,7 +48,12 @@ export const databaseConfig = (configService: ConfigService): TypeOrmModuleOptio
     timeout: 10000,  // Faster query timeout
     max: 5,  // Maximum pool size
     idleTimeoutMillis: 30000,  // Close idle connections faster
+    connectionTimeoutMillis: 15000,  // Timeout for establishing connection
+    statement_timeout: 30000,  // PostgreSQL statement timeout (30 seconds)
   },
+  // Retry logic for transient connection failures
+  retryAttempts: 3,
+  retryDelay: 3000,
   // Add connection lifecycle logging
   subscribers: [],
   migrations: [],

@@ -14,16 +14,22 @@ async function bootstrap() {
   try {
     logger.log('🚀 Starting NestJS application...');
     logger.log(`Environment: ${process.env.NODE_ENV}`);
+    logger.log(`Node version: ${process.version}`);
+    logger.log(`Platform: ${process.platform}`);
     
     // Database configuration logging
     logger.log('📊 Database Configuration:');
     const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
     logger.log(`  Database URL exists: ${!!dbUrl}`);
     if (dbUrl) {
-      const urlParts = dbUrl.split('@');
-      if (urlParts.length > 1) {
-        const hostPart = urlParts[1];
-        logger.log(`  Database host: ${hostPart.split('/')[0]}`);
+      try {
+        const urlParts = dbUrl.split('@');
+        if (urlParts.length > 1) {
+          const hostPart = urlParts[1];
+          logger.log(`  Database host: ${hostPart.split('/')[0]}`);
+        }
+      } catch (e) {
+        logger.warn(`  Could not parse database URL: ${e.message}`);
       }
     }
     
@@ -43,7 +49,7 @@ async function bootstrap() {
         logger.log(`  Redis port: ${url.port}`);
         logger.log(`  Redis username: ${url.username || 'default'}`);
       } catch (e) {
-        logger.warn('  Could not parse REDIS_URL');
+        logger.warn(`  Could not parse REDIS_URL: ${e.message}`);
       }
     } else if (hasVercelKV) {
       logger.log('  Using Vercel KV configuration');
@@ -56,9 +62,18 @@ async function bootstrap() {
       logger.warn('  ⚠️ No Redis configuration found (neither REDIS_URL nor KV_URL)');
     }
     
-    logger.log('Creating NestJS application...');
-    const app = await NestFactory.create(AppModule);
-    logger.log('✅ NestJS application created successfully');
+    logger.log('📦 Creating NestJS application...');
+    logger.log('  This step initializes all modules, connects to database, and sets up dependency injection');
+    logger.log('  This may take 10-30 seconds depending on connection speed...');
+    
+    const appCreationStart = Date.now();
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+      abortOnError: false, // Don't immediately exit on error, let us handle it
+    });
+    const appCreationTime = Date.now() - appCreationStart;
+    
+    logger.log(`✅ NestJS application created successfully in ${appCreationTime}ms`);
     
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
@@ -366,9 +381,23 @@ async function bootstrap() {
     
   } catch (error) {
     logger.error('❌ Failed to bootstrap application');
-    logger.error(`Error: ${error.message}`);
-    logger.error(`Stack: ${error.stack}`);
-    throw error;
+    logger.error(`Error name: ${error.name}`);
+    logger.error(`Error message: ${error.message}`);
+    logger.error(`Error stack: ${error.stack}`);
+    
+    // Log additional error details
+    if (error.code) logger.error(`Error code: ${error.code}`);
+    if (error.errno) logger.error(`Error errno: ${error.errno}`);
+    if (error.syscall) logger.error(`Error syscall: ${error.syscall}`);
+    
+    // Give time for logs to flush before exiting
+    console.error('FATAL ERROR - Application failed to start:', error);
+    console.error('Stack trace:', error.stack);
+    
+    // Force flush and wait before exit
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    process.exit(1);
   }
 }
 
@@ -390,12 +419,29 @@ export default async function handler(req: any, res: any) {
   return cachedApp(req, res);
 }
 
+// Global error handlers for uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION - Application crashed:', error);
+  console.error('Stack:', error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION - Application crashed:', reason);
+  console.error('Promise:', promise);
+  if (reason && typeof reason === 'object' && 'stack' in reason) {
+    console.error('Stack:', (reason as Error).stack);
+  }
+  process.exit(1);
+});
+
 // For local development and Replit (not Vercel)
 if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
   const logger = new Logger('Main');
   logger.log('Running in development mode, starting bootstrap...');
   bootstrap().catch(err => {
     logger.error('Failed to start application:', err);
+    console.error('BOOTSTRAP FAILED:', err);
     process.exit(1);
   });
 } else {
