@@ -117,3 +117,11 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
    - Backend serves static files from `dist/public/` with proper cache headers in production mode
    - SPA fallback route registered after all API routes to ensure API endpoints work correctly
    - Frontend assets and API requests now both work correctly in production deployment
+
+5. **Development Environment Configuration** - Fixed Preview App "Frontend not found" error (November 22, 2025)
+   - Issue: Global `PORT=5000` and `NODE_ENV=production` secrets were overriding development environment
+   - Backend was running in production mode during development, trying to serve static files from `dist/public/`
+   - Fix: Updated `npm run start:dev` script to explicitly set `NODE_ENV=development PORT=3000`
+   - Backend now correctly runs in development mode on port 3000, skipping production static file serving
+   - Frontend Vite dev server runs on port 5000 with proxy forwarding to backend
+   - Note: Dev script overrides global secrets to ensure correct local development behavior
