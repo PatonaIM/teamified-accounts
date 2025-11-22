@@ -52,10 +52,10 @@ deploymentTarget = "vm"
 run = ["npm", "run", "start:prod"]
 build = ["npm", "run", "build:all"]
 
-[[ports]]
-localPort = 5000
-externalPort = 80
-
 [deployment.env]
 NODE_ENV = "production"
 PORT = "5000"
+
+[[ports]]
+localPort = 5000
+externalPort = 80

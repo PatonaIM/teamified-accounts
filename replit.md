@@ -130,3 +130,9 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
    - Backend serves static files from `dist/public/` with proper cache headers in production mode
    - SPA fallback route registered after all API routes to ensure API endpoints work correctly
    - Frontend assets and API requests now both work correctly in production deployment
+
+7. **Frontend Path Detection Issue** - Fixed deployment failure after commit b3b947f (November 22, 2025)
+   - **Root cause**: Path existence checking logic prevented `frontendPath` from being set if `dist/public` didn't exist yet
+   - **Impact**: SPA fallback route registration failed, causing deployment to fail with "port never opened" error
+   - **Fix**: Reverted to trust build process - always set `frontendPath` in production mode, Express handles missing folder gracefully
+   - **Result**: Application starts correctly in production, even if static files aren't available immediately

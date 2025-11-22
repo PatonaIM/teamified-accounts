@@ -146,37 +146,23 @@ async function bootstrap() {
       
       const expressApp = app.getHttpAdapter().getInstance();
       
-      // Try multiple possible frontend paths (different deployment environments)
-      const possiblePaths = [
-        path.join(__dirname, 'public'),  // Standard: dist/public
-        path.join(process.cwd(), 'dist', 'public'),  // Absolute: /app/dist/public
-        path.join(process.cwd(), 'public'),  // Fallback: /app/public
-      ];
+      // In production, frontend files are copied to dist/public during build
+      // Trust the build process - always set this path
+      frontendPath = path.join(__dirname, 'public');
       
-      logger.log('Checking possible frontend paths:');
-      for (const testPath of possiblePaths) {
-        const exists = require('fs').existsSync(testPath);
-        logger.log(`  ${testPath}: ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`);
-        if (exists && !frontendPath) {
-          frontendPath = testPath;
-        }
-      }
+      logger.log(`Frontend path: ${frontendPath}`);
+      logger.log(`Frontend path exists: ${require('fs').existsSync(frontendPath)}`);
       
-      if (frontendPath) {
-        logger.log(`Selected frontend path: ${frontendPath}`);
-        
-        // Serve static assets with proper cache headers
-        expressApp.use(express.static(frontendPath, {
-          maxAge: '1d',
-          etag: true,
-          lastModified: true,
-          index: false, // Don't serve index.html automatically
-        }));
-        
-        logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
-      } else {
-        logger.error(`❌ No valid frontend path found. Checked: ${possiblePaths.join(', ')}`);
-      }
+      // Serve static assets with proper cache headers
+      // Even if folder doesn't exist yet, Express will handle it gracefully
+      expressApp.use(express.static(frontendPath, {
+        maxAge: '1d',
+        etag: true,
+        lastModified: true,
+        index: false, // Don't serve index.html automatically
+      }));
+      
+      logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
     } else {
       logger.log('Not in production mode, skipping static file serving');
       logger.log(`NODE_ENV: ${configService.get('NODE_ENV')}`);
