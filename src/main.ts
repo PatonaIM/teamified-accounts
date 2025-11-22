@@ -67,13 +67,30 @@ async function bootstrap() {
     logger.log('  This may take 10-30 seconds depending on connection speed...');
     
     const appCreationStart = Date.now();
-    const app = await NestFactory.create(AppModule, {
-      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
-      abortOnError: false, // Don't immediately exit on error, let us handle it
-    });
-    const appCreationTime = Date.now() - appCreationStart;
     
-    logger.log(`✅ NestJS application created successfully in ${appCreationTime}ms`);
+    // Create app with timeout to prevent hanging on database connection issues
+    const createAppWithTimeout = () => {
+      return Promise.race([
+        NestFactory.create(AppModule, {
+          logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+          abortOnError: false,
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Application creation timed out after 60 seconds. Likely database connection issue.')), 60000)
+        )
+      ]);
+    };
+    
+    let app;
+    try {
+      app = await createAppWithTimeout();
+      const appCreationTime = Date.now() - appCreationStart;
+      logger.log(`✅ NestJS application created successfully in ${appCreationTime}ms`);
+    } catch (error) {
+      logger.error(`❌ Failed to create NestJS application: ${error.message}`);
+      logger.error(`Stack trace: ${error.stack}`);
+      throw error;
+    }
     
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
@@ -124,15 +141,30 @@ async function bootstrap() {
     
     if (isProduction) {
       logger.log('Setting up static file serving for production...');
+      logger.log(`__dirname: ${__dirname}`);
+      logger.log(`process.cwd(): ${process.cwd()}`);
+      
       const expressApp = app.getHttpAdapter().getInstance();
       
-      // In production, frontend files are copied to dist/public during build
-      frontendPath = path.join(__dirname, 'public');
+      // Try multiple possible frontend paths (different deployment environments)
+      const possiblePaths = [
+        path.join(__dirname, 'public'),  // Standard: dist/public
+        path.join(process.cwd(), 'dist', 'public'),  // Absolute: /app/dist/public
+        path.join(process.cwd(), 'public'),  // Fallback: /app/public
+      ];
       
-      logger.log(`Attempting to serve frontend from: ${frontendPath}`);
-      logger.log(`Frontend path exists: ${require('fs').existsSync(frontendPath)}`);
+      logger.log('Checking possible frontend paths:');
+      for (const testPath of possiblePaths) {
+        const exists = require('fs').existsSync(testPath);
+        logger.log(`  ${testPath}: ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`);
+        if (exists && !frontendPath) {
+          frontendPath = testPath;
+        }
+      }
       
-      if (require('fs').existsSync(frontendPath)) {
+      if (frontendPath) {
+        logger.log(`Selected frontend path: ${frontendPath}`);
+        
         // Serve static assets with proper cache headers
         expressApp.use(express.static(frontendPath, {
           maxAge: '1d',
@@ -143,8 +175,7 @@ async function bootstrap() {
         
         logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
       } else {
-        logger.error(`❌ Frontend path does not exist: ${frontendPath}`);
-        frontendPath = undefined; // Reset to undefined if path doesn't exist
+        logger.error(`❌ No valid frontend path found. Checked: ${possiblePaths.join(', ')}`);
       }
     } else {
       logger.log('Not in production mode, skipping static file serving');
