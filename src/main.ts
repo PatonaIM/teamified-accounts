@@ -103,29 +103,24 @@ async function bootstrap() {
     app.use(cookieParser());
     logger.log('✅ Cookie parser configured');
 
-    // Serve static frontend files in production
-    const isProduction = configService.get('NODE_ENV') === 'production';
-    let frontendPath: string;
+    // Serve static frontend files in both development and production
+    logger.log('Setting up static file serving...');
+    const expressApp = app.getHttpAdapter().getInstance();
     
-    if (isProduction) {
-      logger.log('Setting up static file serving for production...');
-      const expressApp = app.getHttpAdapter().getInstance();
-      
-      // In production, frontend files are copied to dist/public during build
-      frontendPath = path.join(__dirname, 'public');
-      
-      logger.log(`Attempting to serve frontend from: ${frontendPath}`);
-      
-      // Serve static assets with proper cache headers
-      expressApp.use(express.static(frontendPath, {
-        maxAge: '1d',
-        etag: true,
-        lastModified: true,
-        index: false, // Don't serve index.html automatically
-      }));
-      
-      logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
-    }
+    // Frontend files are in dist/public (copied during build process)
+    const frontendPath = path.join(__dirname, 'public');
+    
+    logger.log(`Attempting to serve frontend from: ${frontendPath}`);
+    
+    // Serve static assets with proper cache headers
+    expressApp.use(express.static(frontendPath, {
+      maxAge: '1d',
+      etag: true,
+      lastModified: true,
+      index: false, // Don't serve index.html automatically
+    }));
+    
+    logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
 
     // Swagger documentation - Always enabled, but protected by JWT
     logger.log('Setting up Swagger documentation...');
@@ -213,7 +208,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     
     // Create custom Swagger UI endpoint to avoid asset loading issues
-    const expressApp = app.getHttpAdapter().getInstance();
+    // expressApp already declared above for static file serving
     const jwtService = app.get(JwtService);
     
     // JWT authentication middleware for Swagger endpoints
@@ -318,20 +313,18 @@ async function bootstrap() {
 
     // SPA fallback route - must be registered AFTER all API routes
     // This catches all non-API routes and serves the SPA index.html
-    if (isProduction && frontendPath) {
-      const expressApp = app.getHttpAdapter().getInstance();
-      expressApp.get('*', (req: Request, res: Response) => {
-        // Serve index.html for all routes (SPA will handle routing)
-        const indexPath = path.join(frontendPath, 'index.html');
-        res.sendFile(indexPath, (err) => {
-          if (err) {
-            logger.error(`Failed to serve index.html from ${indexPath}:`, err);
-            res.status(404).send('Frontend not found');
-          }
-        });
+    // expressApp and frontendPath already declared above
+    expressApp.get('*', (req: Request, res: Response) => {
+      // Serve index.html for all routes (SPA will handle routing)
+      const indexPath = path.join(frontendPath, 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          logger.error(`Failed to serve index.html from ${indexPath}:`, err);
+          res.status(404).send('Frontend not found. Please run "npm run build:all" to build the frontend.');
+        }
       });
-      logger.log('✅ SPA fallback route configured');
-    }
+    });
+    logger.log('✅ SPA fallback route configured');
 
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');
