@@ -624,7 +624,7 @@ const OrganizationManagementPage: React.FC = () => {
     const teamified = organizations.find(org => org.slug === 'teamified-internal');
     const others = organizations.filter(org => org.slug !== 'teamified-internal');
     
-    // Apply subscription tier filter to non-Teamified orgs only
+    // Apply subscription tier filter
     const filteredOthers = others.filter((org) => {
       if (subscriptionTierFilter === 'all') return true;
       return org.subscriptionTier?.toLowerCase() === subscriptionTierFilter.toLowerCase();
@@ -640,8 +640,18 @@ const OrganizationManagementPage: React.FC = () => {
       return (b.memberCount || 0) - (a.memberCount || 0);
     });
     
-    // Always put Teamified first (if it exists), then sorted others
-    return teamified ? [teamified, ...sortedOthers] : sortedOthers;
+    // Handle Teamified based on filter:
+    // - 'all': Show Teamified first, then all other orgs
+    // - 'internal': Show ONLY Teamified
+    // - any other tier: Show only orgs matching that tier (exclude Teamified)
+    if (subscriptionTierFilter === 'all') {
+      return teamified ? [teamified, ...sortedOthers] : sortedOthers;
+    } else if (subscriptionTierFilter === 'internal') {
+      return teamified ? [teamified] : [];
+    } else {
+      // Other tiers (enterprise, professional, basic, free) - exclude Teamified
+      return sortedOthers;
+    }
   }, [organizations, subscriptionTierFilter]);
 
   return (
