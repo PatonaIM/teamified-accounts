@@ -107,32 +107,20 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
    - Solution: Disable automatic port forwarding in User Settings → "Automatic port forwarding" → "Never"
    - Production requires only: `[[ports]] localPort = 5000, externalPort = 80`
 
-3. **Production API Routes Issue** - Fixed API endpoints returning HTML instead of JSON in Published App (November 22, 2025)
-   - **Root cause**: SPA fallback route `app.get('*', ...)` was registered before NestJS routes, catching ALL requests
-   - **Impact**: Profile page and organization management showed "invalid response format from server" errors
-   - **Fix**: Call `app.init()` to register NestJS routes BEFORE adding SPA fallback wildcard route
-   - **Result**: API routes now take precedence, wildcard only catches unmatched routes (proper SPA behavior)
-
-4. **API Client Timeout Configuration** - Added 30-second timeout to centralized API client
+2. **API Client Timeout Configuration** - Added 30-second timeout to centralized API client
    - API requests: 30-second timeout (prevents indefinite hangs)
    - Refresh token calls: 15-second timeout
    - Migrated `profileService.ts` and `MyProfilePage.tsx` from raw axios to centralized API client
    - Ensures consistent timeout behavior across all API calls in Preview and Published App
 
-5. **Theme Preference Persistence** - Implemented theme preference caching across login/logout sessions
+3. **Theme Preference Persistence** - Implemented theme preference caching across login/logout sessions
    - Backend login response includes user's theme preference from `profileData.themePreference.themeMode`
    - Supports theme modes: `'light' | 'dark' | 'teamified' | 'custom'`
    - Frontend caches theme to localStorage immediately after login
    - Prevents flash of incorrect theme on page load
 
-6. **Production Static File Serving** - Fixed frontend not being served in Published App (November 22, 2025)
+4. **Production Static File Serving** - Fixed frontend not being served in Published App (November 22, 2025)
    - Build process now copies frontend build (`frontend/dist/*`) to `dist/public/` during deployment
    - Backend serves static files from `dist/public/` with proper cache headers in production mode
    - SPA fallback route registered after all API routes to ensure API endpoints work correctly
    - Frontend assets and API requests now both work correctly in production deployment
-
-7. **Frontend Path Detection Issue** - Fixed deployment failure after commit b3b947f (November 22, 2025)
-   - **Root cause**: Path existence checking logic prevented `frontendPath` from being set if `dist/public` didn't exist yet
-   - **Impact**: SPA fallback route registration failed, causing deployment to fail with "port never opened" error
-   - **Fix**: Reverted to trust build process - always set `frontendPath` in production mode, Express handles missing folder gracefully
-   - **Result**: Application starts correctly in production, even if static files aren't available immediately
