@@ -348,15 +348,26 @@ async function bootstrap() {
       logger.log('✅ SPA fallback route configured');
     }
 
-    // Port configuration: Use 3000 in development workflows, 5000 in production
-    // npm_lifecycle_event is 'start:dev' or 'start:debug' when running dev workflows
-    // REPLIT_DEV_DOMAIN provides additional hint for Replit preview mode
-    const isDevCommand = ['start:dev', 'start:debug'].includes(process.env.npm_lifecycle_event);
-    const isReplitPreview = !!process.env.REPLIT_DEV_DOMAIN;
-    const port = (isDevCommand || isReplitPreview) ? 3000 : Number(configService.get('PORT') ?? 5000);
+    // Port configuration: Check if PORT env var is explicitly set
+    // Production sets PORT=5000 in .replit [userenv.production]
+    // Development doesn't set PORT, so default to 3000 to avoid frontend conflict
+    const portEnvVar = configService.get('PORT');
+    const nodeEnv = configService.get('NODE_ENV');
+    
+    let port: number;
+    if (portEnvVar) {
+      // PORT explicitly set (production): Use the configured value
+      port = Number(portEnvVar);
+      logger.log(`PORT environment variable found: Using port ${port} (NODE_ENV=${nodeEnv})`);
+    } else {
+      // PORT not set (development): Use 3000 to avoid conflict with frontend on 5000
+      port = 3000;
+      logger.log(`PORT not set: Using default port 3000 for development (frontend uses 5000)`);
+    }
+    
     const host = configService.get('HOST', '0.0.0.0');
     
-    logger.log(`Port determination: npm_lifecycle_event=${process.env.npm_lifecycle_event}, isDevCommand=${isDevCommand}, isReplitPreview=${isReplitPreview}, final port=${port}`);
+    logger.log(`Final port determination: NODE_ENV=${nodeEnv}, PORT env=${portEnvVar}, npm_lifecycle_event=${process.env.npm_lifecycle_event}, listening on port ${port}`);
     
     // Check if running in Vercel serverless environment
     const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;

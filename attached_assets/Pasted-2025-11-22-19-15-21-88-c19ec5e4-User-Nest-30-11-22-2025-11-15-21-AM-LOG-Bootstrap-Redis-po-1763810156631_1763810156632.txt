@@ -1,0 +1,160 @@
+2025-11-22 19:15:21.88
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [Bootstrap] Redis port: 13510
+2025-11-22 19:15:21.88
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [Bootstrap] Redis username: default
+2025-11-22 19:15:21.88
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [Bootstrap] This step initializes all modules, connects to database, and sets up dependency injection
+2025-11-22 19:15:21.89
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [NestFactory] Starting Nest application... +3ms
+2025-11-22 19:15:21.92
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +39ms
+2025-11-22 19:15:21.92
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] HealthModule dependencies initialized +0ms
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] AppModule dependencies initialized +0ms
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] ConfigHostModule dependencies initialized +1ms
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] ConfigModule dependencies initialized +1ms
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] ConfigModule dependencies initialized +0ms
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [EmailService] Email service initialized with SendGrid
+2025-11-22 19:15:21.93
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [SupabaseService] Supabase service initialized
+2025-11-22 19:15:21.98
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] EmailModule dependencies initialized +48ms
+2025-11-22 19:15:21.99
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
+2025-11-22 19:15:21.99
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:21 AM LOG [InstanceLoader] JwtModule dependencies initialized +12ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmCoreModule dependencies initialized +260ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +1ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] AuditModule dependencies initialized +0ms
+2025-11-22 19:15:22.25
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] SeedModule dependencies initialized +1ms
+2025-11-22 19:15:22.26
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] AnalyticsModule dependencies initialized +0ms
+2025-11-22 19:15:22.26
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] OAuthClientsModule dependencies initialized +0ms
+2025-11-22 19:15:22.26
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] BlobStorageModule dependencies initialized +5ms
+2025-11-22 19:15:22.26
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] OrganizationsModule dependencies initialized +0ms
+2025-11-22 19:15:22.26
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [InstanceLoader] AuditControllerModule dependencies initialized +0ms
+2025-11-22 19:15:22.26
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [Bootstrap] Configuring CORS...
+2025-11-22 19:15:22.27
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [Bootstrap] Setting up validation pipe...
+2025-11-22 19:15:22.27
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [Bootstrap] Setting global API prefix...
+2025-11-22 19:15:22.27
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [Bootstrap] ✅ Cookie parser configured
+2025-11-22 19:15:22.27
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [Bootstrap] Attempting to serve frontend from: /home/runner/workspace/dist/public
+2025-11-22 19:15:22.38
+c19ec5e4
+User
+[Nest] 30 - 11/22/2025, 11:15:22 AM LOG [Bootstrap] Port determination: npm_lifecycle_event=start:prod, isDevCommand=false, isReplitPreview=true, final port=3000
+2025-11-22 19:15:22.38
+c19ec5e4
+User
+[Nest] 30 - 11/22/20
