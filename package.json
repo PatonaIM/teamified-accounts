@@ -8,7 +8,8 @@
   "scripts": {
     "build": "nest build",
     "build:frontend": "cd frontend && npm run build",
-    "build:all": "npm run build:frontend && npm run build",
+    "build:all": "npm run build:frontend && npm run build && npm run copy:frontend",
+    "copy:frontend": "mkdir -p dist/public && cp -r frontend/dist/* dist/public/",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

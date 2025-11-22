@@ -24,7 +24,7 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/hiring-api\/zoho/, '/api'),
         configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             // Forward auth token from portal to hiring API
             const token = req.headers.authorization;
             if (token) {
@@ -33,11 +33,11 @@ export default defineConfig({
             console.log(`[Hiring-Zoho] ${req.method} ${req.url} -> ${options.target}${proxyReq.path}`);
           });
 
-          proxy.on('proxyRes', (proxyRes, req, res) => {
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
             console.log(`[Hiring-Zoho] ${proxyRes.statusCode} ${req.url}`);
           });
 
-          proxy.on('error', (err, req, res) => {
+          proxy.on('error', (err, req, _res) => {
             console.error(`[Hiring-Zoho Error] ${req.url}:`, err.message);
           });
         },
@@ -50,7 +50,7 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/hiring-api\/interview/, ''),
         configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             const token = req.headers.authorization;
             if (token) {
               proxyReq.setHeader('Authorization', token);
@@ -58,7 +58,7 @@ export default defineConfig({
             console.log(`[Hiring-Interview] ${req.method} ${req.url} -> ${options.target}${proxyReq.path}`);
           });
 
-          proxy.on('error', (err, req, res) => {
+          proxy.on('error', (err, req, _res) => {
             console.error(`[Hiring-Interview Error] ${req.url}:`, err.message);
           });
         },
@@ -71,7 +71,7 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/hiring-api\/ai/, ''),
         configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             const token = req.headers.authorization;
             if (token) {
               proxyReq.setHeader('Authorization', token);
@@ -79,7 +79,7 @@ export default defineConfig({
             console.log(`[Hiring-AI] ${req.method} ${req.url} -> ${options.target}${proxyReq.path}`);
           });
 
-          proxy.on('error', (err, req, res) => {
+          proxy.on('error', (err, req, _res) => {
             console.error(`[Hiring-AI Error] ${req.url}:`, err.message);
           });
         },
@@ -92,7 +92,7 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/hiring-api\/auth/, '/api'),
         configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             const token = req.headers.authorization;
             if (token) {
               proxyReq.setHeader('Authorization', token);
@@ -100,7 +100,7 @@ export default defineConfig({
             console.log(`[Hiring-Auth] ${req.method} ${req.url} -> ${options.target}${proxyReq.path}`);
           });
 
-          proxy.on('error', (err, req, res) => {
+          proxy.on('error', (err, req, _res) => {
             console.error(`[Hiring-Auth Error] ${req.url}:`, err.message);
           });
         },

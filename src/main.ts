@@ -105,22 +105,26 @@ async function bootstrap() {
 
     // Serve static frontend files in production
     const isProduction = configService.get('NODE_ENV') === 'production';
+    let frontendPath: string;
+    
     if (isProduction) {
       logger.log('Setting up static file serving for production...');
       const expressApp = app.getHttpAdapter().getInstance();
-      const frontendPath = path.join(__dirname, '..', 'frontend', 'dist');
       
-      // Serve static assets
-      expressApp.use(express.static(frontendPath));
+      // In production, frontend files are copied to dist/public during build
+      frontendPath = path.join(__dirname, 'public');
       
-      // Handle SPA routing - serve index.html for all non-API routes
-      expressApp.get('*', (req: Request, res: Response) => {
-        if (!req.url.startsWith('/api')) {
-          res.sendFile(path.join(frontendPath, 'index.html'));
-        }
-      });
+      logger.log(`Attempting to serve frontend from: ${frontendPath}`);
       
-      logger.log(`✅ Static files configured to serve from: ${frontendPath}`);
+      // Serve static assets with proper cache headers
+      expressApp.use(express.static(frontendPath, {
+        maxAge: '1d',
+        etag: true,
+        lastModified: true,
+        index: false, // Don't serve index.html automatically
+      }));
+      
+      logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
     }
 
     // Swagger documentation - Always enabled, but protected by JWT
@@ -311,6 +315,23 @@ async function bootstrap() {
     });
 
       logger.log('✅ Swagger documentation configured at: /api/docs (admin-only access)');
+
+    // SPA fallback route - must be registered AFTER all API routes
+    // This catches all non-API routes and serves the SPA index.html
+    if (isProduction && frontendPath) {
+      const expressApp = app.getHttpAdapter().getInstance();
+      expressApp.get('*', (req: Request, res: Response) => {
+        // Serve index.html for all routes (SPA will handle routing)
+        const indexPath = path.join(frontendPath, 'index.html');
+        res.sendFile(indexPath, (err) => {
+          if (err) {
+            logger.error(`Failed to serve index.html from ${indexPath}:`, err);
+            res.status(404).send('Frontend not found');
+          }
+        });
+      });
+      logger.log('✅ SPA fallback route configured');
+    }
 
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');
