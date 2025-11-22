@@ -85,6 +85,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [subscriptionTierFilter, setSubscriptionTierFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -194,8 +195,16 @@ const OrganizationManagementPage: React.FC = () => {
       setDeleteConfirmSlug('');
       setDisplayedMembersCount(10);
       setMemberSearchQuery(''); // Clear member search when switching organizations
+      
+      // Reset activeTab if it's invalid for the new organization
+      // Internal orgs have 3 tabs (0: Users, 1: Company Profile, 2: Delete)
+      // Other orgs have 4 tabs (0: Users, 1: Company Profile, 2: Billing, 3: Delete)
+      const maxTabIndex = selectedOrg.subscriptionTier === 'internal' ? 2 : 3;
+      if (activeTab > maxTabIndex) {
+        setActiveTab(0);
+      }
     }
-  }, [selectedOrg]);
+  }, [selectedOrg, activeTab]);
 
   // Handle navigation state to restore selected organization OR select first org on fresh load
   useEffect(() => {
@@ -576,6 +585,8 @@ const OrganizationManagementPage: React.FC = () => {
   // Helper function to get subscription tier priority for sorting
   const getSubscriptionPriority = (tier: string | null | undefined): number => {
     switch (tier?.toLowerCase()) {
+      case 'internal':
+        return 5; // Highest priority
       case 'enterprise':
         return 4;
       case 'professional':
@@ -592,6 +603,8 @@ const OrganizationManagementPage: React.FC = () => {
   // Helper function to get subscription tier color
   const getSubscriptionColor = (tier: string | null | undefined): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (tier?.toLowerCase()) {
+      case 'internal':
+        return 'error'; // Red for internal/Teamified
       case 'enterprise':
         return 'warning'; // Gold
       case 'professional':
@@ -605,14 +618,31 @@ const OrganizationManagementPage: React.FC = () => {
     }
   };
 
-  // Sort organizations by subscription tier (descending) then by member count (descending)
+  // Filter and sort organizations
   const sortedOrganizations = React.useMemo(() => {
-    return [...organizations].sort((a, b) => {
+    // Separate Teamified from other organizations
+    const teamified = organizations.find(org => org.slug === 'teamified-internal');
+    const others = organizations.filter(org => org.slug !== 'teamified-internal');
+    
+    // Apply subscription tier filter to non-Teamified orgs only
+    const filteredOthers = others.filter((org) => {
+      if (subscriptionTierFilter === 'all') return true;
+      return org.subscriptionTier?.toLowerCase() === subscriptionTierFilter.toLowerCase();
+    });
+    
+    // Sort the filtered others by tier and member count
+    const sortedOthers = [...filteredOthers].sort((a, b) => {
+      // Sort by subscription tier
       const tierDiff = getSubscriptionPriority(b.subscriptionTier) - getSubscriptionPriority(a.subscriptionTier);
       if (tierDiff !== 0) return tierDiff;
+      
+      // Then by member count
       return (b.memberCount || 0) - (a.memberCount || 0);
     });
-  }, [organizations]);
+    
+    // Always put Teamified first (if it exists), then sorted others
+    return teamified ? [teamified, ...sortedOthers] : sortedOthers;
+  }, [organizations, subscriptionTierFilter]);
 
   return (
     <Box>
@@ -750,20 +780,37 @@ const OrganizationManagementPage: React.FC = () => {
         {/* Left Panel - Organizations List */}
         <Paper elevation={0} sx={{ width: 350, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search organizations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search organizations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel>Subscription Tier</InputLabel>
+                <Select
+                  value={subscriptionTierFilter}
+                  label="Subscription Tier"
+                  onChange={(e) => setSubscriptionTierFilter(e.target.value)}
+                >
+                  <MenuItem value="all">All Tiers</MenuItem>
+                  <MenuItem value="internal">Internal</MenuItem>
+                  <MenuItem value="enterprise">Enterprise</MenuItem>
+                  <MenuItem value="professional">Professional</MenuItem>
+                  <MenuItem value="basic">Basic</MenuItem>
+                  <MenuItem value="free">Free</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
           </Box>
           <Box sx={{ flex: 1, overflow: 'auto' }}>
             {loading ? (
@@ -969,7 +1016,7 @@ const OrganizationManagementPage: React.FC = () => {
             >
               <Tab label="Users" />
               <Tab label="Company Profile" />
-              <Tab label="Billing Details" />
+              {selectedOrg?.subscriptionTier !== 'internal' && <Tab label="Billing Details" />}
               <Tab label="Delete Organization" />
             </Tabs>
 
@@ -1224,19 +1271,21 @@ const OrganizationManagementPage: React.FC = () => {
               </TabPanel>
 
               {/* Billing Details Tab */}
-              <TabPanel value={activeTab} index={2}>
-                <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Billing Details
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Coming soon...
-                  </Typography>
-                </Box>
-              </TabPanel>
+              {selectedOrg?.subscriptionTier !== 'internal' && (
+                <TabPanel value={activeTab} index={2}>
+                  <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Billing Details
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Coming soon...
+                    </Typography>
+                  </Box>
+                </TabPanel>
+              )}
 
               {/* Delete Organization Tab */}
-              <TabPanel value={activeTab} index={3}>
+              <TabPanel value={activeTab} index={selectedOrg?.subscriptionTier === 'internal' ? 2 : 3}>
                 <Box sx={{ px: 3 }}>
                   <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
                     <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -1370,6 +1419,7 @@ const OrganizationManagementPage: React.FC = () => {
           onSuccess={handleInvitationSuccess}
           organizationId={selectedOrg.id}
           organizationName={selectedOrg.name}
+          subscriptionTier={selectedOrg.subscriptionTier}
         />
       )}
 

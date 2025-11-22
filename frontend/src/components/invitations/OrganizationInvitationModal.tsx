@@ -33,6 +33,7 @@ interface OrganizationInvitationModalProps {
   onSuccess: () => void;
   organizationId: string;
   organizationName: string;
+  subscriptionTier?: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -45,13 +46,26 @@ const clientRoles = [
   { value: 'client_employee', label: 'Employee', description: 'Standard user access' },
 ];
 
+const internalRoles = [
+  { value: 'super_admin', label: 'Super Admin', description: 'Full system access and control' },
+  { value: 'internal_hr', label: 'Internal HR', description: 'Internal HR operations' },
+  { value: 'internal_finance', label: 'Internal Finance', description: 'Internal finance operations' },
+  { value: 'internal_account_manager', label: 'Account Manager', description: 'Manage client accounts' },
+  { value: 'internal_recruiter', label: 'Internal Recruiter', description: 'Internal recruitment' },
+  { value: 'internal_marketing', label: 'Internal Marketing', description: 'Internal marketing operations' },
+];
+
 const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = ({
   open,
   onClose,
   onSuccess,
   organizationId,
   organizationName,
+  subscriptionTier,
 }) => {
+  // Determine which roles to show based on organization type
+  const isInternal = subscriptionTier === 'internal';
+  const availableRoles = isInternal ? internalRoles : clientRoles;
   const [email, setEmail] = useState('');
   const [emailRoleType, setEmailRoleType] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -237,7 +251,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
         <Box>
           {/* Section 1: Send Email Invitation */}
           <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2, mt: 2, fontWeight: 600 }}>
               Send Email Invitation
             </Typography>
 
@@ -248,7 +262,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                     ✓ Invitation email sent to {email}
                   </Typography>
                   <Typography variant="caption">
-                    Assigned role: <strong>{clientRoles.find(r => r.value === emailRoleType)?.label}</strong> • Expires in 7 days
+                    Assigned role: <strong>{availableRoles.find(r => r.value === emailRoleType)?.label}</strong> • Expires in 7 days
                   </Typography>
                 </Alert>
 
@@ -319,7 +333,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                     onChange={(e) => setEmailRoleType(e.target.value)}
                     disabled={emailLoading}
                   >
-                    {clientRoles.map((role) => (
+                    {availableRoles.map((role) => (
                       <MenuItem key={role.value} value={role.value}>
                         <Box>
                           <Typography variant="body1">{role.label}</Typography>
@@ -375,7 +389,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                     ✓ Shareable link generated
                   </Typography>
                   <Typography variant="caption">
-                    Single-use • Expires in 7 days • Assigns <strong>{clientRoles.find(r => r.value === linkRoleType)?.label}</strong> role
+                    Single-use • Expires in 7 days • Assigns <strong>{availableRoles.find(r => r.value === linkRoleType)?.label}</strong> role
                   </Typography>
                 </Alert>
 
@@ -433,7 +447,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                     onChange={(e) => setLinkRoleType(e.target.value)}
                     disabled={linkLoading}
                   >
-                    {clientRoles.map((role) => (
+                    {availableRoles.map((role) => (
                       <MenuItem key={role.value} value={role.value}>
                         <Box>
                           <Typography variant="body1">{role.label}</Typography>

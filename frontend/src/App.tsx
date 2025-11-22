@@ -20,7 +20,6 @@ import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
-import InternalUsersPage from './pages/InternalUsersPage';
 import UserDetailPage from './pages/UserDetailPage';
 import OrganizationManagementPage from './pages/OrganizationManagementPage';
 import AuditLogsPage from './pages/AuditLogsPage';
@@ -133,14 +132,6 @@ function App() {
                     element={
                       <SuperAdminRoute>
                         <OAuthConfigurationPage />
-                      </SuperAdminRoute>
-                    } 
-                  />
-                  <Route 
-                    path="tools/internal-users" 
-                    element={
-                      <SuperAdminRoute>
-                        <InternalUsersPage />
                       </SuperAdminRoute>
                     } 
                   />

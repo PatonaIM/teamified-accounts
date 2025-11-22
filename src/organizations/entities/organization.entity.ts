@@ -14,7 +14,7 @@ import { Invitation } from '../../invitations/entities/invitation.entity';
 
 @Entity('organizations')
 @Index(['slug'], { unique: true })
-@Check(`"subscription_tier" IN ('free', 'basic', 'professional', 'enterprise')`)
+@Check(`"subscription_tier" IN ('free', 'basic', 'professional', 'enterprise', 'internal')`)
 @Check(`"subscription_status" IN ('active', 'inactive', 'suspended', 'cancelled')`)
 export class Organization {
   @PrimaryGeneratedColumn('uuid')
@@ -35,6 +35,9 @@ export class Organization {
   @Column({ name: 'logo_url', type: 'text', nullable: true })
   logoUrl: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  website: string | null;
+
   @Column({ type: 'jsonb', default: '{}' })
   settings: Record<string, any>;
 
@@ -43,7 +46,7 @@ export class Organization {
     length: 50, 
     default: 'free' 
   })
-  subscriptionTier: 'free' | 'basic' | 'professional' | 'enterprise';
+  subscriptionTier: 'free' | 'basic' | 'professional' | 'enterprise' | 'internal';
 
   @Column({ 
     name: 'subscription_status', 

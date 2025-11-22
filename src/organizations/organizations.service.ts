@@ -155,6 +155,14 @@ export class OrganizationsService {
   ): Promise<OrganizationResponseDto> {
     const normalizedSlug = this.normalizeSlug(createDto.slug);
     
+    // Prevent 'internal' subscription tier selection for client organizations
+    // Only Teamified organization can have 'internal' tier
+    if (createDto.subscriptionTier === 'internal') {
+      throw new BadRequestException(
+        'The "internal" subscription tier is reserved for Teamified organization only and cannot be assigned to client organizations.'
+      );
+    }
+    
     const existingOrg = await this.organizationRepository.findOne({
       where: { slug: normalizedSlug },
     });
@@ -254,8 +262,34 @@ export class OrganizationsService {
     const totalResult = await totalCountQuery.getRawMany();
     const total = totalResult.length;
     
-    // Apply pagination and sort by member count descending
-    queryBuilder.orderBy('membercount', 'DESC').skip(skip).take(limit);
+    // Apply custom sorting:
+    // 1. Teamified organization first (slug = 'teamified-internal')
+    // 2. Then by subscription tier priority (internal > enterprise > professional > basic > free)
+    // 3. Then by member count descending
+    queryBuilder.addSelect(`
+      CASE 
+        WHEN org.slug = 'teamified-internal' THEN 0
+        ELSE 1
+      END
+    `, 'is_teamified_order');
+    
+    queryBuilder.addSelect(`
+      CASE org.subscription_tier
+        WHEN 'internal' THEN 1
+        WHEN 'enterprise' THEN 2
+        WHEN 'professional' THEN 3
+        WHEN 'basic' THEN 4
+        WHEN 'free' THEN 5
+        ELSE 6
+      END
+    `, 'tier_order');
+    
+    queryBuilder
+      .orderBy('is_teamified_order', 'ASC')
+      .addOrderBy('tier_order', 'ASC')
+      .addOrderBy('membercount', 'DESC')
+      .skip(skip)
+      .take(limit);
     
     const organizations = await queryBuilder.getRawAndEntities();
 
@@ -360,6 +394,21 @@ export class OrganizationsService {
 
     if (!organization) {
       throw new NotFoundException(`Organization with ID ${id} not found`);
+    }
+
+    // Prevent changing to 'internal' subscription tier
+    // Only Teamified can have 'internal' tier, and it cannot be changed
+    if (updateDto.subscriptionTier === 'internal' && organization.slug !== 'teamified-internal') {
+      throw new BadRequestException(
+        'The "internal" subscription tier is reserved for Teamified organization only and cannot be assigned to client organizations.'
+      );
+    }
+    
+    // Prevent changing Teamified's subscription tier away from 'internal'
+    if (organization.slug === 'teamified-internal' && updateDto.subscriptionTier && updateDto.subscriptionTier !== 'internal') {
+      throw new BadRequestException(
+        'Teamified organization must maintain "internal" subscription tier.'
+      );
     }
 
     if (updateDto.slug && updateDto.slug !== organization.slug) {
@@ -494,6 +543,18 @@ export class OrganizationsService {
       throw new NotFoundException(`User with ID ${addMemberDto.userId} not found`);
     }
 
+    // Validate role type based on organization subscription tier
+    const isTeamified = organization.subscriptionTier === 'internal';
+    
+    const internalRoles = [
+      RoleType.SUPER_ADMIN,
+      RoleType.INTERNAL_HR,
+      RoleType.INTERNAL_FINANCE,
+      RoleType.INTERNAL_ACCOUNT_MANAGER,
+      RoleType.INTERNAL_RECRUITER,
+      RoleType.INTERNAL_MARKETING,
+    ];
+    
     const clientRoles = [
       RoleType.CLIENT_ADMIN,
       RoleType.CLIENT_HR,
@@ -502,8 +563,20 @@ export class OrganizationsService {
       RoleType.CLIENT_EMPLOYEE,
     ];
 
-    if (!clientRoles.includes(addMemberDto.roleType)) {
-      throw new BadRequestException(`Role type must be a client role (client_*). Got: ${addMemberDto.roleType}`);
+    if (isTeamified) {
+      // Teamified organization can only have internal roles
+      if (!internalRoles.includes(addMemberDto.roleType)) {
+        throw new BadRequestException(
+          `Teamified organization members must have internal roles (super_admin, internal_*). Got: ${addMemberDto.roleType}`
+        );
+      }
+    } else {
+      // Client organizations can only have client roles
+      if (!clientRoles.includes(addMemberDto.roleType)) {
+        throw new BadRequestException(
+          `Client organization members must have client roles (client_*). Got: ${addMemberDto.roleType}`
+        );
+      }
     }
 
     const existingMember = await this.memberRepository.findOne({
@@ -574,6 +647,14 @@ export class OrganizationsService {
   ): Promise<OrganizationMemberResponseDto> {
     this.validateOrgAccess(organizationId, currentUser);
 
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with ID ${organizationId} not found`);
+    }
+
     const member = await this.memberRepository.findOne({
       where: {
         organizationId,
@@ -586,6 +667,18 @@ export class OrganizationsService {
       throw new NotFoundException(`Member not found in organization`);
     }
 
+    // Validate role type based on organization subscription tier
+    const isTeamified = organization.subscriptionTier === 'internal';
+    
+    const internalRoles = [
+      RoleType.SUPER_ADMIN,
+      RoleType.INTERNAL_HR,
+      RoleType.INTERNAL_FINANCE,
+      RoleType.INTERNAL_ACCOUNT_MANAGER,
+      RoleType.INTERNAL_RECRUITER,
+      RoleType.INTERNAL_MARKETING,
+    ];
+    
     const clientRoles = [
       RoleType.CLIENT_ADMIN,
       RoleType.CLIENT_HR,
@@ -594,8 +687,20 @@ export class OrganizationsService {
       RoleType.CLIENT_EMPLOYEE,
     ];
 
-    if (!clientRoles.includes(updateRoleDto.roleType)) {
-      throw new BadRequestException(`Role type must be a client role (client_*). Got: ${updateRoleDto.roleType}`);
+    if (isTeamified) {
+      // Teamified organization can only have internal roles
+      if (!internalRoles.includes(updateRoleDto.roleType)) {
+        throw new BadRequestException(
+          `Teamified organization members must have internal roles (super_admin, internal_*). Got: ${updateRoleDto.roleType}`
+        );
+      }
+    } else {
+      // Client organizations can only have client roles
+      if (!clientRoles.includes(updateRoleDto.roleType)) {
+        throw new BadRequestException(
+          `Client organization members must have client roles (client_*). Got: ${updateRoleDto.roleType}`
+        );
+      }
     }
 
     const userRole = await this.userRoleRepository.findOne({

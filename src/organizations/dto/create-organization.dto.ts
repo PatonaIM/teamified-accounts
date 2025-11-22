@@ -6,6 +6,7 @@ export enum SubscriptionTier {
   BASIC = 'basic',
   PROFESSIONAL = 'professional',
   ENTERPRISE = 'enterprise',
+  INTERNAL = 'internal',
 }
 
 export class CreateOrganizationDto {
@@ -62,6 +63,15 @@ export class CreateOrganizationDto {
   @IsOptional()
   @IsString()
   logoUrl?: string;
+
+  @ApiProperty({ 
+    description: 'Organization website URL',
+    example: 'https://example.com',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  website?: string;
 
   @ApiProperty({ 
     description: 'Subscription tier',

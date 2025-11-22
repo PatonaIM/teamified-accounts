@@ -49,10 +49,10 @@ export class OrganizationResponseDto {
 
   @ApiProperty({ 
     description: 'Subscription tier',
-    enum: ['free', 'basic', 'professional', 'enterprise'],
+    enum: ['free', 'basic', 'professional', 'enterprise', 'internal'],
     example: 'free'
   })
-  subscriptionTier: 'free' | 'basic' | 'professional' | 'enterprise';
+  subscriptionTier: 'free' | 'basic' | 'professional' | 'enterprise' | 'internal';
 
   @ApiProperty({ 
     description: 'Subscription status',

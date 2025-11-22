@@ -3,7 +3,6 @@ import { Box, Typography, Card, CardContent, Button, Grid } from '@mui/material'
 import { useNavigate } from 'react-router-dom';
 import {
   Business as BusinessIcon,
-  People as PeopleIcon,
   PersonAdd as PersonAddIcon,
   VpnKey as VpnKeyIcon,
   Security as SecurityIcon,
@@ -97,14 +96,8 @@ export default function SuperAdminToolsPage() {
     {
       icon: <BusinessIcon fontSize="large" />,
       title: 'Organization Management',
-      description: 'Manage client organizations, members, and metadata',
+      description: 'Manage client and internal organizations, members, and metadata',
       path: '/admin/organizations',
-    },
-    {
-      icon: <PeopleIcon fontSize="large" />,
-      title: 'Internal Users',
-      description: 'Manage super admins and internal staff user accounts',
-      path: '/admin/tools/internal-users',
     },
     {
       icon: <PersonAddIcon fontSize="large" />,

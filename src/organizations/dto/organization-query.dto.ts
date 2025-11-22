@@ -39,10 +39,10 @@ export class OrganizationQueryDto {
   @IsIn(['active', 'inactive'])
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by subscription tier', enum: ['free', 'basic', 'pro', 'enterprise'] })
+  @ApiPropertyOptional({ description: 'Filter by subscription tier', enum: ['free', 'basic', 'professional', 'enterprise', 'internal'] })
   @IsOptional()
   @IsString()
-  @IsIn(['free', 'basic', 'pro', 'enterprise'])
+  @IsIn(['free', 'basic', 'professional', 'enterprise', 'internal'])
   subscriptionTier?: string;
 }
 
