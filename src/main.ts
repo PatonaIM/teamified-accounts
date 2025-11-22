@@ -120,7 +120,7 @@ async function bootstrap() {
 
     // Serve static frontend files in production
     const isProduction = configService.get('NODE_ENV') === 'production';
-    let frontendPath: string;
+    let frontendPath: string | undefined;
     
     if (isProduction) {
       logger.log('Setting up static file serving for production...');
@@ -130,16 +130,25 @@ async function bootstrap() {
       frontendPath = path.join(__dirname, 'public');
       
       logger.log(`Attempting to serve frontend from: ${frontendPath}`);
+      logger.log(`Frontend path exists: ${require('fs').existsSync(frontendPath)}`);
       
-      // Serve static assets with proper cache headers
-      expressApp.use(express.static(frontendPath, {
-        maxAge: '1d',
-        etag: true,
-        lastModified: true,
-        index: false, // Don't serve index.html automatically
-      }));
-      
-      logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
+      if (require('fs').existsSync(frontendPath)) {
+        // Serve static assets with proper cache headers
+        expressApp.use(express.static(frontendPath, {
+          maxAge: '1d',
+          etag: true,
+          lastModified: true,
+          index: false, // Don't serve index.html automatically
+        }));
+        
+        logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
+      } else {
+        logger.error(`❌ Frontend path does not exist: ${frontendPath}`);
+        frontendPath = undefined; // Reset to undefined if path doesn't exist
+      }
+    } else {
+      logger.log('Not in production mode, skipping static file serving');
+      logger.log(`NODE_ENV: ${configService.get('NODE_ENV')}`);
     }
 
     // Swagger documentation - Always enabled, but protected by JWT
@@ -362,24 +371,40 @@ async function bootstrap() {
     
     // SPA fallback route - MUST be registered AFTER all API routes
     // This catches all non-API routes and serves the SPA index.html
+    logger.log(`SPA fallback check: isProduction=${isProduction}, frontendPath=${frontendPath}`);
+    
     if (isProduction && frontendPath) {
       const expressApp = app.getHttpAdapter().getInstance();
-      expressApp.get('*', (req: Request, res: Response) => {
-        // Skip if it's an API route (shouldn't happen, but extra safety)
-        if (req.path.startsWith('/api/')) {
-          return res.status(404).json({ message: 'API endpoint not found' });
-        }
-        
-        // Serve index.html for all non-API routes (SPA will handle routing)
-        const indexPath = path.join(frontendPath, 'index.html');
-        res.sendFile(indexPath, (err) => {
-          if (err) {
-            logger.error(`Failed to serve index.html from ${indexPath}:`, err);
-            res.status(404).send('Frontend not found');
+      const indexPath = path.join(frontendPath, 'index.html');
+      const indexExists = require('fs').existsSync(indexPath);
+      
+      logger.log(`Index.html path: ${indexPath}`);
+      logger.log(`Index.html exists: ${indexExists}`);
+      
+      if (indexExists) {
+        expressApp.get('*', (req: Request, res: Response) => {
+          // Skip if it's an API route (shouldn't happen, but extra safety)
+          if (req.path.startsWith('/api/')) {
+            logger.warn(`SPA fallback caught API route: ${req.path}`);
+            return res.status(404).json({ message: 'API endpoint not found' });
           }
+          
+          logger.log(`SPA fallback serving index.html for route: ${req.path}`);
+          
+          // Serve index.html for all non-API routes (SPA will handle routing)
+          res.sendFile(indexPath, (err) => {
+            if (err) {
+              logger.error(`Failed to serve index.html from ${indexPath}:`, err);
+              res.status(404).send('Frontend not found');
+            }
+          });
         });
-      });
-      logger.log('✅ SPA fallback route configured (registered after API routes)');
+        logger.log('✅ SPA fallback route configured (registered after API routes)');
+      } else {
+        logger.error(`❌ Cannot configure SPA fallback: index.html not found at ${indexPath}`);
+      }
+    } else {
+      logger.log(`❌ SPA fallback NOT configured: isProduction=${isProduction}, frontendPath=${frontendPath}`);
     }
     
     // In Vercel serverless, don't call listen - return Express instance
