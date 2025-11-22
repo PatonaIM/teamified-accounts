@@ -82,11 +82,12 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
 -   **Environment Variables**: `PORT=5000` and `NODE_ENV=production` are set in the production environment
 
 **Build & Deployment Process:**
-1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production (runs automatically on publish)
+1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production, then copies frontend files to `dist/public/` (runs automatically on publish)
 2. `npm run start:prod` - Starts NestJS which:
-   - Serves static frontend files from `frontend/dist` at root routes
+   - Serves static frontend files from `dist/public/` at root routes
    - Serves backend API at `/api/*` routes
    - Listens on port 5000
+   - SPA fallback route serves `index.html` for all non-API routes
 
 **Environment Detection Logic (src/main.ts):**
 - The backend detects Vercel serverless environment via `VERCEL` or `VERCEL_ENV` environment variables
@@ -110,3 +111,9 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
    - Supports theme modes: `'light' | 'dark' | 'teamified' | 'custom'`
    - Frontend caches theme to localStorage immediately after login
    - Prevents flash of incorrect theme on page load
+
+4. **Production Static File Serving** - Fixed frontend not being served in Published App (November 22, 2025)
+   - Build process now copies frontend build (`frontend/dist/*`) to `dist/public/` during deployment
+   - Backend serves static files from `dist/public/` with proper cache headers in production mode
+   - SPA fallback route registered after all API routes to ensure API endpoints work correctly
+   - Frontend assets and API requests now both work correctly in production deployment
