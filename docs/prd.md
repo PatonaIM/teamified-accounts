@@ -22,7 +22,18 @@ This addresses critical business needs for data consistency, operational efficie
 
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
+| 2025-11-22 | 1.1 | Updated role system - organization-based roles (see ORGANIZATION_MANAGEMENT_AND_ROLES.md) | Development Team |
 | 2024-12-19 | 1.0 | Initial PRD creation | Product Manager John |
+
+### ⚠️ Role System Update (November 2025)
+
+**The role system has been updated to an organization-based structure.** For current role documentation, see:
+- [Organization Management and Roles Documentation](ORGANIZATION_MANAGEMENT_AND_ROLES.md)
+- [November 2025 Changelog](CHANGELOG_NOVEMBER_2025.md)
+
+**Current Role Types:**
+- **Client Roles**: `client_admin`, `client_hr`, `client_finance`, `client_recruiter`, `client_employee`
+- **Internal Roles**: `super_admin`, `internal_hr`, `internal_finance`, `internal_account_manager`, `internal_recruiter`, `internal_marketing`, `internal_employee`
 
 ## Requirements
 

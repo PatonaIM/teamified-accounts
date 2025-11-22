@@ -1,9 +1,23 @@
 # Data Model Changes: User Management System
 
-**Document Version:** 1.0  
-**Date:** December 19, 2024  
+**Document Version:** 1.1  
+**Date:** December 19, 2024 (Updated: November 22, 2025)  
 **Author:** Business Analyst Mary 📊  
-**Status:** Draft - Ready for Technical Review
+**Status:** Active - Includes November 2025 Updates
+
+## ⚠️ Important Update - November 2025
+
+**The role system described in this document has been updated.** As of November 2025, the platform uses an organization-based role structure with the following changes:
+
+- **Organization Management**: Added multi-organization support with subscription tiers
+- **Role System Refactor**: Roles are now organization-specific (client roles vs internal roles)
+- **Internal Organization**: Created "Teamified" organization for internal staff with `internal` subscription tier
+
+**For current role system documentation, see:**
+- [Organization Management and Roles](../ORGANIZATION_MANAGEMENT_AND_ROLES.md)
+- [November 2025 Changelog](../CHANGELOG_NOVEMBER_2025.md)
+
+The information below represents the original data model design and may not reflect current implementation.
 
 ## Executive Summary
 
@@ -141,7 +155,12 @@ CREATE TABLE user_roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_type VARCHAR(50) NOT NULL CHECK (role_type IN (
-        'candidate', 'eor', 'admin', 'timesheet_approver', 'leave_approver'
+        'candidate',
+        -- Client roles
+        'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee',
+        -- Internal roles  
+        'super_admin', 'internal_hr', 'internal_finance', 'internal_account_manager',
+        'internal_recruiter', 'internal_marketing', 'internal_employee'
     )),
     scope VARCHAR(20) NOT NULL CHECK (scope IN ('user', 'group', 'client', 'all')),
     scope_entity_id UUID, -- References client_id, group_id, or user_id based on scope
@@ -159,8 +178,9 @@ CREATE TABLE user_roles (
 );
 ```
 
-**Key Changes:**
+**Key Changes (Updated November 2025):**
 - **NEW TABLE**: Flexible role-based access control
+- **Organization-based roles**: Separate client and internal role types
 - Scope-based permissions (user, group, client, all)
 - Time-based role assignments with expiration
 - Comprehensive role types for different user functions

@@ -47,12 +47,14 @@ docker-compose up -d
 
 After running the database setup script, you can use these test accounts:
 
-| Email | Password | Role | Access Level |
-|-------|----------|------|--------------|
-| admin@teamified.com | Admin123! | admin | Full system access |
-| hr@teamified.com | HRManager123! | admin | Full system access |
-| john.doe@example.com | EORUser123! | eor | Client-specific access |
-| jane.smith@example.com | EORUser123! | eor | Client-specific access |
+| Email | Password | Role | Organization | Access Level |
+|-------|----------|------|--------------|--------------|
+| admin@teamified.com | Admin123! | super_admin | Teamified (Internal) | Full system access |
+| hr@teamified.com | HR123! | internal_hr | Teamified (Internal) | Internal HR operations |
+| john.doe@example.com | EOR123! | client_employee | Client Organization | Client-specific access |
+| jane.smith@example.com | EOR123! | client_employee | Client Organization | Client-specific access |
+
+**Note:** As of November 2025, the system uses an organization-based role structure. See [Organization Management Documentation](docs/ORGANIZATION_MANAGEMENT_AND_ROLES.md) for complete role details.
 
 ## Features
 
@@ -60,15 +62,25 @@ After running the database setup script, you can use these test accounts:
 
 - **Authentication System**
   - JWT-based authentication
-  - Role-based access control (admin, HR, EOR, candidate)
+  - Organization-based role access control
+  - Client roles: `client_admin`, `client_hr`, `client_finance`, `client_recruiter`, `client_employee`
+  - Internal roles: `super_admin`, `internal_hr`, `internal_finance`, `internal_account_manager`, `internal_recruiter`, `internal_marketing`, `internal_employee`
   - Password hashing with Argon2
   - Session management
 
 - **User Management**
   - User CRUD operations
+  - Organization-based user management
   - Bulk operations (status updates, role assignments)
   - User search and filtering
   - Profile management
+
+- **Organization Management** (November 2025)
+  - Multi-organization support with subscription tiers (free, basic, professional, enterprise, internal)
+  - Teamified internal organization for platform staff
+  - Organization-specific role assignment
+  - Subscription tier filtering and sorting
+  - See [Organization Management Documentation](docs/ORGANIZATION_MANAGEMENT_AND_ROLES.md)
 
 - **Employment Records Management** (Story 1.4)
   - Employment record CRUD operations
