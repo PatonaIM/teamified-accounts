@@ -1,0 +1,161 @@
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +35ms
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] HealthModule dependencies initialized +0ms
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] ConfigHostModule dependencies initialized +0ms
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] AppModule dependencies initialized +1ms
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] ConfigModule dependencies initialized +0ms
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] ConfigModule dependencies initialized +1ms
+2025-11-22 19:33:42.12
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [EmailService] Email service initialized with SendGrid
+2025-11-22 19:33:42.13
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [SupabaseService] Supabase service initialized
+2025-11-22 19:33:42.62
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] EmailModule dependencies initialized +490ms
+2025-11-22 19:33:42.63
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] ThrottlerModule dependencies initialized +0ms
+2025-11-22 19:33:42.63
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:42 AM LOG [InstanceLoader] JwtModule dependencies initialized +14ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmCoreModule dependencies initialized +2657ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +1ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] TypeOrmModule dependencies initialized +0ms
+2025-11-22 19:33:45.29
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] AuditModule dependencies initialized +0ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] UsersModule dependencies initialized +0ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] AuditControllerModule dependencies initialized +0ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] UserRolesModule dependencies initialized +0ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] InvitationsModule dependencies initialized +1ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [InstanceLoader] OrganizationsModule dependencies initialized +0ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] ✅ NestJS application created successfully in 3217ms
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] ✅ ConfigService initialized
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] Configuring CORS...
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] Setting up validation pipe...
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] ✅ CORS configured to allow ALL origins (CORS policy disabled)
+2025-11-22 19:33:45.30
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] Setting up static file serving for production...
+
+2025-11-22 19:33:45.41
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] ✅ SPA fallback route configured
+2025-11-22 19:33:45.41
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [Bootstrap] Starting server on 0.0.0.0:5000...
+2025-11-22 19:33:45.41
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [RoutesResolver] AppController {/api}: +5ms
+2025-11-22 19:33:45.42
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [RouterExplorer] Mapped {/api/v1/auth/accept-invitation, POST} route +1ms
+2025-11-22 19:33:45.43
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [RouterExplorer] Mapped {/api/v1/auth/reset-password, POST} route +0ms
+2025-11-22 19:33:45.43
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [RouterExplorer] Mapped {/api/v1/auth/debug/token, GET} route +0ms
+2025-11-22 19:33:45.43
+291fe33a
+User
+[Nest] 31 - 11/22/2025, 11:33:45 AM LOG [RoutesResolver] SupabaseAuthController {/api/v1/auth/s
