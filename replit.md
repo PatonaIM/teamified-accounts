@@ -124,3 +124,11 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
    - Backend serves static files from `dist/public/` with proper cache headers in production mode
    - SPA fallback route registered after all API routes to ensure API endpoints work correctly
    - Frontend assets and API requests now both work correctly in production deployment
+
+5. **SPA Fallback Route Fix** - Fixed API endpoints returning HTML in Published App (November 22, 2025)
+   - **Root cause**: SPA fallback used catch-all route `expressApp.get('*')` which intercepted ALL requests including /api/* endpoints
+   - **Impact**: API calls in Published App returned `index.html` instead of JSON, breaking authentication and all API features
+   - **Fix**: Changed SPA fallback route pattern from `'*'` to regex `/^(?!\/api).*$/` (negative lookahead excludes /api paths)
+   - **Scope**: Production-only fix (inside `if (isProduction && frontendPath)` conditional in src/main.ts)
+   - **Pattern Explanation**: `/^(?!\/api).*$/` matches any path that does NOT start with `/api`, allowing frontend SPA routes while preserving API endpoints
+   - **Result**: API endpoints now correctly return JSON, frontend routes still receive index.html for client-side routing
