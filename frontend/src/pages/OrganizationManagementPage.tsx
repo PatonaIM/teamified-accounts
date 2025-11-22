@@ -264,7 +264,7 @@ const OrganizationManagementPage: React.FC = () => {
       const response = await organizationsService.getAll({
         page: append ? currentPage : 1,
         limit: 20,
-        search: searchQuery || undefined,
+        search: searchQuery.trim() || undefined,
       });
       
       if (append) {
@@ -362,7 +362,7 @@ const OrganizationManagementPage: React.FC = () => {
       const response = await organizationsService.getAll({
         page: currentPage,
         limit: 20,
-        search: searchQuery || undefined,
+        search: searchQuery.trim() || undefined,
       });
       setOrganizations(response.organizations);
       
@@ -399,7 +399,7 @@ const OrganizationManagementPage: React.FC = () => {
       const response = await organizationsService.getAll({
         page: currentPage,
         limit: 20,
-        search: searchQuery || undefined,
+        search: searchQuery.trim() || undefined,
       });
       setOrganizations(response.organizations);
       setTotalOrgs(response.pagination.total);
@@ -433,7 +433,7 @@ const OrganizationManagementPage: React.FC = () => {
       const response = await organizationsService.getAll({
         page: adjustedPage,
         limit: 20,
-        search: searchQuery || undefined,
+        search: searchQuery.trim() || undefined,
       });
       
       setOrganizations(response.organizations);
