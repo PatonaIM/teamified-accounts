@@ -33,6 +33,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import organizationsService, { type Organization, type OrganizationMember, type GlobalSearchResponse } from '../services/organizationsService';
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
+import { getRoleColor, getRolePriority } from '../constants/roleMetadata';
 
 const COMPANY_SIZES = [
   '1-10',
@@ -529,38 +530,6 @@ const OrganizationManagementPage: React.FC = () => {
     }
   };
 
-  const getRoleColor = (roleType: string): 'error' | 'secondary' | 'warning' | 'info' | 'primary' => {
-    switch (roleType) {
-      case 'client_admin':
-        return 'error';
-      case 'client_hr':
-        return 'secondary';
-      case 'client_finance':
-        return 'warning';
-      case 'client_recruiter':
-        return 'info';
-      case 'client_employee':
-      default:
-        return 'primary';
-    }
-  };
-
-  const getRoleOrder = (roleType: string): number => {
-    switch (roleType) {
-      case 'client_admin':
-        return 1;
-      case 'client_hr':
-        return 2;
-      case 'client_finance':
-        return 3;
-      case 'client_recruiter':
-        return 4;
-      case 'client_employee':
-        return 5;
-      default:
-        return 999;
-    }
-  };
 
   // Filter members based on search query
   const filteredMembers = members.filter((member) => {
@@ -575,7 +544,7 @@ const OrganizationManagementPage: React.FC = () => {
   });
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
-    return getRoleOrder(a.roleType) - getRoleOrder(b.roleType);
+    return getRolePriority(a.roleType) - getRolePriority(b.roleType);
   });
 
   // Calculate displayed members (Load More strategy)
