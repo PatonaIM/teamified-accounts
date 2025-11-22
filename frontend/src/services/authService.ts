@@ -49,6 +49,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Send cookies with requests for SSO cookie management
+  timeout: 30000, // 30 second timeout to prevent indefinite hangs
 });
 
 // Create separate axios instance for refresh calls (no interceptors to avoid circular loops)
@@ -58,6 +59,7 @@ const refreshApi = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Send cookies with requests
+  timeout: 15000, // 15 second timeout for refresh token calls
 });
 
 // CSRF token management
