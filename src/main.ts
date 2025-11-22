@@ -331,23 +331,6 @@ async function bootstrap() {
 
       logger.log('✅ Swagger documentation configured at: /api/docs (admin-only access)');
 
-    // SPA fallback route - must be registered AFTER all API routes
-    // This catches all non-API routes and serves the SPA index.html
-    if (isProduction && frontendPath) {
-      const expressApp = app.getHttpAdapter().getInstance();
-      expressApp.get('*', (req: Request, res: Response) => {
-        // Serve index.html for all routes (SPA will handle routing)
-        const indexPath = path.join(frontendPath, 'index.html');
-        res.sendFile(indexPath, (err) => {
-          if (err) {
-            logger.error(`Failed to serve index.html from ${indexPath}:`, err);
-            res.status(404).send('Frontend not found');
-          }
-        });
-      });
-      logger.log('✅ SPA fallback route configured');
-    }
-
     // Port configuration: Check if PORT env var is explicitly set
     // Production sets PORT=5000 in .replit [userenv.production]
     // Development doesn't set PORT, so default to 3000 to avoid frontend conflict
@@ -372,18 +355,49 @@ async function bootstrap() {
     // Check if running in Vercel serverless environment
     const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
     
+    // Initialize the app to register all NestJS routes BEFORE adding SPA fallback
+    logger.log('Initializing NestJS application and registering routes...');
+    await app.init();
+    logger.log('✅ NestJS routes registered');
+    
+    // SPA fallback route - MUST be registered AFTER all API routes
+    // This catches all non-API routes and serves the SPA index.html
+    if (isProduction && frontendPath) {
+      const expressApp = app.getHttpAdapter().getInstance();
+      expressApp.get('*', (req: Request, res: Response) => {
+        // Skip if it's an API route (shouldn't happen, but extra safety)
+        if (req.path.startsWith('/api/')) {
+          return res.status(404).json({ message: 'API endpoint not found' });
+        }
+        
+        // Serve index.html for all non-API routes (SPA will handle routing)
+        const indexPath = path.join(frontendPath, 'index.html');
+        res.sendFile(indexPath, (err) => {
+          if (err) {
+            logger.error(`Failed to serve index.html from ${indexPath}:`, err);
+            res.status(404).send('Frontend not found');
+          }
+        });
+      });
+      logger.log('✅ SPA fallback route configured (registered after API routes)');
+    }
+    
     // In Vercel serverless, don't call listen - return Express instance
     if (isVercel) {
-      logger.log('Vercel serverless mode: Initializing app without listening...');
-      await app.init();
+      logger.log('Vercel serverless mode: App initialized without listening...');
       const expressApp = app.getHttpAdapter().getInstance();
       logger.log('✅ Express app instance ready for serverless');
       logger.log('✅ Bootstrap completed successfully');
       return expressApp;
     } else {
-      // In all other environments (dev, Replit Preview, Replit Published VM), start the server normally
+      // In all other environments (dev, Replit Preview, Replit Published VM), start the server
       logger.log(`Starting server on ${host}:${port}...`);
-      await app.listen(port, host);
+      const server = app.getHttpAdapter().getHttpServer();
+      await new Promise<void>((resolve) => {
+        server.listen(port, host, () => {
+          resolve();
+        });
+      });
       logger.log(`🚀 Application is running on: http://${host}:${port}`);
       logger.log(`📚 API documentation: http://${host}:${port}/api/docs`);
       logger.log('✅ Bootstrap completed successfully');
