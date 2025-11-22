@@ -33,7 +33,7 @@ export class LoginResponseDto {
     isActive: boolean;
     emailVerified: boolean;
     roles: string[];
-    themePreference?: 'light' | 'dark';
+    themePreference?: 'light' | 'dark' | 'teamified' | 'custom';
   };
 }
 

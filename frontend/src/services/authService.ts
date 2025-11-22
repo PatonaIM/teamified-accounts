@@ -25,7 +25,7 @@ export interface User {
   isActive: boolean;
   emailVerified: boolean;
   roles: string[];
-  themePreference?: 'light' | 'dark' | null;
+  themePreference?: 'light' | 'dark' | 'teamified' | 'custom' | null;
   hasOnboardingRecord?: boolean;
   hasEmploymentRecord?: boolean;
 }
