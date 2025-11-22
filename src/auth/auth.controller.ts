@@ -7,8 +7,10 @@ import {
   HttpCode,
   HttpStatus,
   Request,
+  Response,
   UseGuards,
 } from '@nestjs/common';
+import { Response as ExpressResponse } from 'express';
 import { 
   ApiTags, 
   ApiOperation, 
@@ -356,12 +358,24 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<LoginResponseDto> {
-    return this.authService.login(
+    const loginResponse = await this.authService.login(
       loginDto,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
+    // API calls use Bearer tokens in Authorization header
+    res.cookie('access_token', loginResponse.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
+    });
+    
+    return loginResponse;
   }
 
   @Post('refresh')
@@ -434,12 +448,23 @@ export class AuthController {
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<RefreshTokenResponseDto> {
-    return this.authService.refresh(
+    const refreshResponse = await this.authService.refresh(
       refreshTokenDto.refreshToken,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Update httpOnly cookie with new access token
+    res.cookie('access_token', refreshResponse.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+    
+    return refreshResponse;
   }
 
   @Post('logout')
@@ -511,12 +536,22 @@ export class AuthController {
   async logout(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<LogoutResponseDto> {
-    return this.authService.logout(
+    const logoutResponse = await this.authService.logout(
       refreshTokenDto.refreshToken,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Clear the httpOnly cookie on logout
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    
+    return logoutResponse;
   }
 
   @Get('me')
@@ -842,7 +877,7 @@ export class AuthController {
       6. Send welcome email
       
       ## What Gets Created:
-      - User account with client_admin role (tenant-scoped)
+      - User account with client_admin role (organization-scoped)
       - Organization with free tier subscription
       - Organization membership record
       - JWT access and refresh tokens

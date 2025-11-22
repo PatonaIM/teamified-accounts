@@ -18,13 +18,22 @@ export class JwtAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     
+    // Extract token from Authorization header (primary) or cookie (fallback for browser redirects)
+    let token: string | undefined;
     const authHeader = request.headers.authorization;
-    if (!authHeader) {
-      throw new UnauthorizedException('Missing authorization header');
+    
+    if (authHeader) {
+      token = this.jwtService.extractTokenFromHeader(authHeader);
+    } else if (request.cookies?.access_token) {
+      // Fallback for browser redirects (like SSO authorize endpoint)
+      token = request.cookies.access_token;
+    }
+    
+    if (!token) {
+      throw new UnauthorizedException('Missing authentication credentials');
     }
 
     try {
-      const token = this.jwtService.extractTokenFromHeader(authHeader);
       const payload = this.jwtService.validateAccessToken(token);
       
       // Attach JWT payload to request

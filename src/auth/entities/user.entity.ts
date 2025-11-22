@@ -40,9 +40,6 @@ export class User {
   @Column({ name: 'profile_data', type: 'jsonb', nullable: true })
   profileData: any | null;
 
-  @Column({ name: 'client_id', type: 'uuid', nullable: true })
-  clientId: string | null;
-
   @Column({ 
     name: 'status', 
     length: 20, 
@@ -95,16 +92,6 @@ export class User {
   deletedAt: Date | null;
 
   // Relations
-  @ManyToOne('Client', { nullable: true })
-  @JoinColumn({ name: 'client_id' })
-  client?: any;
-
-  @OneToOne('EORProfile', 'user')
-  eorProfile?: any;
-
-  @OneToMany('EmploymentRecord', 'user')
-  employmentRecords?: any[];
-
   @OneToMany('UserRole', 'user')
   userRoles?: any[];
 

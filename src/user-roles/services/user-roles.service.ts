@@ -5,7 +5,6 @@ import { UserRole } from '../entities/user-role.entity';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { UserRoleResponseDto } from '../dto/user-role-response.dto';
 import { PermissionResponseDto } from '../dto/permission-response.dto';
-import { EmploymentRecord } from '../../employment-records/entities/employment-record.entity';
 import { 
   RoleType, 
   RoleScope, 
@@ -20,8 +19,6 @@ export class UserRolesService {
   constructor(
     @InjectRepository(UserRole)
     private readonly userRoleRepository: Repository<UserRole>,
-    @InjectRepository(EmploymentRecord)
-    private readonly employmentRecordRepository: Repository<EmploymentRecord>,
   ) {}
 
   /**
@@ -233,7 +230,7 @@ export class UserRolesService {
 
   private getRolePermissions(): Record<string, string[]> {
     const permissions = {
-      // Canonical multitenancy roles
+      // Super admin - Full platform access
       super_admin: [
         'users.read',
         'users.create',
@@ -242,139 +239,56 @@ export class UserRolesService {
         'roles.assign',
         'roles.manage',
         'system.admin',
-        'employment.read',
-        'employment.update',
-        'documents.read',
-        'documents.manage',
-        'timesheets.read',
-        'timesheets.approve',
-        'payroll.read',
-        'payroll.manage',
-        'clients.read',
-        'clients.manage',
         'organizations.read',
         'organizations.manage',
+        'invitations.read',
+        'invitations.create',
+        'invitations.manage',
+        'api_keys.read',
+        'api_keys.manage',
+        'oauth_clients.read',
+        'oauth_clients.manage',
+        'audit.read',
       ],
+      // Client admin - Organization admin
       client_admin: [
         'users.read',
         'users.create',
         'users.update',
         'users.delete',
         'roles.assign',
-        'roles.manage',
-        'employment.read',
-        'employment.update',
-        'documents.read',
-        'documents.manage',
-        'timesheets.read',
-        'timesheets.approve',
-        'payroll.read',
-        'payroll.manage',
+        'invitations.read',
+        'invitations.create',
+        'invitations.manage',
+        'organizations.read',
+        'api_keys.read',
+        'api_keys.manage',
       ],
-      client_hr: [
+      // Client member - Regular organization member
+      client_member: [
         'users.read',
-        'users.create',
-        'users.update',
-        'employment.read',
-        'employment.update',
-        'documents.read',
-        'documents.manage',
-        'timesheets.read',
-        'timesheets.approve',
-        'payroll.read',
-        'payroll.manage',
-      ],
-      internal_account_manager: [
-        'users.read',
-        'employment.read',
-        'documents.read',
-        'timesheets.read',
-        'timesheets.approve',
-        'clients.read',
-        'clients.manage',
         'organizations.read',
       ],
-      internal_recruiter: [
-        'users.read',
-        'users.create',
-        'invitations.read',
-        'invitations.create',
-        'invitations.manage',
-        'candidates.read',
-        'candidates.manage',
-      ],
-      client_recruiter: [
-        'users.read',
-        'users.create',
-        'invitations.read',
-        'invitations.create',
-        'invitations.manage',
-        'candidates.read',
-        'candidates.manage',
-      ],
-      client_employee: [
-        'users.read',
-        'employment.read',
-        'employment.update',
-        'documents.read',
-        'documents.manage',
-        'payroll.read',
-        'payroll.manage',
-        'timesheets.read',
-        'timesheets.create',
-        'leave.read',
-        'leave.create',
-      ],
-      candidate: [
-        'profile.read',
-        'profile.update',
-        'documents.read',
-      ],
+      // Internal member - Platform team member
       internal_member: [
         'users.read',
-        'employment.read',
-        'documents.read',
+        'organizations.read',
+        'audit.read',
       ],
-      internal_hr: [
+      // Internal account manager - Manages client organizations
+      internal_account_manager: [
         'users.read',
-        'users.create',
-        'users.update',
-        'employment.read',
-        'employment.update',
-        'documents.read',
-        'documents.manage',
-        'timesheets.read',
-        'timesheets.approve',
-        'payroll.read',
-        'payroll.manage',
-      ],
-      client_finance: [
-        'payroll.read',
-        'payroll.manage',
-        'timesheets.read',
-        'timesheets.approve',
-        'employment.read',
-      ],
-      internal_finance: [
-        'payroll.read',
-        'payroll.manage',
-        'timesheets.read',
-        'employment.read',
-        'clients.read',
-      ],
-      internal_marketing: [
-        'users.read',
-        'clients.read',
+        'organizations.read',
+        'organizations.manage',
+        'invitations.read',
+        'invitations.create',
+        'audit.read',
       ],
     };
 
     // Add legacy role mappings for backward compatibility
     permissions['admin'] = permissions['client_admin'];
-    permissions['hr'] = permissions['client_hr'];
-    permissions['eor'] = permissions['client_employee'];
     permissions['account_manager'] = permissions['internal_account_manager'];
-    permissions['recruiter'] = permissions['client_recruiter'];
-    permissions['hr_manager_client'] = permissions['client_hr'];
 
     return permissions;
   }
@@ -386,19 +300,11 @@ export class UserRolesService {
   private normalizeRoleType(roleType: string): RoleType | null {
     // Check if it's already a canonical role type
     const canonicalRoles: RoleType[] = [
-      'candidate',
       'client_admin',
-      'client_hr',
-      'client_finance',
-      'client_recruiter',
-      'client_employee',
+      'client_member',
       'super_admin',
       'internal_member',
-      'internal_hr',
-      'internal_recruiter',
       'internal_account_manager',
-      'internal_finance',
-      'internal_marketing',
     ];
     
     if (canonicalRoles.includes(roleType as RoleType)) {
@@ -459,85 +365,11 @@ export class UserRolesService {
   }
 
   /**
-   * Get EOR's assigned clients from employment records
-   */
-  async getEORAssignedClients(eorUserId: string): Promise<string[]> {
-    const activeEmployments = await this.employmentRecordRepository.find({
-      where: { 
-        userId: eorUserId, 
-        status: 'active' 
-      },
-      select: ['clientId']
-    });
-    
-    return activeEmployments.map(emp => emp.clientId);
-  }
-
-  /**
-   * Check if EOR can access specific client data
-   */
-  async canEORAccessClientData(eorUserId: string, clientId: string): Promise<boolean> {
-    const assignment = await this.employmentRecordRepository.findOne({
-      where: { 
-        userId: eorUserId, 
-        clientId, 
-        status: 'active' 
-      }
-    });
-    
-    return !!assignment;
-  }
-
-  /**
-   * Get EOR data access scope based on employment records
-   */
-  async getEORDataAccess(userId: string, dataType: string): Promise<string[]> {
-    if (dataType === 'client_data' || dataType === 'timesheets') {
-      // EOR can only access data for their assigned clients
-      return this.getEORAssignedClients(userId);
-    }
-    
-    if (dataType === 'employment') {
-      // EOR can access their own employment records
-      return [userId];
-    }
-    
-    return [];
-  }
-
-  /**
-   * Check if user has EOR/Client Employee role
-   * Checks for canonical role name (legacy 'eor' is auto-translated to 'client_employee')
-   */
-  async isEOR(userId: string): Promise<boolean> {
-    const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('client_employee');
-  }
-
-  /**
    * Check if user has Account Manager role
    * Checks for canonical role name (legacy 'account_manager' is auto-translated to 'internal_account_manager')
    */
   async isAccountManager(userId: string): Promise<boolean> {
     const userRoles = await this.getUserRoles(userId);
     return userRoles.includes('internal_account_manager');
-  }
-
-  /**
-   * Check if user has HR role
-   * Checks for canonical internal HR role (legacy 'hr' is auto-translated to 'internal_hr' or 'client_hr')
-   */
-  async isHRManagerTeamified(userId: string): Promise<boolean> {
-    const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('internal_hr');
-  }
-
-  /**
-   * Check if user has Client HR role
-   * Checks for canonical role name (legacy 'hr_manager_client' is auto-translated to 'client_hr')
-   */
-  async isHRManagerClient(userId: string): Promise<boolean> {
-    const userRoles = await this.getUserRoles(userId);
-    return userRoles.includes('client_hr');
   }
 }

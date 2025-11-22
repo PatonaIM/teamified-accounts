@@ -1,7 +1,7 @@
 # API Documentation Guidelines
 
 ## Overview
-This document provides guidelines for maintaining comprehensive API documentation using Swagger/OpenAPI in the Teamified EOR Portal project.
+This document provides guidelines for maintaining comprehensive API documentation using Swagger/OpenAPI in the Teamified Accounts project.
 
 ## Documentation Standards
 

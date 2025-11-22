@@ -1,6 +1,6 @@
 # OAuth 2.0 / OIDC Federated Authentication Implementation Plan
 
-**Project Goal:** Transform the Teamified EOR Portal into an OAuth 2.0 / OpenID Connect Identity Provider for 3 internal Replit web applications.
+**Project Goal:** Transform the Teamified Accounts platform into an OAuth 2.0 / OpenID Connect Identity Provider for 3 internal Replit web applications.
 
 **Document Version:** 1.0  
 **Created:** November 5, 2025  
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This plan outlines the implementation of federated authentication, enabling the Teamified Portal to act as a centralized identity provider for multiple internal applications. The solution leverages existing JWT infrastructure while adding OAuth 2.0 and OIDC protocols for secure, standardized authentication flows.
+This plan outlines the implementation of federated authentication, enabling the Teamified Accounts platform to act as a centralized identity provider for multiple internal applications. The solution leverages existing JWT infrastructure while adding OAuth 2.0 and OIDC protocols for secure, standardized authentication flows.
 
 ### Key Benefits
 - **Single Sign-On (SSO)** across all internal apps

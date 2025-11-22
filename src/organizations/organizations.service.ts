@@ -37,6 +37,17 @@ export class OrganizationsService {
   ) {}
 
   /**
+   * Normalize slug: trim whitespace, convert to lowercase, collapse consecutive hyphens, remove trailing/leading hyphens
+   */
+  private normalizeSlug(slug: string): string {
+    return slug
+      .trim()
+      .toLowerCase()
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  /**
    * Get all roles for a user from their userRoles relation
    */
   private getAllRoles(user: User): string[] {
@@ -142,16 +153,19 @@ export class OrganizationsService {
     ip: string,
     userAgent: string,
   ): Promise<OrganizationResponseDto> {
+    const normalizedSlug = this.normalizeSlug(createDto.slug);
+    
     const existingOrg = await this.organizationRepository.findOne({
-      where: { slug: createDto.slug },
+      where: { slug: normalizedSlug },
     });
 
     if (existingOrg) {
-      throw new ConflictException(`Organization with slug '${createDto.slug}' already exists`);
+      throw new ConflictException(`Organization with slug '${normalizedSlug}' already exists`);
     }
 
     const organization = this.organizationRepository.create({
       ...createDto,
+      slug: normalizedSlug,
       subscriptionTier: createDto.subscriptionTier || 'free',
       subscriptionStatus: 'active',
       settings: {},
@@ -310,6 +324,27 @@ export class OrganizationsService {
     return this.mapToResponseDto(organization);
   }
 
+  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string }> {
+    if (!slug || slug.length < 2 || slug.length > 100) {
+      throw new BadRequestException('Slug must be between 2 and 100 characters');
+    }
+
+    const normalizedSlug = this.normalizeSlug(slug);
+    
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedSlug)) {
+      throw new BadRequestException('Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)');
+    }
+
+    const existingOrg = await this.organizationRepository.findOne({
+      where: { slug: normalizedSlug },
+    });
+
+    return {
+      available: !existingOrg,
+      slug: normalizedSlug,
+    };
+  }
+
   async update(
     id: string,
     updateDto: UpdateOrganizationDto,
@@ -328,13 +363,17 @@ export class OrganizationsService {
     }
 
     if (updateDto.slug && updateDto.slug !== organization.slug) {
+      const normalizedSlug = this.normalizeSlug(updateDto.slug);
+      
       const existingOrg = await this.organizationRepository.findOne({
-        where: { slug: updateDto.slug },
+        where: { slug: normalizedSlug },
       });
 
       if (existingOrg) {
-        throw new ConflictException(`Organization with slug '${updateDto.slug}' already exists`);
+        throw new ConflictException(`Organization with slug '${normalizedSlug}' already exists`);
       }
+      
+      updateDto.slug = normalizedSlug;
     }
 
     const oldData = {
@@ -758,8 +797,8 @@ export class OrganizationsService {
       await this.emailService.sendEmail({
         to: candidate.email,
         subject: `Welcome to ${organization.name} - You've Been Hired!`,
-        html: this.generateEmployeeWelcomeEmail(candidate, organization, dto.jobTitle, dto.startDate),
-        text: this.generateEmployeeWelcomeEmailText(candidate, organization, dto.jobTitle, dto.startDate),
+        html: this.generateEmployeeWelcomeEmail(candidate, organization, dto.startDate),
+        text: this.generateEmployeeWelcomeEmailText(candidate, organization, dto.startDate),
       });
     } catch (error) {
       this.logger.warn(`Failed to send welcome email to ${candidate.email}: ${error.message}`);
@@ -780,7 +819,6 @@ export class OrganizationsService {
         organizationName: organization.name,
         hiredBy: dto.hiredBy,
         startDate: dto.startDate,
-        jobTitle: dto.jobTitle,
       },
       ip,
       userAgent,
@@ -839,10 +877,8 @@ export class OrganizationsService {
   private generateEmployeeWelcomeEmail(
     user: User,
     organization: Organization,
-    jobTitle?: string,
     startDate?: string,
   ): string {
-    const jobTitleText = jobTitle ? ` as ${jobTitle}` : '';
     const startDateText = startDate ? ` starting ${new Date(startDate).toLocaleDateString()}` : '';
 
     return `
@@ -871,7 +907,7 @@ export class OrganizationsService {
             
             <div class="success-box">
                 <strong>✅ Your Application Was Successful!</strong><br>
-                You have been hired${jobTitleText}${startDateText}.
+                You have been hired${startDateText}.
             </div>
             
             <p>We're excited to have you join our team! Your candidate profile has been converted to an employee account, and you now have access to all employee features in the Teamified portal.</p>
@@ -909,10 +945,8 @@ export class OrganizationsService {
   private generateEmployeeWelcomeEmailText(
     user: User,
     organization: Organization,
-    jobTitle?: string,
     startDate?: string,
   ): string {
-    const jobTitleText = jobTitle ? ` as ${jobTitle}` : '';
     const startDateText = startDate ? ` starting ${new Date(startDate).toLocaleDateString()}` : '';
 
     return `
@@ -921,7 +955,7 @@ Congratulations ${user.firstName}!
 Welcome to ${organization.name}
 
 ✅ YOUR APPLICATION WAS SUCCESSFUL!
-You have been hired${jobTitleText}${startDateText}.
+You have been hired${startDateText}.
 
 We're excited to have you join our team! Your candidate profile has been converted to an employee account, and you now have access to all employee features in the Teamified portal.
 

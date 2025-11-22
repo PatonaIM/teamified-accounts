@@ -41,6 +41,9 @@ export class Session {
   @Column({ name: 'expires_at', type: 'timestamp with time zone' })
   expiresAt: Date;
 
+  @Column({ name: 'last_activity_at', type: 'timestamp with time zone' })
+  lastActivityAt: Date;
+
   @Column({ name: 'revoked_at', type: 'timestamp with time zone', nullable: true })
   revokedAt: Date | null;
 

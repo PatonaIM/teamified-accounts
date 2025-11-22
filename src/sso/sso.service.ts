@@ -209,8 +209,7 @@ export class SsoService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles: userRoles.length > 0 ? userRoles : ['EOR'],
-        clientId: user.clientId,
+        roles: userRoles.length > 0 ? userRoles : ['client_member'],
       },
     };
   }

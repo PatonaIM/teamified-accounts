@@ -1,6 +1,5 @@
-# Teamified Team Member Portal
-
-A comprehensive EOR (Employer of Record) portal built with NestJS backend and React frontend.
+# Teamified Accounts - SSO
+A comprehensive SSO, user management, and multi-organization platform built with NestJS backend and React frontend.
 
 ## Quick Start
 
@@ -271,3 +270,4 @@ This project is proprietary software. All rights reserved.
 ## Support
 
 For support and questions, please contact the development team.
+>>>>>>> c463c14 (Initial commit)

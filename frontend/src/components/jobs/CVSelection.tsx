@@ -57,7 +57,7 @@ const CVSelection: React.FC<CVSelectionProps> = ({
     try {
       const token = localStorage.getItem('teamified_access_token');
       const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+        import.meta.env.VITE_API_BASE_URL || '/api';
 
       const response = await axios.get<{ cvs: CV[] }>(
         `${API_BASE_URL}/v1/users/me/profile/cv`,

@@ -134,6 +134,39 @@ export class UserResponseDto {
   })
   roles?: string[];
 
+  @ApiPropertyOptional({
+    description: 'Organizations user belongs to',
+    example: [{
+      organizationId: '123e4567-e89b-12d3-a456-426614174000',
+      organizationName: 'Acme Corp',
+      organizationSlug: 'acme-corp',
+      roleType: 'client_admin',
+      joinedAt: '2024-01-15T10:30:00Z'
+    }],
+    type: 'array'
+  })
+  @Expose()
+  @Transform(({ obj }) => {
+    // Extract organization memberships
+    if (obj.organizationMembers && Array.isArray(obj.organizationMembers)) {
+      return obj.organizationMembers.map((om: any) => ({
+        organizationId: om.organizationId,
+        organizationName: om.organization?.name || 'Unknown',
+        organizationSlug: om.organization?.slug || '',
+        roleType: om.roleType || '',
+        joinedAt: om.createdAt?.toISOString() || null,
+      })).filter((org: any) => org.organizationId);
+    }
+    return [];
+  })
+  organizations?: Array<{
+    organizationId: string;
+    organizationName: string;
+    organizationSlug: string;
+    roleType: string;
+    joinedAt: string | null;
+  }>;
+
   // Exclude sensitive fields
   @Exclude()
   passwordHash: string;

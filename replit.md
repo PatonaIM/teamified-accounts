@@ -1,8 +1,8 @@
-# Teamified Team Member Portal
+# Teamified Accounts & SSO Platform
 
 ## Overview
 
-The Teamified Team Member Portal is an Employer of Record (EOR) management system designed to streamline the entire employee lifecycle, from candidate onboarding to employment, payroll, timesheets, and leave management across India, Philippines, and Australia. It aims to consolidate fragmented HR processes into a single platform, offering self-service capabilities, robust audit trails, and compliance tracking, thereby providing significant market potential for EOR operations. The platform supports multi-tenant client management and granular role-based access control for Admins, HR Managers, Client Users, EOR employees, and Candidates.
+The Teamified Accounts & SSO Platform is a centralized authentication and user management system providing secure Single Sign-On (SSO), multi-organization support, and comprehensive user management. It enables seamless OAuth 2.0 + PKCE authentication across applications, supports organization-based multitenancy, and offers granular role-based access control for various user types. The platform aims to streamline user access and management for internal and external stakeholders.
 
 ## User Preferences
 
@@ -12,97 +12,126 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend Architecture
 
-The backend utilizes **NestJS (TypeScript)** with a modular design. **PostgreSQL** with **TypeORM** serves as the robust data store, employing JSONB for flexible user profile data. Authentication is **JWT-based** with refresh tokens and comprehensive role-based access control (RBAC). **Vercel Blob Storage** handles production file uploads. API documentation is generated via **Swagger/OpenAPI**. Core features include a centralized audit module for compliance and extensive data validation.
+The backend is built with **NestJS (TypeScript)**, featuring a modular design. **PostgreSQL** with **TypeORM** handles data storage, utilizing JSONB for flexible user profile data. Authentication is **JWT-based** with refresh tokens and comprehensive role-based access control (RBAC). **Vercel Blob Storage** manages file uploads, and API documentation is generated via **Swagger/OpenAPI**. Core features include a centralized audit module and extensive data validation.
 
 ### Frontend Architecture
 
-The frontend is built with **React 19, TypeScript, and Vite**. **Material-UI (MUI v7)**, styled with a **Tailwind CSS**-based design system, provides a consistent and customizable UI through a dynamic theming system with 5 preset themes and a Theme Editor. **React Router v7** manages declarative and protected routing. State management relies on **React hooks**.
+The frontend uses **React 19, TypeScript, and Vite**. **Material-UI (MUI v7)**, styled with a **Tailwind CSS**-based design system, provides a consistent UI with dynamic theming. **React Router v7** manages declarative and protected routing, and state management relies on **React hooks**.
 
 #### Centralized API Client
 
-All API communication uses a **single, centralized axios instance** (`frontend/src/services/api.ts`) with:
-- **Automatic Token Refresh:** Intercepts 401 errors and refreshes access tokens seamlessly
-- **CSRF Protection:** Built-in CSRF token support for mutating requests  
-- **Consistent Authentication:** All services share the same auth logic, preventing token reuse issues
-- **Request/Response Interceptors:** Automatically adds Authorization headers and handles errors
+All API communication utilizes a **single, centralized axios instance** (`frontend/src/services/api.ts`) for automatic token refresh, CSRF protection, and consistent authentication, preventing token reuse issues.
 
-**Architecture Decision:** After encountering token reuse issues with multiple axios instances, all services were consolidated to use a single client exported from `authService.ts`. This ensures reliable authentication and prevents premature logouts during API requests.
+#### Modules
 
-#### Hiring Module
-
-The hiring module integrates Job Request, Interview, and Talent Pool features. It employs a **service-layer pattern** with custom React hooks for data fetching and implements **infinite scroll pagination** with race condition protection. Authentication uses a consistent `useAuth` hook. Dedicated routes are protected with role-based access. A **Calendar View** leveraging `react-big-calendar` is integrated for interviews, supporting various views and theme-aware styling. All styling adheres to `theme.palette` for seamless dark/light mode transitions.
-
-#### Salary History Module
-
-The salary history module provides organization-wide salary tracking for admin/HR roles with comprehensive pagination and filtering capabilities. Implementation features include:
-
--   **Server-Side Pagination**: Uses shared `PaginatedResponseDto<T>` pattern with TypeORM's `getManyAndCount()` for accurate total counts
--   **Default Page Size**: 50 records per page with options for 10, 25, 50, or 100 records
--   **Always-Visible Controls**: Pagination controls remain visible at table bottom regardless of result count
--   **Filter Reset Protection**: Ref-based guard prevents race conditions by resetting page to 0 when filters change, ensuring exactly one API call at offset=0
--   **Organization Summary**: Aggregated statistics across all active employment records without user filtering
--   **Role-Based Access**: Restricted to admin/hr roles via RoleBasedRoute wrapper; regular EOR employees access salary info via profile page only
-
-#### Client Management Module
-
-The client management module enables admin/HR roles to manage Teamified's customer organizations (clients) with full CRUD operations. Implementation features include:
-
--   **Native MUI Tables**: Uses MUI Table components (not DataGrid) for design consistency with UserList, Employment Records, and Salary History
--   **Centered Typography**: All table cells use centered alignment with `body2` variant (0.875rem font size)
--   **Theme-Aware Status Chips**: Status indicators use semantic colors from theme palette for dark/light mode compatibility
--   **Standard Pagination**: TablePagination with 10, 25, 50, 100 rows per page options
--   **Drawer Form UI**: Create/edit clients via slide-in drawer with Stack-based form layout (MUI v7 compatible)
--   **International Address Fields**: Contact info uses `postalCode` (not "zip") for better recognition in India, Philippines, and Australia markets
--   **JSONB Contact Storage**: Client contact information stored in flexible JSONB field, migrated to use standardized `postalCode` field naming
-
-#### Profile Management
-
-The user profile page (`/account/profile`) provides Material-UI 3 Expressive Design with icon-based editing interface. Implementation features include:
-
--   **Icon-Based Editing**: Pencil icon to enter edit mode, X icon to cancel, check icon to save
--   **Smooth UX**: Profile saves update local state only without triggering AuthContext refresh, preventing page reload feeling
--   **Secondary Email**: Users can add a secondary email address stored in `profileData.secondaryEmail` JSONB field
--   **Profile Picture**: Displays user avatar from Vercel Blob Storage
--   **Role Display**: Shows user roles (e.g., "super_admin") fetched from backend `/v1/users/me` endpoint
--   **Design System**: Uses 16px rounded corners (borderRadius: 2) for buttons, 6 for cards, and purple gradient primary buttons
+-   **Hiring Module**: Integrates Job Request, Interview, and Talent Pool features using a service-layer pattern with custom React hooks, infinite scroll pagination, and a Calendar View (`react-big-calendar`).
+-   **Salary History Module**: Provides organization-wide salary tracking for admin/HR with server-side pagination, filtering, and role-based access.
+-   **Client Management Module**: Enables CRUD operations for customer organizations (clients) for admin/HR roles, using native MUI Tables, Drawer Forms, and JSONB for contact information.
+-   **Profile Management**: Offers a user profile page with Material-UI 3 Expressive Design, icon-based editing, secondary email support, and profile picture display from Vercel Blob Storage.
+-   **SSO Integration Test Page**: A `/test` route demonstrating the OAuth 2.0 + PKCE authentication flow for developers, hardcoded to use a `test-client`.
 
 ### Data Model Architecture
 
-The data model features flexible user profile data in a **JSONB field** within the User entity. Employment and salary histories are managed by normalized entities. Role management is facilitated by a `UserRole` entity supporting scope-based permissions. Multi-country payroll is supported via dedicated entities for `Country`, `Currency`, `TaxYear`, and `PayrollPeriod`. Document management is categorized for HR and onboarding processes.
+The data model includes a flexible JSONB field for user profile data within the User entity. Employment and salary histories are normalized. Role management uses a `UserRole` entity with scope-based permissions. Multi-country payroll is supported via `Country`, `Currency`, `TaxYear`, and `PayrollPeriod` entities. Document management is categorized for HR and onboarding.
 
 ### Security Architecture
 
-Security measures include **Argon2** for password hashing, multi-tier **NestJS Throttler** for rate limiting, environment-aware **CORS configuration**, and **Redis-backed session storage** for refresh token management. Client scoping is implemented by embedding `clientId` in JWTs to enable efficient data filtering.
+Security features include **Argon2** for password hashing, multi-tier **NestJS Throttler** for rate limiting, and **Redis-backed session storage** for refresh token management. Client scoping is implemented via `clientId` in JWTs.
+
+#### CORS Configuration
+
+CORS restrictions are **disabled** to support cross-origin OAuth 2.0 integrations, allowing requests from any origin with credentials enabled. Public OAuth endpoints (`/api/v1/sso/authorize`, `/api/v1/sso/token`) are accessible without JWT, while other endpoints require valid JWTs.
+
+#### Dual Token Approach (Bearer + Cookie)
+
+The platform uses a dual-token strategy: Bearer tokens in Authorization headers for API calls and httpOnly cookies for seamless browser-based SSO redirects to the OAuth authorize endpoint. This secures SSO flows while maintaining explicit control for API authentication.
+
+#### Session Management & Inactivity Timeout
+
+Sessions have a **48-hour inactivity timeout** with activity tracked via `last_activity_at` on token refresh, extending across connected SSO applications. There is also a **30-day absolute expiry** regardless of activity.
 
 #### API Key Management
 
-The platform supports programmatic access through API keys as an alternative to JWT-based authentication. API keys enable automation, CLI tools, and third-party integrations to securely access the portal. Key features include:
-
--   **Dual Authentication Methods**: JWT tokens for browser sessions and API keys for programmatic access
--   **Bcrypt-Hashed Keys**: Full API keys are hashed using bcrypt before storage, ensuring security
--   **Prefix Indexing**: Keys use indexed 10-character prefixes (format: `tmf_<random_hex>`) for fast lookup and validation
--   **Access Types**: 
-    -   `read_only`: View-only access to data
-    -   `full_access`: Read and write permissions
--   **10-Key Limit**: Each user can create up to 10 active API keys
--   **Audit Logging**: All API key creation, deletion, and usage events are logged in the centralized audit trail
--   **MUI Settings UI**: Theme-aware management interface in Settings → API Keys tab with full CRUD operations
--   **TypeORM Entity**: Database table with indexed prefix column for performance optimization
+The platform supports programmatic access via API keys, alternative to JWTs. Keys are **Bcrypt-hashed**, use 10-character prefixes for lookup, and offer `read_only` or `full_access`. Each user can create up to 10 keys, with audit logging for all key actions and a dedicated MUI settings UI.
 
 ## External Dependencies
 
 ### Third-Party Services
 
 -   **Vercel Blob Storage**: Cloud storage for production file uploads.
--   **Redis/Vercel KV**: Used for session management and caching.
+-   **Redis/Vercel KV**: For session management and caching.
 -   **Workable API**: Integrates for syncing candidates and job postings.
 -   **Email Service (Nodemailer)**: For transactional email functionalities.
 -   **Supabase**: Provides authentication services including Google OAuth.
 
 ### Database
 
--   **PostgreSQL**: The primary relational database, configured with TypeORM and SSL for production.
+-   **PostgreSQL**: The primary relational database, configured with TypeORM and SSL.
 
 ### Build & Deployment
 
--   **Replit**: Utilized for both development and production hosting, with Autoscale deployment serving both frontend and backend from a single instance.
+-   **Replit**: Used for development and production hosting, with Reserved VM deployment.
+
+#### Production Deployment Configuration
+
+The platform uses **Replit Reserved VM** for production deployments with the following configuration:
+
+**Port Configuration:**
+-   **Development (Preview)**: NestJS listens on port 5000, serves both static frontend AND backend API from a single process (unified architecture)
+-   **Production (Published App)**: NestJS listens on port 5000, serves both static frontend AND backend API from a single process
+-   **Environment Variables**: `PORT=5000` is set globally, `NODE_ENV=development` for dev, `NODE_ENV=production` for production
+
+**Build & Deployment Process:**
+1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production, then copies frontend files to `dist/public/` (runs automatically on publish)
+2. `npm run start:prod` - Starts NestJS which:
+   - Serves static frontend files from `dist/public/` at root routes
+   - Serves backend API at `/api/*` routes
+   - Listens on port 5000
+   - SPA fallback route serves `index.html` for all non-API routes
+
+**Environment Detection Logic (src/main.ts):**
+- The backend detects Vercel serverless environment via `VERCEL` or `VERCEL_ENV` environment variables
+- In Vercel: Returns Express instance without calling `app.listen()` (serverless function handler)
+- In Replit (dev/production): Always calls `app.listen()` on configured port
+
+**Critical Fixes (November 22, 2025):**
+1. **Backend Production Listening Issue** - Fixed backend not calling `app.listen()` in Replit Reserved VM production
+   - Previous logic incorrectly treated Replit production as Vercel serverless environment
+   - Now properly detects Vercel vs. Replit using environment-specific variables
+   - Backend now properly listens on port 5000 in both development and production Replit environments
+
+2. **API Client Timeout Configuration** - Added 30-second timeout to centralized API client
+   - API requests: 30-second timeout (prevents indefinite hangs)
+   - Refresh token calls: 15-second timeout
+   - Migrated `profileService.ts` and `MyProfilePage.tsx` from raw axios to centralized API client
+   - Ensures consistent timeout behavior across all API calls in Preview and Published App
+
+3. **Theme Preference Persistence** - Implemented theme preference caching across login/logout sessions
+   - Backend login response includes user's theme preference from `profileData.themePreference.themeMode`
+   - Supports theme modes: `'light' | 'dark' | 'teamified' | 'custom'`
+   - Frontend caches theme to localStorage immediately after login
+   - Prevents flash of incorrect theme on page load
+
+4. **Production Static File Serving** - Fixed frontend not being served in Published App (November 22, 2025)
+   - Build process now copies frontend build (`frontend/dist/*`) to `dist/public/` during deployment
+   - Backend serves static files from `dist/public/` with proper cache headers in production mode
+   - SPA fallback route registered after all API routes to ensure API endpoints work correctly
+   - Frontend assets and API requests now both work correctly in production deployment
+
+5. **Development Environment Configuration** - Fixed Preview App "Frontend not found" error (November 22, 2025)
+   - Issue: Global `PORT=5000` and `NODE_ENV=production` secrets were overriding development environment
+   - Backend was running in production mode during development, trying to serve static files from `dist/public/`
+   - Fix: Updated `npm run start:dev` script to explicitly set `NODE_ENV=development PORT=3000`
+   - Backend now correctly runs in development mode on port 3000, skipping production static file serving
+
+6. **Unified Development Architecture** - Simplified dev/prod consistency (November 22, 2025)
+   - Eliminated separate Vite dev server workflow to reduce complexity and improve dev/prod parity
+   - Both development and production now use identical architecture: NestJS serves frontend from `dist/public/` on port 5000
+   - Single "Server" workflow runs `npm run dev:full` which builds frontend, builds backend, copies files, then starts NestJS in watch mode
+   - Smart startup script available (`scripts/start-dev.sh`) with error handling that checks if frontend exists before building
+   - Disabled `deleteOutDir` in nest-cli.json to preserve frontend files during backend hot reloads
+   - Trade-off: Lost Vite hot module replacement (HMR) for frontend, but gained perfect dev/prod consistency
+   - Development now mirrors production exactly, eliminating deployment-related surprises
+   - Scripts: `npm run dev` (smart script with conditional build), `npm run dev:full` (always rebuild everything)
+   - Workflow uses `dev:full` to guarantee fresh builds on every startup
+   - Backend changes are picked up by watch mode automatically; frontend changes require manual rebuild with `npm run build:frontend && npm run copy:frontend`

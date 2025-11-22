@@ -82,7 +82,13 @@ const InternalUsersPage: React.FC = () => {
 
       // Filter out deleted users from the results (soft deleted)
       const filteredUsers = (response.users || []).filter(user => !(user as any).deletedAt);
-      setUsers(filteredUsers);
+      
+      // Sort users by role: admins first, internal members last
+      const sortedUsers = [...filteredUsers].sort((a, b) => {
+        return getRoleOrder(a) - getRoleOrder(b);
+      });
+      
+      setUsers(sortedUsers);
       setTotalCount(response.pagination?.total || 0);
     } catch (err: any) {
       setError(err.message || 'Failed to load internal users');
@@ -172,6 +178,58 @@ const InternalUsersPage: React.FC = () => {
     };
     
     return roleMap[primaryRole] || primaryRole;
+  };
+
+  const getRoleColor = (user: User): { bgcolor: string; color: string } => {
+    const userRoles = (user as any).userRoles;
+    const primaryRole = userRoles && userRoles.length > 0 
+      ? userRoles[0].roleType 
+      : '';
+
+    switch (primaryRole) {
+      case 'super_admin':
+        return { bgcolor: '#ffebee', color: '#c62828' }; // Red
+      case 'internal_hr':
+        return { bgcolor: '#f3e5f5', color: '#7b1fa2' }; // Purple
+      case 'internal_finance':
+        return { bgcolor: '#fff3e0', color: '#e65100' }; // Orange
+      case 'internal_account_manager':
+        return { bgcolor: '#e8f5e9', color: '#2e7d32' }; // Green
+      case 'internal_recruiter':
+        return { bgcolor: '#e3f2fd', color: '#1565c0' }; // Blue
+      case 'internal_marketing':
+        return { bgcolor: '#fce4ec', color: '#c2185b' }; // Pink
+      case 'internal_member':
+        return { bgcolor: '#f5f5f5', color: '#616161' }; // Gray
+      default:
+        return { bgcolor: '#e0e0e0', color: '#424242' }; // Default gray
+    }
+  };
+
+  const getRoleOrder = (user: User): number => {
+    const userRoles = (user as any).userRoles;
+    const primaryRole = userRoles && userRoles.length > 0 
+      ? userRoles[0].roleType 
+      : '';
+
+    switch (primaryRole) {
+      case 'super_admin':
+        return 1;
+      case 'internal_hr':
+        return 2;
+      case 'internal_finance':
+        return 3;
+      case 'internal_account_manager':
+        return 4;
+      case 'internal_recruiter':
+        return 5;
+      case 'internal_marketing':
+        return 6;
+      case 'internal_member':
+        return 7;
+      default:
+        return 999;
+    }
   };
 
   return (
@@ -322,7 +380,7 @@ const InternalUsersPage: React.FC = () => {
                     <Chip
                       label={getRoleDisplay(user)}
                       size="small"
-                      sx={{ bgcolor: '#e3f2fd', color: '#1976d2' }}
+                      sx={getRoleColor(user)}
                     />
                   </TableCell>
                   <TableCell onClick={() => handleUserClick(user)} sx={{ width: '12%' }}>

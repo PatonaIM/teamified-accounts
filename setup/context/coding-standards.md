@@ -1,7 +1,7 @@
 # Coding Standards
 
 ## Overview
-This document defines the coding standards and best practices for the Teamified EOR Portal project, covering both backend (NestJS) and frontend (React) development.
+This document defines the coding standards and best practices for the Teamified Accounts project, covering both backend (NestJS) and frontend (React) development.
 
 ## Backend Standards (NestJS)
 

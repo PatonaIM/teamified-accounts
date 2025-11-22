@@ -7,6 +7,7 @@ import type { ThemeMode } from '../theme/themeConfig';
 import { createAppTheme } from '../theme/themeConfig';
 import { themesApi } from '../api/themes';
 import type { UserTheme, ThemeConfig } from '../api/themes';
+import { themePreferenceService } from '../services/themePreferenceService';
 
 interface ThemeContextType {
   currentTheme: ThemeMode | 'custom';
@@ -19,8 +20,26 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = 'teamified_theme';
-const CUSTOM_THEME_STORAGE_KEY = 'teamified_custom_theme';
+const THEME_STORAGE_KEY = 'teamified_theme_auth';
+const CUSTOM_THEME_STORAGE_KEY = 'teamified_custom_theme_auth';
+
+// Public routes that should always use light mode
+const PUBLIC_LIGHT_MODE_ROUTES = [
+  '/login',
+  '/docs',
+  '/test',
+  '/signup-select',
+  '/signup-candidate',
+  '/signup-client-admin',
+  '/reset-password',
+  '/verify-email',
+  '/invite',
+  '/invitations',
+];
+
+const isPublicLightModeRoute = (pathname: string): boolean => {
+  return PUBLIC_LIGHT_MODE_ROUTES.some(route => pathname.startsWith(route));
+};
 
 const getStoredTheme = (): ThemeMode | 'custom' => {
   if (typeof window === 'undefined') {
@@ -28,7 +47,13 @@ const getStoredTheme = (): ThemeMode | 'custom' => {
   }
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return (stored as ThemeMode | 'custom') || 'teamified';
+    if (stored) {
+      return stored as ThemeMode | 'custom';
+    }
+    
+    // If no theme is stored but user is authenticated, default to dark mode
+    const isAuth = !!localStorage.getItem('teamified_access_token');
+    return isAuth ? 'dark' : 'teamified';
   } catch {
     return 'teamified';
   }
@@ -55,6 +80,18 @@ const isUserAuthenticated = (): boolean => {
     return !!token;
   } catch {
     return false;
+  }
+};
+
+export const clearThemePreferences = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    localStorage.removeItem(CUSTOM_THEME_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear theme preferences:', error);
   }
 };
 
@@ -231,6 +268,42 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentTheme, setCurrentTheme] = useState<ThemeMode | 'custom'>(getStoredTheme());
   const [customTheme, setCustomTheme] = useState<UserTheme | null>(getStoredCustomTheme());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentPath, setCurrentPath] = useState(
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+
+  // Check if we're on a public route that requires light mode
+  const isPublicRoute = isPublicLightModeRoute(currentPath);
+
+  // Listen for route changes
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    // Listen for popstate (browser back/forward)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Listen for pushState/replaceState (programmatic navigation)
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+    
+    window.history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
+    
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      handleLocationChange();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, []);
 
   useEffect(() => {
     const authStatus = isUserAuthenticated();
@@ -240,34 +313,111 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const newAuthStatus = isUserAuthenticated();
       if (newAuthStatus !== isAuthenticated) {
         setIsAuthenticated(newAuthStatus);
+        
+        // If user logged out, clear theme preferences and reset to light mode
+        if (isAuthenticated && !newAuthStatus) {
+          clearThemePreferences();
+          setCurrentTheme('teamified');
+          setCustomTheme(null);
+        }
+        
+        // If user logged in, load their theme preference from backend
+        if (!isAuthenticated && newAuthStatus) {
+          loadUserThemePreference();
+        }
       }
     }, 1000);
 
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  const refreshActiveTheme = async () => {
+  // Load user's theme preference from backend on initial mount if authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isPublicRoute) {
+      loadUserThemePreference();
+    }
+  }, []);
+
+  const loadUserThemePreference = async () => {
     if (!isAuthenticated) {
       return;
     }
 
     try {
-      const activeTheme = await themesApi.getActiveTheme();
-      if (activeTheme) {
-        loadCustomTheme(activeTheme);
+      const preference = await themePreferenceService.loadThemePreference();
+      
+      if (preference) {
+        if (preference.themeMode === 'custom' && preference.customThemeId) {
+          try {
+            const customTheme = await themesApi.getThemeById(preference.customThemeId);
+            if (customTheme) {
+              setCustomTheme(customTheme);
+              setCurrentTheme('custom');
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(THEME_STORAGE_KEY, 'custom');
+                localStorage.setItem(CUSTOM_THEME_STORAGE_KEY, JSON.stringify(customTheme));
+              }
+            } else {
+              console.warn('Custom theme not found, falling back to teamified');
+              await clearStaleCustomThemePreference();
+              setCurrentTheme('teamified');
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(THEME_STORAGE_KEY, 'teamified');
+              }
+            }
+          } catch (error: any) {
+            const is404or403 = error?.response?.status === 404 || error?.response?.status === 403;
+            if (is404or403) {
+              console.warn('Custom theme not found or not accessible (ownership check failed), clearing stale preference');
+              await clearStaleCustomThemePreference();
+            } else {
+              console.error('Failed to load custom theme by ID:', error);
+            }
+            setCurrentTheme('teamified');
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(THEME_STORAGE_KEY, 'teamified');
+            }
+          }
+        } else if (preference.themeMode) {
+          setCurrentTheme(preference.themeMode);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(THEME_STORAGE_KEY, preference.themeMode as string);
+          }
+        }
       }
     } catch (error) {
-      console.error('Failed to load active theme:', error);
+      console.error('Failed to load user theme preference:', error);
     }
   };
 
+  const clearStaleCustomThemePreference = async () => {
+    try {
+      await themePreferenceService.saveThemePreference('teamified');
+    } catch (error) {
+      console.error('Failed to clear stale custom theme preference:', error);
+    }
+  };
+
+  const refreshActiveTheme = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    await loadUserThemePreference();
+  };
+
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isPublicRoute) {
       refreshActiveTheme();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isPublicRoute]);
 
   const setTheme = (theme: ThemeMode) => {
+    // Only save theme preferences if user is authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+    
     setCurrentTheme(theme);
     if (typeof window !== 'undefined') {
       try {
@@ -276,9 +426,18 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('Failed to save theme to localStorage:', error);
       }
     }
+    
+    themePreferenceService.saveThemePreference(theme as ThemeMode).catch(error => {
+      console.error('Failed to save theme preference to backend:', error);
+    });
   };
 
   const loadCustomTheme = (theme: UserTheme) => {
+    // Only save theme preferences if user is authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+    
     setCustomTheme(theme);
     setCurrentTheme('custom');
     if (typeof window !== 'undefined') {
@@ -289,13 +448,14 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('Failed to save custom theme to localStorage:', error);
       }
     }
+    
+    themePreferenceService.saveThemePreference('custom', theme.id).catch(error => {
+      console.error('Failed to save custom theme preference to backend:', error);
+    });
   };
 
   const clearCustomTheme = () => {
     setCustomTheme(null);
-    if (currentTheme === 'custom') {
-      setTheme('teamified');
-    }
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem(CUSTOM_THEME_STORAGE_KEY);
@@ -303,18 +463,28 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.error('Failed to clear custom theme from localStorage:', error);
       }
     }
+    
+    if (currentTheme === 'custom') {
+      setTheme('teamified');
+    }
   };
 
-  let theme = createAppTheme(currentTheme === 'custom' ? 'teamified' : currentTheme);
+  // Force light mode for public routes
+  let effectiveTheme: ThemeMode | 'custom' = currentTheme;
+  if (isPublicRoute || !isAuthenticated) {
+    effectiveTheme = 'teamified'; // Always use light mode for public routes
+  }
 
-  if (currentTheme === 'custom' && customTheme) {
+  let theme = createAppTheme(effectiveTheme === 'custom' ? 'teamified' : effectiveTheme);
+
+  if (effectiveTheme === 'custom' && customTheme && isAuthenticated && !isPublicRoute) {
     theme = applyCustomTheme(theme, customTheme.themeConfig);
   }
 
   return (
     <ThemeContext.Provider
       value={{
-        currentTheme,
+        currentTheme: effectiveTheme,
         setTheme,
         customTheme,
         loadCustomTheme,

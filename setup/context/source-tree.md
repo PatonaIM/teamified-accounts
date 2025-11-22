@@ -1,7 +1,7 @@
 # Source Tree Structure
 
 ## Overview
-This document outlines the complete source code structure of the Teamified EOR Portal project, including both backend (NestJS) and frontend (React) codebases.
+This document outlines the complete source code structure of the Teamified Accounts project, including both backend (NestJS) and frontend (React) codebases.
 
 ## Project Root Structure
 ```

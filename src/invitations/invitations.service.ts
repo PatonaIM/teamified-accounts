@@ -711,7 +711,7 @@ export class InvitationsService {
     
     const where: any = {};
     
-    // Apply tenant scoping for client roles
+    // Apply organization scoping for client roles
     if (!policy.canManageAll) {
       // Client roles can only see invitations for their organizations
       const memberships = await this.memberRepository.find({
@@ -1399,7 +1399,7 @@ This is an automated message from Teamified.
       throw new NotFoundException('Invitation not found');
     }
 
-    // Validate tenant access with revoke permission before allowing cancellation
+    // Validate organization access with revoke permission before allowing cancellation
     this.validateOrgAccess(invitation.organizationId, currentUser, 'revoke');
 
     if (invitation.status !== InvitationStatus.PENDING) {
