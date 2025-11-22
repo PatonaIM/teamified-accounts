@@ -827,6 +827,26 @@ const OrganizationManagementPage: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
                 <CircularProgress />
               </Box>
+            ) : sortedOrganizations.length === 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
+                <Business sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  No organizations found
+                </Typography>
+                {searchQuery.trim() ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No organizations match "{searchQuery}"
+                  </Typography>
+                ) : subscriptionTierFilter !== 'all' ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No {subscriptionTierFilter} tier organizations
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Create your first organization to get started
+                  </Typography>
+                )}
+              </Box>
             ) : (
               <List sx={{ py: 0 }}>
                 {sortedOrganizations.map((org) => (
