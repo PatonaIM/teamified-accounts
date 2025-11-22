@@ -25,9 +25,9 @@ export class ConvertCandidateDto {
   @IsDateString()
   @IsOptional()
   startDate?: string;
-
+  
   @ApiProperty({ 
-    description: 'Job title for the employee (legacy field for backward compatibility)',
+    description: 'Job title for the employee',
     example: 'Software Engineer', 
     required: false 
   })

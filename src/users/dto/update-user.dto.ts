@@ -14,15 +14,4 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
     message: 'Status must be one of: active, inactive, archived'
   })
   status?: 'active' | 'inactive' | 'archived';
-
-  @ApiPropertyOptional({
-    description: 'User theme preference',
-    enum: ['light', 'dark'],
-    example: 'dark'
-  })
-  @IsOptional()
-  @IsEnum(['light', 'dark'], {
-    message: 'Theme preference must be either light or dark'
-  })
-  themePreference?: 'light' | 'dark';
 }

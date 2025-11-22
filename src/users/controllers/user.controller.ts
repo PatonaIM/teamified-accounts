@@ -15,7 +15,6 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -34,7 +33,6 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
-import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
 @ApiTags('Users')
@@ -101,11 +99,22 @@ export class UserController {
     status: 401,
     description: 'Unauthorized',
   })
-  async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto }> {
+  async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto & { hasOnboardingRecord?: boolean; hasEmploymentRecord?: boolean } }> {
     console.log('getCurrentUser: JWT payload:', req.user);
     console.log('getCurrentUser: Looking up user with ID:', req.user.sub);
     const user = await this.userService.findOne(req.user.sub);
     console.log('getCurrentUser: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
+
+    // Check if user has any employment record with onboarding status
+    const hasOnboardingRecord = user.employmentRecords?.some(
+      record => record.status === 'onboarding'
+    ) || false;
+
+    // Check if user has any employment record (current or past) - for payroll tabs visibility
+    const hasEmploymentRecord = user.employmentRecords && user.employmentRecords.length > 0;
+
+    console.log('getCurrentUser: hasOnboardingRecord:', hasOnboardingRecord);
+    console.log('getCurrentUser: hasEmploymentRecord:', hasEmploymentRecord);
 
     // Manually add roles property to response (extracted from userRoles)
     const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
@@ -114,44 +123,9 @@ export class UserController {
       user: {
         ...user,
         roles,
+        hasOnboardingRecord,
+        hasEmploymentRecord
       }
-    };
-  }
-
-  @Patch('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update current user settings (e.g., theme preference)' })
-  @ApiResponse({
-    status: 200,
-    description: 'User settings updated successfully',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input data',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  async updateCurrentUser(
-    @CurrentUser() currentUser: User,
-    @Body() updateData: Partial<UpdateUserDto>,
-    @Request() req: any,
-  ): Promise<{ message: string; user: UserResponseDto }> {
-    const ip = req.ip || req.connection?.remoteAddress;
-    const userAgent = req.get('user-agent');
-
-    const updatedUser = await this.userService.update(currentUser.id, updateData);
-
-    // Manually add roles property to response
-    const roles = updatedUser.userRoles?.map(r => r.roleType).filter(Boolean) || [];
-
-    return {
-      message: 'User settings updated successfully',
-      user: {
-        ...updatedUser,
-        roles,
-      },
     };
   }
 
@@ -164,7 +138,7 @@ export class UserController {
     return { user };
   }
 
-  @Get(`:id(${UUID_PARAM_PATTERN})`)
+  @Get(':id')
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Get user by ID' })
@@ -174,36 +148,12 @@ export class UserController {
     type: UserResponseDto,
   })
   @ApiResponse({
-    status: 400,
-    description: 'Invalid UUID format',
-  })
-  @ApiResponse({
     status: 404,
     description: 'User not found',
   })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
+  async findOne(@Param('id') id: string): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.findOne(id);
     return { user };
-  }
-
-  @Get('me/profile')
-  @ApiOperation({ summary: 'Get current user profile data' })
-  @ApiResponse({
-    status: 200,
-    description: 'Profile data retrieved successfully',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized',
-  })
-  async getMyProfile(
-    @CurrentUser() user: User,
-  ): Promise<{ profileData: any }> {
-    const fullUser = await this.userService.findOne(user.id);
-    
-    return {
-      profileData: fullUser.profileData || {},
-    };
   }
 
   @Put('me/profile')
@@ -222,7 +172,7 @@ export class UserController {
   })
   async updateMyProfile(
     @CurrentUser() user: User,
-    @Body() profileData: { profileData: any },
+    @Body() profileData: { profileData: any; employmentRecordId?: string; clientId?: string },
     @Request() req: any,
   ): Promise<{ message: string; profileData: any }> {
     const ip = req.ip || req.connection?.remoteAddress;
@@ -232,6 +182,8 @@ export class UserController {
       user.id,
       profileData.profileData,
       {
+        employmentRecordId: profileData.employmentRecordId,
+        clientId: profileData.clientId,
         ip,
         userAgent,
       },
@@ -336,7 +288,7 @@ export class UserController {
     };
   }
 
-  @Get(`:id(${UUID_PARAM_PATTERN})/profile`)
+  @Get(':id/profile')
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Get user profile data by ID (Admin only)' })
@@ -348,14 +300,14 @@ export class UserController {
     status: 404,
     description: 'User not found',
   })
-  async getUserProfile(@Param('id', ParseUUIDPipe) id: string): Promise<{ profileData: any }> {
+  async getUserProfile(@Param('id') id: string): Promise<{ profileData: any }> {
     const user = await this.userService.findOne(id);
     return {
       profileData: user.profileData || {},
     };
   }
 
-  @Put(`:id(${UUID_PARAM_PATTERN})/profile`)
+  @Put(':id/profile')
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Update user profile data by ID (Admin only)' })
@@ -372,7 +324,7 @@ export class UserController {
     description: 'User not found',
   })
   async updateUserProfile(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() profileData: any,
     @Request() req: any,
   ): Promise<{ message: string; profileData: any }> {
@@ -383,6 +335,8 @@ export class UserController {
       id,
       profileData,
       {
+        employmentRecordId: profileData.employmentRecordId,
+        clientId: profileData.clientId,
         ip,
         userAgent,
       },
@@ -394,7 +348,7 @@ export class UserController {
     };
   }
 
-  @Patch(`:id(${UUID_PARAM_PATTERN})`)
+  @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Update user (partial update)' })
@@ -416,14 +370,14 @@ export class UserController {
     description: 'User with this email already exists',
   })
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.update(id, updateUserDto);
     return { user };
   }
 
-  @Put(`:id(${UUID_PARAM_PATTERN})`)
+  @Put(':id')
   @UseGuards(RolesGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Update user (full update)' })
@@ -445,14 +399,14 @@ export class UserController {
     description: 'User with this email already exists',
   })
   async fullUpdate(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.update(id, updateUserDto);
     return { user };
   }
 
-  @Delete(`:id(${UUID_PARAM_PATTERN})`)
+  @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -465,11 +419,11 @@ export class UserController {
     status: 404,
     description: 'User not found',
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async remove(@Param('id') id: string): Promise<void> {
     await this.userService.remove(id);
   }
 
-  @Patch(`:id(${UUID_PARAM_PATTERN})/status`)
+  @Patch(':id/status')
   @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Update user status' })
@@ -487,14 +441,14 @@ export class UserController {
     description: 'User not found',
   })
   async updateStatus(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() body: { status: 'active' | 'inactive' | 'archived' },
   ): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.updateStatus(id, body.status);
     return { user };
   }
 
-  @Patch(`:id(${UUID_PARAM_PATTERN})/verify-email`)
+  @Patch(':id/verify-email')
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Mark user email as verified (Admin/HR only)' })
@@ -508,7 +462,7 @@ export class UserController {
     description: 'User not found',
   })
   async verifyUserEmail(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
   ): Promise<{ user: UserResponseDto; message: string }> {
     const user = await this.userService.markEmailVerified(id);
     return {

@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { CountryProvider } from './contexts/CountryContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
+import { ClientProvider } from './contexts/ClientContext';
 import LoginPageMUI from './pages/LoginPageMUI';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -13,16 +15,18 @@ import CandidateSignupPage from './pages/CandidateSignupPage';
 import ClientAdminSignupPage from './pages/ClientAdminSignupPage';
 import InvitationPreviewPage from './pages/InvitationPreviewPage';
 import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
+import ClientInvitationManagementPage from './pages/ClientInvitationManagementPage';
 import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
 import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
 import DocsPage from './pages/DocsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
-import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
+import MultitenancyIntegrationPage from './pages/docs/MultitenancyIntegrationPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import InternalUsersPage from './pages/InternalUsersPage';
 import UserDetailPage from './pages/UserDetailPage';
-import OrganizationManagementPage from './pages/OrganizationManagementPage';
+import TenantManagementPage from './pages/TenantManagementPage';
+import CandidateUsersPage from './pages/CandidateUsersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import MyOrganizationPage from './pages/MyOrganizationPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -38,9 +42,10 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <SnackbarProvider>
-          <Router>
+      <CountryProvider>
+        <ThemeProvider>
+          <SnackbarProvider>
+            <Router>
             <div className="App">
               <Routes>
                 <Route 
@@ -88,10 +93,22 @@ function App() {
                   element={<OrganizationInvitationAcceptPage />} 
                 />
                 <Route 
+                  path="/admin/invitations/client" 
+                  element={
+                    <ProtectedRoute>
+                      <ClientProvider>
+                        <ClientInvitationManagementPage />
+                      </ClientProvider>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
                   path="/admin/invitations/internal" 
                   element={
                     <ProtectedRoute>
-                      <InternalTeamInvitationManagementPage />
+                      <ClientProvider>
+                        <InternalTeamInvitationManagementPage />
+                      </ClientProvider>
                     </ProtectedRoute>
                   } 
                 />
@@ -99,7 +116,9 @@ function App() {
                   path="/account" 
                   element={
                     <ProtectedRoute>
-                      <AccountLayout />
+                      <ClientProvider>
+                        <AccountLayout />
+                      </ClientProvider>
                     </ProtectedRoute>
                   }
                 >
@@ -116,7 +135,9 @@ function App() {
                   path="/admin" 
                   element={
                     <ProtectedRoute>
-                      <AccountLayout />
+                      <ClientProvider>
+                        <AccountLayout />
+                      </ClientProvider>
                     </ProtectedRoute>
                   }
                 >
@@ -145,6 +166,10 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="tools/tenant-management" 
+                    element={<Navigate to="/admin/organizations" replace />}
+                  />
+                  <Route 
                     path="audit-logs" 
                     element={
                       <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
@@ -153,17 +178,25 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="tools/candidate-users" 
+                    element={
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_hr', 'internal_account_manager', 'internal_recruiter']}>
+                        <CandidateUsersPage />
+                      </RoleBasedRoute>
+                    } 
+                  />
+                  <Route 
                     path="organizations" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
-                        <OrganizationManagementPage />
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
+                        <TenantManagementPage />
                       </RoleBasedRoute>
                     } 
                   />
                   <Route 
                     path="users" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
                         <UserManagement />
                       </RoleBasedRoute>
                     } 
@@ -171,7 +204,7 @@ function App() {
                   <Route 
                     path="users/:userId" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager', 'internal_hr']}>
                         <UserDetailPage />
                       </RoleBasedRoute>
                     } 
@@ -183,12 +216,12 @@ function App() {
                   element={<DocsPage />} 
                 />
                 <Route 
-                  path="/docs/sso-integration" 
+                  path="/docs/sso_integration" 
                   element={<SsoIntegrationPage />} 
                 />
                 <Route 
-                  path="/docs/multi-organization" 
-                  element={<MultiOrganizationIntegrationPage />} 
+                  path="/docs/multitenancy_integration" 
+                  element={<MultitenancyIntegrationPage />} 
                 />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
@@ -196,6 +229,7 @@ function App() {
           </Router>
         </SnackbarProvider>
       </ThemeProvider>
+      </CountryProvider>
     </AuthProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, Length, Matches, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, Matches, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ClientAdminSignupDto {
@@ -45,21 +45,6 @@ export class ClientAdminSignupDto {
   @IsNotEmpty({ message: 'Company name is required' })
   @MaxLength(255, { message: 'Company name must not exceed 255 characters' })
   companyName: string;
-
-  @ApiProperty({
-    example: 'acme-corp',
-    description: 'URL-friendly slug for the organization (lowercase, alphanumeric and hyphens only). If not provided, will be auto-generated from company name.',
-    required: false,
-    minLength: 2,
-    maxLength: 100
-  })
-  @IsString()
-  @IsOptional()
-  @Length(2, 100, { message: 'Slug must be between 2 and 100 characters' })
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-    message: 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)'
-  })
-  slug?: string;
 
   @ApiProperty({
     example: 'Technology',

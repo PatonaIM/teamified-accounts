@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SidebarMUI from './SidebarMUI';
+import ClientPicker from './ClientPicker';
 
 interface LayoutMUIProps {
   children: React.ReactNode;
@@ -89,6 +90,7 @@ const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
               <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
                 teamified
               </Typography>
+              <ClientPicker />
             </Toolbar>
           </AppBar>
         )}
@@ -107,6 +109,7 @@ const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
           >
             <Toolbar sx={{ minHeight: 64 }}>
               <Box sx={{ flexGrow: 1 }} />
+              <ClientPicker />
             </Toolbar>
           </AppBar>
         )}

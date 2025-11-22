@@ -145,46 +145,4 @@ export class SsoController {
   async token(@Body() tokenDto: TokenExchangeDto) {
     return await this.ssoService.exchangeToken(tokenDto);
   }
-
-  /**
-   * User Info Endpoint
-   * GET /api/v1/sso/me
-   * 
-   * Returns authenticated user information using the access token
-   * Used by SSO client apps to fetch user details after authentication
-   */
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  async getUserInfo(@Req() req: any) {
-    const userId = req.user.sub;
-    
-    // Return user information from JWT payload
-    return {
-      id: userId,
-      email: req.user.email,
-      firstName: req.user.firstName,
-      lastName: req.user.lastName,
-      roles: req.user.roles || [],
-    };
-  }
-
-  /**
-   * Clear SSO Session
-   * POST /api/v1/sso/clear-session
-   * 
-   * Clears the SSO authentication cookie for testing purposes
-   * Used by the SSO test application to reset authentication state
-   */
-  @Post('clear-session')
-  @HttpCode(HttpStatus.OK)
-  async clearSession(@Res() res: Response) {
-    // Clear the httpOnly cookie
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
-    
-    return res.json({ message: 'Session cleared successfully' });
-  }
 }

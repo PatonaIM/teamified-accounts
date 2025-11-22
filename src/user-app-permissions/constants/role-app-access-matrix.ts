@@ -80,7 +80,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     data_dashboard: { canAccess: true, scope: 'view_only', description: 'View all data for marketing insights' },
   },
 
-  // ===== Client Roles (Organization-Scoped) =====
+  // ===== Client Roles (Tenant-Scoped) =====
   client_admin: {
     candidate_portal: { canAccess: false },
     team_connect: { canAccess: true, scope: 'own_org', description: 'Access to own organization only' },

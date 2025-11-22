@@ -3,6 +3,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Button,
   FormControl,
   InputLabel,
@@ -14,8 +15,7 @@ import {
   Typography,
   TextField,
   IconButton,
-  Paper,
-  Divider,
+  InputAdornment,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
@@ -23,7 +23,6 @@ import {
   Close as CloseIcon,
   ContentCopy as CopyIcon,
   CheckCircle as CheckIcon,
-  Link as LinkIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -52,52 +51,29 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
   organizationId,
   organizationName,
 }) => {
-  const [email, setEmail] = useState('');
-  const [emailRoleType, setEmailRoleType] = useState('');
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailInvitationUrl, setEmailInvitationUrl] = useState<string | null>(null);
-  const [emailCopied, setEmailCopied] = useState(false);
+  const [roleType, setRoleType] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [invitationCreated, setInvitationCreated] = useState(false);
+  const [invitationLink, setInvitationLink] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  const [linkRoleType, setLinkRoleType] = useState('');
-  const [linkError, setLinkError] = useState<string | null>(null);
-  const [linkLoading, setLinkLoading] = useState(false);
-  const [shareableLink, setShareableLink] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
-
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const handleEmailSubmit = async () => {
-    setEmailError(null);
-
-    if (!email) {
-      setEmailError('Please enter an email address');
+  const handleSubmit = async () => {
+    if (!roleType) {
+      setError('Please select a role');
       return;
     }
 
-    if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
-      return;
-    }
-
-    if (!emailRoleType) {
-      setEmailError('Please select a role');
-      return;
-    }
-
-    setEmailLoading(true);
+    setIsLoading(true);
+    setError(null);
 
     try {
       const token = localStorage.getItem('teamified_access_token');
       const response = await axios.post(
         `${API_BASE_URL}/v1/invitations`,
         {
-          email,
           organizationId,
-          roleType: emailRoleType,
+          roleType,
           maxUses: 1,
         },
         {
@@ -110,85 +86,35 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
 
       const inviteCode = response.data.inviteCode;
       const link = `${window.location.origin}/invite/${inviteCode}`;
-      setEmailInvitationUrl(link);
+      setInvitationLink(link);
+      setInvitationCreated(true);
     } catch (err: any) {
       const errorMessage =
-        err.response?.data?.message || err.message || 'Failed to send invitation';
-      setEmailError(errorMessage);
+        err.response?.data?.message || err.message || 'Failed to create invitation';
+      setError(errorMessage);
     } finally {
-      setEmailLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleGenerateLink = async () => {
-    setLinkError(null);
-
-    if (!linkRoleType) {
-      setLinkError('Please select a role');
-      return;
-    }
-
-    setLinkLoading(true);
-
-    try {
-      const token = localStorage.getItem('teamified_access_token');
-      const response = await axios.post(
-        `${API_BASE_URL}/v1/invitations`,
-        {
-          organizationId,
-          roleType: linkRoleType,
-          maxUses: 1,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const inviteCode = response.data.inviteCode;
-      const link = `${window.location.origin}/invite/${inviteCode}`;
-      setShareableLink(link);
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || err.message || 'Failed to generate link';
-      setLinkError(errorMessage);
-    } finally {
-      setLinkLoading(false);
-    }
-  };
-
-  const handleCopyEmailLink = () => {
-    if (emailInvitationUrl) {
-      navigator.clipboard.writeText(emailInvitationUrl);
-      setEmailCopied(true);
-      setTimeout(() => setEmailCopied(false), 2000);
-    }
-  };
-
-  const handleCopyShareableLink = () => {
-    if (shareableLink) {
-      navigator.clipboard.writeText(shareableLink);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2000);
-    }
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(invitationLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleClose = () => {
-    if (emailInvitationUrl || shareableLink) {
-      onSuccess();
+    if (!isLoading) {
+      setRoleType('');
+      setError(null);
+      setInvitationCreated(false);
+      setInvitationLink('');
+      setCopied(false);
+      onClose();
+      if (invitationCreated) {
+        onSuccess();
+      }
     }
-    setEmail('');
-    setEmailRoleType('');
-    setEmailError(null);
-    setEmailInvitationUrl(null);
-    setEmailCopied(false);
-    setLinkRoleType('');
-    setLinkError(null);
-    setShareableLink(null);
-    setLinkCopied(false);
-    onClose();
   };
 
   return (
@@ -220,13 +146,17 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
             <PersonAddIcon sx={{ color: 'primary.main', fontSize: 32 }} />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                Invite User to {organizationName}
+                Invite User to Organization
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {organizationName}
               </Typography>
             </Box>
           </Box>
           <IconButton
             onClick={handleClose}
             sx={{ minWidth: 'auto', p: 1, color: 'text.secondary' }}
+            disabled={isLoading}
           >
             <CloseIcon />
           </IconButton>
@@ -234,240 +164,114 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
       </DialogTitle>
 
       <DialogContent sx={{ p: 4, pt: 4 }}>
-        <Box>
-          {/* Section 1: Send Email Invitation */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-              Send Email Invitation
-            </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-            {emailInvitationUrl ? (
-              <Box>
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    ✓ Invitation email sent to {email}
-                  </Typography>
-                  <Typography variant="caption">
-                    Assigned role: <strong>{clientRoles.find(r => r.value === emailRoleType)?.label}</strong> • Expires in 7 days
-                  </Typography>
-                </Alert>
+        {!invitationCreated ? (
+          <>
+            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+              <Typography variant="body2">
+                Create an invitation link for a user to join this organization. The user account
+                will be created when they accept the invitation.
+              </Typography>
+            </Alert>
 
-                <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary' }}>
-                  You can also share this link manually:
-                </Typography>
-                
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 1.5,
-                    bgcolor: 'grey.100',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    mb: 1,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        flex: 1,
-                        wordBreak: 'break-all',
-                        fontFamily: 'monospace',
-                        fontSize: '0.85rem',
-                        color: '#1a1a1a',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {emailInvitationUrl}
-                    </Typography>
-                    <IconButton
-                      onClick={handleCopyEmailLink}
-                      color={emailCopied ? 'success' : 'primary'}
-                      size="small"
-                    >
-                      {emailCopied ? <CheckIcon /> : <CopyIcon />}
+            <FormControl fullWidth>
+              <InputLabel id="role-select-label">User Role *</InputLabel>
+              <Select
+                labelId="role-select-label"
+                value={roleType}
+                onChange={(e) => {
+                  setRoleType(e.target.value);
+                  setError(null);
+                }}
+                label="User Role *"
+                disabled={isLoading}
+              >
+                {clientRoles.map((role) => (
+                  <MenuItem key={role.value} value={role.value}>
+                    <Box>
+                      <Typography variant="body1">{role.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {role.description}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </>
+        ) : (
+          <>
+            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Invitation created successfully!
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Share this link with the person you want to invite. They will create their account
+                when accepting the invitation.
+              </Typography>
+            </Alert>
+
+            <TextField
+              fullWidth
+              label="Invitation Link"
+              value={invitationLink}
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleCopyLink} edge="end" color="primary">
+                      {copied ? <CheckIcon /> : <CopyIcon />}
                     </IconButton>
-                  </Box>
-                </Paper>
-              </Box>
-            ) : (
-              <Box>
-                {emailError && (
-                  <Alert severity="error" sx={{ mb: 2 }} onClose={() => setEmailError(null)}>
-                    {emailError}
-                  </Alert>
-                )}
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 2 }}
+            />
 
-                <TextField
-                  fullWidth
-                  label="Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@example.com"
-                  sx={{ mb: 2 }}
-                  error={email.length > 0 && !validateEmail(email)}
-                  helperText={email.length > 0 && !validateEmail(email) ? 'Please enter a valid email' : ''}
-                  disabled={emailLoading}
-                />
-
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel>Role</InputLabel>
-                  <Select
-                    value={emailRoleType}
-                    label="Role"
-                    onChange={(e) => setEmailRoleType(e.target.value)}
-                    disabled={emailLoading}
-                  >
-                    {clientRoles.map((role) => (
-                      <MenuItem key={role.value} value={role.value}>
-                        <Box>
-                          <Typography variant="body1">{role.label}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {role.description}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <Button
-                  variant="contained"
-                  onClick={handleEmailSubmit}
-                  disabled={!email || !emailRoleType || emailLoading || (email.length > 0 && !validateEmail(email))}
-                  startIcon={emailLoading ? <CircularProgress size={20} color="inherit" /> : null}
-                  fullWidth
-                  sx={{
-                    bgcolor: '#4CAF50',
-                    '&:hover': {
-                      bgcolor: '#45a049',
-                    },
-                  }}
-                >
-                  {emailLoading ? 'Sending...' : 'Send Invitation'}
-                </Button>
-              </Box>
-            )}
-          </Box>
-
-          <Divider sx={{ my: 3 }} />
-
-          {/* Section 2: Generate Shareable Link */}
-          <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Invite Using a Shareable Link
+            <Typography variant="caption" color="text.secondary">
+              This link can be used once and will expire in 7 days.
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Anyone with the link can join this organization. Select a role first.
-            </Typography>
-
-            {linkError && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setLinkError(null)}>
-                {linkError}
-              </Alert>
-            )}
-
-            {shareableLink ? (
-              <Box>
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    ✓ Shareable link generated
-                  </Typography>
-                  <Typography variant="caption">
-                    Single-use • Expires in 7 days • Assigns <strong>{clientRoles.find(r => r.value === linkRoleType)?.label}</strong> role
-                  </Typography>
-                </Alert>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 2,
-                    bgcolor: '#e8f5e9',
-                    border: '1px solid',
-                    borderColor: '#4CAF50',
-                    borderRadius: 1,
-                    mb: 2,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        flex: 1,
-                        wordBreak: 'break-all',
-                        fontFamily: 'monospace',
-                        fontSize: '0.85rem',
-                        color: '#1a1a1a',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {shareableLink}
-                    </Typography>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={linkCopied ? <CheckIcon /> : <CopyIcon />}
-                    onClick={handleCopyShareableLink}
-                    color={linkCopied ? 'success' : 'primary'}
-                    fullWidth
-                    sx={{
-                      bgcolor: linkCopied ? '#4CAF50' : '#2196F3',
-                      '&:hover': {
-                        bgcolor: linkCopied ? '#45a049' : '#1976D2',
-                      },
-                    }}
-                  >
-                    {linkCopied ? 'Copied!' : 'Copy Link'}
-                  </Button>
-                </Paper>
-              </Box>
-            ) : (
-              <Box>
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel>Role</InputLabel>
-                  <Select
-                    value={linkRoleType}
-                    label="Role"
-                    onChange={(e) => setLinkRoleType(e.target.value)}
-                    disabled={linkLoading}
-                  >
-                    {clientRoles.map((role) => (
-                      <MenuItem key={role.value} value={role.value}>
-                        <Box>
-                          <Typography variant="body1">{role.label}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {role.description}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <Button
-                  variant="outlined"
-                  onClick={handleGenerateLink}
-                  disabled={!linkRoleType || linkLoading}
-                  startIcon={linkLoading ? <CircularProgress size={20} /> : <LinkIcon />}
-                  fullWidth
-                  sx={{
-                    borderColor: '#2196F3',
-                    color: '#2196F3',
-                    '&:hover': {
-                      borderColor: '#1976D2',
-                      bgcolor: 'rgba(33, 150, 243, 0.04)',
-                    },
-                  }}
-                >
-                  {linkLoading ? 'Generating...' : 'Copy Invitation Link'}
-                </Button>
-              </Box>
-            )}
-          </Box>
-        </Box>
+          </>
+        )}
       </DialogContent>
+
+      <DialogActions sx={{ px: 4, pb: 3 }}>
+        {!invitationCreated ? (
+          <>
+            <Button onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={!roleType || isLoading}
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                bgcolor: '#4CAF50',
+                '&:hover': { bgcolor: '#45a049' },
+              }}
+            >
+              {isLoading ? 'Creating...' : 'Create Invitation'}
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={handleClose}
+            sx={{
+              bgcolor: '#4CAF50',
+              '&:hover': { bgcolor: '#45a049' },
+            }}
+          >
+            Done
+          </Button>
+        )}
+      </DialogActions>
     </Dialog>
   );
 };

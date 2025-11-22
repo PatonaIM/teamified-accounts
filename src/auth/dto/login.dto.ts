@@ -32,8 +32,6 @@ export class LoginResponseDto {
     lastName: string;
     isActive: boolean;
     emailVerified: boolean;
-    roles: string[];
-    themePreference?: 'light' | 'dark' | 'teamified' | 'custom';
   };
 }
 
@@ -57,45 +55,24 @@ export class LogoutResponseDto {
 }
 
 export class UserProfileDto {
-  @ApiProperty({ description: 'User unique identifier' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ description: 'User email address' })
+  @ApiProperty()
   email: string;
 
-  @ApiProperty({ description: 'User first name' })
+  @ApiProperty()
   firstName: string;
 
-  @ApiProperty({ description: 'User last name' })
+  @ApiProperty()
   lastName: string;
 
-  @ApiProperty({ description: 'User phone number', required: false })
-  phone: string | null;
-
-  @ApiProperty({ description: 'User account status', enum: ['active', 'inactive', 'archived', 'invited'] })
-  status: string;
-
-  @ApiProperty({ description: 'Whether the user account is active' })
+  @ApiProperty()
   isActive: boolean;
 
-  @ApiProperty({ description: 'Whether the user email is verified' })
+  @ApiProperty()
   emailVerified: boolean;
 
-  @ApiProperty({ type: [String], description: 'User roles (e.g., super_admin, admin, hr, etc.)' })
+  @ApiProperty({ type: [String], description: 'User roles' })
   roles: string[];
-
-  @ApiProperty({ description: 'User theme preference', enum: ['light', 'dark'], required: false })
-  themePreference: 'light' | 'dark' | null;
-
-  @ApiProperty({ description: 'Profile picture URL', required: false })
-  profilePictureUrl: string | null;
-
-  @ApiProperty({ description: 'Account creation timestamp' })
-  createdAt: Date;
-
-  @ApiProperty({ description: 'Last account update timestamp' })
-  updatedAt: Date;
-
-  @ApiProperty({ description: 'Last login timestamp', required: false })
-  lastLoginAt: Date | null;
 }

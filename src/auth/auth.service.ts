@@ -344,10 +344,9 @@ This is an automated message from Teamified.
   ): Promise<LoginResponseDto> {
     const { email, password } = loginDto;
 
-    // Find user by email with roles
+    // Find user by email
     const user = await this.userRepository.findOne({
       where: { email, isActive: true },
-      relations: ['userRoles'],
     });
 
     if (!user) {
@@ -420,12 +419,6 @@ This is an automated message from Teamified.
       userAgent,
     });
 
-    // Extract roles from userRoles relation
-    const roles = user.userRoles?.map(userRole => userRole.roleType) || [];
-
-    // Extract theme preference from profileData if available
-    const themePreference = user.profileData?.themePreference?.themeMode || 'light';
-
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -436,8 +429,6 @@ This is an automated message from Teamified.
         lastName: user.lastName,
         isActive: user.isActive,
         emailVerified: user.emailVerified,
-        roles: roles,
-        themePreference: themePreference,
       },
     };
   }
@@ -544,24 +535,14 @@ This is an automated message from Teamified.
     // Extract roles from userRoles relation
     const roles = user.userRoles?.map(userRole => userRole.roleType) || [];
 
-    // Extract profile picture URL from profileData JSONB
-    const profilePictureUrl = user.profileData?.profilePictureUrl || null;
-
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      phone: user.phone,
-      status: user.status,
       isActive: user.isActive,
       emailVerified: user.emailVerified,
       roles,
-      themePreference: user.themePreference,
-      profilePictureUrl,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      lastLoginAt: user.lastLoginAt,
     };
   }
 
@@ -850,17 +831,6 @@ This is an automated message from Teamified.
   }
 
   /**
-   * Normalize slug: trim whitespace, convert to lowercase, collapse consecutive hyphens, remove trailing/leading hyphens
-   */
-  private normalizeSlug(slug: string): string {
-    return slug
-      .trim()
-      .toLowerCase()
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-
-  /**
    * Generate a unique slug from company name
    */
   private async generateUniqueSlug(companyName: string): Promise<string> {
@@ -870,7 +840,6 @@ This is an automated message from Teamified.
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim()
-      .replace(/^-+|-+$/g, '')
       .substring(0, 50);
 
     if (!baseSlug) {
@@ -896,7 +865,7 @@ This is an automated message from Teamified.
     ip?: string,
     userAgent?: string,
   ): Promise<ClientAdminSignupResponseDto> {
-    const { email, password, firstName, lastName, companyName, slug: providedSlug, industry, companySize } = signupDto;
+    const { email, password, firstName, lastName, companyName, industry, companySize } = signupDto;
 
     const existingUser = await this.userRepository.findOne({
       where: { email },
@@ -914,23 +883,8 @@ This is an automated message from Teamified.
       });
     }
 
-    let slug: string;
-    
-    if (providedSlug) {
-      slug = this.normalizeSlug(providedSlug);
-      
-      const existingOrg = await this.organizationRepository.findOne({
-        where: { slug },
-      });
-      
-      if (existingOrg) {
-        throw new ConflictException(`Organization slug '${slug}' is already taken. Please choose a different slug.`);
-      }
-    } else {
-      slug = await this.generateUniqueSlug(companyName);
-    }
-
     const hashedPassword = await this.passwordService.hashPassword(password);
+    const slug = await this.generateUniqueSlug(companyName);
 
     const user = this.userRepository.create({
       email,

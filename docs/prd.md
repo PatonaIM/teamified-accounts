@@ -4,7 +4,7 @@
 
 ### Goals
 - **Streamline User Lifecycle Management** - Enable seamless transitions from candidate to EOR to candidate with proper data tracking
-- **Enable Multi-Organization Client Management** - Allow clients to manage their team members while maintaining data isolation
+- **Enable Multi-Tenant Client Management** - Allow clients to manage their team members while maintaining data isolation
 - **Provide Comprehensive Employment Tracking** - Track employment records, salary history, and role assignments with full audit trails
 - **Support Efficient Bulk Operations** - Enable administrators to perform mass operations on users, roles, and employment records
 - **Ensure Data Integrity and Compliance** - Maintain complete audit trails and prevent data conflicts through validation
@@ -78,7 +78,7 @@ This addresses critical business needs for data consistency, operational efficie
 
 ### Overall UX Vision
 
-The user management system will provide a clean, intuitive interface that adapts to different user roles while maintaining consistency across all interactions. The design will prioritize data clarity, efficient workflows, and accessibility, ensuring that complex employment relationships and multi-organization data are presented in an understandable and actionable format.
+The user management system will provide a clean, intuitive interface that adapts to different user roles while maintaining consistency across all interactions. The design will prioritize data clarity, efficient workflows, and accessibility, ensuring that complex employment relationships and multi-tenant data are presented in an understandable and actionable format.
 
 ### Key Interaction Paradigms
 

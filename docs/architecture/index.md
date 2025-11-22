@@ -1,14 +1,14 @@
-# Full‑Stack Architecture — Teamified Accounts
+# Full‑Stack Architecture — Teamified EOR Portal (v1 patched)
 
 ## Table of Contents
 
-- [Full‑Stack Architecture — Teamified Accounts](#table-of-contents)
+- [Full‑Stack Architecture — Teamified EOR Portal (v1 patched)](#table-of-contents)
   - [0) Executive Summary & Key Decisions](./0-executive-summary-key-decisions.md)
   - [1) NFRs & Constraints](./1-nfrs-constraints.md)
   - [2) System Context](./2-system-context.md)
   - [3) High‑Level Architecture](./3-highlevel-architecture.md)
   - [4) Domain Model](./4-domain-model.md)
-  - [5) Organization Management, RBAC & Authorization](./5-tenancy-rbac-authorization.md)
+  - [5) Tenancy, RBAC & Authorization](./5-tenancy-rbac-authorization.md)
   - [6) API Design (REST v1)](./6-api-design-rest-v1.md)
   - [7) Authentication & Sessions](./7-authentication-sessions.md)
   - [8) Documents & Storage](./8-documents-storage.md)

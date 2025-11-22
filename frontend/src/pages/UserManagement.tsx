@@ -25,6 +25,7 @@ import InvitationFormModal from '../components/invitations/InvitationFormModal';
 import InvitationStatistics from '../components/invitations/InvitationStatistics';
 import InvitationFilters, { type InvitationFilterState } from '../components/invitations/InvitationFilters';
 import InvitationList from '../components/InvitationList';
+import { useClient } from '../contexts/ClientContext';
 
 const StyledTab = styled(Tab)(({ theme }) => ({
   minHeight: 48,
@@ -61,6 +62,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const UserManagement: React.FC = () => {
+  const { selectedClient } = useClient();
   const [activeTab, setActiveTab] = useState(0);
   
   // Users tab state
@@ -105,6 +107,7 @@ const UserManagement: React.FC = () => {
         limit: 20,
         search: searchQuery || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
+        clientId: selectedClient?.id,
         ...params,
       };
 
@@ -120,8 +123,12 @@ const UserManagement: React.FC = () => {
   };
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedClient]);
+
+  useEffect(() => {
     loadUsers();
-  }, [currentPage, searchQuery, statusFilter]);
+  }, [currentPage, searchQuery, statusFilter, selectedClient]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

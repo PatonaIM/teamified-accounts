@@ -12,6 +12,8 @@ import { UserRolesModule } from './user-roles/user-roles.module';
 import { UsersModule } from './users/users.module';
 import { SeedModule } from './seed/seed.module';
 import { AppController } from './app.controller';
+import { QueueModule } from './queue/queue.module';
+import { ClientsModule } from './clients/clients.module';
 import { OAuthClientsModule } from './oauth-clients/oauth-clients.module';
 import { SsoModule } from './sso/sso.module';
 import { BlobStorageModule } from './blob-storage/blob-storage.module';
@@ -50,6 +52,7 @@ import { UserAppPermissionsModule } from './user-app-permissions/user-app-permis
         }
       ],
     }),
+    QueueModule,
     AuthModule,
     AuditModule,
     AuditControllerModule,
@@ -58,6 +61,7 @@ import { UserAppPermissionsModule } from './user-app-permissions/user-app-permis
     UserRolesModule,
     UsersModule,
     SeedModule,
+    ClientsModule,
     OAuthClientsModule,
     SsoModule,
     BlobStorageModule,

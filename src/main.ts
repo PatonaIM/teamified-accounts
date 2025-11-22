@@ -63,17 +63,60 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
 
-    // Enable CORS - Allow all origins (CORS policy disabled)
+    // Enable CORS for Replit and development
     logger.log('Configuring CORS...');
+    const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+    const isReplitProduction = process.env.REPLIT_ENVIRONMENT === 'production';
     
+    const allowedOrigins = [
+      'http://localhost',
+      'http://127.0.0.1',
+    ];
+
+    if (replitDomain) {
+      allowedOrigins.push(`https://${replitDomain}`);
+    }
+
+    if (process.env.FRONTEND_URL) {
+      allowedOrigins.push(process.env.FRONTEND_URL);
+    }
+
     app.enableCors({
-      origin: true, // Allow all origins
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin) {
+          return callback(null, true);
+        }
+
+        // Allow all localhost origins (any port)
+        if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+          return callback(null, true);
+        }
+
+        // In Replit, allow all *.replit.dev and *.replit.app domains for SSO
+        if (origin.match(/^https:\/\/.*\.replit\.(dev|app)$/)) {
+          return callback(null, true);
+        }
+
+        // Check against allowed origins list
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        // Log rejected origins for debugging
+        logger.warn(`CORS rejected origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      },
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
       credentials: true,
     });
     
-    logger.log('✅ CORS configured to allow ALL origins (CORS policy disabled)');
+    if (isReplitProduction) {
+      logger.log(`✅ CORS configured for Replit production: allowing all *.replit.dev and *.replit.app domains + specific origins: ${allowedOrigins.join(', ')}`);
+    } else {
+      logger.log(`✅ CORS configured to allow all localhost ports, *.replit.dev, and *.replit.app domains. Specific origins: ${allowedOrigins.join(', ')}`);
+    }
 
     // Global validation pipe
     logger.log('Setting up validation pipe...');
@@ -103,47 +146,59 @@ async function bootstrap() {
     app.use(cookieParser());
     logger.log('✅ Cookie parser configured');
 
-    // Serve static frontend files in both development and production
-    logger.log('Setting up static file serving...');
-    const expressApp = app.getHttpAdapter().getInstance();
-    
-    // Frontend files are in dist/public (copied during build process)
-    const frontendPath = path.join(__dirname, 'public');
-    
-    logger.log(`Attempting to serve frontend from: ${frontendPath}`);
-    
-    // Serve static assets with proper cache headers
-    expressApp.use(express.static(frontendPath, {
-      maxAge: '1d',
-      etag: true,
-      lastModified: true,
-      index: false, // Don't serve index.html automatically
-    }));
-    
-    logger.log(`✅ Static assets middleware configured for: ${frontendPath}`);
+    // Serve static frontend files in production
+    const isProduction = configService.get('NODE_ENV') === 'production';
+    if (isProduction) {
+      logger.log('Setting up static file serving for production...');
+      const expressApp = app.getHttpAdapter().getInstance();
+      const frontendPath = path.join(__dirname, '..', 'frontend', 'dist');
+      
+      // Serve static assets
+      expressApp.use(express.static(frontendPath));
+      
+      // Handle SPA routing - serve index.html for all non-API routes
+      expressApp.get('*', (req: Request, res: Response) => {
+        if (!req.url.startsWith('/api')) {
+          res.sendFile(path.join(frontendPath, 'index.html'));
+        }
+      });
+      
+      logger.log(`✅ Static files configured to serve from: ${frontendPath}`);
+    }
 
     // Swagger documentation - Always enabled, but protected by JWT
     logger.log('Setting up Swagger documentation...');
     const config = new DocumentBuilder()
-      .setTitle('Teamified Accounts API')
+      .setTitle('Teamified EOR Portal API')
       .setDescription(`
-        # Teamified Accounts API Documentation
+        # Teamified EOR Portal API Documentation
         
-        This API provides comprehensive endpoints for SSO authentication, user management, multi-organization support, and access control for the Teamified Accounts platform.
+        This API provides comprehensive endpoints for managing employment records, user profiles, invitations, document management, and salary history for the Teamified EOR Portal.
         
         ## Key Capabilities
         
         ### 🔐 Core Platform
         - **Authentication & Authorization** - JWT-based authentication with role-based access control (RBAC)
         - **OAuth 2.0 SSO Provider** - Federated authentication for third-party applications
-        - **Multi-Organization Architecture** - Client scoping with granular permission management
+        - **Multi-Tenant Architecture** - Client scoping with granular permission management
         - **Audit Trail** - Comprehensive logging of all critical operations for compliance
         
-        ### 👥 User Operations
+        ### 👥 HR Operations
         - **User Management** - Complete profile management with data validation
         - **Invitation System** - Email-based invitations with role assignment
         - **Document Management** - Upload, versioning, secure download, and verification workflows
         - **Hiring Module** - Job requests, interview scheduling with calendar view, talent pool tracking
+        
+        ### 💰 Payroll & Finance
+        - **Multi-Country Payroll** - Automated processing for India (IN), Philippines (PH), Australia (AU)
+        - **Tax Compliance** - Region-specific tax calculations and statutory components
+        - **Salary History** - Immutable tracking with audit trails and scheduled changes
+        - **Payslip Generation** - Automated creation with earnings, deductions, and contributions breakdown
+        - **Contribution Tracking** - Year-to-date summaries and compliance reporting
+        
+        ### ⏱️ Time & Leave
+        - **Timesheets** - Submission, approval workflows, and payroll integration
+        - **Leave Management** - Requests, balance tracking, approvals, and payroll impact calculation
         
         ### 🎨 Developer Experience
         - **API Key Management** - Programmatic access with read-only/full-access permissions (10 keys max)
@@ -174,7 +229,7 @@ async function bootstrap() {
         - \`POST /api/v1/sso/token\` - Token exchange endpoint for OAuth flow
         
         ### Protected Endpoints
-        All other endpoints require a valid JWT access token in the Authorization header. Protected endpoints include user management, organization management, invitations, audit logs, and administrative functions.
+        All other endpoints require a valid JWT access token in the Authorization header. Protected endpoints include user management, payroll, timesheets, leave requests, hiring, documents, and administrative functions.
         
         ## Rate Limiting
         Authentication endpoints are rate-limited to prevent abuse. Please respect the rate limits and implement appropriate retry logic.
@@ -202,38 +257,30 @@ async function bootstrap() {
       .addTag('authentication', 'Authentication and user management endpoints')
       .addTag('users', 'User profile and management endpoints')
       .addTag('invitations', 'Invitation management endpoints')
+      .addTag('documents', 'Document and CV management endpoints')
+      .addTag('salary-history', 'Salary history management endpoints')
       .addTag('health', 'Health check and monitoring endpoints')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
     
     // Create custom Swagger UI endpoint to avoid asset loading issues
-    // expressApp already declared above for static file serving
+    const expressApp = app.getHttpAdapter().getInstance();
     const jwtService = app.get(JwtService);
     
     // JWT authentication middleware for Swagger endpoints
-    // Supports both Authorization header (for API calls) and httpOnly cookies (for browser access)
     const swaggerAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
       try {
-        // Extract token from Authorization header or cookie
-        let token: string | undefined;
         const authHeader = req.headers.authorization;
-        
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-          token = authHeader.substring(7);
-        } else if (req.cookies?.access_token) {
-          // Fallback to cookie for browser-based access
-          token = req.cookies.access_token;
-        }
-
-        if (!token) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
           return res.status(401).json({ message: 'Authentication required to access API documentation' });
         }
 
+        const token = authHeader.substring(7);
         const payload = await jwtService.verifyAsync(token);
         
-        // Check if user has admin or super_admin role
-        if (!payload.roles || (!payload.roles.includes('admin') && !payload.roles.includes('super_admin'))) {
+        // Check if user has admin role
+        if (!payload.roles || !payload.roles.includes('admin')) {
           return res.status(403).json({ message: 'Admin access required to view API documentation' });
         }
         
@@ -254,7 +301,7 @@ async function bootstrap() {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Teamified Accounts API Documentation</title>
+  <title>Teamified EOR Portal API Documentation</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
   <link rel="icon" href="/favicon.ico" />
   <style>
@@ -311,37 +358,19 @@ async function bootstrap() {
 
       logger.log('✅ Swagger documentation configured at: /api/docs (admin-only access)');
 
-    // SPA fallback route - must be registered AFTER all API routes
-    // This catches all non-API routes and serves the SPA index.html
-    // expressApp and frontendPath already declared above
-    expressApp.get('*', (req: Request, res: Response) => {
-      // Serve index.html for all routes (SPA will handle routing)
-      const indexPath = path.join(frontendPath, 'index.html');
-      res.sendFile(indexPath, (err) => {
-        if (err) {
-          logger.error(`Failed to serve index.html from ${indexPath}:`, err);
-          res.status(404).send('Frontend not found. Please run "npm run build:all" to build the frontend.');
-        }
-      });
-    });
-    logger.log('✅ SPA fallback route configured');
-
     const port = configService.get('PORT', 3000);
     const host = configService.get('HOST', '0.0.0.0');
     
-    // Check if running in Vercel serverless environment
-    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
-    
-    // In Vercel serverless, don't call listen - return Express instance
-    if (isVercel) {
-      logger.log('Vercel serverless mode: Initializing app without listening...');
+    // In production (Vercel), don't call listen - return Express instance
+    if (configService.get('NODE_ENV') === 'production' && !process.env.REPLIT_DEV_DOMAIN) {
+      logger.log('Production mode: Initializing app for serverless...');
       await app.init();
       const expressApp = app.getHttpAdapter().getInstance();
       logger.log('✅ Express app instance ready for serverless');
       logger.log('✅ Bootstrap completed successfully');
       return expressApp;
     } else {
-      // In all other environments (dev, Replit Preview, Replit Published VM), start the server normally
+      // In development or Replit, start the server normally
       logger.log(`Starting server on ${host}:${port}...`);
       await app.listen(port, host);
       logger.log(`🚀 Application is running on: http://${host}:${port}`);
@@ -376,8 +405,8 @@ export default async function handler(req: any, res: any) {
   return cachedApp(req, res);
 }
 
-// For local development and Replit (not Vercel)
-if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
+// For local development and Replit
+if (process.env.NODE_ENV !== 'production' || process.env.REPLIT_DEV_DOMAIN) {
   const logger = new Logger('Main');
   logger.log('Running in development mode, starting bootstrap...');
   bootstrap().catch(err => {

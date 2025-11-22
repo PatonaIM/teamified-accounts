@@ -96,7 +96,7 @@ export default function SuperAdminToolsPage() {
   const tools: ToolCardProps[] = [
     {
       icon: <BusinessIcon fontSize="large" />,
-      title: 'Organization Management',
+      title: 'Tenant Management',
       description: 'Manage client organizations, members, and metadata',
       path: '/admin/organizations',
     },

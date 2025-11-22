@@ -29,10 +29,6 @@ const LoginPageMUI: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   
-  console.log('[LoginPageMUI] Current URL:', window.location.href);
-  console.log('[LoginPageMUI] Return URL from query params:', returnUrl);
-  console.log('[LoginPageMUI] Is SSO authorize URL?:', returnUrl.includes('/api/v1/sso/authorize'));
-  
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
     email: '',
@@ -135,13 +131,43 @@ const LoginPageMUI: React.FC = () => {
       
       await refreshUser();
       
-      console.log('[LoginPageMUI] Login successful, redirecting to:', returnUrl);
-      
       if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
-        console.log('[LoginPageMUI] SSO flow - redirecting with cookies');
-        window.location.href = returnUrl;
+        try {
+          const url = new URL(returnUrl, window.location.origin);
+          const clientId = url.searchParams.get('client_id');
+          
+          if (!clientId) {
+            setErrors({ general: 'Invalid SSO request. Please try again.' });
+            setIsLoading(false);
+            return;
+          }
+          
+          const response = await fetch(`/api/v1/sso/launch/${clientId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${getAccessToken()}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!response.ok) {
+            throw new Error(`SSO launch failed: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data.redirectUrl) {
+            window.location.href = data.redirectUrl;
+            return;
+          } else {
+            throw new Error('No redirect URL received from SSO launch');
+          }
+        } catch (error) {
+          console.error('SSO launch failed:', error);
+          setErrors({ general: 'SSO authentication failed. Redirecting to dashboard...' });
+          setTimeout(() => navigate('/account/profile'), 2000);
+        }
       } else {
-        console.log('[LoginPageMUI] Normal redirect');
         navigate(returnUrl);
       }
     } catch (error: any) {
@@ -400,13 +426,7 @@ const LoginPageMUI: React.FC = () => {
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        sx={{ 
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          '&:hover': {
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            bgcolor: 'rgba(255, 255, 255, 0.1)',
-                          },
-                        }}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -459,10 +479,6 @@ const LoginPageMUI: React.FC = () => {
                     '&:hover': {
                       borderColor: 'rgba(255, 255, 255, 0.5)',
                       bgcolor: 'rgba(255, 255, 255, 0.05)',
-                    },
-                    '&:disabled': {
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      color: 'rgba(255, 255, 255, 0.5)',
                     },
                   }}
                 >

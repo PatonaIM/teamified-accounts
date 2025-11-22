@@ -124,6 +124,7 @@ export class SupabaseAuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        clientId: user.clientId, // Include client info for multi-tenant apps
         clientName: oauthClient?.name, // Client name from OAuth registration
         roles: user.userRoles?.map(ur => ur.role) || [], // Include roles
       },

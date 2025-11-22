@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { profileService } from '../../services/profileService';
-import api from '../../services/api';
+import axios from 'axios';
 
 interface ProfileData {
   id?: string;
@@ -108,8 +108,12 @@ export default function MyProfilePage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await api.post('/v1/users/me/profile-picture', formData, {
+      const token = localStorage.getItem('teamified_access_token');
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+      const response = await axios.post(`${baseURL}/v1/users/me/profile-picture`, formData, {
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -140,9 +144,17 @@ export default function MyProfilePage() {
       setIsSaving(true);
 
       // Update profile via API with proper authorization
-      await api.put('/v1/users/me/profile', {
+      const token = localStorage.getItem('teamified_access_token');
+      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+      
+      await axios.put(`${baseURL}/v1/users/me/profile`, {
         profileData: {
           secondaryEmail: secondaryEmail || null,
+        },
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 

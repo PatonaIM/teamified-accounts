@@ -26,7 +26,7 @@ export class CurrentUserGuard implements CanActivate {
     
     const fullUser = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['userRoles'],
+      relations: ['userRoles', 'employmentRecords'],
     });
 
     if (!fullUser) {

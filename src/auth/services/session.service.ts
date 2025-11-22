@@ -29,7 +29,6 @@ export class SessionService {
   ): Promise<Session> {
     const tokenFamily = this.jwtService.generateTokenFamily();
     const refreshTokenHash = this.jwtService.hashRefreshToken(refreshToken);
-    const now = new Date();
     
     const session = this.sessionRepository.create({
       userId: user.id,
@@ -37,7 +36,6 @@ export class SessionService {
       tokenFamily,
       deviceMetadata,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      lastActivityAt: now,
     });
 
     return await this.sessionRepository.save(session);
@@ -73,25 +71,14 @@ export class SessionService {
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    // Check for 48-hour inactivity timeout
-    const now = new Date();
-    const hoursSinceLastActivity = (now.getTime() - session.lastActivityAt.getTime()) / (1000 * 60 * 60);
-    
-    if (hoursSinceLastActivity >= 48) {
-      await this.revokeSession(session.id);
-      this.logger.log(`Session expired due to 48 hours of inactivity for user ${user.id}`);
-      throw new UnauthorizedException('Session expired due to inactivity. Please log in again.');
-    }
-
     // Generate new tokens with same family
     const newTokens = await this.jwtService.generateTokenPair(user, payload.tokenFamily);
     const newTokenHash = this.jwtService.hashRefreshToken(newTokens.refreshToken);
 
-    // Update session with new token hash and reset activity timer
+    // Update session with new token hash
     session.refreshTokenHash = newTokenHash;
     session.deviceMetadata = deviceMetadata;
     session.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Extend expiry
-    session.lastActivityAt = now; // Reset activity timer
 
     await this.sessionRepository.save(session);
 

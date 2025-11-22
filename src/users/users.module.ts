@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bull';
 import { User } from '../auth/entities/user.entity';
 import { Invitation } from '../invitations/entities/invitation.entity';
 import { UserService } from './services/user.service';
@@ -14,6 +15,9 @@ import { BlobStorageModule } from '../blob-storage/blob-storage.module';
     forwardRef(() => AuthModule),
     AuditModule,
     BlobStorageModule,
+    BullModule.registerQueue({
+      name: 'supabase-user-deletion',
+    }),
   ],
   controllers: [UserController],
   providers: [UserService],

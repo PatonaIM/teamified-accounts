@@ -2,14 +2,6 @@ import api from './api';
 import axios from 'axios'; // Keep for utility functions
 
 // Types for user management
-export interface UserOrganization {
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  roleType: string;
-  joinedAt: string | null;
-}
-
 export interface User {
   id: string;
   email: string;
@@ -25,9 +17,9 @@ export interface User {
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
-  organizations?: UserOrganization[];
   eorProfile?: {
     employeeId: string | null;
+    jobTitle?: string | null;
     department?: string | null;
   };
 }
@@ -103,7 +95,7 @@ class UserService {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'https://teamified-team-member-portal-backend.vercel.app/api';
   }
 
   private getAuthHeaders() {

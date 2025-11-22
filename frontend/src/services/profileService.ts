@@ -1,4 +1,4 @@
-import api from './api';
+import axios from 'axios';
 import { calculateProfileCompletion, type ProfileData } from '../utils/profileCompletion';
 
 // Backend API types for User.profile_data structure
@@ -76,6 +76,19 @@ interface UserProfileData {
 }
 
 class ProfileService {
+  private baseURL: string;
+
+  constructor() {
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+  }
+
+  private getAuthHeaders() {
+    const token = localStorage.getItem('teamified_access_token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+  }
 
   private convertToProfileData(userProfileData: UserProfileData | null | undefined): ProfileData {
     if (!userProfileData) {
@@ -308,7 +321,9 @@ class ProfileService {
   async getProfileData(): Promise<ProfileData & { id?: string; roles?: string[] }> {
     try {
       // Get profile data first (this seems to work)
-      const profileResponse = await api.get('/v1/auth/me/profile');
+      const profileResponse = await axios.get(`${this.baseURL}/v1/auth/me/profile`, {
+        headers: this.getAuthHeaders(),
+      });
 
       const profileData = profileResponse.data.profileData;
 
@@ -318,7 +333,9 @@ class ProfileService {
       // Try to get user data, but handle the case where it returns HTML
       let userData = null;
       try {
-        const userResponse = await api.get('/v1/users/me');
+        const userResponse = await axios.get(`${this.baseURL}/v1/users/me`, {
+          headers: this.getAuthHeaders(),
+        });
         
         // Check if the response is HTML (nginx routing issue)
         if (typeof userResponse.data === 'string' && userResponse.data.includes('<!doctype html>')) {
@@ -458,10 +475,13 @@ class ProfileService {
       const updateDto = this.convertToUpdateDto(mergedData);
 
       // Update the profile using the new endpoint
-      const response = await api.put(
-        '/v1/users/me/profile',
+      const response = await axios.put(
+        `${this.baseURL}/v1/users/me/profile`,
         {
           profileData: updateDto,
+        },
+        {
+          headers: this.getAuthHeaders(),
         }
       );
 
@@ -479,7 +499,9 @@ class ProfileService {
   async getUserProfileData(userId: string): Promise<ProfileData> {
     try {
       // Get profile data for specific user
-      const profileResponse = await api.get(`/v1/users/${userId}/profile`);
+      const profileResponse = await axios.get(`${this.baseURL}/v1/users/${userId}/profile`, {
+        headers: this.getAuthHeaders(),
+      });
 
       const profileData = profileResponse.data.profileData;
 
@@ -489,7 +511,9 @@ class ProfileService {
       // Get user data for the specific user
       let userData = null;
       try {
-        const userResponse = await api.get(`/v1/users/${userId}`);
+        const userResponse = await axios.get(`${this.baseURL}/v1/users/${userId}`, {
+          headers: this.getAuthHeaders(),
+        });
         
         // Check if the response is HTML (nginx routing issue)
         if (typeof userResponse.data === 'string' && userResponse.data.includes('<!doctype html>')) {
@@ -533,9 +557,12 @@ class ProfileService {
       const updateDto = this.convertToUpdateDto(mergedData);
 
       // Update the profile using the new endpoint
-      const response = await api.put(
-        `/v1/users/${userId}/profile`,
-        updateDto
+      const response = await axios.put(
+        `${this.baseURL}/v1/users/${userId}/profile`,
+        updateDto,
+        {
+          headers: this.getAuthHeaders(),
+        }
       );
 
       // Get updated profile data
@@ -551,7 +578,9 @@ class ProfileService {
    */
   async getEmploymentRecords(): Promise<any[]> {
     try {
-      const response = await api.get('/v1/users/me/employment');
+      const response = await axios.get(`${this.baseURL}/v1/users/me/employment`, {
+        headers: this.getAuthHeaders(),
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to load employment records:', error);

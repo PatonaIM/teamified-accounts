@@ -46,11 +46,19 @@ export class UserQueryDto {
 
   @ApiPropertyOptional({
     description: 'Filter by role type',
-    example: 'client_admin'
+    example: 'eor'
   })
   @IsOptional()
   @IsString()
   role?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by client ID',
+    example: '550e8400-e29b-41d4-a716-446655440000'
+  })
+  @IsOptional()
+  @IsString()
+  clientId?: string;
 
   @ApiPropertyOptional({
     description: 'Sort field',
