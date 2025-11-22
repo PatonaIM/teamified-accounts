@@ -264,13 +264,13 @@ export class UserRolesService {
         'api_keys.read',
         'api_keys.manage',
       ],
-      // Client member - Regular organization member
-      client_member: [
+      // Client employee - Regular organization member
+      client_employee: [
         'users.read',
         'organizations.read',
       ],
-      // Internal member - Platform team member
-      internal_member: [
+      // Internal employee - Platform team member
+      internal_employee: [
         'users.read',
         'organizations.read',
         'audit.read',
@@ -289,6 +289,8 @@ export class UserRolesService {
     // Add legacy role mappings for backward compatibility
     permissions['admin'] = permissions['client_admin'];
     permissions['account_manager'] = permissions['internal_account_manager'];
+    permissions['client_member'] = permissions['client_employee']; // Legacy mapping
+    permissions['internal_member'] = permissions['internal_employee']; // Legacy mapping
 
     return permissions;
   }
@@ -301,10 +303,17 @@ export class UserRolesService {
     // Check if it's already a canonical role type
     const canonicalRoles: RoleType[] = [
       'client_admin',
-      'client_member',
+      'client_hr',
+      'client_finance',
+      'client_recruiter',
+      'client_employee',
       'super_admin',
-      'internal_member',
+      'internal_hr',
+      'internal_finance',
       'internal_account_manager',
+      'internal_recruiter',
+      'internal_marketing',
+      'internal_employee',
     ];
     
     if (canonicalRoles.includes(roleType as RoleType)) {

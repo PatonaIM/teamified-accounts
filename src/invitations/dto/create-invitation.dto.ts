@@ -14,6 +14,7 @@ export enum RoleType {
   INTERNAL_ACCOUNT_MANAGER = 'internal_account_manager',
   INTERNAL_FINANCE = 'internal_finance',
   INTERNAL_MARKETING = 'internal_marketing',
+  INTERNAL_EMPLOYEE = 'internal_employee',
 }
 
 export class CreateInvitationDto {

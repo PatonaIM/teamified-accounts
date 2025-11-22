@@ -3,7 +3,18 @@ import { IsUUID, IsEnum, IsOptional, IsDateString } from 'class-validator';
 import { RoleType, RoleScope } from '../../common/types/role-types';
 
 const ROLE_TYPES: RoleType[] = [
-  'client_admin', 'client_member', 'super_admin', 'internal_member', 'internal_account_manager'
+  'client_admin',
+  'client_hr',
+  'client_finance',
+  'client_recruiter',
+  'client_employee',
+  'super_admin',
+  'internal_hr',
+  'internal_finance',
+  'internal_account_manager',
+  'internal_recruiter',
+  'internal_marketing',
+  'internal_employee',
 ];
 
 const ROLE_SCOPES: RoleScope[] = ['all', 'global', 'organization', 'individual'];

@@ -32,7 +32,7 @@ export enum InvitationStatus {
   'client_recruiter',
   'client_employee',
   'super_admin',
-  'internal_member',
+  'internal_employee',
   'internal_hr',
   'internal_recruiter',
   'internal_account_manager',
@@ -70,7 +70,7 @@ export class Invitation {
     | 'client_recruiter'
     | 'client_employee'
     | 'super_admin'
-    | 'internal_member'
+    | 'internal_employee'
     | 'internal_hr'
     | 'internal_recruiter'
     | 'internal_account_manager'

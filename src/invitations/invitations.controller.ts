@@ -407,14 +407,14 @@ export class InvitationsController {
       
       ## Shareable Link Process:
       1. Generate unique invitation code
-      2. Create invitation with internal_member role and 1-hour expiration
+      2. Create invitation with internal_employee role and 1-hour expiration
       3. Return shareable URL that can be used by anyone with approved email domain
       4. Log link generation for audit purposes
       
       ## Features:
       - 1-hour expiration for security
       - Single-use link (maxUses: 1)
-      - Assigns internal_member role by default
+      - Assigns internal_employee role by default
       - No email required - link can be shared anywhere
       
       ## Security:
