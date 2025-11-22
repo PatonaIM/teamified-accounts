@@ -879,6 +879,10 @@ const OrganizationManagementPage: React.FC = () => {
                               bgcolor: '#A16AE8',
                               color: 'white',
                             }),
+                            ...(org.subscriptionTier?.toLowerCase() === 'internal' && {
+                              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'white' : 'black',
+                              color: (theme) => theme.palette.mode === 'dark' ? 'black' : 'white',
+                            }),
                           }}
                         />
                       </Box>
@@ -997,6 +1001,10 @@ const OrganizationManagementPage: React.FC = () => {
                               ...(selectedOrg.subscriptionTier?.toLowerCase() === 'professional' && {
                                 bgcolor: '#A16AE8',
                                 color: 'white',
+                              }),
+                              ...(selectedOrg.subscriptionTier?.toLowerCase() === 'internal' && {
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'white' : 'black',
+                                color: (theme) => theme.palette.mode === 'dark' ? 'black' : 'white',
                               }),
                             }}
                           />
