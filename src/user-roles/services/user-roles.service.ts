@@ -270,7 +270,7 @@ export class UserRolesService {
         'organizations.read',
       ],
       // Internal employee - Platform team member
-      internal_employee: [
+      internal_member: [
         'users.read',
         'organizations.read',
         'audit.read',
@@ -290,7 +290,7 @@ export class UserRolesService {
     permissions['admin'] = permissions['client_admin'];
     permissions['account_manager'] = permissions['internal_account_manager'];
     permissions['client_member'] = permissions['client_employee']; // Legacy mapping
-    permissions['internal_member'] = permissions['internal_employee']; // Legacy mapping
+    permissions['internal_member'] = permissions['internal_member']; // Legacy mapping
 
     return permissions;
   }
@@ -313,7 +313,7 @@ export class UserRolesService {
       'internal_account_manager',
       'internal_recruiter',
       'internal_marketing',
-      'internal_employee',
+      'internal_member',
     ];
     
     if (canonicalRoles.includes(roleType as RoleType)) {

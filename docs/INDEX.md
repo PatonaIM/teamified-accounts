@@ -53,7 +53,7 @@ This index provides an overview of all major documentation for the Teamified pla
 - `internal_account_manager` - Client account management
 - `internal_recruiter` - Internal recruitment
 - `internal_marketing` - Marketing operations
-- `internal_employee` - Standard internal staff (default)
+- `internal_member` - Standard internal staff (default)
 
 ## 📚 Product Requirements
 
@@ -166,7 +166,7 @@ Located in `architecture/archive/` - includes legacy architecture documentation
 ### Recent Changes
 - **November 22, 2025**: Organization and role system refactoring
   - Replaced separate "Internal Users" tool with Teamified organization
-  - Renamed `internal_member` → `internal_employee`
+  - Renamed `internal_member` → `internal_member`
   - Added organization-based role validation
   - See [November 2025 Changelog](CHANGELOG_NOVEMBER_2025.md) for complete details
 

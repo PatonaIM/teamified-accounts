@@ -3,7 +3,7 @@ import { IsEmail, IsEnum, IsOptional, IsInt, Min, Matches, IsBoolean } from 'cla
 
 export enum InternalRoleType {
   SUPER_ADMIN = 'super_admin',
-  INTERNAL_EMPLOYEE = 'internal_employee',
+  INTERNAL_EMPLOYEE = 'internal_member',
   INTERNAL_HR = 'internal_hr',
   INTERNAL_RECRUITER = 'internal_recruiter',
   INTERNAL_ACCOUNT_MANAGER = 'internal_account_manager',

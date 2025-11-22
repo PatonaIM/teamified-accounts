@@ -17,7 +17,7 @@ Replaced the separate "Internal Users" admin tool with a special "Teamified" org
 
 ##### 2. Role System Refactoring
 
-**Renamed `internal_member` to `internal_employee`:**
+**Renamed `internal_member` to `internal_member`:**
 - Updated all backend type definitions
 - Updated invitation entities and DTOs
 - Updated user roles service
@@ -40,7 +40,7 @@ Internal Roles:
 - `internal_account_manager` - Manage client accounts
 - `internal_recruiter` - Internal recruitment
 - `internal_marketing` - Internal marketing operations
-- `internal_employee` - Standard internal team member (default)
+- `internal_member` - Standard internal team member (default)
 
 ##### 3. Backend Validation
 - Implemented subscription tier validation (prevents clients from selecting 'internal')
@@ -66,7 +66,7 @@ Internal Roles:
 - Shows internal roles when inviting to Teamified organization
 - Shows client roles when inviting to client organizations  
 - Role filtering based on `subscriptionTier` prop
-- Added `internal_employee` to internal roles list
+- Added `internal_member` to internal roles list
 - Added spacing above "Send Email Invitation" label
 
 **Subscription Tier Styling:**
@@ -120,12 +120,12 @@ All existing internal users with the following roles were automatically migrated
 - `internal_account_manager`
 - `internal_recruiter`
 - `internal_marketing`
-- `internal_employee` (formerly `internal_member`)
+- `internal_member` (formerly `internal_member`)
 
 ##### Backward Compatibility
 The system maintains backward compatibility with legacy role names:
 - `client_member` → `client_employee`
-- `internal_member` → `internal_employee`
+- `internal_member` → `internal_member`
 
 Old data with these role names will continue to work through automatic mapping in the permissions service.
 
@@ -146,7 +146,7 @@ Old data with these role names will continue to work through automatic mapping i
 None. All changes are backward compatible through legacy role mappings.
 
 #### Deprecations
-- `internal_member` role type (use `internal_employee` instead)
+- `internal_member` role type (use `internal_member` instead)
 - `client_member` role type (use `client_employee` instead)
 
 Note: These are not removed, just mapped to new names for compatibility.

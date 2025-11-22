@@ -465,7 +465,7 @@ export class InvitationsService {
       organizationId: null, // Internal invitations don't belong to an organization
       inviteCode,
       invitedBy: currentUser.id,
-      roleType: 'internal_employee', // Shareable links always assign internal_employee role
+      roleType: 'internal_member', // Shareable links always assign internal_member role
       maxUses: 1, // Each link can be used once
       currentUses: 0,
       status: InvitationStatus.PENDING,
@@ -482,7 +482,7 @@ export class InvitationsService {
       entityType: 'invitation',
       entityId: savedInvitation.id,
       changes: {
-        roleType: 'internal_employee',
+        roleType: 'internal_member',
         maxUses: 1,
         inviteCode,
         expiresAt,

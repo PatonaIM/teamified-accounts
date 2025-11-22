@@ -70,12 +70,12 @@ Used for Teamified internal staff:
 | `internal_account_manager` | Account Manager | Manage client accounts |
 | `internal_recruiter` | Internal Recruiter | Internal recruitment |
 | `internal_marketing` | Internal Marketing | Internal marketing operations |
-| `internal_employee` | Internal Employee | Standard internal team member |
+| `internal_member` | Internal Employee | Standard internal team member |
 
 ### Default Roles
 
 - **Client Organizations:** `client_employee` (default for new users)
-- **Internal Organization:** `internal_employee` (default for new internal staff)
+- **Internal Organization:** `internal_member` (default for new internal staff)
 
 ### Role Assignment Rules
 
@@ -91,7 +91,7 @@ Used for Teamified internal staff:
 
 3. **Legacy Compatibility:**
    - `client_member` → maps to `client_employee`
-   - `internal_member` → maps to `internal_employee`
+   - `internal_member` → maps to `internal_member`
    - Existing data with old role names continues to work
 
 ## Organization Management Interface
@@ -154,7 +154,7 @@ role_type VARCHAR(50) CHECK (role_type IN (
   'candidate',
   'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee',
   'super_admin', 'internal_hr', 'internal_finance', 'internal_account_manager',
-  'internal_recruiter', 'internal_marketing', 'internal_employee'
+  'internal_recruiter', 'internal_marketing', 'internal_member'
 ))
 ```
 
@@ -244,7 +244,7 @@ All existing internal users were migrated to the Teamified organization through 
 
 The system maintains backward compatibility with legacy role names:
 - `client_member` automatically maps to `client_employee`
-- `internal_member` automatically maps to `internal_employee`
+- `internal_member` automatically maps to `internal_member`
 - Permissions mapped in `user-roles.service.ts`
 
 ## Security Considerations
@@ -290,7 +290,7 @@ The system maintains backward compatibility with legacy role names:
 1. **Managing Internal Staff:**
    - Add all internal team members to Teamified organization
    - Assign appropriate internal roles based on responsibilities
-   - Use `internal_employee` as default for general staff
+   - Use `internal_member` as default for general staff
 
 2. **Managing Client Organizations:**
    - Choose appropriate subscription tier based on client needs
@@ -317,7 +317,7 @@ The system maintains backward compatibility with legacy role names:
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2025-11-22 | 2.0 | Renamed `internal_member` to `internal_employee`, added complete role documentation |
+| 2025-11-22 | 2.0 | Renamed `internal_member` to `internal_member`, added complete role documentation |
 | 2025-11-22 | 1.1 | Added subscription tier system and Teamified organization |
 | 2024-12-19 | 1.0 | Initial organization and role system implementation |
 

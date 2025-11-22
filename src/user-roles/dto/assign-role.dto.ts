@@ -14,7 +14,7 @@ const ROLE_TYPES: RoleType[] = [
   'internal_account_manager',
   'internal_recruiter',
   'internal_marketing',
-  'internal_employee',
+  'internal_member',
 ];
 
 const ROLE_SCOPES: RoleScope[] = ['all', 'global', 'organization', 'individual'];

@@ -160,7 +160,7 @@ CREATE TABLE user_roles (
         'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee',
         -- Internal roles  
         'super_admin', 'internal_hr', 'internal_finance', 'internal_account_manager',
-        'internal_recruiter', 'internal_marketing', 'internal_employee'
+        'internal_recruiter', 'internal_marketing', 'internal_member'
     )),
     scope VARCHAR(20) NOT NULL CHECK (scope IN ('user', 'group', 'client', 'all')),
     scope_entity_id UUID, -- References client_id, group_id, or user_id based on scope

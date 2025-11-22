@@ -33,7 +33,7 @@ This addresses critical business needs for data consistency, operational efficie
 
 **Current Role Types:**
 - **Client Roles**: `client_admin`, `client_hr`, `client_finance`, `client_recruiter`, `client_employee`
-- **Internal Roles**: `super_admin`, `internal_hr`, `internal_finance`, `internal_account_manager`, `internal_recruiter`, `internal_marketing`, `internal_employee`
+- **Internal Roles**: `super_admin`, `internal_hr`, `internal_finance`, `internal_account_manager`, `internal_recruiter`, `internal_marketing`, `internal_member`
 
 ## Requirements
 

@@ -53,7 +53,7 @@ const internalRoles = [
   { value: 'internal_account_manager', label: 'Account Manager', description: 'Manage client accounts' },
   { value: 'internal_recruiter', label: 'Internal Recruiter', description: 'Internal recruitment' },
   { value: 'internal_marketing', label: 'Internal Marketing', description: 'Internal marketing operations' },
-  { value: 'internal_employee', label: 'Internal Employee', description: 'Standard internal team member' },
+  { value: 'internal_member', label: 'Internal Employee', description: 'Standard internal team member' },
 ];
 
 const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = ({

@@ -64,7 +64,7 @@ After running the database setup script, you can use these test accounts:
   - JWT-based authentication
   - Organization-based role access control
   - Client roles: `client_admin`, `client_hr`, `client_finance`, `client_recruiter`, `client_employee`
-  - Internal roles: `super_admin`, `internal_hr`, `internal_finance`, `internal_account_manager`, `internal_recruiter`, `internal_marketing`, `internal_employee`
+  - Internal roles: `super_admin`, `internal_hr`, `internal_finance`, `internal_account_manager`, `internal_recruiter`, `internal_marketing`, `internal_member`
   - Password hashing with Argon2
   - Session management
 
