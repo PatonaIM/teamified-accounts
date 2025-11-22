@@ -6,14 +6,14 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "npx @nestjs/cli build",
     "build:frontend": "cd frontend && npm run build",
     "build:all": "npm run build:frontend && npm run build && npm run copy:frontend",
     "copy:frontend": "mkdir -p dist/public && cp -r frontend/dist/* dist/public/",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
+    "start": "npx @nestjs/cli start",
+    "start:dev": "npx @nestjs/cli start --watch",
+    "start:debug": "npx @nestjs/cli start --debug --watch",
     "start:prod": "NODE_ENV=production node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
@@ -84,7 +84,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.0.0",
+    "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@playwright/test": "^1.55.0",

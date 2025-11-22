@@ -333,7 +333,9 @@ async function bootstrap() {
       logger.log('✅ SPA fallback route configured');
     }
 
-    const port = configService.get('PORT', 3000);
+    // Port configuration: Use 3000 in dev mode, 5000 in production
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const port = isDevelopment ? 3000 : configService.get('PORT', 5000);
     const host = configService.get('HOST', '0.0.0.0');
     
     // Check if running in Vercel serverless environment

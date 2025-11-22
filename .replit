@@ -56,6 +56,10 @@ build = ["npm", "run", "build:all"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 39135
+externalPort = 3001
+
 [userenv]
 
 [userenv.production]
