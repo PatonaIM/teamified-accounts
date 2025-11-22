@@ -333,10 +333,11 @@ async function bootstrap() {
 
     // SPA fallback route - must be registered AFTER all API routes
     // This catches all non-API routes and serves the SPA index.html
+    // CRITICAL: The regex /^(?!\/api).*$/ excludes /api routes so they reach NestJS controllers
     if (isProduction && frontendPath) {
       const expressApp = app.getHttpAdapter().getInstance();
-      expressApp.get('*', (req: Request, res: Response) => {
-        // Serve index.html for all routes (SPA will handle routing)
+      expressApp.get(/^(?!\/api).*$/, (req: Request, res: Response) => {
+        // Serve index.html for all non-API routes (SPA will handle routing)
         const indexPath = path.join(frontendPath, 'index.html');
         res.sendFile(indexPath, (err) => {
           if (err) {
@@ -345,7 +346,7 @@ async function bootstrap() {
           }
         });
       });
-      logger.log('✅ SPA fallback route configured');
+      logger.log('✅ SPA fallback route configured (excludes /api routes)');
     }
 
     // Port configuration: Check if PORT env var is explicitly set
