@@ -95,10 +95,17 @@ The platform uses **Replit Reserved VM** for production deployments with the fol
 - In Replit (dev/production): Always calls `app.listen()` on configured port
 
 **Critical Fixes (November 22, 2025):**
-1. **Backend Production Listening Issue** - Fixed backend not calling `app.listen()` in Replit Reserved VM production
-   - Previous logic incorrectly treated Replit production as Vercel serverless environment
-   - Now properly detects Vercel vs. Replit using environment-specific variables
-   - Backend now properly listens on port 5000 in both development and production Replit environments
+1. **Production Port Detection Issue** - Fixed backend listening on wrong port in production deployment
+   - **Root cause**: Port detection logic checked `REPLIT_DEV_DOMAIN` which exists even in production, causing app to use port 3000 instead of 5000
+   - **Impact**: .replit expects port 5000, but app opened port 3000, causing "port never opened" deployment failures
+   - **Fix**: Port logic now prioritizes explicit `PORT` environment variable (production sets PORT=5000 in .replit)
+   - **Logic**: If PORT env var is set → use it; if not set → default to 3000 for development
+   - Development correctly uses port 3000 (PORT not set), production uses port 5000 (PORT=5000 from .replit)
+   
+2. **Automatic Port Configuration** - Replit automatically adds port mappings to .replit when detecting open ports
+   - Reserved VM deployments support only **one external port**; multiple port entries cause deployment failure
+   - Solution: Disable automatic port forwarding in User Settings → "Automatic port forwarding" → "Never"
+   - Production requires only: `[[ports]] localPort = 5000, externalPort = 80`
 
 2. **API Client Timeout Configuration** - Added 30-second timeout to centralized API client
    - API requests: 30-second timeout (prevents indefinite hangs)
