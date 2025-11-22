@@ -321,7 +321,16 @@ async function bootstrap() {
     if (isProduction && frontendPath) {
       const expressApp = app.getHttpAdapter().getInstance();
       expressApp.get('*', (req: Request, res: Response) => {
-        // Serve index.html for all routes (SPA will handle routing)
+        // CRITICAL: Never serve index.html for API routes - let them 404 properly
+        // This prevents the SPA from intercepting API requests in production
+        if (req.path.startsWith('/api/')) {
+          return res.status(404).json({ 
+            statusCode: 404, 
+            message: `API endpoint not found: ${req.path}` 
+          });
+        }
+        
+        // Serve index.html for all non-API routes (SPA will handle routing)
         const indexPath = path.join(frontendPath, 'index.html');
         res.sendFile(indexPath, (err) => {
           if (err) {
@@ -330,7 +339,7 @@ async function bootstrap() {
           }
         });
       });
-      logger.log('✅ SPA fallback route configured');
+      logger.log('✅ SPA fallback route configured (excludes /api/* paths)');
     }
 
     const port = configService.get('PORT', 3000);
