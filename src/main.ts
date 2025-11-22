@@ -333,10 +333,15 @@ async function bootstrap() {
       logger.log('✅ SPA fallback route configured');
     }
 
-    // Port configuration: Use 3000 in dev mode, 5000 in production
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    const port = isDevelopment ? 3000 : configService.get('PORT', 5000);
+    // Port configuration: Use 3000 in development workflows, 5000 in production
+    // npm_lifecycle_event is 'start:dev' or 'start:debug' when running dev workflows
+    // REPLIT_DEV_DOMAIN provides additional hint for Replit preview mode
+    const isDevCommand = ['start:dev', 'start:debug'].includes(process.env.npm_lifecycle_event);
+    const isReplitPreview = !!process.env.REPLIT_DEV_DOMAIN;
+    const port = (isDevCommand || isReplitPreview) ? 3000 : Number(configService.get('PORT') ?? 5000);
     const host = configService.get('HOST', '0.0.0.0');
+    
+    logger.log(`Port determination: npm_lifecycle_event=${process.env.npm_lifecycle_event}, isDevCommand=${isDevCommand}, isReplitPreview=${isReplitPreview}, final port=${port}`);
     
     // Check if running in Vercel serverless environment
     const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
