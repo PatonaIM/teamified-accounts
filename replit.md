@@ -70,11 +70,11 @@ The platform supports programmatic access via API keys, alternative to JWTs. Key
 
 ### Build & Deployment
 
--   **Replit**: Used for development and production hosting, with Autoscale deployment.
+-   **Replit**: Used for development and production hosting, with Reserved VM deployment.
 
 #### Production Deployment Configuration
 
-The platform uses **Replit Autoscale** for production deployments with the following configuration:
+The platform uses **Replit Reserved VM** for production deployments with the following configuration:
 
 **Port Configuration:**
 -   **Development (Preview)**: Backend runs on port 3000, Frontend runs on port 5000 (Vite dev server)
@@ -82,13 +82,31 @@ The platform uses **Replit Autoscale** for production deployments with the follo
 -   **Environment Variables**: `PORT=5000` and `NODE_ENV=production` are set in the production environment
 
 **Build & Deployment Process:**
-1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production
+1. `npm run build:all` - Builds both frontend (`frontend/dist`) and backend (`dist/`) for production (runs automatically on publish)
 2. `npm run start:prod` - Starts NestJS which:
    - Serves static frontend files from `frontend/dist` at root routes
    - Serves backend API at `/api/*` routes
-   - Listens on port 5000 (mapped to external port 80 for HTTP traffic)
+   - Listens on port 5000
 
-**Critical Fix (November 21, 2025):**
-- Fixed `/me` endpoint failures in Published App by setting `PORT=5000` in production environment
-- Issue was NestJS defaulting to port 3000 while Replit Autoscale expected port 5000
-- Frontend proxy errors (`ECONNREFUSED 127.0.0.1:3000`) resolved by proper port configuration
+**Environment Detection Logic (src/main.ts):**
+- The backend detects Vercel serverless environment via `VERCEL` or `VERCEL_ENV` environment variables
+- In Vercel: Returns Express instance without calling `app.listen()` (serverless function handler)
+- In Replit (dev/production): Always calls `app.listen()` on configured port
+
+**Critical Fixes (November 22, 2025):**
+1. **Backend Production Listening Issue** - Fixed backend not calling `app.listen()` in Replit Reserved VM production
+   - Previous logic incorrectly treated Replit production as Vercel serverless environment
+   - Now properly detects Vercel vs. Replit using environment-specific variables
+   - Backend now properly listens on port 5000 in both development and production Replit environments
+
+2. **API Client Timeout Configuration** - Added 30-second timeout to centralized API client
+   - API requests: 30-second timeout (prevents indefinite hangs)
+   - Refresh token calls: 15-second timeout
+   - Migrated `profileService.ts` and `MyProfilePage.tsx` from raw axios to centralized API client
+   - Ensures consistent timeout behavior across all API calls in Preview and Published App
+
+3. **Theme Preference Persistence** - Implemented theme preference caching across login/logout sessions
+   - Backend login response includes user's theme preference from `profileData.themePreference.themeMode`
+   - Supports theme modes: `'light' | 'dark' | 'teamified' | 'custom'`
+   - Frontend caches theme to localStorage immediately after login
+   - Prevents flash of incorrect theme on page load
