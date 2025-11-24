@@ -28,7 +28,7 @@ All API communication utilizes a **single, centralized axios instance** (`fronte
 -   **Salary History Module**: Provides organization-wide salary tracking for admin/HR with server-side pagination, filtering, and role-based access.
 -   **Client Management Module**: Enables CRUD operations for customer organizations (clients) for admin/HR roles, using native MUI Tables, Drawer Forms, and JSONB for contact information.
 -   **Profile Management**: Offers a user profile page with Material-UI 3 Expressive Design, icon-based editing, secondary email support, and profile picture display from Vercel Blob Storage.
--   **SSO Integration Test Page**: A `/test` route demonstrating the OAuth 2.0 + PKCE authentication flow for developers, hardcoded to use a `test-client`.
+-   **SSO Integration Test Page**: A `/test` route demonstrating the OAuth 2.0 + PKCE authentication flow for developers with intent testing capabilities.
 
 ### Data Model Architecture
 
@@ -53,6 +53,40 @@ Sessions have a **48-hour inactivity timeout** with activity tracked via `last_a
 #### API Key Management
 
 The platform supports programmatic access via API keys, alternative to JWTs. Keys are **Bcrypt-hashed**, use 10-character prefixes for lookup, and offer `read_only` or `full_access`. Each user can create up to 10 keys, with audit logging for all key actions and a dedicated MUI settings UI.
+
+#### Intent-Aware SSO (November 24, 2025)
+
+The SSO system now supports **audience-based access control** via an intent parameter to route users based on their type (client vs candidate):
+
+**Intent Types:**
+- `'client'`: Restricts access to users with client organization roles (client_*, internal_*)
+- `'candidate'`: Restricts access to candidate users without client roles
+- `'both'`: Allows access to all authenticated users (default)
+
+**Security Model:**
+- OAuth clients have a `default_intent` field (stored in database) that is **authoritative**
+- Runtime `intent` query parameter can only **narrow** access, never widen it
+- Prevents privilege escalation attacks by enforcing intersection-based resolution
+- Example: If client's `default_intent='client'`, runtime `intent='both'` is ignored
+
+**User Type Classification:**
+- Users with roles starting with `client_` or `internal_` → classified as 'client'
+- Users without such roles → classified as 'candidate'
+- Classification uses optimized sync method `classifyUserType()` to avoid redundant DB lookups
+
+**Error Handling:**
+- Intent mismatches return OAuth-compliant error redirects preserving state
+- Error: `access_denied` with descriptive `error_description` parameter
+- Candidate trying client-only app → redirected with suggestion to create/join client org
+- Client trying candidate-only app → redirected with error message
+
+**Implementation Files:**
+- Migration: `src/migrations/1732436400000-AddDefaultIntentToOAuthClients.ts`
+- Backend service: `src/sso/sso.service.ts` (resolveEffectiveIntent, validateUserIntent)
+- User classification: `src/users/services/user.service.ts` (getUserType, classifyUserType)
+- OAuth entity: `src/oauth-clients/entities/oauth-client.entity.ts` (default_intent field)
+- Frontend test page: `frontend/src/pages/test/IntegratedTestSuite.tsx` (intent dropdown)
+- Admin UI: `frontend/src/components/settings/OAuthClientDialog.tsx` (default_intent configuration)
 
 ## External Dependencies
 
