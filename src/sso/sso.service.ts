@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthCodeStorageService } from '../auth/services/auth-code-storage.service';
 import { OAuthClientsService } from '../oauth-clients/oauth-clients.service';
@@ -13,6 +14,7 @@ import { UserRolesService } from '../user-roles/services/user-roles.service';
 import { AuthorizeDto } from './dto/authorize.dto';
 import { TokenExchangeDto, TokenResponseDto } from './dto/token.dto';
 import { createHash, randomUUID } from 'crypto';
+import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
 
 @Injectable()
 export class SsoService {
@@ -66,7 +68,7 @@ export class SsoService {
    * Authorize: Create auth code and redirect to SSO app
    */
   async authorize(userId: string, authorizeDto: AuthorizeDto): Promise<string> {
-    const { client_id, redirect_uri, state, code_challenge, code_challenge_method } = authorizeDto;
+    const { client_id, redirect_uri, state, code_challenge, code_challenge_method, intent } = authorizeDto;
 
     // Validate OAuth client
     const client = await this.oauthClientsService.findByClientId(client_id);
@@ -94,6 +96,17 @@ export class SsoService {
       }
     }
 
+    // Resolve effective intent and validate user access
+    const effectiveIntent = this.resolveEffectiveIntent(client.default_intent, intent);
+    const errorRedirect = await this.validateUserIntent(userId, effectiveIntent, client_id, redirect_uri, state);
+    
+    if (errorRedirect) {
+      this.logger.log(
+        `User ${userId} access denied for intent ${effectiveIntent}, redirecting with OAuth error`,
+      );
+      return errorRedirect;
+    }
+
     // Create authorization code
     const authCode = await this.authCodeStorage.createAuthCode({
       userId,
@@ -112,7 +125,7 @@ export class SsoService {
     }
 
     this.logger.log(
-      `SSO authorization granted for user ${userId} to client ${client_id}`,
+      `SSO authorization granted for user ${userId} to client ${client_id} with intent ${effectiveIntent}`,
     );
 
     return redirectUrl.toString();
@@ -232,5 +245,90 @@ export class SsoService {
     }
 
     return false;
+  }
+
+  /**
+   * Resolve effective intent by applying intersection logic
+   * The default_intent from OAuth client is authoritative
+   * Runtime intent can only narrow, never widen access
+   */
+  private resolveEffectiveIntent(
+    defaultIntent: IntentType,
+    runtimeIntent?: IntentType,
+  ): IntentType {
+    if (!runtimeIntent) {
+      return defaultIntent;
+    }
+
+    if (defaultIntent === 'both') {
+      return runtimeIntent;
+    }
+
+    if (runtimeIntent !== defaultIntent && runtimeIntent !== 'both') {
+      this.logger.warn(
+        `Attempted intent escalation: default=${defaultIntent}, runtime=${runtimeIntent}. Using default.`,
+      );
+    }
+
+    return defaultIntent;
+  }
+
+  /**
+   * Validate user type against effective intent
+   * Returns error redirect URL if access should be denied, null otherwise
+   */
+  private async validateUserIntent(
+    userId: string,
+    effectiveIntent: IntentType,
+    clientId: string,
+    redirectUri: string,
+    state?: string,
+  ): Promise<string | null> {
+    if (effectiveIntent === 'both') {
+      return null;
+    }
+
+    const user = await this.userService.findOne(userId);
+    const userType = this.userService.classifyUserType(user);
+
+    this.logger.log(
+      `Intent validation: user=${userId} (${user.email}), userType=${userType}, effectiveIntent=${effectiveIntent}, clientId=${clientId}`,
+    );
+
+    if (userType === effectiveIntent) {
+      return null;
+    }
+
+    if (effectiveIntent === 'client' && userType === 'candidate') {
+      this.logger.warn(
+        `Candidate user ${userId} (${user.email}) attempted to access client-only app ${clientId}. Returning access_denied error.`,
+      );
+      
+      const errorUrl = new URL(redirectUri);
+      errorUrl.searchParams.set('error', 'access_denied');
+      errorUrl.searchParams.set('error_description', 'This application is for client organizations only. Please create or join a client organization to access this portal.');
+      if (state) {
+        errorUrl.searchParams.set('state', state);
+      }
+      
+      return errorUrl.toString();
+    }
+
+    if (effectiveIntent === 'candidate' && userType === 'client') {
+      this.logger.warn(
+        `Client user ${userId} (${user.email}) attempted to access candidate-only app ${clientId}. Returning access_denied error.`,
+      );
+      
+      const errorUrl = new URL(redirectUri);
+      errorUrl.searchParams.set('error', 'access_denied');
+      errorUrl.searchParams.set('error_description', 'This application is for candidates only. Please use a candidate account to access this portal.');
+      if (state) {
+        errorUrl.searchParams.set('state', state);
+      }
+      
+      return errorUrl.toString();
+    }
+
+    return null;
   }
 }

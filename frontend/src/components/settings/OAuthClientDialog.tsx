@@ -32,6 +32,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [appUrl, setAppUrl] = useState('');
   const [owner, setOwner] = useState('');
   const [environment, setEnvironment] = useState<'development' | 'staging' | 'production'>('development');
+  const [defaultIntent, setDefaultIntent] = useState<'client' | 'candidate' | 'both'>('both');
   const [redirectUris, setRedirectUris] = useState<string[]>(['']);
   const [loading, setLoading] = useState(false);
   const [createdClient, setCreatedClient] = useState<OAuthClient | null>(null);
@@ -44,6 +45,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       setAppUrl(client.metadata?.app_url || '');
       setOwner(client.metadata?.owner || '');
       setEnvironment(client.metadata?.environment || 'development');
+      setDefaultIntent(client.default_intent || 'both');
       setRedirectUris(client.redirect_uris.length > 0 ? client.redirect_uris : ['']);
     } else {
       resetForm();
@@ -56,6 +58,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setAppUrl('');
     setOwner('');
     setEnvironment('development');
+    setDefaultIntent('both');
     setRedirectUris(['']);
     setCreatedClient(null);
   };
@@ -86,6 +89,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       name,
       description: description || undefined,
       redirect_uris: filteredUris,
+      default_intent: defaultIntent,
       app_url: appUrl || undefined,
       owner: owner || undefined,
       environment,
@@ -256,6 +260,20 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
               <MenuItem value="development">Development</MenuItem>
               <MenuItem value="staging">Staging</MenuItem>
               <MenuItem value="production">Production</MenuItem>
+            </TextField>
+
+            <TextField
+              select
+              label="Default Intent (User Audience)"
+              value={defaultIntent}
+              onChange={(e) => setDefaultIntent(e.target.value as any)}
+              required
+              fullWidth
+              helperText="Controls which user types can access this application. This is authoritative and cannot be escalated via query parameters."
+            >
+              <MenuItem value="both">Both (Clients & Candidates)</MenuItem>
+              <MenuItem value="client">Client Only</MenuItem>
+              <MenuItem value="candidate">Candidate Only</MenuItem>
             </TextField>
 
             <Box>

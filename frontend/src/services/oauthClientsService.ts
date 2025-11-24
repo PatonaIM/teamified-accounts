@@ -8,6 +8,7 @@ export interface OAuthClient {
   description: string;
   redirect_uris: string[];
   is_active: boolean;
+  default_intent: 'client' | 'candidate' | 'both';
   metadata: {
     app_url?: string;
     owner?: string;
@@ -22,6 +23,7 @@ export interface CreateOAuthClientDto {
   name: string;
   description?: string;
   redirect_uris: string[];
+  default_intent?: 'client' | 'candidate' | 'both';
   app_url?: string;
   owner?: string;
   environment?: 'development' | 'staging' | 'production';
@@ -31,6 +33,7 @@ export interface UpdateOAuthClientDto {
   name?: string;
   description?: string;
   redirect_uris?: string[];
+  default_intent?: 'client' | 'candidate' | 'both';
   app_url?: string;
   owner?: string;
   environment?: 'development' | 'staging' | 'production';

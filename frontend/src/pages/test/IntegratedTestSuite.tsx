@@ -9,6 +9,11 @@ import {
   Divider,
   IconButton,
   Snackbar,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  FormHelperText,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -27,12 +32,15 @@ interface UserInfo {
   roles?: string[];
 }
 
+type IntentType = 'both' | 'client' | 'candidate';
+
 export default function IntegratedTestSuite() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [selectedIntent, setSelectedIntent] = useState<IntentType>('both');
   const callbackProcessedRef = useRef(false);
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
@@ -89,15 +97,19 @@ export default function IntegratedTestSuite() {
       sessionStorage.setItem('pkce_code_verifier', codeVerifier);
       sessionStorage.setItem('pkce_state', state);
 
-      const authParams = new URLSearchParams({
+      const authParams: Record<string, string> = {
         client_id: DEVELOPER_SANDBOX_CLIENT_ID,
         redirect_uri: redirectUri,
         state: state,
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',
-      });
+      };
 
-      const authUrl = `${apiUrl}/api/v1/sso/authorize?${authParams}`;
+      if (selectedIntent !== 'both') {
+        authParams.intent = selectedIntent;
+      }
+
+      const authUrl = `${apiUrl}/api/v1/sso/authorize?${new URLSearchParams(authParams)}`;
       window.location.href = authUrl;
     } catch (err: any) {
       setError(err.message || 'Failed to initiate login');
@@ -235,6 +247,26 @@ export default function IntegratedTestSuite() {
             </Typography>
           </Alert>
 
+          <Paper sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
+            <FormControl fullWidth>
+              <InputLabel id="intent-select-label">User Intent</InputLabel>
+              <Select
+                labelId="intent-select-label"
+                id="intent-select"
+                value={selectedIntent}
+                label="User Intent"
+                onChange={(e) => setSelectedIntent(e.target.value as IntentType)}
+              >
+                <MenuItem value="both">Both (Default - Allow All Users)</MenuItem>
+                <MenuItem value="client">Client Only</MenuItem>
+                <MenuItem value="candidate">Candidate Only</MenuItem>
+              </Select>
+              <FormHelperText>
+                Select the target user audience for this SSO login. The runtime intent can only narrow the OAuth client's default intent, never widen it (security protection).
+              </FormHelperText>
+            </FormControl>
+          </Paper>
+
           <Button
             variant="contained"
             size="large"
@@ -274,6 +306,9 @@ export default function IntegratedTestSuite() {
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 • Code Challenge Method: S256 (SHA-256)
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Selected Intent: {selectedIntent}
               </Typography>
             </Stack>
             <Alert severity="warning" icon={<Warning />} sx={{ mt: 2 }}>

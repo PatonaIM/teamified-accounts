@@ -397,4 +397,34 @@ export class UserService {
       .orderBy('user.createdAt', 'DESC')
       .getMany();
   }
+
+  async getUserType(userId: string): Promise<'client' | 'candidate'> {
+    const user = await this.findOne(userId);
+    
+    if (!user.userRoles || user.userRoles.length === 0) {
+      return 'candidate';
+    }
+
+    const roles = user.userRoles.map(r => r.roleType);
+    
+    const hasClientRole = roles.some(role => 
+      role.startsWith('client_') || role.startsWith('internal_')
+    );
+    
+    return hasClientRole ? 'client' : 'candidate';
+  }
+
+  classifyUserType(user: { userRoles?: Array<{ roleType: string }> }): 'client' | 'candidate' {
+    if (!user.userRoles || user.userRoles.length === 0) {
+      return 'candidate';
+    }
+
+    const roles = user.userRoles.map(r => r.roleType);
+    
+    const hasClientRole = roles.some(role => 
+      role.startsWith('client_') || role.startsWith('internal_')
+    );
+    
+    return hasClientRole ? 'client' : 'candidate';
+  }
 }

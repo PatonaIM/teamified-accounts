@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export type IntentType = 'client' | 'candidate' | 'both';
+
 @Entity('oauth_clients')
 export class OAuthClient {
   @PrimaryGeneratedColumn('uuid')
@@ -28,6 +30,13 @@ export class OAuthClient {
 
   @Column({ default: true })
   is_active: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: ['client', 'candidate', 'both'],
+    default: 'both',
+  })
+  default_intent: IntentType;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: {

@@ -30,6 +30,17 @@ export class CreateOAuthClientDto {
   redirect_uris: string[];
 
   @ApiProperty({
+    description: 'Target user audience for this application. Controls which user types can access this app.',
+    example: 'both',
+    enum: ['client', 'candidate', 'both'],
+    required: false,
+    default: 'both',
+  })
+  @IsEnum(['client', 'candidate', 'both'])
+  @IsOptional()
+  default_intent?: 'client' | 'candidate' | 'both';
+
+  @ApiProperty({
     description: 'Application URL',
     example: 'https://app1.teamified.com',
     required: false,

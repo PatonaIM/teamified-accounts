@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUrl, IsEnum } from 'class-validator';
 
 export class AuthorizeDto {
   @IsString()
@@ -20,4 +20,8 @@ export class AuthorizeDto {
   @IsString()
   @IsOptional()
   code_challenge_method?: string;
+
+  @IsEnum(['client', 'candidate', 'both'])
+  @IsOptional()
+  intent?: 'client' | 'candidate' | 'both';
 }
