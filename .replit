@@ -53,6 +53,10 @@ run = ["npm", "run", "start:prod"]
 build = ["npm", "run", "build:all"]
 
 [[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 
