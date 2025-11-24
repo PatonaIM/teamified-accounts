@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddDefaultIntentToOAuthClients1764000000000 implements MigrationInterface {
+export class AddDefaultIntentToOAuthClients1732436400000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TYPE "oauth_client_intent_enum" AS ENUM ('client', 'candidate', 'both')
