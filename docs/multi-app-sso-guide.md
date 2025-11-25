@@ -112,6 +112,8 @@ The SSO authorization endpoint supports an optional `intent` parameter that allo
    - If `default_intent` is `'both'` → Runtime intent is applied as-is
    - If runtime intent tries to widen access → Ignored, falls back to `default_intent`
 
+4. **Internal User Bypass**: Users with `super_admin` or `internal_*` roles bypass all intent restrictions and can access any application regardless of the configured intent. This allows internal staff to access all apps for administration and support purposes.
+
 ### Authorization URL Examples
 
 **Standard authorization (uses OAuth client's default intent):**

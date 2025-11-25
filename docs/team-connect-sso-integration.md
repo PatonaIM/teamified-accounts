@@ -22,6 +22,8 @@ The authorization endpoint supports an optional `intent` parameter to restrict w
 | `candidate` | Only candidate users |
 | `both` | All users (default) |
 
+**Note**: Internal users (`super_admin` and `internal_*` roles) bypass all intent restrictions and can access any application.
+
 See [Multi-App SSO Guide](./multi-app-sso-guide.md#intent-parameter-user-type-filtering) for full documentation on the intent parameter.
 
 ---

@@ -274,8 +274,24 @@ export class SsoService {
   }
 
   /**
+   * Check if user is an internal user (super_admin or internal_* roles)
+   * Internal users bypass all intent restrictions
+   */
+  private isInternalUser(user: { userRoles?: Array<{ roleType: string }> }): boolean {
+    if (!user.userRoles || user.userRoles.length === 0) {
+      return false;
+    }
+
+    return user.userRoles.some(role => 
+      role.roleType === 'super_admin' || 
+      role.roleType.startsWith('internal_')
+    );
+  }
+
+  /**
    * Validate user type against effective intent
    * Returns error redirect URL if access should be denied, null otherwise
+   * Internal users (super_admin, internal_*) bypass all intent restrictions
    */
   private async validateUserIntent(
     userId: string,
@@ -289,6 +305,15 @@ export class SsoService {
     }
 
     const user = await this.userService.findOne(userId);
+    
+    // Internal users bypass all intent restrictions
+    if (this.isInternalUser(user)) {
+      this.logger.log(
+        `Internal user ${userId} (${user.email}) bypassing intent restriction for client ${clientId}`,
+      );
+      return null;
+    }
+
     const userType = this.userService.classifyUserType(user);
 
     this.logger.log(

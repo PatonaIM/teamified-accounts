@@ -340,6 +340,7 @@ The `intent` parameter allows you to restrict which type of users can authentica
 1. **OAuth Client Default Intent**: Each registered OAuth client has a `default_intent` configured in Portal admin
 2. **Runtime Intent**: The `intent` query parameter can only **narrow** access, never widen it
 3. **Escalation Prevention**: If `default_intent='client'`, passing `intent='both'` is ignored
+4. **Internal User Bypass**: Users with `super_admin` or `internal_*` roles bypass all intent restrictions and can access any application regardless of the configured intent
 
 ### Handling Intent Errors
 

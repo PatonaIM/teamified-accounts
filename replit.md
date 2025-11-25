@@ -68,6 +68,7 @@ The SSO system now supports **audience-based access control** via an intent para
 - Runtime `intent` query parameter can only **narrow** access, never widen it
 - Prevents privilege escalation attacks by enforcing intersection-based resolution
 - Example: If client's `default_intent='client'`, runtime `intent='both'` is ignored
+- **Internal User Bypass**: Users with `super_admin` or `internal_*` roles bypass all intent restrictions
 
 **User Type Classification:**
 - Users with roles starting with `client_` or `internal_`, or with `super_admin` role → classified as 'client'
@@ -89,7 +90,7 @@ The SSO system now supports **audience-based access control** via an intent para
 
 **Implementation Files:**
 - Migration: `src/migrations/1732436400000-AddDefaultIntentToOAuthClients.ts`
-- Backend service: `src/sso/sso.service.ts` (resolveEffectiveIntent, validateUserIntent)
+- Backend service: `src/sso/sso.service.ts` (resolveEffectiveIntent, validateUserIntent, isInternalUser)
 - User classification: `src/users/services/user.service.ts` (getUserType, classifyUserType)
 - OAuth entity: `src/oauth-clients/entities/oauth-client.entity.ts` (default_intent field)
 - Frontend test page: `frontend/src/pages/test/IntegratedTestSuite.tsx` (intent dropdown)
