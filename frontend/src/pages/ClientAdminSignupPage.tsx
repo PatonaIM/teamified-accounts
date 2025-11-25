@@ -52,6 +52,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const emailParam = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
+  const intent = searchParams.get('intent') || '';
 
   const [formData, setFormData] = useState({
     email: emailParam,
@@ -197,8 +198,18 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
-  const handleBackToSelection = () => {
-    navigate(`/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+  const handleBack = () => {
+    // If intent was specified (candidate or client), go back to login instead of selection
+    if (intent === 'candidate' || intent === 'client') {
+      const loginParams = new URLSearchParams();
+      if (returnUrl !== '/account') {
+        loginParams.set('returnUrl', returnUrl);
+      }
+      navigate(`/login${loginParams.toString() ? `?${loginParams.toString()}` : ''}`);
+    } else {
+      // No specific intent - go back to selection page
+      navigate(`/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+    }
   };
 
   return (
@@ -438,11 +449,11 @@ const ClientAdminSignupPage: React.FC = () => {
               <Box textAlign="center" mt={2}>
                 <Button
                   startIcon={<ArrowBack />}
-                  onClick={handleBackToSelection}
+                  onClick={handleBack}
                   disabled={isLoading}
                   sx={{ textTransform: 'none' }}
                 >
-                  Back to Selection
+                  {intent === 'candidate' || intent === 'client' ? 'Back to Login' : 'Back to Selection'}
                 </Button>
               </Box>
             </Box>
