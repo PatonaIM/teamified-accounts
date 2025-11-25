@@ -29,9 +29,25 @@ const LoginPageMUI: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   
+  // Extract intent from the returnUrl if it's an SSO authorize URL
+  const extractIntentFromReturnUrl = (): string => {
+    if (returnUrl.includes('/api/v1/sso/authorize')) {
+      try {
+        // Parse the returnUrl to extract query params
+        const url = new URL(returnUrl, window.location.origin);
+        return url.searchParams.get('intent') || '';
+      } catch {
+        return '';
+      }
+    }
+    return '';
+  };
+  const intent = extractIntentFromReturnUrl();
+  
   console.log('[LoginPageMUI] Current URL:', window.location.href);
   console.log('[LoginPageMUI] Return URL from query params:', returnUrl);
   console.log('[LoginPageMUI] Is SSO authorize URL?:', returnUrl.includes('/api/v1/sso/authorize'));
+  console.log('[LoginPageMUI] Extracted intent:', intent);
   
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
@@ -99,7 +115,16 @@ const LoginPageMUI: React.FC = () => {
       if (data.valid) {
         setStep('password');
       } else {
-        const signupUrl = `/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account/profile' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`;
+        // Build signup URL with email, returnUrl, and intent (if present)
+        const signupParams = new URLSearchParams();
+        signupParams.set('email', formData.email);
+        if (returnUrl !== '/account/profile') {
+          signupParams.set('returnUrl', returnUrl);
+        }
+        if (intent) {
+          signupParams.set('intent', intent);
+        }
+        const signupUrl = `/signup-select?${signupParams.toString()}`;
         navigate(signupUrl);
       }
     } catch (error) {

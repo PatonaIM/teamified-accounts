@@ -21,17 +21,44 @@ const SignupPathSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get email and returnUrl from query parameters
+  // Get email, returnUrl, and intent from query parameters
   const searchParams = new URLSearchParams(location.search);
   const email = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
+  const intent = searchParams.get('intent') || '';
 
   useEffect(() => {
     // If no email provided, redirect back to login
     if (!email) {
       navigate('/login', { replace: true });
+      return;
     }
-  }, [email, navigate]);
+
+    // Build the query string for signup pages
+    const buildQueryString = () => {
+      const params = new URLSearchParams();
+      params.set('email', email);
+      if (returnUrl !== '/account') {
+        params.set('returnUrl', returnUrl);
+      }
+      if (intent) {
+        params.set('intent', intent);
+      }
+      return params.toString();
+    };
+
+    // Auto-redirect based on intent parameter
+    if (intent === 'candidate') {
+      // Candidate-only app: go directly to candidate signup
+      navigate(`/signup-candidate?${buildQueryString()}`, { replace: true });
+      return;
+    } else if (intent === 'client') {
+      // Client-only app: go directly to employer signup
+      navigate(`/signup-client-admin?${buildQueryString()}`, { replace: true });
+      return;
+    }
+    // If intent is 'both' or not specified, show the selection page
+  }, [email, navigate, returnUrl, intent]);
 
   const handleCandidateSignup = () => {
     navigate(`/signup-candidate?email=${encodeURIComponent(email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);

@@ -80,6 +80,13 @@ The SSO system now supports **audience-based access control** via an intent para
 - Candidate trying client-only app → redirected with suggestion to create/join client org
 - Client trying candidate-only app → redirected with error message
 
+**Intent-Aware Signup Flow (November 25, 2025):**
+- When SSO flow includes an `intent` parameter, the signup page skips the user type selection
+- `intent=candidate` → automatically redirects to candidate signup form
+- `intent=client` → automatically redirects to employer signup form
+- `intent=both` or not specified → shows the selection page with both options
+- Login page extracts intent from the SSO authorize URL's returnUrl parameter
+
 **Implementation Files:**
 - Migration: `src/migrations/1732436400000-AddDefaultIntentToOAuthClients.ts`
 - Backend service: `src/sso/sso.service.ts` (resolveEffectiveIntent, validateUserIntent)
@@ -87,6 +94,8 @@ The SSO system now supports **audience-based access control** via an intent para
 - OAuth entity: `src/oauth-clients/entities/oauth-client.entity.ts` (default_intent field)
 - Frontend test page: `frontend/src/pages/test/IntegratedTestSuite.tsx` (intent dropdown)
 - Admin UI: `frontend/src/components/settings/OAuthClientDialog.tsx` (default_intent configuration)
+- Login page: `frontend/src/pages/LoginPageMUI.tsx` (intent extraction and passing)
+- Signup selection: `frontend/src/pages/SignupPathSelectionPage.tsx` (auto-redirect based on intent)
 
 ## External Dependencies
 
