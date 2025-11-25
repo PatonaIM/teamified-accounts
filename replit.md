@@ -55,6 +55,30 @@ The platform uses a dual-token strategy: Bearer tokens in Authorization headers 
 
 Sessions have a **48-hour inactivity timeout** with activity tracked via `last_activity_at` on token refresh, extending across connected SSO applications. There is also a **30-day absolute expiry** regardless of activity.
 
+#### Session Persistence & Deep Linking (November 25, 2025)
+
+The frontend now supports **session persistence and deep linking**, ensuring users aren't forced to re-login after page refreshes or server restarts:
+
+**Key Components:**
+- `SessionAwareRedirect` component (`frontend/src/components/SessionAwareRedirect.tsx`): Smart routing that checks authentication state on the root path (`/`) and redirects accordingly
+- `saveLastPath()` / `getLastPath()`: Persists the user's last visited protected path in localStorage
+- Token refresh on page load: Automatically refreshes expired access tokens using stored refresh tokens
+
+**Behavior:**
+1. When accessing `/` or any unknown path:
+   - If authenticated → redirect to last visited path OR `/account/profile`
+   - If not authenticated but has valid refresh token → refresh and redirect
+   - If no valid session → redirect to `/login`
+2. Protected routes automatically save their path for restoration
+3. Login page checks for existing session and redirects if valid
+4. Logout clears the last visited path from storage
+
+**Implementation Files:**
+- `frontend/src/components/SessionAwareRedirect.tsx` - Core session-aware routing
+- `frontend/src/components/ProtectedRoute.tsx` - Path persistence on navigation
+- `frontend/src/pages/LoginPageMUI.tsx` - Authenticated user redirect
+- `frontend/src/services/authService.ts` - Logout clears last path
+
 #### API Key Management
 
 The platform supports programmatic access via API keys, alternative to JWTs. Keys are **Bcrypt-hashed**, use 10-character prefixes for lookup, and offer `read_only` or `full_access`. Each user can create up to 10 keys, with audit logging for all key actions and a dedicated MUI settings UI.

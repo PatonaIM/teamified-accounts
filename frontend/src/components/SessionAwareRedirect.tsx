@@ -4,6 +4,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken } from '../services/authService';
 
 const LAST_PATH_KEY = 'teamified_last_path';
+const LAST_PATH_USER_KEY = 'teamified_last_path_user';
 const DEFAULT_AUTHENTICATED_PATH = '/account/profile';
 
 const PUBLIC_PATHS = [
@@ -22,18 +23,30 @@ const PUBLIC_PATHS = [
   '/accept-invitation',
 ];
 
-export const saveLastPath = (path: string): void => {
+export const saveLastPath = (path: string, userId?: string): void => {
   if (!isPublicPath(path) && path !== '/') {
     localStorage.setItem(LAST_PATH_KEY, path);
+    if (userId) {
+      localStorage.setItem(LAST_PATH_USER_KEY, userId);
+    }
   }
 };
 
-export const getLastPath = (): string | null => {
-  return localStorage.getItem(LAST_PATH_KEY);
+export const getLastPath = (currentUserId?: string): string | null => {
+  const storedPath = localStorage.getItem(LAST_PATH_KEY);
+  const storedUserId = localStorage.getItem(LAST_PATH_USER_KEY);
+  
+  if (currentUserId && storedUserId && storedUserId !== currentUserId) {
+    clearLastPath();
+    return null;
+  }
+  
+  return storedPath;
 };
 
 export const clearLastPath = (): void => {
   localStorage.removeItem(LAST_PATH_KEY);
+  localStorage.removeItem(LAST_PATH_USER_KEY);
 };
 
 const isPublicPath = (path: string): boolean => {
@@ -103,7 +116,12 @@ const SessionAwareRedirect: React.FC = () => {
 
   if (isLoggedIn) {
     const lastPath = getLastPath();
-    const targetPath = lastPath || DEFAULT_AUTHENTICATED_PATH;
+    let targetPath = DEFAULT_AUTHENTICATED_PATH;
+    
+    if (lastPath && !isPublicPath(lastPath)) {
+      targetPath = lastPath;
+    }
+    
     console.log('[SessionAwareRedirect] User authenticated, redirecting to:', targetPath);
     return <Navigate to={targetPath} replace />;
   }

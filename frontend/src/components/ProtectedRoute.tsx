@@ -14,7 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      saveLastPath(location.pathname + location.search);
+      saveLastPath(location.pathname + location.search, user.id);
     }
   }, [location.pathname, location.search, user]);
 
