@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,15 +16,17 @@ import {
   VisibilityOff,
   ArrowBack,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { login, getAccessToken } from '../services/authService';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { login, getAccessToken, isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { SupabaseLoginButton } from '../components/auth/SupabaseLoginButton';
 import { isSupabaseConfigured } from '../config/supabase';
+import { getLastPath } from '../components/SessionAwareRedirect';
 
 const LoginPageMUI: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const location = useLocation();
+  const { refreshUser, user, loading } = useAuth();
   
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
@@ -48,6 +50,49 @@ const LoginPageMUI: React.FC = () => {
   console.log('[LoginPageMUI] Return URL from query params:', returnUrl);
   console.log('[LoginPageMUI] Is SSO authorize URL?:', returnUrl.includes('/api/v1/sso/authorize'));
   console.log('[LoginPageMUI] Extracted intent:', intent);
+  
+  useEffect(() => {
+    const checkAndRedirect = async () => {
+      if (loading) return;
+      
+      if (user) {
+        console.log('[LoginPageMUI] User already authenticated, redirecting...');
+        const targetUrl = returnUrl !== '/account/profile' ? returnUrl : (getLastPath() || '/account/profile');
+        
+        if (targetUrl.includes('/api/v1/sso/authorize')) {
+          window.location.href = targetUrl;
+        } else {
+          navigate(targetUrl, { replace: true });
+        }
+        return;
+      }
+      
+      if (!isAuthenticated()) {
+        const refreshToken = getRefreshToken();
+        if (refreshToken) {
+          try {
+            console.log('[LoginPageMUI] Attempting token refresh...');
+            const response = await refreshAccessToken(refreshToken);
+            setAccessToken(response.data.accessToken);
+            await refreshUser();
+            
+            const targetUrl = returnUrl !== '/account/profile' ? returnUrl : (getLastPath() || '/account/profile');
+            console.log('[LoginPageMUI] Token refreshed, redirecting to:', targetUrl);
+            
+            if (targetUrl.includes('/api/v1/sso/authorize')) {
+              window.location.href = targetUrl;
+            } else {
+              navigate(targetUrl, { replace: true });
+            }
+          } catch (error) {
+            console.log('[LoginPageMUI] Token refresh failed, showing login form');
+          }
+        }
+      }
+    };
+    
+    checkAndRedirect();
+  }, [user, loading, navigate, returnUrl, refreshUser]);
   
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({

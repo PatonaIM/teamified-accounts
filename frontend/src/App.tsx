@@ -27,6 +27,7 @@ import MyOrganizationPage from './pages/MyOrganizationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SuperAdminRoute from './components/SuperAdminRoute';
 import RoleBasedRoute from './components/RoleBasedRoute';
+import SessionAwareRedirect from './components/SessionAwareRedirect';
 import AccountLayout from './components/AccountLayout';
 import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
@@ -181,7 +182,8 @@ function App() {
                   path="/docs/multi-organization" 
                   element={<MultiOrganizationIntegrationPage />} 
                 />
-                <Route path="*" element={<Navigate to="/login" replace />} />
+                <Route path="/" element={<SessionAwareRedirect />} />
+                <Route path="*" element={<SessionAwareRedirect />} />
               </Routes>
             </div>
           </Router>
