@@ -8,6 +8,11 @@ The Teamified Accounts & SSO Platform is a centralized authentication and user m
 
 Preferred communication style: Simple, everyday language.
 
+## Developer Documentation
+
+- [Documentation Index](./docs/README.md) - Main documentation entry point
+- [Deep Linking Guide](./docs/deep_linking_using_teamified_accounts_guide.md) - Session persistence and deep linking implementation for client apps
+
 ## System Architecture
 
 ### Backend Architecture
