@@ -627,6 +627,29 @@ export default function DocsPage() {
                   </Typography>
                 </Alert>
 
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Intent Parameter (User Type Filtering)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Optionally pass an <code>intent</code> parameter to restrict authentication by user type:
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2">
+                      • <code>intent=client</code> - Only client organization users
+                    </Typography>
+                    <Typography variant="body2">
+                      • <code>intent=candidate</code> - Only candidate users
+                    </Typography>
+                    <Typography variant="body2">
+                      • <code>intent=both</code> - All users (default)
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    <strong>Note:</strong> Internal users (<code>super_admin</code>, <code>internal_*</code>) bypass all intent restrictions.
+                  </Typography>
+                </Paper>
+
                 <Button
                   variant="outlined"
                   href="/docs/sso-integration"

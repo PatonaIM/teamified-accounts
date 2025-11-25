@@ -319,6 +319,70 @@ curl -X GET ${userInfoUrl} \\
         </TabPanel>
       </Paper>
 
+      {/* Intent Parameter */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+          Intent Parameter (User Type Filtering)
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          The authorization endpoint supports an optional <code>intent</code> parameter to restrict which type of users can authenticate through your application.
+        </Typography>
+        
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Available Intent Values
+            </Typography>
+            <Stack spacing={1}>
+              <Typography variant="body2">
+                • <code>client</code> - Only users associated with client organizations can authenticate
+              </Typography>
+              <Typography variant="body2">
+                • <code>candidate</code> - Only candidate users can authenticate
+              </Typography>
+              <Typography variant="body2">
+                • <code>both</code> - All authenticated users (default if omitted)
+              </Typography>
+            </Stack>
+          </Box>
+
+          <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Example: Client-Only Authorization
+            </Typography>
+            <Typography variant="body2" component="code" sx={{ display: 'block', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+              {authorizationUrl}?client_id=xxx&redirect_uri=xxx&state=xxx&intent=client
+            </Typography>
+          </Paper>
+
+          <Alert severity="info">
+            <Typography variant="body2">
+              <strong>Security Note:</strong> The runtime <code>intent</code> parameter can only narrow access, never widen it. 
+              If your OAuth client has a <code>default_intent</code> of <code>client</code>, passing <code>intent=both</code> will be ignored.
+            </Typography>
+          </Alert>
+
+          <Alert severity="success">
+            <Typography variant="body2">
+              <strong>Internal User Bypass:</strong> Users with <code>super_admin</code> or <code>internal_*</code> roles 
+              bypass all intent restrictions and can access any application regardless of the configured intent.
+            </Typography>
+          </Alert>
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Handling Intent Errors
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              When a user's type doesn't match the intent, the callback receives an OAuth error:
+            </Typography>
+            <Typography variant="body2" component="code" sx={{ display: 'block', fontSize: '0.875rem', mt: 1, bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
+              ?error=access_denied&error_description=This+application+is+for+client+organizations+only...
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
+
       {/* Security Best Practices */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
