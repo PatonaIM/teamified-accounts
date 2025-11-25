@@ -70,7 +70,7 @@ The SSO system now supports **audience-based access control** via an intent para
 - Example: If client's `default_intent='client'`, runtime `intent='both'` is ignored
 
 **User Type Classification:**
-- Users with roles starting with `client_` or `internal_` → classified as 'client'
+- Users with roles starting with `client_` or `internal_`, or with `super_admin` role → classified as 'client'
 - Users without such roles → classified as 'candidate'
 - Classification uses optimized sync method `classifyUserType()` to avoid redundant DB lookups
 

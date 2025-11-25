@@ -408,7 +408,9 @@ export class UserService {
     const roles = user.userRoles.map(r => r.roleType);
     
     const hasClientRole = roles.some(role => 
-      role.startsWith('client_') || role.startsWith('internal_')
+      role.startsWith('client_') || 
+      role.startsWith('internal_') ||
+      role === 'super_admin'
     );
     
     return hasClientRole ? 'client' : 'candidate';
@@ -422,7 +424,9 @@ export class UserService {
     const roles = user.userRoles.map(r => r.roleType);
     
     const hasClientRole = roles.some(role => 
-      role.startsWith('client_') || role.startsWith('internal_')
+      role.startsWith('client_') || 
+      role.startsWith('internal_') ||
+      role === 'super_admin'
     );
     
     return hasClientRole ? 'client' : 'candidate';
