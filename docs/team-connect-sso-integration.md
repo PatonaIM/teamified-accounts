@@ -9,7 +9,20 @@ Client ID: client_266b2fd552de8dd40c0414285e1b597f
 Client Secret: f26957a353ff2426a5730298a95da6a7a3ba3a56e33449bb6b073c1cb33ba76c
 Redirect URI: https://98de675e-3037-461f-b391-8267ceb28294-00-31oxsij4o498l.worf.replit.dev/auth/callback
 Portal Base URL: [Your Portal URL]
+Default Intent: both (can be 'client', 'candidate', or 'both')
 ```
+
+### Intent Parameter (Optional)
+
+The authorization endpoint supports an optional `intent` parameter to restrict which user types can authenticate:
+
+| Intent | Description |
+|--------|-------------|
+| `client` | Only client organization users |
+| `candidate` | Only candidate users |
+| `both` | All users (default) |
+
+See [Multi-App SSO Guide](./multi-app-sso-guide.md#intent-parameter-user-type-filtering) for full documentation on the intent parameter.
 
 ---
 

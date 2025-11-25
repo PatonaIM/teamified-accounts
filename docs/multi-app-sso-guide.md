@@ -40,6 +40,7 @@ The Portal provides these SSO endpoints:
 2. **Authorization Endpoint (Advanced)**: `GET /api/v1/sso/authorize`
    - Full OAuth 2.0 authorization endpoint
    - Requires manual redirect_uri, state, and optional PKCE parameters
+   - Supports optional `intent` parameter for user type filtering
    - Use when you need custom redirect URIs or state management
    - **Use this for app-initiated SSO flows with custom parameters**
 
@@ -86,6 +87,83 @@ When a user clicks "Team Connect" in the Portal navigation:
 - ✅ **Client secret validation** - For confidential apps
 - ✅ **Redirect URI validation** - Prevents code interception
 - ✅ **Audit logging** - All SSO attempts are logged
+- ✅ **Intent-based access control** - Restrict access by user type
+
+## Intent Parameter (User Type Filtering)
+
+The SSO authorization endpoint supports an optional `intent` parameter that allows you to restrict which type of users can authenticate through your application.
+
+### Intent Values
+
+| Intent | Description |
+|--------|-------------|
+| `client` | Only users associated with client organizations can authenticate |
+| `candidate` | Only candidate users can authenticate |
+| `both` | Both client and candidate users can authenticate (default) |
+
+### How Intent Works
+
+1. **OAuth Client Default Intent**: Each registered OAuth client has a `default_intent` setting configured in the Portal admin. This acts as the baseline access control for the application.
+
+2. **Runtime Intent (Optional)**: Client apps can pass an `intent` parameter at authorization time to further narrow access. The runtime intent can only be **equal to or more restrictive** than the default intent - it cannot widen access.
+
+3. **Intent Resolution Logic**:
+   - If no runtime `intent` is provided → Uses OAuth client's `default_intent`
+   - If `default_intent` is `'both'` → Runtime intent is applied as-is
+   - If runtime intent tries to widen access → Ignored, falls back to `default_intent`
+
+### Authorization URL Examples
+
+**Standard authorization (uses OAuth client's default intent):**
+```
+GET /api/v1/sso/authorize?client_id=xxx&redirect_uri=xxx&state=xxx
+```
+
+**Candidate-only authorization:**
+```
+GET /api/v1/sso/authorize?client_id=xxx&redirect_uri=xxx&state=xxx&intent=candidate
+```
+
+**Client-only authorization:**
+```
+GET /api/v1/sso/authorize?client_id=xxx&redirect_uri=xxx&state=xxx&intent=client
+```
+
+### Client-Side Implementation Example
+
+```typescript
+const handleLoginClick = async (userIntent?: 'client' | 'candidate' | 'both') => {
+  const authParams: Record<string, string> = {
+    client_id: OAUTH_CLIENT_ID,
+    redirect_uri: redirectUri,
+    state: generateState(),
+    code_challenge: await generateCodeChallenge(codeVerifier),
+    code_challenge_method: 'S256',
+  };
+
+  // Only add intent if narrowing from 'both'
+  if (userIntent && userIntent !== 'both') {
+    authParams.intent = userIntent;
+  }
+
+  const authUrl = `${portalUrl}/api/v1/sso/authorize?${new URLSearchParams(authParams)}`;
+  window.location.href = authUrl;
+};
+```
+
+### Error Handling for Intent Mismatch
+
+When a user's type doesn't match the effective intent, the Portal redirects back to the client app with an OAuth error:
+
+```
+https://your-app.com/auth/callback?error=access_denied&error_description=This+application+is+for+client+organizations+only...&state=xxx
+```
+
+Your callback handler should check for the `error` parameter and display an appropriate message to the user.
+
+### Backward Compatibility
+
+The `intent` parameter is fully optional. Existing client applications that don't pass the `intent` parameter will continue to work exactly as before - they will use the OAuth client's `default_intent` (which defaults to `'both'` for existing clients).
 
 ## Registering Your App for SSO
 
@@ -99,6 +177,10 @@ When a user clicks "Team Connect" in the Portal navigation:
    - **Description**: Internal team collaboration platform
    - **Redirect URI**: `https://your-app.repl.co/auth/callback`
    - **Environment**: Development or Production
+   - **Default Intent**: Select the target user audience:
+     - `both` (default) - Allow both candidates and client users
+     - `candidate` - Restrict to candidate users only
+     - `client` - Restrict to client organization users only
 5. **Save** and copy your credentials:
    - `client_id`: e.g., `client_266b2fd552de8dd40c0414285e1b597f`
    - `client_secret`: e.g., `secret_abc123def456...`
