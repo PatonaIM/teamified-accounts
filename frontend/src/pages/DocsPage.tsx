@@ -1128,6 +1128,11 @@ Authorization: Bearer <access_token>
                         Multi-Organization Integration Guide
                       </Button>
                     </ListItem>
+                    <ListItem>
+                      <Button href="/docs/deep-linking-guide" variant="text" size="small">
+                        Deep Linking & Session Persistence Guide
+                      </Button>
+                    </ListItem>
                   </List>
                 </Paper>
               </Stack>
