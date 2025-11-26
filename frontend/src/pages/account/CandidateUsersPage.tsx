@@ -37,7 +37,6 @@ import {
   Phone,
   CalendarToday,
   Badge,
-  Refresh,
   DeleteForever,
   Warning,
 } from '@mui/icons-material';
@@ -50,6 +49,7 @@ import type { User, UserQueryParams } from '../../services/userService';
 import organizationsService from '../../services/organizationsService';
 import type { Organization } from '../../services/organizationsService';
 import { useAuth } from '../../contexts/AuthContext';
+import InviteCandidateModal from '../../components/invitations/InviteCandidateModal';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -103,6 +103,8 @@ export default function CandidateUsersPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   const loadCandidates = useCallback(
     async (append = false) => {
@@ -317,16 +319,17 @@ export default function CandidateUsersPage() {
             }}
           />
           <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={() => {
-              setCurrentPage(1);
-              loadCandidates();
+            variant="contained"
+            startIcon={<PersonAdd />}
+            onClick={() => setInviteModalOpen(true)}
+            sx={{
+              whiteSpace: 'nowrap',
+              px: 3,
+              bgcolor: 'success.main',
+              '&:hover': { bgcolor: 'success.dark' },
             }}
-            disabled={loading}
-            sx={{ whiteSpace: 'nowrap', px: 3 }}
           >
-            Refresh
+            Invite Candidate
           </Button>
         </Box>
       </Paper>
@@ -800,6 +803,15 @@ export default function CandidateUsersPage() {
           </Paper>
         )}
       </Box>
+
+      <InviteCandidateModal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        onSuccess={(message) => {
+          setSnackbar({ open: true, message, severity: 'success' });
+          loadCandidates();
+        }}
+      />
 
       <Dialog
         open={deleteConfirmOpen}
