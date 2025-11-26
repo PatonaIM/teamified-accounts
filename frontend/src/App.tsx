@@ -18,6 +18,7 @@ import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
 import DocsPage from './pages/DocsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
+import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -27,6 +28,7 @@ import MyOrganizationPage from './pages/MyOrganizationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SuperAdminRoute from './components/SuperAdminRoute';
 import RoleBasedRoute from './components/RoleBasedRoute';
+import SessionAwareRedirect from './components/SessionAwareRedirect';
 import AccountLayout from './components/AccountLayout';
 import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
@@ -181,7 +183,12 @@ function App() {
                   path="/docs/multi-organization" 
                   element={<MultiOrganizationIntegrationPage />} 
                 />
-                <Route path="*" element={<Navigate to="/login" replace />} />
+                <Route 
+                  path="/docs/deep-linking-guide" 
+                  element={<DeepLinkingGuidePage />} 
+                />
+                <Route path="/" element={<SessionAwareRedirect />} />
+                <Route path="*" element={<SessionAwareRedirect />} />
               </Routes>
             </div>
           </Router>

@@ -264,6 +264,10 @@ export const logout = async (): Promise<void> => {
     // Always remove local tokens
     removeTokens();
     
+    // Clear last visited path and associated user ID
+    localStorage.removeItem('teamified_last_path');
+    localStorage.removeItem('teamified_last_path_user');
+    
     // Clear theme preferences on logout
     try {
       const { clearThemePreferences } = await import('../contexts/ThemeContext');
