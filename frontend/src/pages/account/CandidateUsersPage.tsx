@@ -34,6 +34,7 @@ import {
   PersonAdd as PersonAddIcon,
   Refresh as RefreshIcon,
   Business as BusinessIcon,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -316,7 +317,12 @@ export default function CandidateUsersPage() {
                 </TableRow>
               ) : (
                 candidates.map((candidate) => (
-                  <TableRow key={candidate.id} hover>
+                  <TableRow
+                    key={candidate.id}
+                    hover
+                    onClick={() => navigate(`/admin/users/${candidate.id}`)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{ bgcolor: 'primary.main' }}>
@@ -353,20 +359,37 @@ export default function CandidateUsersPage() {
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Tooltip title="Convert to Employee">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<PersonAddIcon />}
-                          onClick={() => handleOpenConvertDialog(candidate)}
-                          sx={{
-                            bgcolor: '#A16AE8',
-                            '&:hover': { bgcolor: '#8f5cd9' },
-                          }}
-                        >
-                          Convert
-                        </Button>
-                      </Tooltip>
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                        <Tooltip title="View Profile">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/users/${candidate.id}`);
+                            }}
+                            sx={{ color: 'text.secondary' }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Convert to Employee">
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<PersonAddIcon />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenConvertDialog(candidate);
+                            }}
+                            sx={{
+                              bgcolor: '#A16AE8',
+                              '&:hover': { bgcolor: '#8f5cd9' },
+                            }}
+                          >
+                            Convert
+                          </Button>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
