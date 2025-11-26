@@ -38,6 +38,8 @@ import {
   CalendarToday,
   Badge,
   Refresh,
+  DeleteForever,
+  Warning,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -97,6 +99,10 @@ export default function CandidateUsersPage() {
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const loadCandidates = useCallback(
     async (append = false) => {
@@ -212,6 +218,36 @@ export default function CandidateUsersPage() {
       );
     } finally {
       setConvertLoading(false);
+    }
+  };
+
+  const handleDeleteCandidate = async () => {
+    if (!selectedCandidate) return;
+
+    setDeleteLoading(true);
+
+    try {
+      await userService.deleteUser(selectedCandidate.id);
+
+      setSnackbar({
+        open: true,
+        message: `Successfully deleted ${selectedCandidate.firstName} ${selectedCandidate.lastName}`,
+        severity: 'success',
+      });
+
+      setDeleteConfirmOpen(false);
+      setDeleteConfirmText('');
+      setSelectedCandidate(null);
+      setCurrentPage(1);
+      loadCandidates();
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err?.response?.data?.message || err.message || 'Failed to delete candidate',
+        severity: 'error',
+      });
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -500,6 +536,7 @@ export default function CandidateUsersPage() {
               >
                 <Tab label="Profile Info" />
                 <Tab label="Convert to Employee" />
+                <Tab label="Delete User" sx={{ color: 'error.main' }} />
               </Tabs>
             </Box>
 
@@ -683,6 +720,59 @@ export default function CandidateUsersPage() {
                   </Stack>
                 </Box>
               </TabPanel>
+
+              <TabPanel value={activeTab} index={2}>
+                <Box sx={{ maxWidth: 500 }}>
+                  <Alert severity="warning" sx={{ mb: 3 }} icon={<Warning />}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                      This action cannot be undone
+                    </Typography>
+                    <Typography variant="body2">
+                      Deleting this user will permanently remove their account, including all
+                      associated data, roles, and permissions from the system.
+                    </Typography>
+                  </Alert>
+
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      bgcolor: 'error.main',
+                      color: 'error.contrastText',
+                      borderRadius: 2,
+                      mb: 3,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Avatar
+                        src={selectedCandidate.profileData?.profilePicture || undefined}
+                        sx={{ width: 48, height: 48, bgcolor: 'error.dark' }}
+                      >
+                        {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          {selectedCandidate.firstName} {selectedCandidate.lastName}
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                          {selectedCandidate.email}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Paper>
+
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="large"
+                    fullWidth
+                    startIcon={<DeleteForever />}
+                    onClick={() => setDeleteConfirmOpen(true)}
+                  >
+                    Delete This User
+                  </Button>
+                </Box>
+              </TabPanel>
             </Box>
           </Paper>
         ) : (
@@ -710,6 +800,70 @@ export default function CandidateUsersPage() {
           </Paper>
         )}
       </Box>
+
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setDeleteConfirmText('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <Warning />
+          Confirm User Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            You are about to permanently delete the user{' '}
+            <strong>
+              {selectedCandidate?.firstName} {selectedCandidate?.lastName}
+            </strong>{' '}
+            ({selectedCandidate?.email}).
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 3 }}>
+            This action cannot be undone. All associated data will be permanently removed.
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, fontWeight: 600 }}>
+            To confirm, type "DELETE" below:
+          </Typography>
+          <TextField
+            fullWidth
+            placeholder="Type DELETE to confirm"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            error={deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE'}
+            helperText={
+              deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE'
+                ? 'Please type DELETE exactly as shown'
+                : ''
+            }
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => {
+              setDeleteConfirmOpen(false);
+              setDeleteConfirmText('');
+            }}
+            disabled={deleteLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteCandidate}
+            disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
+            startIcon={
+              deleteLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteForever />
+            }
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}
