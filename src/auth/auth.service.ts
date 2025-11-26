@@ -726,10 +726,10 @@ This is an automated message from Teamified.
       throw new NotFoundException('User not found');
     }
 
-    // Generate reset token and expiry
+    // Generate reset token and expiry (24 hours for admin-initiated resets)
     const resetToken = uuidv4();
     const resetTokenExpiry = new Date();
-    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 24);
 
     // Save reset token
     await this.userRepository.update(user.id, {
@@ -763,6 +763,68 @@ This is an automated message from Teamified.
     });
 
     return { message: 'Password reset email sent successfully' };
+  }
+
+  async adminSetPassword(
+    userId: string,
+    password: string,
+    adminUserId: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    // Find the user
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Validate password policy
+    const passwordValidation = this.passwordService.validatePasswordPolicy(password);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await this.passwordService.hashPassword(password);
+
+    // Update password and clear any reset tokens
+    await this.userRepository.update(user.id, {
+      passwordHash: hashedPassword,
+      passwordResetToken: null,
+      passwordResetTokenExpiry: null,
+    });
+
+    // Invalidate all existing sessions for security
+    await this.sessionRepository.update(
+      { userId: user.id },
+      { revokedAt: new Date() },
+    );
+
+    // Log the admin password set action
+    await this.auditService.log({
+      actorUserId: adminUserId,
+      actorRole: await this.getUserPrimaryRole(adminUserId),
+      action: 'admin_password_set',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        targetUserEmail: user.email,
+        passwordChanged: true,
+        sessionsInvalidated: true,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Admin ${adminUserId} set password for user ${user.email}`);
+
+    return { message: 'Password set successfully' };
   }
 
   async resetPassword(

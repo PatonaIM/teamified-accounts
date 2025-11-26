@@ -13,11 +13,6 @@ import {
   Tab,
   InputAdornment,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
   IconButton,
   Stack,
   FormControl,
@@ -35,13 +30,20 @@ import {
   PersonAdd,
   Business,
   Email,
-  Phone,
   CalendarToday,
   Badge,
   DeleteForever,
   Warning,
   Edit,
   Save,
+  Close,
+  CameraAlt,
+  Lock,
+  Refresh,
+  Send,
+  ContentCopy,
+  Visibility,
+  VisibilityOff,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -103,20 +105,23 @@ export default function CandidateUsersPage() {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
-  const [editForm, setEditForm] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    status: 'active' as 'active' | 'inactive' | 'archived',
-  });
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
+
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editEmailValue, setEditEmailValue] = useState('');
+  const [emailSaveLoading, setEmailSaveLoading] = useState(false);
+
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [manualPassword, setManualPassword] = useState('');
+  const [showManualPassword, setShowManualPassword] = useState(false);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [sendResetEmailLoading, setSendResetEmailLoading] = useState(false);
 
   const loadCandidates = useCallback(
     async (append = false) => {
@@ -185,13 +190,11 @@ export default function CandidateUsersPage() {
       setConvertJobTitle('');
       setConvertStartDate(null);
       setConvertError(null);
-      setEditForm({
-        firstName: selectedCandidate.firstName || '',
-        lastName: selectedCandidate.lastName || '',
-        phone: selectedCandidate.phone || '',
-        status: selectedCandidate.status as 'active' | 'inactive' | 'archived',
-      });
-      setEditError(null);
+      setIsEditingEmail(false);
+      setEditEmailValue(selectedCandidate.email);
+      setManualPassword('');
+      setShowManualPassword(false);
+      setDeleteConfirmText('');
     }
   }, [selectedCandidate]);
 
@@ -245,6 +248,15 @@ export default function CandidateUsersPage() {
   const handleDeleteCandidate = async () => {
     if (!selectedCandidate) return;
 
+    if (deleteConfirmText !== selectedCandidate.email) {
+      setSnackbar({
+        open: true,
+        message: 'Please enter the exact email address to confirm deletion',
+        severity: 'error',
+      });
+      return;
+    }
+
     setDeleteLoading(true);
 
     try {
@@ -256,7 +268,6 @@ export default function CandidateUsersPage() {
         severity: 'success',
       });
 
-      setDeleteConfirmOpen(false);
       setDeleteConfirmText('');
       setSelectedCandidate(null);
       setCurrentPage(1);
@@ -272,28 +283,29 @@ export default function CandidateUsersPage() {
     }
   };
 
-  const handleSaveProfile = async () => {
+  const handleSaveEmail = async () => {
     if (!selectedCandidate) return;
 
-    if (!editForm.firstName.trim() || !editForm.lastName.trim()) {
-      setEditError('First name and last name are required');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editEmailValue.trim())) {
+      setSnackbar({
+        open: true,
+        message: 'Please enter a valid email address',
+        severity: 'error',
+      });
       return;
     }
 
-    setEditLoading(true);
-    setEditError(null);
+    setEmailSaveLoading(true);
 
     try {
       const updatedUser = await userService.updateUser(selectedCandidate.id, {
-        firstName: editForm.firstName.trim(),
-        lastName: editForm.lastName.trim(),
-        phone: editForm.phone.trim() || undefined,
-        status: editForm.status,
+        email: editEmailValue.trim(),
       });
 
       setSnackbar({
         open: true,
-        message: `Successfully updated ${updatedUser.firstName} ${updatedUser.lastName}'s profile`,
+        message: 'Email updated successfully',
         severity: 'success',
       });
 
@@ -301,13 +313,171 @@ export default function CandidateUsersPage() {
       setCandidates((prev) =>
         prev.map((c) => (c.id === updatedUser.id ? updatedUser : c))
       );
+      setIsEditingEmail(false);
     } catch (err: any) {
-      setEditError(
-        err?.response?.data?.message || err.message || 'Failed to update profile'
-      );
+      setSnackbar({
+        open: true,
+        message: err?.response?.data?.message || err.message || 'Failed to update email',
+        severity: 'error',
+      });
     } finally {
-      setEditLoading(false);
+      setEmailSaveLoading(false);
     }
+  };
+
+  const handlePhotoClick = () => {
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedCandidate) return;
+
+    if (!file.type.startsWith('image/')) {
+      setSnackbar({
+        open: true,
+        message: 'Please select an image file',
+        severity: 'error',
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSnackbar({
+        open: true,
+        message: 'Image size must be less than 5MB',
+        severity: 'error',
+      });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target?.result as string;
+        
+        const updatedUser = await userService.updateUser(selectedCandidate.id, {
+          profileData: {
+            ...selectedCandidate.profileData,
+            profilePicture: base64,
+          },
+        });
+
+        setSnackbar({
+          open: true,
+          message: 'Profile picture updated successfully',
+          severity: 'success',
+        });
+
+        setSelectedCandidate(updatedUser);
+        setCandidates((prev) =>
+          prev.map((c) => (c.id === updatedUser.id ? updatedUser : c))
+        );
+        setIsUploadingPhoto(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err?.response?.data?.message || err.message || 'Failed to upload photo',
+        severity: 'error',
+      });
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const generateSecurePassword = () => {
+    const length = 16;
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const special = '@$!%*?&.';
+    const allChars = uppercase + lowercase + numbers + special;
+
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    setManualPassword(password);
+    setShowManualPassword(true);
+  };
+
+  const handleManualPasswordReset = async () => {
+    if (!selectedCandidate || !manualPassword) return;
+
+    if (manualPassword.length < 8) {
+      setSnackbar({
+        open: true,
+        message: 'Password must be at least 8 characters long',
+        severity: 'error',
+      });
+      return;
+    }
+
+    setPasswordResetLoading(true);
+
+    try {
+      await userService.adminSetPassword(selectedCandidate.id, manualPassword);
+
+      setSnackbar({
+        open: true,
+        message: 'Password reset successfully',
+        severity: 'success',
+      });
+
+      setManualPassword('');
+      setShowManualPassword(false);
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err?.response?.data?.message || err.message || 'Failed to reset password',
+        severity: 'error',
+      });
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!selectedCandidate) return;
+
+    setSendResetEmailLoading(true);
+
+    try {
+      await userService.adminSendPasswordResetEmail(selectedCandidate.id);
+
+      setSnackbar({
+        open: true,
+        message: `Password reset email sent to ${selectedCandidate.email}`,
+        severity: 'success',
+      });
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err?.response?.data?.message || err.message || 'Failed to send reset email',
+        severity: 'error',
+      });
+    } finally {
+      setSendResetEmailLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setSnackbar({
+      open: true,
+      message: 'Password copied to clipboard',
+      severity: 'success',
+    });
   };
 
   const getStatusChipColor = (
@@ -595,15 +765,82 @@ export default function CandidateUsersPage() {
                 sx={{ px: 3 }}
               >
                 <Tab label="Profile Info" />
-                <Tab icon={<Edit sx={{ fontSize: 18 }} />} iconPosition="start" label="Edit Profile" />
+                <Tab icon={<Lock sx={{ fontSize: 18 }} />} iconPosition="start" label="Reset Password" />
                 <Tab label="Convert to Employee" />
                 <Tab label="Delete User" sx={{ color: 'error.main' }} />
               </Tabs>
             </Box>
 
+            <input
+              type="file"
+              ref={photoInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handlePhotoChange}
+            />
+
             <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
               <TabPanel value={activeTab} index={0}>
                 <Stack spacing={3}>
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                    >
+                      Profile Picture
+                    </Typography>
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: 100,
+                        height: 100,
+                        cursor: 'pointer',
+                        '&:hover .photo-overlay': {
+                          opacity: 1,
+                        },
+                      }}
+                      onClick={handlePhotoClick}
+                    >
+                      <Avatar
+                        src={selectedCandidate.profileData?.profilePicture || undefined}
+                        sx={{
+                          width: 100,
+                          height: 100,
+                          bgcolor: 'primary.main',
+                          fontSize: '2rem',
+                        }}
+                      >
+                        {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
+                      </Avatar>
+                      <Box
+                        className="photo-overlay"
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          borderRadius: '50%',
+                          bgcolor: 'rgba(0, 0, 0, 0.5)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0,
+                          transition: 'opacity 0.2s ease',
+                        }}
+                      >
+                        {isUploadingPhoto ? (
+                          <CircularProgress size={24} sx={{ color: 'white' }} />
+                        ) : (
+                          <CameraAlt sx={{ color: 'white', fontSize: 28 }} />
+                        )}
+                      </Box>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Click to change profile picture
+                    </Typography>
+                  </Box>
+
                   <Box>
                     <Typography
                       variant="subtitle2"
@@ -618,24 +855,57 @@ export default function CandidateUsersPage() {
                       <Stack spacing={2}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Email color="action" />
-                          <Box>
+                          <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" color="text.secondary">
                               Email
                             </Typography>
-                            <Typography variant="body1">
-                              {selectedCandidate.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Phone color="action" />
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Phone
-                            </Typography>
-                            <Typography variant="body1">
-                              {selectedCandidate.phone || 'Not provided'}
-                            </Typography>
+                            {isEditingEmail ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                <TextField
+                                  size="small"
+                                  value={editEmailValue}
+                                  onChange={(e) => setEditEmailValue(e.target.value)}
+                                  disabled={emailSaveLoading}
+                                  sx={{ flex: 1 }}
+                                  autoFocus
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={handleSaveEmail}
+                                  disabled={emailSaveLoading}
+                                  color="primary"
+                                >
+                                  {emailSaveLoading ? (
+                                    <CircularProgress size={18} />
+                                  ) : (
+                                    <Save sx={{ fontSize: 18 }} />
+                                  )}
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setIsEditingEmail(false);
+                                    setEditEmailValue(selectedCandidate.email);
+                                  }}
+                                  disabled={emailSaveLoading}
+                                >
+                                  <Close sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Box>
+                            ) : (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body1">
+                                  {selectedCandidate.email}
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setIsEditingEmail(true)}
+                                  sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
+                                >
+                                  <Edit sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Box>
+                            )}
                           </Box>
                         </Box>
                       </Stack>
@@ -710,92 +980,177 @@ export default function CandidateUsersPage() {
               </TabPanel>
 
               <TabPanel value={activeTab} index={1}>
-                <Box sx={{ maxWidth: 500 }}>
-                  <Typography variant="body1" sx={{ mb: 3 }}>
-                    Edit the candidate's profile information. Changes will be saved immediately.
-                  </Typography>
-
-                  {editError && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
-                      {editError}
-                    </Alert>
-                  )}
-
-                  <Stack spacing={3}>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                      <TextField
-                        fullWidth
-                        label="First Name"
-                        required
-                        value={editForm.firstName}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, firstName: e.target.value })
-                        }
-                        disabled={editLoading}
-                      />
-                      <TextField
-                        fullWidth
-                        label="Last Name"
-                        required
-                        value={editForm.lastName}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, lastName: e.target.value })
-                        }
-                        disabled={editLoading}
-                      />
-                    </Box>
-
-                    <TextField
-                      fullWidth
-                      label="Phone Number"
-                      value={editForm.phone}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, phone: e.target.value })
-                      }
-                      placeholder="+1 555 123 4567"
-                      disabled={editLoading}
-                    />
-
-                    <FormControl fullWidth>
-                      <InputLabel>Status</InputLabel>
-                      <Select
-                        value={editForm.status}
-                        label="Status"
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            status: e.target.value as 'active' | 'inactive' | 'archived',
-                          })
-                        }
-                        disabled={editLoading}
-                      >
-                        <MenuItem value="active">Active</MenuItem>
-                        <MenuItem value="inactive">Inactive</MenuItem>
-                        <MenuItem value="archived">Archived</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <Button
-                      variant="contained"
-                      size="large"
-                      startIcon={
-                        editLoading ? (
-                          <CircularProgress size={20} color="inherit" />
-                        ) : (
-                          <Save />
-                        )
-                      }
-                      onClick={handleSaveProfile}
-                      disabled={editLoading || !editForm.firstName.trim() || !editForm.lastName.trim()}
-                      sx={{
-                        bgcolor: '#A16AE8',
-                        '&:hover': { bgcolor: '#8f5cd9' },
-                      }}
+                <Stack spacing={4}>
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
                     >
-                      {editLoading ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </Stack>
-                </Box>
+                      Password Information
+                    </Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}
+                    >
+                      <Stack spacing={2}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Lock color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Last Password Update
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedCandidate.profileData?.passwordChangedAt
+                                ? new Date(selectedCandidate.profileData.passwordChangedAt).toLocaleDateString(
+                                    undefined,
+                                    { year: 'numeric', month: 'long', day: 'numeric' }
+                                  )
+                                : 'Never updated'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <CalendarToday color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Last Successful Sign In
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedCandidate.lastLoginAt
+                                ? new Date(selectedCandidate.lastLoginAt).toLocaleDateString(
+                                    undefined,
+                                    { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+                                  )
+                                : 'Never signed in'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Warning color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Failed Sign In Attempts
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedCandidate.profileData?.failedLoginAttempts || 0} attempts
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                    >
+                      Manual Password Reset
+                    </Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{ p: 3, bgcolor: 'action.hover', borderRadius: 2 }}
+                    >
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Set a new password for this user directly. They will be able to use this password immediately.
+                      </Typography>
+                      <Stack spacing={2}>
+                        <TextField
+                          fullWidth
+                          label="New Password"
+                          type={showManualPassword ? 'text' : 'password'}
+                          value={manualPassword}
+                          onChange={(e) => setManualPassword(e.target.value)}
+                          disabled={passwordResetLoading}
+                          InputProps={{
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  onClick={() => setShowManualPassword(!showManualPassword)}
+                                  edge="end"
+                                  size="small"
+                                >
+                                  {showManualPassword ? <VisibilityOff /> : <Visibility />}
+                                </IconButton>
+                                {manualPassword && (
+                                  <IconButton
+                                    onClick={() => copyToClipboard(manualPassword)}
+                                    edge="end"
+                                    size="small"
+                                    sx={{ ml: 0.5 }}
+                                  >
+                                    <ContentCopy sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                )}
+                              </InputAdornment>
+                            ),
+                          }}
+                          helperText="Password must be at least 8 characters with uppercase, lowercase, number, and special character"
+                        />
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<Refresh />}
+                            onClick={generateSecurePassword}
+                            disabled={passwordResetLoading}
+                          >
+                            Generate Secure Password
+                          </Button>
+                          <Button
+                            variant="contained"
+                            startIcon={
+                              passwordResetLoading ? (
+                                <CircularProgress size={20} color="inherit" />
+                              ) : (
+                                <Save />
+                              )
+                            }
+                            onClick={handleManualPasswordReset}
+                            disabled={passwordResetLoading || !manualPassword || manualPassword.length < 8}
+                            sx={{
+                              bgcolor: '#A16AE8',
+                              '&:hover': { bgcolor: '#8f5cd9' },
+                            }}
+                          >
+                            {passwordResetLoading ? 'Setting...' : 'Set Password'}
+                          </Button>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                    >
+                      Send Password Reset Link
+                    </Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{ p: 3, bgcolor: 'action.hover', borderRadius: 2 }}
+                    >
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Send a password reset email to <strong>{selectedCandidate.email}</strong>. 
+                        The link will be valid for 24 hours.
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={
+                          sendResetEmailLoading ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : (
+                            <Send />
+                          )
+                        }
+                        onClick={handleSendResetEmail}
+                        disabled={sendResetEmailLoading}
+                      >
+                        {sendResetEmailLoading ? 'Sending...' : 'Send Reset Email'}
+                      </Button>
+                    </Paper>
+                  </Box>
+                </Stack>
               </TabPanel>
 
               <TabPanel value={activeTab} index={2}>
@@ -872,7 +1227,7 @@ export default function CandidateUsersPage() {
               </TabPanel>
 
               <TabPanel value={activeTab} index={3}>
-                <Box sx={{ px: 0 }}>
+                <Box sx={{ maxWidth: 500 }}>
                   <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
                     <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
                       Delete User
@@ -882,15 +1237,48 @@ export default function CandidateUsersPage() {
                     </Typography>
                   </Alert>
 
-                  <Button
-                    variant="contained"
-                    color="error"
-                    fullWidth
-                    onClick={() => setDeleteConfirmOpen(true)}
-                    sx={{ textTransform: 'none', fontWeight: 600 }}
+                  <Paper
+                    elevation={0}
+                    sx={{ p: 3, bgcolor: 'action.hover', borderRadius: 2, mb: 3 }}
                   >
-                    Delete User
-                  </Button>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      Are you sure you want to delete <strong>{selectedCandidate.firstName} {selectedCandidate.lastName}</strong>?
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      This action cannot be undone. The user and all their data will be permanently removed from the system.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }}>
+                      To confirm, please type the user's email address: <strong>{selectedCandidate.email}</strong>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      label="Confirm email address"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder={selectedCandidate.email}
+                      disabled={deleteLoading}
+                      error={deleteConfirmText !== '' && deleteConfirmText !== selectedCandidate.email}
+                      helperText={
+                        deleteConfirmText !== '' && deleteConfirmText !== selectedCandidate.email
+                          ? 'Email does not match'
+                          : ''
+                      }
+                      sx={{ mb: 3 }}
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      fullWidth
+                      onClick={handleDeleteCandidate}
+                      disabled={deleteLoading || deleteConfirmText.trim() !== selectedCandidate.email}
+                      startIcon={
+                        deleteLoading ? <CircularProgress size={16} color="inherit" /> : <DeleteForever />
+                      }
+                      sx={{ textTransform: 'none', fontWeight: 600 }}
+                    >
+                      {deleteLoading ? 'Deleting...' : 'Delete Permanently'}
+                    </Button>
+                  </Paper>
                 </Box>
               </TabPanel>
             </Box>
@@ -929,66 +1317,6 @@ export default function CandidateUsersPage() {
           loadCandidates();
         }}
       />
-
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => {
-          setDeleteConfirmOpen(false);
-          setDeleteConfirmText('');
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Delete User</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Are you sure you want to delete {selectedCandidate?.firstName} {selectedCandidate?.lastName}?
-          </DialogContentText>
-          <DialogContentText sx={{ mb: 3, fontWeight: 'bold' }}>
-            This action cannot be undone. The user and all their data will be permanently removed.
-          </DialogContentText>
-          <DialogContentText sx={{ mb: 2 }}>
-            To confirm, please type the user's email address: <strong>{selectedCandidate?.email}</strong>
-          </DialogContentText>
-          <TextField
-            fullWidth
-            label="Confirm email address"
-            value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder={selectedCandidate?.email}
-            autoFocus
-            disabled={deleteLoading}
-            error={deleteConfirmText !== '' && deleteConfirmText !== selectedCandidate?.email}
-            helperText={
-              deleteConfirmText !== '' && deleteConfirmText !== selectedCandidate?.email
-                ? 'Email does not match'
-                : ''
-            }
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            onClick={() => {
-              setDeleteConfirmOpen(false);
-              setDeleteConfirmText('');
-            }}
-            disabled={deleteLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteCandidate}
-            disabled={deleteLoading || deleteConfirmText.trim() !== selectedCandidate?.email}
-            startIcon={
-              deleteLoading ? <CircularProgress size={16} /> : <DeleteForever />
-            }
-          >
-            {deleteLoading ? 'Deleting...' : 'Delete Permanently'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar
         open={snackbar.open}

@@ -42,6 +42,8 @@ import {
 import { ClientAdminSignupDto, ClientAdminSignupResponseDto } from './dto/client-admin-signup.dto';
 import { CandidateSignupDto, CandidateSignupResponseDto } from './dto/candidate-signup.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { ErrorResponseDto, ValidationErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
 import { ApiResponseDto, CreatedResponseDto, UpdatedResponseDto } from '../common/dto/api-response.dto';
 
@@ -741,7 +743,8 @@ export class AuthController {
   }
 
   @Post('admin/send-password-reset')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager')
   @Throttle({ default: { limit: 10, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -750,6 +753,7 @@ export class AuthController {
     description: `
       Admin endpoint to send a password reset email on behalf of a user.
       This endpoint requires authentication and logs which admin initiated the reset.
+      Only super admins and internal users can access this endpoint.
       
       ## Process Flow:
       1. Admin provides user ID
@@ -776,6 +780,56 @@ export class AuthController {
   ): Promise<{ message: string }> {
     return this.authService.adminSendPasswordReset(
       body.userId,
+      req.user.id,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Post('admin/set-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager')
+  @Throttle({ default: { limit: 10, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Admin: Set password directly for a user',
+    description: `
+      Admin endpoint to directly set a user's password without requiring a reset token.
+      This endpoint requires authentication and logs which admin initiated the password change.
+      Only super admins and internal users can access this endpoint.
+      
+      ## Process Flow:
+      1. Admin provides user ID and new password
+      2. System validates admin permissions
+      3. Password is validated against security policy
+      4. Password is updated and all user sessions are invalidated
+      5. Action is logged with admin as the actor
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password set successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Password does not meet requirements',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async adminSetPassword(
+    @Body() body: { userId: string; password: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    return this.authService.adminSetPassword(
+      body.userId,
+      body.password,
       req.user.id,
       req.ip,
       req.get('user-agent'),
