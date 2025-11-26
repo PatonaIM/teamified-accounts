@@ -16,6 +16,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   IconButton,
   Stack,
@@ -871,54 +872,24 @@ export default function CandidateUsersPage() {
               </TabPanel>
 
               <TabPanel value={activeTab} index={3}>
-                <Box sx={{ maxWidth: 500 }}>
-                  <Alert severity="warning" sx={{ mb: 3 }} icon={<Warning />}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                      This action cannot be undone
+                <Box sx={{ px: 0 }}>
+                  <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                      Delete User
                     </Typography>
                     <Typography variant="body2">
-                      Deleting this user will permanently remove their account, including all
-                      associated data, roles, and permissions from the system.
+                      This action will permanently delete the user and all associated data. This cannot be undone.
                     </Typography>
                   </Alert>
-
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 3,
-                      bgcolor: 'error.main',
-                      color: 'error.contrastText',
-                      borderRadius: 2,
-                      mb: 3,
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                      <Avatar
-                        src={selectedCandidate.profileData?.profilePicture || undefined}
-                        sx={{ width: 48, height: 48, bgcolor: 'error.dark' }}
-                      >
-                        {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          {selectedCandidate.firstName} {selectedCandidate.lastName}
-                        </Typography>
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          {selectedCandidate.email}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Paper>
 
                   <Button
                     variant="contained"
                     color="error"
-                    size="large"
                     fullWidth
-                    startIcon={<DeleteForever />}
                     onClick={() => setDeleteConfirmOpen(true)}
+                    sx={{ textTransform: 'none', fontWeight: 600 }}
                   >
-                    Delete This User
+                    Delete User
                   </Button>
                 </Box>
               </TabPanel>
@@ -968,33 +939,29 @@ export default function CandidateUsersPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
-          <Warning />
-          Confirm User Deletion
-        </DialogTitle>
+        <DialogTitle>Delete User</DialogTitle>
         <DialogContent>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            You are about to permanently delete the user{' '}
-            <strong>
-              {selectedCandidate?.firstName} {selectedCandidate?.lastName}
-            </strong>{' '}
-            ({selectedCandidate?.email}).
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 3 }}>
-            This action cannot be undone. All associated data will be permanently removed.
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 2, fontWeight: 600 }}>
-            To confirm, type "DELETE" below:
-          </Typography>
+          <DialogContentText sx={{ mb: 2 }}>
+            Are you sure you want to delete {selectedCandidate?.firstName} {selectedCandidate?.lastName}?
+          </DialogContentText>
+          <DialogContentText sx={{ mb: 3, fontWeight: 'bold' }}>
+            This action cannot be undone. The user and all their data will be permanently removed.
+          </DialogContentText>
+          <DialogContentText sx={{ mb: 2 }}>
+            To confirm, please type the user's email address: <strong>{selectedCandidate?.email}</strong>
+          </DialogContentText>
           <TextField
             fullWidth
-            placeholder="Type DELETE to confirm"
+            label="Confirm email address"
             value={deleteConfirmText}
             onChange={(e) => setDeleteConfirmText(e.target.value)}
-            error={deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE'}
+            placeholder={selectedCandidate?.email}
+            autoFocus
+            disabled={deleteLoading}
+            error={deleteConfirmText !== '' && deleteConfirmText !== selectedCandidate?.email}
             helperText={
-              deleteConfirmText.length > 0 && deleteConfirmText !== 'DELETE'
-                ? 'Please type DELETE exactly as shown'
+              deleteConfirmText !== '' && deleteConfirmText !== selectedCandidate?.email
+                ? 'Email does not match'
                 : ''
             }
           />
@@ -1013,12 +980,12 @@ export default function CandidateUsersPage() {
             variant="contained"
             color="error"
             onClick={handleDeleteCandidate}
-            disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
+            disabled={deleteLoading || deleteConfirmText.trim() !== selectedCandidate?.email}
             startIcon={
-              deleteLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteForever />
+              deleteLoading ? <CircularProgress size={16} /> : <DeleteForever />
             }
           >
-            {deleteLoading ? 'Deleting...' : 'Delete User'}
+            {deleteLoading ? 'Deleting...' : 'Delete Permanently'}
           </Button>
         </DialogActions>
       </Dialog>
