@@ -8,6 +8,32 @@ Teamified SSO uses a JWT-based authentication system with:
 - **Access tokens**: Short-lived (15 minutes) tokens for API authentication
 - **Refresh tokens**: Long-lived (30 days) tokens for session renewal
 - **48-hour inactivity timeout**: Sessions expire after 48 hours of no activity
+- **Multi-device support**: Users can be logged in on multiple devices simultaneously
+
+## Session Management Across Devices and Browsers
+
+### How Sessions Work
+
+| Scenario | Behavior |
+|----------|----------|
+| Same browser, multiple tabs | All tabs share the same session (localStorage is shared) |
+| Same browser, multiple windows | All windows share the same session |
+| Different devices | Each device has an independent session (login required per device) |
+
+### Multi-Device Sessions
+
+Teamified supports simultaneous sessions on multiple devices:
+
+- **Independent sessions**: Each device login creates its own access + refresh token pair
+- **No session limits**: Users can be logged in on unlimited devices
+- **Independent timeouts**: Each session has its own 48-hour inactivity timer
+- **Independent expiry**: Each session has its own 30-day absolute expiry
+
+### Important Notes
+
+1. **Browser isolation**: Different browser applications (Chrome, Firefox, Safari) on the same device do NOT share sessions. Each browser requires its own login.
+2. **Incognito/Private mode**: Private browsing windows have isolated storage and won't have access to regular session tokens.
+3. **Logout scope**: Logging out on one device does NOT log out other devices. Each session is independent.
 
 ## API Endpoints
 

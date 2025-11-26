@@ -18,6 +18,7 @@ import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
 import DocsPage from './pages/DocsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
+import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -181,6 +182,10 @@ function App() {
                 <Route 
                   path="/docs/multi-organization" 
                   element={<MultiOrganizationIntegrationPage />} 
+                />
+                <Route 
+                  path="/docs/deep-linking-guide" 
+                  element={<DeepLinkingGuidePage />} 
                 />
                 <Route path="/" element={<SessionAwareRedirect />} />
                 <Route path="*" element={<SessionAwareRedirect />} />
