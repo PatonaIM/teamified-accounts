@@ -3,38 +3,41 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
+  List,
+  ListItemButton,
+  ListItemText,
   TextField,
-  InputAdornment,
-  IconButton,
-  Chip,
-  Avatar,
   Button,
+  Chip,
+  Tabs,
+  Tab,
+  InputAdornment,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
+  Stack,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  CircularProgress,
+  Avatar,
   Alert,
-  Tooltip,
+  Snackbar,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  ArrowBack as ArrowBackIcon,
-  PersonAdd as PersonAddIcon,
-  Refresh as RefreshIcon,
-  Business as BusinessIcon,
-  Visibility as VisibilityIcon,
+  Search,
+  ArrowBack,
+  Person,
+  PersonAdd,
+  Business,
+  Email,
+  Phone,
+  CalendarToday,
+  Badge,
+  Refresh,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -46,14 +49,25 @@ import organizationsService from '../../services/organizationsService';
 import type { Organization } from '../../services/organizationsService';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface ConvertDialogState {
-  open: boolean;
-  candidate: User | null;
-  organizationId: string;
-  jobTitle: string;
-  startDate: Date | null;
-  loading: boolean;
-  error: string | null;
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`candidate-tabpanel-${index}`}
+      aria-labelledby={`candidate-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
 }
 
 export default function CandidateUsersPage() {
@@ -61,47 +75,71 @@ export default function CandidateUsersPage() {
   const { user: currentUser } = useAuth();
 
   const [candidates, setCandidates] = useState<User[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [totalCandidates, setTotalCandidates] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
-  const [convertDialog, setConvertDialog] = useState<ConvertDialogState>({
-    open: false,
-    candidate: null,
-    organizationId: '',
-    jobTitle: '',
-    startDate: null,
-    loading: false,
-    error: null,
-  });
+  const [convertOrganizationId, setConvertOrganizationId] = useState('');
+  const [convertJobTitle, setConvertJobTitle] = useState('');
+  const [convertStartDate, setConvertStartDate] = useState<Date | null>(null);
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
 
-  const loadCandidates = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
-    try {
-      const params: UserQueryParams = {
-        page: page + 1,
-        limit: rowsPerPage,
-        role: 'candidate',
-        search: searchQuery || undefined,
-      };
+  const loadCandidates = useCallback(
+    async (append = false) => {
+      setLoading(true);
 
-      const response = await userService.getUsers(params);
-      setCandidates(response.users || []);
-      setTotalCandidates(response.pagination?.total || 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load candidate users');
-      setCandidates([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, rowsPerPage, searchQuery]);
+      try {
+        const params: UserQueryParams = {
+          page: append ? currentPage : 1,
+          limit: 20,
+          role: 'candidate',
+          search: searchQuery || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+        };
+
+        const response = await userService.getUsers(params);
+        const newCandidates = response.users || [];
+
+        if (append) {
+          setCandidates((prev) => [...prev, ...newCandidates]);
+        } else {
+          setCandidates(newCandidates);
+          if (newCandidates.length > 0 && !selectedCandidate) {
+            setSelectedCandidate(newCandidates[0]);
+          }
+        }
+
+        setTotalCandidates(response.pagination?.total || 0);
+        setHasMore(
+          (response.pagination?.page || 1) < (response.pagination?.totalPages || 1)
+        );
+      } catch (err) {
+        console.error('Failed to load candidates:', err);
+        setSnackbar({
+          open: true,
+          message: 'Failed to load candidate users',
+          severity: 'error',
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentPage, searchQuery, statusFilter, selectedCandidate]
+  );
 
   const loadOrganizations = useCallback(async () => {
     try {
@@ -114,95 +152,66 @@ export default function CandidateUsersPage() {
 
   useEffect(() => {
     loadCandidates();
-  }, [loadCandidates]);
+  }, [searchQuery, statusFilter]);
 
   useEffect(() => {
     loadOrganizations();
   }, [loadOrganizations]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-    setPage(0);
-  };
+  useEffect(() => {
+    if (selectedCandidate) {
+      setActiveTab(0);
+      setConvertOrganizationId('');
+      setConvertJobTitle('');
+      setConvertStartDate(null);
+      setConvertError(null);
+    }
+  }, [selectedCandidate]);
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const handleOpenConvertDialog = (candidate: User) => {
-    setConvertDialog({
-      open: true,
-      candidate,
-      organizationId: '',
-      jobTitle: '',
-      startDate: null,
-      loading: false,
-      error: null,
-    });
-  };
-
-  const handleCloseConvertDialog = () => {
-    setConvertDialog({
-      open: false,
-      candidate: null,
-      organizationId: '',
-      jobTitle: '',
-      startDate: null,
-      loading: false,
-      error: null,
-    });
+  const handleLoadMore = () => {
+    setCurrentPage((p) => p + 1);
+    loadCandidates(true);
   };
 
   const handleConvertCandidate = async () => {
-    if (!convertDialog.candidate || !convertDialog.organizationId) {
-      setConvertDialog((prev) => ({
-        ...prev,
-        error: 'Please select an organization',
-      }));
+    if (!selectedCandidate || !convertOrganizationId) {
+      setConvertError('Please select an organization');
       return;
     }
 
     if (!currentUser?.id) {
-      setConvertDialog((prev) => ({
-        ...prev,
-        error: 'User session not available. Please refresh the page and try again.',
-      }));
+      setConvertError('User session not available. Please refresh the page and try again.');
       return;
     }
 
-    setConvertDialog((prev) => ({ ...prev, loading: true, error: null }));
+    setConvertLoading(true);
+    setConvertError(null);
 
     try {
-      await organizationsService.convertCandidateToEmployee(
-        convertDialog.organizationId,
-        {
-          candidateEmail: convertDialog.candidate.email,
-          hiredBy: currentUser.id,
-          jobTitle: convertDialog.jobTitle || undefined,
-          startDate: convertDialog.startDate
-            ? convertDialog.startDate.toISOString().split('T')[0]
-            : undefined,
-        }
-      );
+      await organizationsService.convertCandidateToEmployee(convertOrganizationId, {
+        candidateEmail: selectedCandidate.email,
+        hiredBy: currentUser.id,
+        jobTitle: convertJobTitle || undefined,
+        startDate: convertStartDate
+          ? convertStartDate.toISOString().split('T')[0]
+          : undefined,
+      });
 
-      setSuccessMessage(
-        `Successfully converted ${convertDialog.candidate.firstName} ${convertDialog.candidate.lastName} to employee`
-      );
-      handleCloseConvertDialog();
+      setSnackbar({
+        open: true,
+        message: `Successfully converted ${selectedCandidate.firstName} ${selectedCandidate.lastName} to employee`,
+        severity: 'success',
+      });
+
+      setSelectedCandidate(null);
+      setCurrentPage(1);
       loadCandidates();
-
-      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
-      setConvertDialog((prev) => ({
-        ...prev,
-        loading: false,
-        error: err?.response?.data?.message || err.message || 'Failed to convert candidate',
-      }));
+      setConvertError(
+        err?.response?.data?.message || err.message || 'Failed to convert candidate'
+      );
+    } finally {
+      setConvertLoading(false);
     }
   };
 
@@ -225,300 +234,497 @@ export default function CandidateUsersPage() {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
+  const filteredCandidates = candidates;
+
   return (
-    <Box sx={{ p: 4 }}>
+    <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate('/admin/tools')} sx={{ mr: 2 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
-            Candidate Users
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage candidate users and convert them to organization employees
-          </Typography>
-        </Box>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={loadCandidates}
-          disabled={loading}
+        <IconButton
+          onClick={() => navigate('/admin/tools')}
+          sx={{
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': {
+              bgcolor: 'rgba(161, 106, 232, 0.08)',
+            },
+          }}
         >
-          Refresh
-        </Button>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          Candidate Users
+        </Typography>
       </Box>
 
-      {successMessage && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccessMessage(null)}>
-          {successMessage}
-        </Alert>
-      )}
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Paper
+        elevation={0}
+        sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+      >
+        <Box
+          sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}
+        >
           <TextField
-            placeholder="Search by name or email..."
-            value={searchQuery}
-            onChange={handleSearchChange}
+            fullWidth
             size="small"
-            sx={{ width: 300 }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-              },
+            placeholder="Search candidates by name or email..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
             }}
           />
-          <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-            {totalCandidates} candidate{totalCandidates !== 1 ? 's' : ''} found
-          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={() => {
+              setCurrentPage(1);
+              loadCandidates();
+            }}
+            disabled={loading}
+            sx={{ whiteSpace: 'nowrap', px: 3 }}
+          >
+            Refresh
+          </Button>
         </Box>
       </Paper>
 
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Candidate</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Email Verified</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <CircularProgress size={32} />
-                  </TableCell>
-                </TableRow>
-              ) : candidates.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">
-                      {searchQuery
-                        ? 'No candidates found matching your search'
-                        : 'No candidate users found'}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                candidates.map((candidate) => (
-                  <TableRow
-                    key={candidate.id}
-                    hover
-                    onClick={() => navigate(`/admin/users/${candidate.id}`)}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {getInitials(candidate.firstName, candidate.lastName)}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {candidate.firstName} {candidate.lastName}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{candidate.email}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={candidate.status}
-                        size="small"
-                        color={getStatusChipColor(candidate.status)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={candidate.emailVerified ? 'Verified' : 'Pending'}
-                        size="small"
-                        color={candidate.emailVerified ? 'success' : 'warning'}
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(candidate.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                        <Tooltip title="View Profile">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/admin/users/${candidate.id}`);
-                            }}
-                            sx={{ color: 'text.secondary' }}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Convert to Employee">
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<PersonAddIcon />}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenConvertDialog(candidate);
-                            }}
-                            sx={{
-                              bgcolor: '#A16AE8',
-                              '&:hover': { bgcolor: '#8f5cd9' },
-                            }}
-                          >
-                            Convert
-                          </Button>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          component="div"
-          count={totalCandidates}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Paper>
-
-      <Dialog
-        open={convertDialog.open}
-        onClose={handleCloseConvertDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <BusinessIcon color="primary" />
-          Convert Candidate to Employee
-        </DialogTitle>
-        <DialogContent>
-          {convertDialog.error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {convertDialog.error}
-            </Alert>
-          )}
-
-          {convertDialog.candidate && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Converting candidate:
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  {getInitials(
-                    convertDialog.candidate.firstName,
-                    convertDialog.candidate.lastName
-                  )}
-                </Avatar>
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {convertDialog.candidate.firstName} {convertDialog.candidate.lastName}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {convertDialog.candidate.email}
-                  </Typography>
-                </Box>
+      <Box sx={{ display: 'flex', gap: 2, minHeight: 'calc(100vh - 300px)' }}>
+        <Paper
+          elevation={0}
+          sx={{
+            width: 350,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <MenuItem value="all">All Statuses</MenuItem>
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="archived">Archived</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            {loading && candidates.length === 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
               </Box>
-            </Box>
-          )}
+            ) : filteredCandidates.length === 0 ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  p: 4,
+                  textAlign: 'center',
+                }}
+              >
+                <Person sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
+                  No candidates found
+                </Typography>
+                {searchQuery.trim() ? (
+                  <Typography variant="body2" color="text.secondary">
+                    No candidates match "{searchQuery}"
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No candidate users in the system
+                  </Typography>
+                )}
+              </Box>
+            ) : (
+              <List sx={{ py: 0 }}>
+                {filteredCandidates.map((candidate) => (
+                  <ListItemButton
+                    key={candidate.id}
+                    selected={selectedCandidate?.id === candidate.id}
+                    onClick={() => setSelectedCandidate(candidate)}
+                    sx={{
+                      borderLeft:
+                        selectedCandidate?.id === candidate.id
+                          ? '3px solid'
+                          : '3px solid transparent',
+                      borderLeftColor: 'primary.main',
+                      py: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Avatar
+                      src={candidate.profileData?.profilePicture || undefined}
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        mr: 2,
+                        bgcolor: 'primary.main',
+                      }}
+                    >
+                      {getInitials(candidate.firstName, candidate.lastName)}
+                    </Avatar>
+                    <ListItemText
+                      primary={`${candidate.firstName} ${candidate.lastName}`}
+                      secondary={candidate.email}
+                      primaryTypographyProps={{ fontWeight: 600 }}
+                      secondaryTypographyProps={{
+                        sx: {
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        },
+                      }}
+                    />
+                    <Chip
+                      label={candidate.status}
+                      size="small"
+                      color={getStatusChipColor(candidate.status)}
+                      sx={{ ml: 1, textTransform: 'capitalize' }}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            )}
+          </Box>
+          <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Stack direction="column" spacing={1} alignItems="center">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Showing {filteredCandidates.length} of {totalCandidates} candidates
+              </Typography>
+              {hasMore && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={handleLoadMore}
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Load More'}
+                </Button>
+              )}
+            </Stack>
+          </Box>
+        </Paper>
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Organization *</InputLabel>
-            <Select
-              value={convertDialog.organizationId}
-              label="Organization *"
-              onChange={(e) =>
-                setConvertDialog((prev) => ({
-                  ...prev,
-                  organizationId: e.target.value,
-                }))
-              }
-            >
-              {organizations.map((org) => (
-                <MenuItem key={org.id} value={org.id}>
-                  {org.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            fullWidth
-            label="Job Title (Optional)"
-            value={convertDialog.jobTitle}
-            onChange={(e) =>
-              setConvertDialog((prev) => ({
-                ...prev,
-                jobTitle: e.target.value,
-              }))
-            }
-            sx={{ mb: 2 }}
-          />
-
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Start Date (Optional)"
-              value={convertDialog.startDate}
-              onChange={(date) =>
-                setConvertDialog((prev) => ({
-                  ...prev,
-                  startDate: date,
-                }))
-              }
-              slotProps={{
-                textField: { fullWidth: true },
-              }}
-            />
-          </LocalizationProvider>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseConvertDialog} disabled={convertDialog.loading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleConvertCandidate}
-            disabled={convertDialog.loading || !convertDialog.organizationId}
+        {selectedCandidate ? (
+          <Paper
+            elevation={0}
             sx={{
-              bgcolor: '#A16AE8',
-              '&:hover': { bgcolor: '#8f5cd9' },
+              flex: 1,
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              minHeight: 0,
             }}
           >
-            {convertDialog.loading ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              'Convert to Employee'
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar
+                    src={selectedCandidate.profileData?.profilePicture || undefined}
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      bgcolor: 'primary.main',
+                    }}
+                  >
+                    {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+                      {selectedCandidate.firstName} {selectedCandidate.lastName}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip
+                        label={selectedCandidate.email}
+                        size="small"
+                        icon={<Email sx={{ fontSize: 16 }} />}
+                      />
+                      <Chip
+                        label={selectedCandidate.status}
+                        size="small"
+                        color={getStatusChipColor(selectedCandidate.status)}
+                        sx={{ textTransform: 'capitalize' }}
+                      />
+                      <Chip
+                        label={selectedCandidate.emailVerified ? 'Email Verified' : 'Email Pending'}
+                        size="small"
+                        color={selectedCandidate.emailVerified ? 'success' : 'warning'}
+                        variant="outlined"
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate(`/admin/users/${selectedCandidate.id}`)}
+                >
+                  View Full Profile
+                </Button>
+              </Box>
+            </Box>
+
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs
+                value={activeTab}
+                onChange={(_, newValue) => setActiveTab(newValue)}
+                sx={{ px: 3 }}
+              >
+                <Tab label="Profile Info" />
+                <Tab label="Convert to Employee" />
+              </Tabs>
+            </Box>
+
+            <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
+              <TabPanel value={activeTab} index={0}>
+                <Stack spacing={3}>
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                    >
+                      Contact Information
+                    </Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}
+                    >
+                      <Stack spacing={2}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Email color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Email
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedCandidate.email}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Phone color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Phone
+                            </Typography>
+                            <Typography variant="body1">
+                              {selectedCandidate.phone || 'Not provided'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Stack>
+                    </Paper>
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                    >
+                      Account Details
+                    </Typography>
+                    <Paper
+                      elevation={0}
+                      sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}
+                    >
+                      <Stack spacing={2}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Badge color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              User ID
+                            </Typography>
+                            <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
+                              {selectedCandidate.id}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <CalendarToday color="action" />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Created
+                            </Typography>
+                            <Typography variant="body1">
+                              {new Date(selectedCandidate.createdAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                }
+                              )}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        {selectedCandidate.lastLoginAt && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <CalendarToday color="action" />
+                            <Box>
+                              <Typography variant="body2" color="text.secondary">
+                                Last Login
+                              </Typography>
+                              <Typography variant="body1">
+                                {new Date(selectedCandidate.lastLoginAt).toLocaleDateString(
+                                  undefined,
+                                  {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  }
+                                )}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        )}
+                      </Stack>
+                    </Paper>
+                  </Box>
+                </Stack>
+              </TabPanel>
+
+              <TabPanel value={activeTab} index={1}>
+                <Box sx={{ maxWidth: 500 }}>
+                  <Typography variant="body1" sx={{ mb: 3 }}>
+                    Convert this candidate to an employee of an organization. This will add them
+                    as a member of the selected organization.
+                  </Typography>
+
+                  {convertError && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {convertError}
+                    </Alert>
+                  )}
+
+                  <Stack spacing={3}>
+                    <FormControl fullWidth>
+                      <InputLabel>Organization *</InputLabel>
+                      <Select
+                        value={convertOrganizationId}
+                        label="Organization *"
+                        onChange={(e) => setConvertOrganizationId(e.target.value)}
+                      >
+                        {organizations.map((org) => (
+                          <MenuItem key={org.id} value={org.id}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Business sx={{ fontSize: 20, color: 'text.secondary' }} />
+                              {org.name}
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    <TextField
+                      fullWidth
+                      label="Job Title (Optional)"
+                      value={convertJobTitle}
+                      onChange={(e) => setConvertJobTitle(e.target.value)}
+                    />
+
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <DatePicker
+                        label="Start Date (Optional)"
+                        value={convertStartDate}
+                        onChange={(date) => setConvertStartDate(date)}
+                        slotProps={{
+                          textField: { fullWidth: true },
+                        }}
+                      />
+                    </LocalizationProvider>
+
+                    <Button
+                      variant="contained"
+                      size="large"
+                      startIcon={
+                        convertLoading ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <PersonAdd />
+                        )
+                      }
+                      onClick={handleConvertCandidate}
+                      disabled={convertLoading || !convertOrganizationId}
+                      sx={{
+                        bgcolor: '#A16AE8',
+                        '&:hover': { bgcolor: '#8f5cd9' },
+                      }}
+                    >
+                      {convertLoading ? 'Converting...' : 'Convert to Employee'}
+                    </Button>
+                  </Stack>
+                </Box>
+              </TabPanel>
+            </Box>
+          </Paper>
+        ) : (
+          <Paper
+            elevation={0}
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 4,
+            }}
+          >
+            <Person sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Select a candidate
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Choose a candidate from the list to view their details
+            </Typography>
+          </Paper>
+        )}
+      </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
