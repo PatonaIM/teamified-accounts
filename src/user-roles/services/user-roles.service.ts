@@ -314,6 +314,7 @@ export class UserRolesService {
       'internal_recruiter',
       'internal_marketing',
       'internal_member',
+      'candidate',
     ];
     
     if (canonicalRoles.includes(roleType as RoleType)) {
