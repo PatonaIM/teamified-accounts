@@ -39,6 +39,8 @@ import {
   Badge,
   DeleteForever,
   Warning,
+  Edit,
+  Save,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -105,6 +107,15 @@ export default function CandidateUsersPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    status: 'active' as 'active' | 'inactive' | 'archived',
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const loadCandidates = useCallback(
     async (append = false) => {
@@ -173,6 +184,13 @@ export default function CandidateUsersPage() {
       setConvertJobTitle('');
       setConvertStartDate(null);
       setConvertError(null);
+      setEditForm({
+        firstName: selectedCandidate.firstName || '',
+        lastName: selectedCandidate.lastName || '',
+        phone: selectedCandidate.phone || '',
+        status: selectedCandidate.status as 'active' | 'inactive' | 'archived',
+      });
+      setEditError(null);
     }
   }, [selectedCandidate]);
 
@@ -250,6 +268,44 @@ export default function CandidateUsersPage() {
       });
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!selectedCandidate) return;
+
+    if (!editForm.firstName.trim() || !editForm.lastName.trim()) {
+      setEditError('First name and last name are required');
+      return;
+    }
+
+    setEditLoading(true);
+    setEditError(null);
+
+    try {
+      const updatedUser = await userService.updateUser(selectedCandidate.id, {
+        firstName: editForm.firstName.trim(),
+        lastName: editForm.lastName.trim(),
+        phone: editForm.phone.trim() || undefined,
+        status: editForm.status,
+      });
+
+      setSnackbar({
+        open: true,
+        message: `Successfully updated ${updatedUser.firstName} ${updatedUser.lastName}'s profile`,
+        severity: 'success',
+      });
+
+      setSelectedCandidate(updatedUser);
+      setCandidates((prev) =>
+        prev.map((c) => (c.id === updatedUser.id ? updatedUser : c))
+      );
+    } catch (err: any) {
+      setEditError(
+        err?.response?.data?.message || err.message || 'Failed to update profile'
+      );
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -538,6 +594,7 @@ export default function CandidateUsersPage() {
                 sx={{ px: 3 }}
               >
                 <Tab label="Profile Info" />
+                <Tab icon={<Edit sx={{ fontSize: 18 }} />} iconPosition="start" label="Edit Profile" />
                 <Tab label="Convert to Employee" />
                 <Tab label="Delete User" sx={{ color: 'error.main' }} />
               </Tabs>
@@ -654,6 +711,95 @@ export default function CandidateUsersPage() {
               <TabPanel value={activeTab} index={1}>
                 <Box sx={{ maxWidth: 500 }}>
                   <Typography variant="body1" sx={{ mb: 3 }}>
+                    Edit the candidate's profile information. Changes will be saved immediately.
+                  </Typography>
+
+                  {editError && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {editError}
+                    </Alert>
+                  )}
+
+                  <Stack spacing={3}>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <TextField
+                        fullWidth
+                        label="First Name"
+                        required
+                        value={editForm.firstName}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, firstName: e.target.value })
+                        }
+                        disabled={editLoading}
+                      />
+                      <TextField
+                        fullWidth
+                        label="Last Name"
+                        required
+                        value={editForm.lastName}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, lastName: e.target.value })
+                        }
+                        disabled={editLoading}
+                      />
+                    </Box>
+
+                    <TextField
+                      fullWidth
+                      label="Phone Number"
+                      value={editForm.phone}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, phone: e.target.value })
+                      }
+                      placeholder="+1 555 123 4567"
+                      disabled={editLoading}
+                    />
+
+                    <FormControl fullWidth>
+                      <InputLabel>Status</InputLabel>
+                      <Select
+                        value={editForm.status}
+                        label="Status"
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            status: e.target.value as 'active' | 'inactive' | 'archived',
+                          })
+                        }
+                        disabled={editLoading}
+                      >
+                        <MenuItem value="active">Active</MenuItem>
+                        <MenuItem value="inactive">Inactive</MenuItem>
+                        <MenuItem value="archived">Archived</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <Button
+                      variant="contained"
+                      size="large"
+                      startIcon={
+                        editLoading ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <Save />
+                        )
+                      }
+                      onClick={handleSaveProfile}
+                      disabled={editLoading || !editForm.firstName.trim() || !editForm.lastName.trim()}
+                      sx={{
+                        bgcolor: '#A16AE8',
+                        '&:hover': { bgcolor: '#8f5cd9' },
+                      }}
+                    >
+                      {editLoading ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </Stack>
+                </Box>
+              </TabPanel>
+
+              <TabPanel value={activeTab} index={2}>
+                <Box sx={{ maxWidth: 500 }}>
+                  <Typography variant="body1" sx={{ mb: 3 }}>
                     Convert this candidate to an employee of an organization. This will add them
                     as a member of the selected organization.
                   </Typography>
@@ -724,7 +870,7 @@ export default function CandidateUsersPage() {
                 </Box>
               </TabPanel>
 
-              <TabPanel value={activeTab} index={2}>
+              <TabPanel value={activeTab} index={3}>
                 <Box sx={{ maxWidth: 500 }}>
                   <Alert severity="warning" sx={{ mb: 3 }} icon={<Warning />}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
