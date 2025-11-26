@@ -237,6 +237,24 @@ class OrganizationsService {
     await api.post(`${API_BASE_URL}/${organizationId}/convert-candidate`, { userId });
   }
 
+  async convertCandidateToEmployee(
+    organizationId: string,
+    data: {
+      candidateEmail: string;
+      hiredBy: string;
+      jobTitle?: string;
+      startDate?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    user: { id: string; email: string; firstName: string; lastName: string };
+    organizationMembership: { organizationId: string; role: string; status: string };
+    message?: string;
+  }> {
+    const response = await api.post(`${API_BASE_URL}/${organizationId}/convert-candidate`, data);
+    return response.data;
+  }
+
   // Subscription management
   async updateSubscription(organizationId: string, data: UpdateSubscriptionDto): Promise<Organization> {
     const response = await api.patch(`${API_BASE_URL}/${organizationId}/subscription`, data);

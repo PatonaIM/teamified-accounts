@@ -34,6 +34,7 @@ import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
 import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
+import CandidateUsersPage from './pages/account/CandidateUsersPage';
 import './App.css';
 
 function App() {
@@ -134,6 +135,14 @@ function App() {
                     element={
                       <SuperAdminRoute>
                         <OAuthConfigurationPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="tools/candidate-users" 
+                    element={
+                      <SuperAdminRoute>
+                        <CandidateUsersPage />
                       </SuperAdminRoute>
                     } 
                   />
