@@ -216,7 +216,16 @@ export class UserService {
     const user = await this.findOne(userId);
     const previousUrl = user.profilePictureUrl;
 
+    // Update the profilePictureUrl column
     user.profilePictureUrl = profilePictureUrl;
+    
+    // Also update the profilePicture field in the JSONB profileData column
+    // This ensures consistency since some parts of the app read from profileData
+    user.profileData = {
+      ...user.profileData,
+      profilePicture: profilePictureUrl,
+    };
+    
     const savedUser = await this.userRepository.save(user);
 
     try {
