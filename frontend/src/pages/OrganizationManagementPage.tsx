@@ -386,29 +386,26 @@ const OrganizationManagementPage: React.FC = () => {
     if (!editOrgData) return;
     const orgIdToReselect = editOrgData.id;
     try {
-      await organizationsService.update(editOrgData.id, {
+      // Get the updated organization directly from the update response
+      const updatedOrg = await organizationsService.update(editOrgData.id, {
         name: editOrgData.name,
         slug: editOrgData.slug,
         industry: editOrgData.industry,
         companySize: editOrgData.companySize,
         website: editOrgData.website,
       });
+      
       setIsEditingProfile(false);
       setSuccess('Organization updated successfully!');
       
-      const response = await organizationsService.getAll({
-        page: currentPage,
-        limit: 20,
-        search: searchQuery.trim() || undefined,
-      });
-      setOrganizations(response.organizations);
-      setTotalOrgs(response.pagination.total);
-      setHasMoreOrgs(response.pagination.page < response.pagination.totalPages);
+      // Update the local states immediately with the response
+      setSelectedOrg(updatedOrg);
+      setEditOrgData(updatedOrg);
       
-      const reselect = response.organizations.find(o => o.id === orgIdToReselect);
-      if (reselect) {
-        setSelectedOrg(reselect);
-      }
+      // Update the organization in the list
+      setOrganizations(prev => 
+        prev.map(org => org.id === orgIdToReselect ? updatedOrg : org)
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update organization');
     }
