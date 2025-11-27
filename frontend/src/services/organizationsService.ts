@@ -173,36 +173,18 @@ class OrganizationsService {
     await api.delete(`${API_BASE_URL}/${id}`);
   }
 
-  // Logo upload
-  async getLogoUploadUrl(organizationId: string, extension: string): Promise<{ uploadURL: string; objectKey: string }> {
-    const response = await api.post(`${API_BASE_URL}/${organizationId}/logo/upload-url`, { extension });
-    return response.data;
-  }
-
+  // Logo upload - Direct upload to Azure Blob Storage
   async uploadLogo(organizationId: string, file: File): Promise<string> {
-    const extension = file.name.split('.').pop() || 'png';
+    const formData = new FormData();
+    formData.append('file', file);
     
-    // Get upload URL
-    const { uploadURL, objectKey } = await this.getLogoUploadUrl(organizationId, extension);
-    
-    // Upload to blob storage
-    const uploadResponse = await fetch(uploadURL, {
-      method: 'PUT',
-      body: file,
+    const response = await api.post(`${API_BASE_URL}/${organizationId}/logo`, formData, {
       headers: {
-        'Content-Type': file.type,
+        'Content-Type': 'multipart/form-data',
       },
     });
 
-    if (!uploadResponse.ok) {
-      throw new Error('Failed to upload logo');
-    }
-
-    // Update organization with logo URL
-    const logoUrl = objectKey;
-    await this.update(organizationId, { logoUrl });
-
-    return logoUrl;
+    return response.data.logoUrl;
   }
 
   // Member management
