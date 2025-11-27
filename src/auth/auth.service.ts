@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
@@ -320,9 +320,9 @@ This is an automated message from Teamified.
     const jitter = Math.floor(Math.random() * 200) + 200;
     await new Promise(resolve => setTimeout(resolve, jitter));
 
-    // Check if user exists and is active
+    // Check if user exists and is active (ignore soft-deleted users)
     const user = await this.userRepository.findOne({
-      where: { email, isActive: true },
+      where: { email, isActive: true, deletedAt: IsNull() },
     });
 
     if (!user) {
@@ -344,9 +344,9 @@ This is an automated message from Teamified.
   ): Promise<LoginResponseDto> {
     const { email, password } = loginDto;
 
-    // Find user by email with roles
+    // Find user by email with roles (ignore soft-deleted users)
     const user = await this.userRepository.findOne({
-      where: { email, isActive: true },
+      where: { email, isActive: true, deletedAt: IsNull() },
       relations: ['userRoles'],
     });
 
@@ -646,9 +646,9 @@ This is an automated message from Teamified.
     const securityMessage = 'If an account exists with this email, a password reset link has been sent';
 
     try {
-      // Find user by email
+      // Find user by email (ignore soft-deleted users)
       const user = await this.userRepository.findOne({
-        where: { email: email.toLowerCase(), isActive: true },
+        where: { email: email.toLowerCase(), isActive: true, deletedAt: IsNull() },
       });
 
       // If user doesn't exist, still return success message (security)
@@ -960,8 +960,9 @@ This is an automated message from Teamified.
   ): Promise<ClientAdminSignupResponseDto> {
     const { email, password, firstName, lastName, companyName, slug: providedSlug, industry, companySize } = signupDto;
 
+    // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
-      where: { email },
+      where: { email, deletedAt: IsNull() },
     });
 
     if (existingUser) {
@@ -1092,8 +1093,9 @@ This is an automated message from Teamified.
   ): Promise<CandidateSignupResponseDto> {
     const { email, password, firstName, lastName } = signupDto;
 
+    // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
-      where: { email },
+      where: { email, deletedAt: IsNull() },
     });
 
     if (existingUser) {

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, Like, FindManyOptions, DataSource } from 'typeorm';
+import { Repository, Like, FindManyOptions, DataSource, IsNull } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -32,9 +32,9 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    // Check if user with email already exists
+    // Check if user with email already exists (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email }
+      where: { email: createUserDto.email, deletedAt: IsNull() }
     });
 
     if (existingUser) {
@@ -128,10 +128,10 @@ export class UserService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
-    // Check for email conflicts if email is being updated
+    // Check for email conflicts if email is being updated (ignore soft-deleted users)
     if (updateUserDto.email && updateUserDto.email !== user.email) {
       const existingUser = await this.userRepository.findOne({
-        where: { email: updateUserDto.email }
+        where: { email: updateUserDto.email, deletedAt: IsNull() }
       });
 
       if (existingUser) {
@@ -203,7 +203,7 @@ export class UserService {
     return savedUser;
   }
 
-  async remove(id: string, deletedBy?: string, actorRole: string = 'admin'): Promise<void> {
+  async remove(id: string, deletedBy?: string, actorRole: string = 'admin', reason?: string): Promise<void> {
     const user = await this.findOne(id);
     
     // Capture user data snapshot before deletion
@@ -211,6 +211,9 @@ export class UserService {
     const userStatus = user.status;
     const deletedAt = new Date();
     let cancelledCount = 0;
+
+    // Generate unique placeholder email to free up the original email for reuse
+    const anonymizedEmail = `deleted+${user.id}@teamified-archive.local`;
 
     // Wrap database operations in a transaction
     await this.dataSource.transaction(async (manager) => {
@@ -238,8 +241,7 @@ export class UserService {
 
       cancelledCount = (cancelByUserId.affected || 0) + (cancelByEmail.affected || 0);
 
-      // Create audit log BEFORE deletion (user record will be gone)
-      // Use transaction manager's repository to ensure audit log participates in transaction
+      // Create audit log for the soft delete
       const auditRepo = manager.getRepository(AuditLog);
       const auditLog = auditRepo.create({
         actorUserId: deletedBy || null,
@@ -252,27 +254,45 @@ export class UserService {
           status: userStatus,
           cancelledInvitations: cancelledCount,
           deletedAt: deletedAt.toISOString(),
-          hardDelete: true,
+          softDelete: true,
+          reason: reason || 'Admin deletion',
         },
         ip: null,
         userAgent: null,
       });
       await auditRepo.save(auditLog);
 
-      // Hard delete the user (cascades will handle related entities)
-      await userRepo.remove(user);
+      // Soft delete: Archive user data and anonymize email to allow re-registration
+      await userRepo.update(user.id, {
+        deletedAt: deletedAt,
+        deletedEmail: userEmail,
+        deletedBy: deletedBy || null,
+        deletedReason: reason || 'Admin deletion',
+        email: anonymizedEmail,
+        supabaseUserId: null,
+        status: 'archived',
+        isActive: false,
+        passwordHash: null,
+        passwordResetToken: null,
+        passwordResetTokenExpiry: null,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      });
     });
 
     // After successful commit, attempt Supabase deletion
     // This is done asynchronously to not block the response
-    this.supabaseService.deleteSupabaseUser(user.id)
-      .then(() => {
-        this.logger.log(`User ${userEmail} hard deleted from database and Supabase (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
-      })
-      .catch((error) => {
-        this.logger.error(`User ${userEmail} was deleted from database but Supabase deletion failed:`, error);
-        // User is already deleted from DB, log the error but don't fail
-      });
+    if (user.supabaseUserId) {
+      this.supabaseService.deleteSupabaseUser(user.supabaseUserId)
+        .then(() => {
+          this.logger.log(`User ${userEmail} soft deleted and email anonymized. Supabase account removed. (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+        })
+        .catch((error) => {
+          this.logger.error(`User ${userEmail} was soft deleted but Supabase deletion failed:`, error);
+        });
+    } else {
+      this.logger.log(`User ${userEmail} soft deleted and email anonymized (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+    }
   }
 
   async updateStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {
@@ -384,9 +404,13 @@ export class UserService {
     };
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string, includeDeleted: boolean = false): Promise<User | null> {
+    const whereClause: any = { email };
+    if (!includeDeleted) {
+      whereClause.deletedAt = IsNull();
+    }
     return await this.userRepository.findOne({
-      where: { email }
+      where: whereClause
     });
   }
 

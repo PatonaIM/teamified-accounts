@@ -91,6 +91,15 @@ export class User {
   @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt: Date | null;
 
+  @Column({ name: 'deleted_email', nullable: true })
+  deletedEmail: string | null;
+
+  @Column({ name: 'deleted_by', type: 'uuid', nullable: true })
+  deletedBy: string | null;
+
+  @Column({ name: 'deleted_reason', nullable: true })
+  deletedReason: string | null;
+
   // Relations
   @OneToMany('UserRole', 'user')
   userRoles?: any[];
