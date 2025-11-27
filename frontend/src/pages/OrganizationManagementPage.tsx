@@ -832,7 +832,12 @@ const OrganizationManagementPage: React.FC = () => {
                     }}
                   >
                     <Avatar
+                      key={`org-avatar-${org.id}-${org.logoUrl || 'default'}`}
                       src={org.logoUrl || undefined}
+                      imgProps={{ 
+                        crossOrigin: 'anonymous',
+                        onError: (e: any) => { e.target.style.display = 'none'; }
+                      }}
                       sx={{
                         width: 40,
                         height: 40,
@@ -922,7 +927,12 @@ const OrganizationManagementPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Box sx={{ position: 'relative', display: 'inline-block' }}>
                     <Avatar
+                      key={`selected-org-avatar-${selectedOrg.id}-${selectedOrg.logoUrl || 'default'}`}
                       src={selectedOrg.logoUrl || undefined}
+                      imgProps={{ 
+                        crossOrigin: 'anonymous',
+                        onError: (e: any) => { e.target.style.display = 'none'; }
+                      }}
                       sx={{
                         width: 64,
                         height: 64,
