@@ -124,6 +124,7 @@ const OrganizationManagementPage: React.FC = () => {
   // Edit state (now inline in Company Profile tab)
   const [editOrgData, setEditOrgData] = useState<Organization | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   
   // Delete state (for Delete Organization tab)
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState('');
@@ -385,6 +386,7 @@ const OrganizationManagementPage: React.FC = () => {
   const handleSaveProfileChanges = async () => {
     if (!editOrgData) return;
     const orgIdToReselect = editOrgData.id;
+    setSavingProfile(true);
     try {
       // Get the updated organization directly from the update response
       const updatedOrg = await organizationsService.update(editOrgData.id, {
@@ -408,6 +410,8 @@ const OrganizationManagementPage: React.FC = () => {
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update organization');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -1213,6 +1217,7 @@ const OrganizationManagementPage: React.FC = () => {
                             setIsEditingProfile(false);
                             setEditOrgData(selectedOrg);
                           }}
+                          disabled={savingProfile}
                         >
                           Cancel
                         </Button>
@@ -1220,8 +1225,10 @@ const OrganizationManagementPage: React.FC = () => {
                           size="small"
                           variant="contained"
                           onClick={handleSaveProfileChanges}
+                          disabled={savingProfile}
+                          startIcon={savingProfile ? <CircularProgress size={16} color="inherit" /> : null}
                         >
-                          Save Changes
+                          {savingProfile ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </Stack>
                     )}

@@ -1134,6 +1134,7 @@ Welcome to the ${organization.name} team!
       industry: organization.industry,
       companySize: organization.companySize,
       logoUrl: organization.logoUrl,
+      website: organization.website,
       settings: organization.settings,
       subscriptionTier: organization.subscriptionTier,
       subscriptionStatus: organization.subscriptionStatus,

@@ -42,6 +42,13 @@ export class OrganizationResponseDto {
   logoUrl: string | null;
 
   @ApiProperty({ 
+    description: 'Organization website URL',
+    example: 'https://example.com',
+    nullable: true
+  })
+  website: string | null;
+
+  @ApiProperty({ 
     description: 'Organization settings (JSON)',
     example: { theme: 'light', notifications: true }
   })
