@@ -371,8 +371,12 @@ const OrganizationManagementPage: React.FC = () => {
         setSelectedOrg(updatedOrg);
         setEditOrgData(updatedOrg);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload logo');
+    } catch (err: any) {
+      // Extract error message from axios response or use generic message
+      const errorMessage = err?.response?.data?.message 
+        || err?.message 
+        || 'Failed to upload logo';
+      setError(errorMessage);
     } finally {
       setUploadingLogo(false);
       // Reset the input so the same file can be selected again
