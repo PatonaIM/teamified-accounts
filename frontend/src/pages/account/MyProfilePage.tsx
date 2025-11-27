@@ -9,11 +9,13 @@ import {
   IconButton,
   Tooltip,
   Badge,
+  Alert,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import WarningIcon from '@mui/icons-material/Warning';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSnackbar } from '../../contexts/SnackbarContext';
@@ -25,6 +27,7 @@ interface ProfileData {
   emailAddress?: string;
   firstName?: string;
   lastName?: string;
+  emailVerified?: boolean;
   profileData?: {
     secondaryEmail?: string;
     profilePicture?: string;
@@ -41,10 +44,12 @@ export default function MyProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Form state
+  const [primaryEmail, setPrimaryEmail] = useState('');
   const [secondaryEmail, setSecondaryEmail] = useState('');
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [primaryEmailChanged, setPrimaryEmailChanged] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,6 +65,7 @@ export default function MyProfilePage() {
       console.log('MyProfilePage: Profile id:', data.id);
       console.log('MyProfilePage: Secondary email from backend:', data.profileData?.secondaryEmail);
       setProfileData(data);
+      setPrimaryEmail(data.emailAddress || '');
       setSecondaryEmail(data.profileData?.secondaryEmail || '');
       setProfilePicture(data.profileData?.profilePicture || null);
     } catch (error) {
@@ -73,12 +79,17 @@ export default function MyProfilePage() {
 
   const handleEditClick = () => {
     setIsEditing(true);
+    setPrimaryEmailChanged(false);
+    setEmailError(null);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
+    setPrimaryEmail(profileData?.emailAddress || '');
     setSecondaryEmail(profileData?.profileData?.secondaryEmail || '');
     setProfilePicture(profileData?.profileData?.profilePicture || null);
+    setEmailError(null);
+    setPrimaryEmailChanged(false);
   };
 
   const handleProfilePictureClick = () => {
@@ -91,13 +102,11 @@ export default function MyProfilePage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       showSnackbar('Please select an image file', 'error');
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       showSnackbar('Image size must be less than 5MB', 'error');
       return;
@@ -118,7 +127,6 @@ export default function MyProfilePage() {
       const newProfilePictureUrl = response.data.profilePictureUrl;
       setProfilePicture(newProfilePictureUrl);
       
-      // Update local state
       setProfileData(prev => prev ? {
         ...prev,
         profileData: {
@@ -136,28 +144,104 @@ export default function MyProfilePage() {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    if (!email) return true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateEmails = (): boolean => {
+    const trimmedPrimary = primaryEmail.trim();
+    const trimmedSecondary = secondaryEmail.trim();
+
+    if (!trimmedPrimary && !trimmedSecondary) {
+      setEmailError('At least one email address is required');
+      return false;
+    }
+
+    if (trimmedPrimary && !validateEmail(trimmedPrimary)) {
+      setEmailError('Please enter a valid primary email address');
+      return false;
+    }
+
+    if (trimmedSecondary && !validateEmail(trimmedSecondary)) {
+      setEmailError('Please enter a valid secondary email address');
+      return false;
+    }
+
+    setEmailError(null);
+    return true;
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && isEditing && !isSaving) {
+      event.preventDefault();
+      handleSaveChanges();
+    }
+  };
+
+  const handlePrimaryEmailChange = (value: string) => {
+    setPrimaryEmail(value);
+    const originalPrimary = profileData?.emailAddress || '';
+    setPrimaryEmailChanged(value.trim() !== originalPrimary.trim());
+  };
+
   const handleSaveChanges = async () => {
+    if (!validateEmails()) {
+      return;
+    }
+
     try {
       setIsSaving(true);
 
-      // Update profile via API with proper authorization
-      await api.put('/v1/users/me/profile', {
-        profileData: {
-          secondaryEmail: secondaryEmail || null,
-        },
-      });
+      let finalPrimaryEmail = primaryEmail.trim();
+      let finalSecondaryEmail = secondaryEmail.trim();
 
-      // Update local state without reloading the entire profile
+      if (!finalPrimaryEmail && finalSecondaryEmail) {
+        finalPrimaryEmail = finalSecondaryEmail;
+        finalSecondaryEmail = '';
+      }
+
+      const originalPrimaryEmail = profileData?.emailAddress || '';
+      const isPrimaryEmailUpdated = finalPrimaryEmail !== originalPrimaryEmail;
+
+      if (isPrimaryEmailUpdated) {
+        await api.put('/v1/users/me/email', {
+          email: finalPrimaryEmail,
+          secondaryEmail: finalSecondaryEmail || null,
+        });
+      } else {
+        await api.put('/v1/users/me/profile', {
+          profileData: {
+            secondaryEmail: finalSecondaryEmail || null,
+          },
+        });
+      }
+
       setProfileData(prev => prev ? {
         ...prev,
+        emailAddress: finalPrimaryEmail,
+        emailVerified: isPrimaryEmailUpdated ? false : prev.emailVerified,
         profileData: {
           ...prev.profileData,
-          secondaryEmail: secondaryEmail || undefined,
+          secondaryEmail: finalSecondaryEmail || undefined,
         },
       } : prev);
 
-      showSnackbar('Profile updated successfully', 'success');
+      setPrimaryEmail(finalPrimaryEmail);
+      setSecondaryEmail(finalSecondaryEmail);
+
+      if (isPrimaryEmailUpdated) {
+        showSnackbar('Email updated. Please check your inbox to verify your new email address.', 'success');
+        if (refreshUser) {
+          await refreshUser();
+        }
+      } else {
+        showSnackbar('Profile updated successfully', 'success');
+      }
+      
       setIsEditing(false);
+      setPrimaryEmailChanged(false);
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       showSnackbar(error.response?.data?.message || 'Failed to update profile', 'error');
@@ -184,7 +268,6 @@ export default function MyProfilePage() {
 
   const displayName = `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || 'User';
   
-  // Get initials from first and last name
   const getInitials = () => {
     const firstName = profileData.firstName || '';
     const lastName = profileData.lastName || '';
@@ -193,7 +276,7 @@ export default function MyProfilePage() {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2 }} onKeyDown={handleKeyDown}>
       <Paper
         sx={{
           p: 4,
@@ -201,7 +284,6 @@ export default function MyProfilePage() {
           borderRadius: 6,
         }}
       >
-        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -210,7 +292,6 @@ export default function MyProfilePage() {
           onChange={handleFileChange}
         />
 
-        {/* User Header with Edit Icons */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Badge
@@ -266,7 +347,6 @@ export default function MyProfilePage() {
             </Box>
           </Box>
           
-          {/* Edit/Cancel/Save Icons */}
           <Box sx={{ display: 'flex', gap: 1 }}>
             {isEditing ? (
               <>
@@ -284,7 +364,7 @@ export default function MyProfilePage() {
                     <CloseIcon />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Save Changes">
+                <Tooltip title="Save Changes (or press Enter)">
                   <IconButton
                     onClick={handleSaveChanges}
                     disabled={isSaving}
@@ -317,13 +397,23 @@ export default function MyProfilePage() {
           </Box>
         </Box>
 
-        {/* Email Addresses Section */}
+        {emailError && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {emailError}
+          </Alert>
+        )}
+
+        {isEditing && primaryEmailChanged && (
+          <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 3 }}>
+            Changing your primary email will require email verification. You will need to verify the new email address before you can continue using your account.
+          </Alert>
+        )}
+
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
             Email Addresses
           </Typography>
           
-          {/* Primary Email */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
               Primary Email
@@ -331,22 +421,19 @@ export default function MyProfilePage() {
             {isEditing ? (
               <TextField
                 fullWidth
-                value={profileData.emailAddress || ''}
-                disabled
+                value={primaryEmail}
+                onChange={(e) => handlePrimaryEmailChange(e.target.value)}
+                placeholder="Enter primary email address"
                 size="small"
                 variant="outlined"
-                sx={{ 
-                  '& .MuiInputBase-input.Mui-disabled': { 
-                    WebkitTextFillColor: 'text.secondary',
-                  } 
-                }}
+                type="email"
+                helperText="This is your main account email used for login"
               />
             ) : (
               <Typography variant="body1">{profileData.emailAddress}</Typography>
             )}
           </Box>
 
-          {/* Secondary Email */}
           <Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
               Secondary Email (Optional)
@@ -360,7 +447,7 @@ export default function MyProfilePage() {
                 size="small"
                 variant="outlined"
                 type="email"
-                helperText="This can be used for account recovery"
+                helperText="This can be used for account recovery. If primary email is empty, this will become your primary email."
               />
             ) : (
               <Typography variant="body1" color={profileData.profileData?.secondaryEmail ? 'text.primary' : 'text.secondary'}>
@@ -370,7 +457,6 @@ export default function MyProfilePage() {
           </Box>
         </Box>
 
-        {/* Account Information Section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
             Account Information

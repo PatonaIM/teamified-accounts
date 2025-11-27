@@ -501,4 +501,72 @@ export class UserService {
     
     return hasClientRole ? 'client' : 'candidate';
   }
+
+  async updatePrimaryEmail(
+    userId: string,
+    newEmail: string,
+    secondaryEmail: string | null,
+    auditContext?: {
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<{ user: User; verificationToken: string }> {
+    const user = await this.findOne(userId);
+    const previousEmail = user.email;
+
+    if (newEmail === previousEmail) {
+      throw new BadRequestException('New email is the same as the current email');
+    }
+
+    const existingUser = await this.userRepository.findOne({
+      where: { email: newEmail, deletedAt: IsNull() }
+    });
+
+    if (existingUser) {
+      throw new ConflictException('This email address is already in use by another account');
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    const { v4: uuidv4 } = await import('uuid');
+    const verificationToken = uuidv4();
+
+    user.email = newEmail;
+    user.emailVerified = false;
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
+    user.profileData = {
+      ...user.profileData,
+      secondaryEmail: secondaryEmail || undefined,
+    };
+
+    const savedUser = await this.userRepository.save(user);
+
+    try {
+      await this.auditService.log({
+        actorUserId: userId,
+        actorRole: user.userRoles?.[0]?.roleType || 'user',
+        action: 'email_changed',
+        entityType: 'user',
+        entityId: userId,
+        changes: {
+          previousEmail,
+          newEmail,
+          emailVerificationRequired: true,
+        },
+        ip: auditContext?.ip,
+        userAgent: auditContext?.userAgent,
+      });
+    } catch (auditError) {
+      this.logger.error('Failed to create audit log for email change:', auditError);
+    }
+
+    this.logger.log(`User ${userId} changed email from ${previousEmail} to ${newEmail}. Verification required.`);
+
+    return { user: savedUser, verificationToken };
+  }
 }

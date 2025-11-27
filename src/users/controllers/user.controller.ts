@@ -19,6 +19,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -35,6 +36,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
 import { AzureBlobStorageService } from '../../blob-storage/azure-blob-storage.service';
+import { EmailService } from '../../email/services/email.service';
 import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
@@ -47,6 +49,8 @@ export class UserController {
     private readonly userService: UserService,
     private readonly objectStorageService: ObjectStorageService,
     private readonly azureBlobStorageService: AzureBlobStorageService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post()
@@ -242,6 +246,62 @@ export class UserController {
     return {
       message: 'Profile updated successfully',
       profileData: updatedUser.profileData,
+    };
+  }
+
+  @Put('me/email')
+  @ApiOperation({ summary: 'Update current user primary email address' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email updated successfully, verification email sent',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid email format or same as current email',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already in use by another account',
+  })
+  async updateMyEmail(
+    @CurrentUser() user: User,
+    @Body() emailData: { email: string; secondaryEmail?: string | null },
+    @Request() req: any,
+  ): Promise<{ message: string; emailVerificationRequired: boolean }> {
+    const ip = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.get('user-agent');
+
+    if (!emailData.email || !emailData.email.trim()) {
+      throw new BadRequestException('Email address is required');
+    }
+
+    const { user: updatedUser, verificationToken } = await this.userService.updatePrimaryEmail(
+      user.id,
+      emailData.email.trim(),
+      emailData.secondaryEmail?.trim() || null,
+      {
+        ip,
+        userAgent,
+      },
+    );
+
+    try {
+      await this.emailService.sendEmailVerificationReminder(
+        updatedUser.email,
+        updatedUser.firstName,
+        verificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+    }
+
+    return {
+      message: 'Email updated successfully. Please check your inbox to verify your new email address.',
+      emailVerificationRequired: true,
     };
   }
 
