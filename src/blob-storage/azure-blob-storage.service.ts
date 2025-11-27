@@ -16,6 +16,7 @@ export class AzureBlobStorageService {
   
   private readonly containerName = 'teamified-accounts';
   private readonly baseUrl = 'https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts';
+  private readonly proxyBaseUrl = '/api/objects/azure';
   
   private readonly allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
   private readonly allowedLogoExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
@@ -95,7 +96,7 @@ export class AzureBlobStorageService {
 
     await this.uploadBlob(blobPath, fileBuffer, validExtension);
 
-    const url = `${this.baseUrl}/${blobPath}`;
+    const url = `${this.proxyBaseUrl}/${blobPath}`;
     
     this.logger.log(`Uploaded profile picture for user ${userId}: ${blobPath}`);
     
@@ -125,7 +126,7 @@ export class AzureBlobStorageService {
 
     await this.uploadBlob(blobPath, fileBuffer, validExtension);
 
-    const url = `${this.baseUrl}/${blobPath}`;
+    const url = `${this.proxyBaseUrl}/${blobPath}`;
     
     this.logger.log(`Uploaded logo for organization ${organizationId}: ${blobPath}`);
     
@@ -212,5 +213,34 @@ export class AzureBlobStorageService {
 
   isConfigured(): boolean {
     return this.containerClient !== null;
+  }
+
+  async downloadBlob(blobPath: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    this.ensureInitialized();
+
+    try {
+      const blockBlobClient = this.containerClient!.getBlockBlobClient(blobPath);
+      const downloadResponse = await blockBlobClient.download(0);
+      
+      if (!downloadResponse.readableStreamBody) {
+        return null;
+      }
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of downloadResponse.readableStreamBody) {
+        chunks.push(Buffer.from(chunk));
+      }
+
+      const buffer = Buffer.concat(chunks);
+      const contentType = downloadResponse.contentType || 'application/octet-stream';
+
+      return { buffer, contentType };
+    } catch (error: any) {
+      if (error.statusCode === 404) {
+        return null;
+      }
+      this.logger.error(`Failed to download blob ${blobPath}:`, error);
+      throw error;
+    }
   }
 }

@@ -27,39 +27,40 @@ export class BlobStorageController {
     private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
-  @Get(':objectPath(*)')
-  @UseGuards(JwtAuthGuard)
-  async getObject(
-    @Param('objectPath') objectPath: string,
-    @Request() req,
+  @Get('azure/:blobPath(*)')
+  @ApiOperation({ summary: 'Proxy Azure Blob Storage images (public access)' })
+  async proxyAzureBlob(
+    @Param('blobPath') blobPath: string,
     @Res() res: Response,
   ) {
-    const userId = req.user.id;
-    const fullPath = `/objects/${objectPath}`;
-
     try {
-      const objectFile = await this.objectStorageService.getObjectEntityFile(fullPath);
-      const canAccess = await this.objectStorageService.canAccessObjectEntity({
-        objectFile,
-        userId: userId,
-        requestedPermission: ObjectPermission.READ,
-      });
-
-      if (!canAccess) {
-        throw new UnauthorizedException('Access denied');
+      const result = await this.azureBlobStorageService.downloadBlob(blobPath);
+      
+      if (!result) {
+        return res.status(404).json({ message: 'Image not found' });
       }
 
-      await this.objectStorageService.downloadObject(objectFile, res);
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.send(result.buffer);
     } catch (error) {
-      console.error('Error checking object access:', error);
-      if (error instanceof ObjectNotFoundError) {
-        return res.sendStatus(404);
-      }
-      if (error instanceof UnauthorizedException) {
-        return res.sendStatus(401);
-      }
-      return res.sendStatus(500);
+      console.error('Error proxying Azure blob:', error);
+      return res.status(500).json({ message: 'Failed to load image' });
     }
+  }
+
+  @Get('storage/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Check Azure Blob Storage configuration status' })
+  @ApiBearerAuth()
+  async getStorageStatus() {
+    return {
+      azureBlobStorage: {
+        configured: this.azureBlobStorageService.isConfigured(),
+        containerUrl: 'https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts',
+      },
+    };
   }
 
   @Post('users/:userId/profile-picture')
@@ -140,16 +141,38 @@ export class BlobStorageController {
     };
   }
 
-  @Get('storage/status')
+  @Get(':objectPath(*)')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Check Azure Blob Storage configuration status' })
-  @ApiBearerAuth()
-  async getStorageStatus() {
-    return {
-      azureBlobStorage: {
-        configured: this.azureBlobStorageService.isConfigured(),
-        containerUrl: 'https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts',
-      },
-    };
+  async getObject(
+    @Param('objectPath') objectPath: string,
+    @Request() req,
+    @Res() res: Response,
+  ) {
+    const userId = req.user.id;
+    const fullPath = `/objects/${objectPath}`;
+
+    try {
+      const objectFile = await this.objectStorageService.getObjectEntityFile(fullPath);
+      const canAccess = await this.objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId: userId,
+        requestedPermission: ObjectPermission.READ,
+      });
+
+      if (!canAccess) {
+        throw new UnauthorizedException('Access denied');
+      }
+
+      await this.objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error('Error checking object access:', error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      if (error instanceof UnauthorizedException) {
+        return res.sendStatus(401);
+      }
+      return res.sendStatus(500);
+    }
   }
 }
