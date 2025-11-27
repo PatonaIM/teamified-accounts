@@ -114,7 +114,7 @@ export default function MyProfilePage() {
         },
       });
 
-      const newProfilePictureUrl = response.data.profilePicture;
+      const newProfilePictureUrl = response.data.profilePictureUrl;
       setProfilePicture(newProfilePictureUrl);
       
       // Update local state
