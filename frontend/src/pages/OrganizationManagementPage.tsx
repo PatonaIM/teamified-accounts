@@ -358,19 +358,15 @@ const OrganizationManagementPage: React.FC = () => {
       const logoUrl = await organizationsService.uploadLogo(selectedOrg.id, file);
       setSuccess('Logo uploaded successfully!');
       
-      // Refresh organizations list to show updated logo
-      const response = await organizationsService.getAll({
-        page: currentPage,
-        limit: 20,
-        search: searchQuery.trim() || undefined,
-      });
-      setOrganizations(response.organizations);
+      // Update logo locally without reloading the entire list
+      const updatedOrg = { ...selectedOrg, logoUrl };
+      setSelectedOrg(updatedOrg);
+      setEditOrgData(updatedOrg);
       
-      const updatedOrg = response.organizations.find(o => o.id === selectedOrg.id);
-      if (updatedOrg) {
-        setSelectedOrg(updatedOrg);
-        setEditOrgData(updatedOrg);
-      }
+      // Update the organization in the list as well
+      setOrganizations(prev => 
+        prev.map(org => org.id === selectedOrg.id ? { ...org, logoUrl } : org)
+      );
     } catch (err: any) {
       // Extract error message from axios response or use generic message
       const errorMessage = err?.response?.data?.message 
