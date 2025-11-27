@@ -27,6 +27,7 @@ interface ProfileData {
   lastName?: string;
   profileData?: {
     secondaryEmail?: string;
+    profilePicture?: string;
   };
   roles?: string[];
 }
