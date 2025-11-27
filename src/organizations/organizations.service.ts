@@ -505,6 +505,46 @@ export class OrganizationsService {
     return this.objectStorageService.getOrganizationLogoUploadURL(organizationId, extension);
   }
 
+  async updateLogoUrl(
+    organizationId: string,
+    logoUrl: string,
+    currentUser: User,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<Organization> {
+    this.validateOrgAccess(organizationId, currentUser);
+
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with ID ${organizationId} not found`);
+    }
+
+    const previousLogoUrl = organization.logoUrl;
+    organization.logoUrl = logoUrl;
+    const savedOrganization = await this.organizationRepository.save(organization);
+
+    const roles = this.getAllRoles(currentUser);
+    await this.auditService.log({
+      actorUserId: currentUser.id,
+      actorRole: roles[0] || 'unknown',
+      action: 'organization_logo_updated',
+      entityType: 'Organization',
+      entityId: organizationId,
+      changes: {
+        previousLogoUrl,
+        newLogoUrl: logoUrl,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Organization logo updated: ${organization.name} (${organizationId}) by user ${currentUser.id}`);
+    return savedOrganization;
+  }
+
   async getMembers(organizationId: string, currentUser: User): Promise<OrganizationMemberResponseDto[]> {
     this.validateOrgAccess(organizationId, currentUser);
 

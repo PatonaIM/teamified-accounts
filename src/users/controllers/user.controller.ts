@@ -34,6 +34,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
+import { AzureBlobStorageService } from '../../blob-storage/azure-blob-storage.service';
 import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
@@ -45,6 +46,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly objectStorageService: ObjectStorageService,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
   @Post()
@@ -278,7 +280,7 @@ export class UserController {
     @CurrentUser() user: User,
     @UploadedFile() file: any,
     @Request() req: any,
-  ): Promise<{ message: string; profilePicture: string }> {
+  ): Promise<{ message: string; profilePictureUrl: string }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -295,36 +297,22 @@ export class UserController {
       throw new BadRequestException('File size exceeds 5MB limit');
     }
 
-    // Get file extension
-    const ext = path.extname(file.originalname).toLowerCase();
-    
-    // Get upload URL from object storage
-    const { uploadURL, objectKey } = await this.objectStorageService.getProfilePictureUploadURL(
+    // Upload to Azure Blob Storage
+    const result = await this.azureBlobStorageService.uploadUserProfilePicture(
       user.id,
-      ext,
+      file.buffer,
+      file.originalname,
     );
 
-    // Upload file to object storage
-    const response = await fetch(uploadURL, {
-      method: 'PUT',
-      body: file.buffer,
-      headers: {
-        'Content-Type': file.mimetype,
-      },
-    });
-
-    if (!response.ok) {
-      throw new BadRequestException('Failed to upload file to storage');
-    }
-
-    // Update user profile with new picture path
+    // Update user profile picture URL in database
     const ip = req.ip || req.connection?.remoteAddress;
     const userAgent = req.get('user-agent');
 
-    const updatedUser = await this.userService.updateProfileData(
+    await this.userService.updateProfilePictureUrl(
       user.id,
-      { profilePicture: objectKey },
+      result.url,
       {
+        actorUserId: user.id,
         ip,
         userAgent,
       },
@@ -332,7 +320,7 @@ export class UserController {
 
     return {
       message: 'Profile picture uploaded successfully',
-      profilePicture: objectKey,
+      profilePictureUrl: result.url,
     };
   }
 

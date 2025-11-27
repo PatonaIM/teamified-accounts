@@ -41,6 +41,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.29.1",
     "@google-cloud/storage": "^7.17.3",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.0.0",

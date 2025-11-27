@@ -52,11 +52,19 @@ export class UserResponseDto {
   profileData?: any | null;
 
   @ApiPropertyOptional({
-    description: 'Profile picture path',
+    description: 'Profile picture URL (Azure Blob Storage)',
+    example: 'https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts/users/user-id/profile_123456789.jpg'
+  })
+  @Expose()
+  @Transform(({ obj }) => obj.profilePictureUrl || obj.profileData?.profilePicture || null)
+  profilePictureUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Profile picture path (legacy, use profilePictureUrl instead)',
     example: '/objects/profile-pictures/user-id/picture.jpg'
   })
   @Expose()
-  @Transform(({ obj }) => obj.profileData?.profilePicture || null)
+  @Transform(({ obj }) => obj.profilePictureUrl || obj.profileData?.profilePicture || null)
   profilePicture?: string | null;
 
   @ApiPropertyOptional({

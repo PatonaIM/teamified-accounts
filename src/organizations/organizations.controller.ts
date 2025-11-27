@@ -11,8 +11,12 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiSecurity } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiSecurity, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -30,6 +34,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../auth/entities/user.entity';
 import { ErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
+import { AzureBlobStorageService } from '../blob-storage/azure-blob-storage.service';
 
 @ApiTags('organizations')
 @Controller('v1/organizations')
@@ -37,7 +42,10 @@ import { ErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from
 @ApiBearerAuth()
 @ApiSecurity('JWT-auth')
 export class OrganizationsController {
-  constructor(private readonly organizationsService: OrganizationsService) {}
+  constructor(
+    private readonly organizationsService: OrganizationsService,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
+  ) {}
 
   @Post()
   @Roles('super_admin')
@@ -400,6 +408,82 @@ export class OrganizationsController {
     @CurrentUser() user: User,
   ): Promise<{ uploadURL: string; objectKey: string }> {
     return this.organizationsService.getLogoUploadUrl(organizationId, body.extension, user);
+  }
+
+  @Post(':id/logo')
+  @Roles('super_admin', 'client_admin')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload organization logo directly to Azure Blob Storage' })
+  @ApiParam({
+    name: 'id',
+    description: 'Organization unique identifier',
+    type: 'string',
+    format: 'uuid'
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Logo image file (JPG, PNG, GIF, WebP, SVG) - Max size: 5MB',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Logo uploaded successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid file or validation error',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async uploadLogo(
+    @Param('id') organizationId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: User,
+    @Request() req: any,
+  ): Promise<{ message: string; logoUrl: string }> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Only JPG, PNG, GIF, WebP, and SVG are allowed');
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size exceeds 5MB limit');
+    }
+
+    const result = await this.azureBlobStorageService.uploadOrganizationLogo(
+      organizationId,
+      file.buffer,
+      file.originalname,
+    );
+
+    await this.organizationsService.updateLogoUrl(
+      organizationId,
+      result.url,
+      user,
+      req.ip,
+      req.headers['user-agent'],
+    );
+
+    return {
+      message: 'Logo uploaded successfully',
+      logoUrl: result.url,
+    };
   }
 
   @Delete(':id')

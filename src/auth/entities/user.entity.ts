@@ -82,6 +82,9 @@ export class User {
   @Column({ name: 'theme_preference', length: 20, nullable: true, default: 'light' })
   themePreference: 'light' | 'dark' | null;
 
+  @Column({ name: 'profile_picture_url', type: 'text', nullable: true })
+  profilePictureUrl: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

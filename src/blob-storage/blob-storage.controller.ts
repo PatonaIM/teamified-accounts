@@ -1,20 +1,31 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Res,
   UseGuards,
   Request,
   UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ObjectStorageService, ObjectNotFoundError } from './object-storage.service';
+import { AzureBlobStorageService } from './azure-blob-storage.service';
 import { ObjectPermission } from './object-acl.service';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Storage')
 @Controller('objects')
 export class BlobStorageController {
-  constructor(private readonly objectStorageService: ObjectStorageService) {}
+  constructor(
+    private readonly objectStorageService: ObjectStorageService,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
+  ) {}
 
   @Get(':objectPath(*)')
   @UseGuards(JwtAuthGuard)
@@ -49,5 +60,96 @@ export class BlobStorageController {
       }
       return res.sendStatus(500);
     }
+  }
+
+  @Post('users/:userId/profile-picture')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload user profile picture to Azure Blob Storage' })
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadUserProfilePicture(
+    @Param('userId') userId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const result = await this.azureBlobStorageService.uploadUserProfilePicture(
+      userId,
+      file.buffer,
+      file.originalname,
+    );
+
+    return {
+      success: true,
+      url: result.url,
+      path: result.path,
+    };
+  }
+
+  @Post('organizations/:organizationId/logo')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload organization logo to Azure Blob Storage' })
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadOrganizationLogo(
+    @Param('organizationId') organizationId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const result = await this.azureBlobStorageService.uploadOrganizationLogo(
+      organizationId,
+      file.buffer,
+      file.originalname,
+    );
+
+    return {
+      success: true,
+      url: result.url,
+      path: result.path,
+    };
+  }
+
+  @Get('storage/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Check Azure Blob Storage configuration status' })
+  @ApiBearerAuth()
+  async getStorageStatus() {
+    return {
+      azureBlobStorage: {
+        configured: this.azureBlobStorageService.isConfigured(),
+        containerUrl: 'https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts',
+      },
+    };
   }
 }

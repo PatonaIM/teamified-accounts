@@ -203,6 +203,43 @@ export class UserService {
     return savedUser;
   }
 
+  async updateProfilePictureUrl(
+    userId: string,
+    profilePictureUrl: string,
+    auditContext?: {
+      actorUserId?: string;
+      actorRole?: string;
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<User> {
+    const user = await this.findOne(userId);
+    const previousUrl = user.profilePictureUrl;
+
+    user.profilePictureUrl = profilePictureUrl;
+    const savedUser = await this.userRepository.save(user);
+
+    try {
+      await this.auditService.log({
+        actorUserId: auditContext?.actorUserId || userId,
+        actorRole: auditContext?.actorRole || user.userRoles?.[0]?.roleType || 'user',
+        action: 'profile_picture_update',
+        entityType: 'user',
+        entityId: userId,
+        changes: {
+          previousUrl,
+          newUrl: profilePictureUrl,
+        },
+        ip: auditContext?.ip,
+        userAgent: auditContext?.userAgent,
+      });
+    } catch (auditError) {
+      this.logger.error('Failed to create audit log for profile picture update:', auditError);
+    }
+
+    return savedUser;
+  }
+
   async remove(id: string, deletedBy?: string, actorRole: string = 'admin', reason?: string): Promise<void> {
     const user = await this.findOne(id);
     
