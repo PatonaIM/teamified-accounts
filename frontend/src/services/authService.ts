@@ -107,8 +107,8 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, logout user
-        logout();
+        // Refresh failed, logout user and notify
+        logoutDueToSessionExpiry();
         return Promise.reject(refreshError);
       }
     }
@@ -276,6 +276,15 @@ export const logout = async (): Promise<void> => {
       console.warn('Failed to clear theme preferences:', error);
     }
   }
+};
+
+export const logoutDueToSessionExpiry = async (): Promise<void> => {
+  await logout();
+  
+  // Dispatch custom event to notify the app that session has expired
+  window.dispatchEvent(new CustomEvent('sessionExpired', {
+    detail: { reason: 'token_refresh_failed' }
+  }));
 };
 
 export const refreshAccessToken = async (refreshToken: string): Promise<{ data: { accessToken: string } }> => {
@@ -487,7 +496,7 @@ export const setupTokenRefresh = (): void => {
           })
           .catch((error) => {
             console.error('Auto token refresh failed:', error);
-            logout();
+            logoutDueToSessionExpiry();
           });
       }
     }

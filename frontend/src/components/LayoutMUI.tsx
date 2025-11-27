@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SidebarMUI from './SidebarMUI';
+import SessionExpiredModal from './SessionExpiredModal';
 
 interface LayoutMUIProps {
   children: React.ReactNode;
@@ -123,6 +124,9 @@ const LayoutMUI: React.FC<LayoutMUIProps> = ({ children }) => {
           {children}
         </Box>
       </Box>
+
+      {/* Session Expired Modal */}
+      <SessionExpiredModal />
     </Box>
   );
 };
