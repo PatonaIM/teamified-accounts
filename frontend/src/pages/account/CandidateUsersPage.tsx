@@ -714,16 +714,52 @@ export default function CandidateUsersPage() {
             <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar
-                    src={selectedCandidate.profileData?.profilePicture || undefined}
+                  <Box
                     sx={{
+                      position: 'relative',
                       width: 64,
                       height: 64,
-                      bgcolor: 'primary.main',
+                      cursor: 'pointer',
+                      '&:hover .photo-overlay': {
+                        opacity: 1,
+                      },
                     }}
+                    onClick={handlePhotoClick}
                   >
-                    {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
-                  </Avatar>
+                    <Avatar
+                      src={selectedCandidate.profileData?.profilePicture || undefined}
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        bgcolor: 'primary.main',
+                      }}
+                    >
+                      {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
+                    </Avatar>
+                    <Box
+                      className="photo-overlay"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: '50%',
+                        bgcolor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0,
+                        transition: 'opacity 0.2s ease',
+                      }}
+                    >
+                      {isUploadingPhoto ? (
+                        <CircularProgress size={20} sx={{ color: 'white' }} />
+                      ) : (
+                        <CameraAlt sx={{ color: 'white', fontSize: 22 }} />
+                      )}
+                    </Box>
+                  </Box>
                   <Box>
                     <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
                       {selectedCandidate.firstName} {selectedCandidate.lastName}
@@ -782,65 +818,6 @@ export default function CandidateUsersPage() {
             <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
               <TabPanel value={activeTab} index={0}>
                 <Stack spacing={3}>
-                  <Box>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
-                    >
-                      Profile Picture
-                    </Typography>
-                    <Box
-                      sx={{
-                        position: 'relative',
-                        width: 100,
-                        height: 100,
-                        cursor: 'pointer',
-                        '&:hover .photo-overlay': {
-                          opacity: 1,
-                        },
-                      }}
-                      onClick={handlePhotoClick}
-                    >
-                      <Avatar
-                        src={selectedCandidate.profileData?.profilePicture || undefined}
-                        sx={{
-                          width: 100,
-                          height: 100,
-                          bgcolor: 'primary.main',
-                          fontSize: '2rem',
-                        }}
-                      >
-                        {getInitials(selectedCandidate.firstName, selectedCandidate.lastName)}
-                      </Avatar>
-                      <Box
-                        className="photo-overlay"
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          borderRadius: '50%',
-                          bgcolor: 'rgba(0, 0, 0, 0.5)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: 0,
-                          transition: 'opacity 0.2s ease',
-                        }}
-                      >
-                        {isUploadingPhoto ? (
-                          <CircularProgress size={24} sx={{ color: 'white' }} />
-                        ) : (
-                          <CameraAlt sx={{ color: 'white', fontSize: 28 }} />
-                        )}
-                      </Box>
-                    </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Click to change profile picture
-                    </Typography>
-                  </Box>
-
                   <Box>
                     <Typography
                       variant="subtitle2"
