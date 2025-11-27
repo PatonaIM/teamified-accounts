@@ -937,10 +937,29 @@ const OrganizationManagementPage: React.FC = () => {
                         width: 64,
                         height: 64,
                         bgcolor: 'primary.main',
+                        opacity: uploadingLogo ? 0.5 : 1,
+                        transition: 'opacity 0.2s ease-in-out',
                       }}
                     >
                       <Business sx={{ fontSize: 32 }} />
                     </Avatar>
+                    {uploadingLogo && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 64,
+                          height: 64,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '50%',
+                        }}
+                      >
+                        <CircularProgress size={32} thickness={4} />
+                      </Box>
+                    )}
                     <IconButton
                       onClick={() => logoFileInputRef.current?.click()}
                       disabled={uploadingLogo}
@@ -960,11 +979,7 @@ const OrganizationManagementPage: React.FC = () => {
                         },
                       }}
                     >
-                      {uploadingLogo ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <CameraAlt sx={{ fontSize: 16 }} />
-                      )}
+                      <CameraAlt sx={{ fontSize: 16 }} />
                     </IconButton>
                     <input
                       ref={logoFileInputRef}
