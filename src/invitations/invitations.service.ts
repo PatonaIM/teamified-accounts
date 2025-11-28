@@ -724,7 +724,7 @@ export class InvitationsService {
 
     const inviteLink = `${baseUrl}/invitations/accept/${inviteCode}`;
     
-    await this.emailService.sendOrganizationInvitationEmail(
+    const emailSent = await this.emailService.sendOrganizationInvitationEmail(
       email,
       firstName,
       lastName,
@@ -733,6 +733,13 @@ export class InvitationsService {
       roleType,
       expiresAt,
     );
+
+    if (!emailSent) {
+      this.logger.error(`Failed to send invitation email to ${email}`);
+      throw new BadRequestException(
+        'Invitation created but email could not be sent. Please check the email address or try again later. The invitation link has been generated and can be shared manually.'
+      );
+    }
 
     await this.auditService.log({
       actorUserId: currentUser.id,
