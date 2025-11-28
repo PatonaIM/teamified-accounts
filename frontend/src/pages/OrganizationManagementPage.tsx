@@ -377,7 +377,7 @@ const OrganizationManagementPage: React.FC = () => {
       setSuccess(successMessage);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create organization';
-      if (errorMessage.includes('slug') && errorMessage.includes('already exists')) {
+      if (errorMessage.includes('slug') || errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
         setSlugError('This slug is already taken. Please choose a different one.');
       } else {
         setError(errorMessage);
