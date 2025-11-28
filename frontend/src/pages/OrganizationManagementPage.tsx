@@ -1356,15 +1356,26 @@ const OrganizationManagementPage: React.FC = () => {
                                     {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
                                   </Avatar>
                                   <Box>
-                                    <Typography 
-                                      variant="body1" 
-                                      sx={{ 
-                                        fontWeight: 600,
-                                        color: inactive ? 'text.secondary' : 'text.primary',
-                                      }}
-                                    >
-                                      {member.userName}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography 
+                                        variant="body1" 
+                                        sx={{ 
+                                          fontWeight: 600,
+                                          color: inactive ? 'text.secondary' : 'text.primary',
+                                        }}
+                                      >
+                                        {member.userName}
+                                      </Typography>
+                                      {member.status === 'invited' && (
+                                        <Chip
+                                          label="Invited"
+                                          size="small"
+                                          color="warning"
+                                          variant="filled"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                    </Box>
                                     <Typography variant="body2" color="text.secondary">
                                       {member.userEmail}
                                     </Typography>
@@ -1380,14 +1391,6 @@ const OrganizationManagementPage: React.FC = () => {
                                         color: 'white',
                                         fontWeight: 500,
                                       }}
-                                    />
-                                  )}
-                                  {member.status === 'invited' && (
-                                    <Chip
-                                      label="Invited"
-                                      size="small"
-                                      color="warning"
-                                      variant="outlined"
                                     />
                                   )}
                                   <Chip
