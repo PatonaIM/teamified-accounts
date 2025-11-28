@@ -163,10 +163,48 @@ export class OrganizationsService {
       );
     }
     
+    // Check for existing org including soft-deleted ones
     const existingOrg = await this.organizationRepository.findOne({
       where: { slug: normalizedSlug },
+      withDeleted: true,
     });
 
+    const roles = this.getAllRoles(currentUser);
+
+    // If org exists and is soft-deleted, restore it with updated info
+    if (existingOrg && existingOrg.deletedAt) {
+      this.logger.log(`Restoring soft-deleted organization: ${existingOrg.name} (${existingOrg.id})`);
+      
+      // Restore the organization with new data
+      existingOrg.deletedAt = null;
+      existingOrg.name = createDto.name;
+      existingOrg.subscriptionTier = createDto.subscriptionTier || existingOrg.subscriptionTier || 'free';
+      existingOrg.subscriptionStatus = 'active';
+      
+      const restoredOrg = await this.organizationRepository.save(existingOrg);
+      
+      this.logger.log(`Organization restored: ${restoredOrg.name} (${restoredOrg.id}) by user ${currentUser.id}`);
+
+      await this.auditService.log({
+        actorUserId: currentUser.id,
+        actorRole: roles[0] || 'unknown',
+        action: 'organization_restored',
+        entityType: 'Organization',
+        entityId: restoredOrg.id,
+        changes: {
+          name: restoredOrg.name,
+          slug: restoredOrg.slug,
+          subscriptionTier: restoredOrg.subscriptionTier,
+          restoredFrom: 'soft_deleted',
+        },
+        ip,
+        userAgent,
+      });
+
+      return { ...this.mapToResponseDto(restoredOrg), wasRestored: true };
+    }
+
+    // If org exists and is active, throw conflict error
     if (existingOrg) {
       throw new ConflictException(`Organization with slug '${normalizedSlug}' already exists`);
     }
@@ -183,7 +221,6 @@ export class OrganizationsService {
 
     this.logger.log(`Organization created: ${savedOrg.name} (${savedOrg.id}) by user ${currentUser.id}`);
 
-    const roles = this.getAllRoles(currentUser);
     await this.auditService.log({
       actorUserId: currentUser.id,
       actorRole: roles[0] || 'unknown',
@@ -358,7 +395,7 @@ export class OrganizationsService {
     return this.mapToResponseDto(organization);
   }
 
-  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string }> {
+  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
     if (!slug || slug.length < 2 || slug.length > 100) {
       throw new BadRequestException('Slug must be between 2 and 100 characters');
     }
@@ -369,13 +406,37 @@ export class OrganizationsService {
       throw new BadRequestException('Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)');
     }
 
-    const existingOrg = await this.organizationRepository.findOne({
+    // Check for active organizations
+    const activeOrg = await this.organizationRepository.findOne({
       where: { slug: normalizedSlug },
     });
 
+    if (activeOrg) {
+      return {
+        available: false,
+        slug: normalizedSlug,
+        isSoftDeleted: false,
+      };
+    }
+
+    // Check for soft-deleted organizations
+    const softDeletedOrg = await this.organizationRepository.findOne({
+      where: { slug: normalizedSlug },
+      withDeleted: true,
+    });
+
+    if (softDeletedOrg) {
+      return {
+        available: true,
+        slug: normalizedSlug,
+        isSoftDeleted: true,
+      };
+    }
+
     return {
-      available: !existingOrg,
+      available: true,
       slug: normalizedSlug,
+      isSoftDeleted: false,
     };
   }
 

@@ -16,6 +16,7 @@ export interface Organization {
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
+  wasRestored?: boolean;
 }
 
 export interface OrganizationMember {
@@ -156,6 +157,11 @@ class OrganizationsService {
 
   async getMyOrganization(): Promise<Organization> {
     const response = await api.get(`${API_BASE_URL}/me`);
+    return response.data;
+  }
+
+  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
+    const response = await api.get(`${API_BASE_URL}/check-slug/${encodeURIComponent(slug)}`);
     return response.data;
   }
 

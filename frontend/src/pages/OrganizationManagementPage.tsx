@@ -125,6 +125,8 @@ const OrganizationManagementPage: React.FC = () => {
   const [newOrgName, setNewOrgName] = useState('');
   const [newOrgSlug, setNewOrgSlug] = useState('');
   const [slugError, setSlugError] = useState<string | null>(null);
+  const [slugInfo, setSlugInfo] = useState<string | null>(null);
+  const [isSoftDeletedSlug, setIsSoftDeletedSlug] = useState(false);
   const [clientAdminEmail, setClientAdminEmail] = useState('');
   const [clientAdminEmailError, setClientAdminEmailError] = useState<string | null>(null);
   
@@ -255,14 +257,48 @@ const OrganizationManagementPage: React.FC = () => {
       .replace(/^-+|-+$/g, '');
   };
 
-  const validateSlugUniqueness = (slug: string): boolean => {
-    const exists = organizations.some(org => org.slug.toLowerCase() === slug.toLowerCase());
-    if (exists) {
-      setSlugError('This slug is already taken. Please choose a different one.');
-      return false;
+  const validateSlugUniqueness = async (slug: string): Promise<boolean> => {
+    if (!slug || slug.length < 2) {
+      setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      return true;
     }
-    setSlugError(null);
-    return true;
+
+    try {
+      const response = await organizationsService.checkSlugAvailability(slug);
+      
+      if (!response.available) {
+        setSlugError('This slug is already taken. Please choose a different one.');
+        setSlugInfo(null);
+        setIsSoftDeletedSlug(false);
+        return false;
+      }
+      
+      if (response.isSoftDeleted) {
+        setSlugError(null);
+        setSlugInfo('This organization was previously archived. Creating it will restore the archived organization.');
+        setIsSoftDeletedSlug(true);
+        return true;
+      }
+      
+      setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      return true;
+    } catch {
+      const exists = organizations.some(org => org.slug.toLowerCase() === slug.toLowerCase());
+      if (exists) {
+        setSlugError('This slug is already taken. Please choose a different one.');
+        setSlugInfo(null);
+        setIsSoftDeletedSlug(false);
+        return false;
+      }
+      setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      return true;
+    }
   };
 
   const loadOrganizations = async (append = false) => {
@@ -313,7 +349,8 @@ const OrganizationManagementPage: React.FC = () => {
   const handleCreateOrganization = async () => {
     if (!newOrgName || !newOrgSlug) return;
 
-    if (!validateSlugUniqueness(newOrgSlug)) {
+    const isSlugValid = await validateSlugUniqueness(newOrgSlug);
+    if (!isSlugValid) {
       return;
     }
 
@@ -331,7 +368,10 @@ const OrganizationManagementPage: React.FC = () => {
       });
       setOrganizations([...organizations, newOrg]);
       
-      let successMessage = 'Organization created successfully!';
+      const wasRestored = newOrg.wasRestored === true;
+      let successMessage = wasRestored 
+        ? 'Organization restored successfully!' 
+        : 'Organization created successfully!';
       
       if (clientAdminEmail) {
         try {
@@ -354,16 +394,22 @@ const OrganizationManagementPage: React.FC = () => {
             throw new Error(errorData.message || `HTTP ${response.status}`);
           }
           
-          successMessage = `Organization created and invitation sent to ${clientAdminEmail}!`;
+          successMessage = wasRestored 
+            ? `Organization restored and invitation sent to ${clientAdminEmail}!`
+            : `Organization created and invitation sent to ${clientAdminEmail}!`;
         } catch (inviteErr) {
           console.error('Failed to send invitation:', inviteErr);
           setShowCreateOrgDialog(false);
           setNewOrgName('');
           setNewOrgSlug('');
           setSlugError(null);
+          setSlugInfo(null);
+          setIsSoftDeletedSlug(false);
           setClientAdminEmail('');
           setClientAdminEmailError(null);
-          setWarning('Organization created, but failed to send invitation email. You can invite the admin manually.');
+          setWarning(wasRestored 
+            ? 'Organization restored, but failed to send invitation email. You can invite the admin manually.'
+            : 'Organization created, but failed to send invitation email. You can invite the admin manually.');
           return;
         }
       }
@@ -372,6 +418,8 @@ const OrganizationManagementPage: React.FC = () => {
       setNewOrgName('');
       setNewOrgSlug('');
       setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
       setClientAdminEmail('');
       setClientAdminEmailError(null);
       setSuccess(successMessage);
@@ -395,6 +443,8 @@ const OrganizationManagementPage: React.FC = () => {
       validateSlugUniqueness(generatedSlug);
     } else {
       setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
     }
   };
 
@@ -405,6 +455,8 @@ const OrganizationManagementPage: React.FC = () => {
       validateSlugUniqueness(cleanSlug);
     } else {
       setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
     }
   };
 
@@ -1560,9 +1612,15 @@ const OrganizationManagementPage: React.FC = () => {
             value={newOrgSlug}
             onChange={(e) => handleSlugChange(e.target.value)}
             error={!!slugError}
-            helperText={slugError || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
+            helperText={slugError || slugInfo || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
             placeholder="e.g., acme-corporation"
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              '& .MuiFormHelperText-root': slugInfo && !slugError ? {
+                color: '#1976d2',
+                fontWeight: 500,
+              } : {},
+            }}
           />
           <TextField
             fullWidth
