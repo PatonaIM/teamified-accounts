@@ -976,28 +976,24 @@ const OrganizationManagementPage: React.FC = () => {
                     </Avatar>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                            {org.name}
-                          </Typography>
-                          {(org.memberCount === 0 || org.memberCount === undefined) && (
-                            <Chip
-                              label="No Users"
-                              size="small"
-                              sx={{
-                                height: 18,
-                                fontSize: '0.65rem',
-                                fontWeight: 600,
-                                bgcolor: 'warning.main',
-                                color: 'warning.contrastText',
-                              }}
-                            />
-                          )}
-                        </Box>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {org.name}
+                        </Typography>
                       }
                       secondary={`${org.memberCount || 0} users`}
                     />
-                    {org.subscriptionTier && (
+                    {(org.memberCount === 0 || org.memberCount === undefined) ? (
+                      <Chip
+                        label="No Users"
+                        size="small"
+                        sx={{
+                          ml: 1,
+                          fontWeight: 600,
+                          bgcolor: 'warning.main',
+                          color: 'warning.contrastText',
+                        }}
+                      />
+                    ) : org.subscriptionTier && (
                       <Box sx={{ position: 'relative', display: 'inline-block' }}>
                         {org.subscriptionTier?.toLowerCase() === 'enterprise' && (
                           <Box
