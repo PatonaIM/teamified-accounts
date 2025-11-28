@@ -336,7 +336,7 @@ const OrganizationManagementPage: React.FC = () => {
       if (clientAdminEmail) {
         try {
           const token = localStorage.getItem('teamified_access_token');
-          const response = await fetch('/api/v1/invitations', {
+          const response = await fetch('/api/v1/invitations/send-email', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -346,7 +346,6 @@ const OrganizationManagementPage: React.FC = () => {
               email: clientAdminEmail,
               organizationId: newOrg.id,
               roleType: 'client_admin',
-              maxUses: 1,
             }),
           });
           
