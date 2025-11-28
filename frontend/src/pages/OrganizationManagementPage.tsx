@@ -110,7 +110,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
-  const [memberStatusFilters, setMemberStatusFilters] = useState<Set<string>>(new Set(['active']));
+  const [memberStatusFilters, setMemberStatusFilters] = useState<Set<string> | null>(null); // null = not initialized yet
   
   // Members pagination state (Load More strategy)
   const [displayedMembersCount, setDisplayedMembersCount] = useState(10);
@@ -643,13 +643,44 @@ const OrganizationManagementPage: React.FC = () => {
   // Helper to check member status
   const getMemberStatusCategory = (member: OrganizationMember): string => {
     const status = member.status?.toLowerCase() || '';
-    if (status === 'nlwf') return 'nlwf';
-    if (status === 'inactive') return 'inactive';
+    if (status === 'inactive') return 'inactive'; // NLWF users are stored as 'inactive'
     if (status === 'invited') return 'invited';
     if (status === 'suspended') return 'suspended';
     if (status === 'deleted') return 'deleted';
     return 'active';
   };
+
+  // Count members by status for filter display (computed before filtering)
+  const statusCounts = members.reduce((acc, member) => {
+    const status = getMemberStatusCategory(member);
+    if (status !== 'deleted') {
+      acc[status] = (acc[status] || 0) + 1;
+      acc.total = (acc.total || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Reset filters when organization changes
+  useEffect(() => {
+    setMemberStatusFilters(null); // Reset to null so it will be re-initialized
+  }, [selectedOrg?.id]);
+
+  // Initialize filters when members are loaded - default to 'active' unless no active users exist
+  useEffect(() => {
+    if (members.length > 0 && memberStatusFilters === null) {
+      const activeCount = statusCounts['active'] || 0;
+      if (activeCount === 0) {
+        // No active users, default to showing active + invited
+        setMemberStatusFilters(new Set(['active', 'invited']));
+      } else {
+        // Has active users, default to showing only active
+        setMemberStatusFilters(new Set(['active']));
+      }
+    }
+  }, [members, statusCounts, memberStatusFilters]);
+
+  // Get effective filters (use empty set during initialization)
+  const effectiveFilters = memberStatusFilters || new Set<string>();
 
   // Filter members based on search query and status filter checkboxes
   const filteredMembers = members.filter((member) => {
@@ -661,7 +692,7 @@ const OrganizationManagementPage: React.FC = () => {
     }
     
     // Apply checkbox filters - show member if their status is checked
-    if (memberStatusFilters.size > 0 && !memberStatusFilters.has(status)) {
+    if (effectiveFilters.size > 0 && !effectiveFilters.has(status)) {
       return false;
     }
     
@@ -675,21 +706,11 @@ const OrganizationManagementPage: React.FC = () => {
     
     return name.includes(query) || email.includes(query) || role.includes(query);
   });
-
-  // Count members by status for filter display
-  const statusCounts = members.reduce((acc, member) => {
-    const status = getMemberStatusCategory(member);
-    if (status !== 'deleted') {
-      acc[status] = (acc[status] || 0) + 1;
-      acc.total = (acc.total || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
   
   // Toggle a status filter checkbox
   const toggleStatusFilter = (status: string) => {
     setMemberStatusFilters(prev => {
-      const newSet = new Set(prev);
+      const newSet = new Set(prev || []);
       if (newSet.has(status)) {
         newSet.delete(status);
       } else {
@@ -1277,44 +1298,49 @@ const OrganizationManagementPage: React.FC = () => {
                           label={`Active (${statusCounts['active'] || 0})`}
                           size="small"
                           onClick={() => toggleStatusFilter('active')}
-                          color={memberStatusFilters.has('active') ? 'primary' : 'default'}
-                          variant={memberStatusFilters.has('active') ? 'filled' : 'outlined'}
+                          color={effectiveFilters.has('active') ? 'primary' : 'default'}
+                          variant={effectiveFilters.has('active') ? 'filled' : 'outlined'}
                           sx={{ cursor: 'pointer' }}
                         />
                         <Chip
                           label={`Invited (${statusCounts['invited'] || 0})`}
                           size="small"
                           onClick={() => toggleStatusFilter('invited')}
-                          color={memberStatusFilters.has('invited') ? 'info' : 'default'}
-                          variant={memberStatusFilters.has('invited') ? 'filled' : 'outlined'}
+                          color={effectiveFilters.has('invited') ? 'info' : 'default'}
+                          variant={effectiveFilters.has('invited') ? 'filled' : 'outlined'}
                           sx={{ cursor: 'pointer' }}
                         />
                         {(statusCounts['inactive'] || 0) > 0 && (
                           <Chip
-                            label={`Inactive (${statusCounts['inactive'] || 0})`}
+                            label={`Inactive/NLWF (${statusCounts['inactive'] || 0})`}
                             size="small"
                             onClick={() => toggleStatusFilter('inactive')}
-                            color={memberStatusFilters.has('inactive') ? 'warning' : 'default'}
-                            variant={memberStatusFilters.has('inactive') ? 'filled' : 'outlined'}
-                            sx={{ cursor: 'pointer' }}
-                          />
-                        )}
-                        {(statusCounts['nlwf'] || 0) > 0 && (
-                          <Chip
-                            label={`NLWF (${statusCounts['nlwf'] || 0})`}
-                            size="small"
-                            onClick={() => toggleStatusFilter('nlwf')}
-                            color={memberStatusFilters.has('nlwf') ? 'error' : 'default'}
-                            variant={memberStatusFilters.has('nlwf') ? 'filled' : 'outlined'}
+                            color={effectiveFilters.has('inactive') ? 'warning' : 'default'}
+                            variant={effectiveFilters.has('inactive') ? 'filled' : 'outlined'}
                             sx={{ cursor: 'pointer' }}
                           />
                         )}
                       </Box>
 
+                      {/* No Users Message - only show if no active AND no invited users */}
+                      {(statusCounts['active'] || 0) === 0 && (statusCounts['invited'] || 0) === 0 && (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No users in this organization yet.
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Click "Invite User" to add members.
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Member List - only render if there are active or invited users */}
+                      {((statusCounts['active'] || 0) > 0 || (statusCounts['invited'] || 0) > 0) && (
+                        <>
                       <Box>
                         {paginatedMembers.map((member) => {
                           const memberStatus = getMemberStatusCategory(member);
-                          const inactive = memberStatus === 'inactive' || memberStatus === 'nlwf';
+                          const inactive = memberStatus === 'inactive';
                           return (
                             <Paper
                               key={member.id}
@@ -1434,6 +1460,8 @@ const OrganizationManagementPage: React.FC = () => {
                           </Button>
                         )}
                       </Box>
+                        </>
+                      )}
                     </>
                   )}
                 </Box>
