@@ -705,7 +705,7 @@ export class InvitationsController {
   }
 
   @Post()
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')

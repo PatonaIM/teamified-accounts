@@ -93,6 +93,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   
   // Pagination state (Load More strategy)
   const [currentPage, setCurrentPage] = useState(1);
@@ -357,7 +358,14 @@ const OrganizationManagementPage: React.FC = () => {
           successMessage = `Organization created and invitation sent to ${clientAdminEmail}!`;
         } catch (inviteErr) {
           console.error('Failed to send invitation:', inviteErr);
-          successMessage = 'Organization created, but failed to send invitation email. You can invite the admin manually.';
+          setShowCreateOrgDialog(false);
+          setNewOrgName('');
+          setNewOrgSlug('');
+          setSlugError(null);
+          setClientAdminEmail('');
+          setClientAdminEmailError(null);
+          setWarning('Organization created, but failed to send invitation email. You can invite the admin manually.');
+          return;
         }
       }
       
@@ -1709,6 +1717,17 @@ const OrganizationManagementPage: React.FC = () => {
       >
         <Alert severity="success" onClose={() => setSuccess(null)} sx={{ width: '100%' }}>
           {success}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!warning}
+        autoHideDuration={6000}
+        onClose={() => setWarning(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert severity="warning" onClose={() => setWarning(null)} sx={{ width: '100%' }}>
+          {warning}
         </Alert>
       </Snackbar>
     </Box>
