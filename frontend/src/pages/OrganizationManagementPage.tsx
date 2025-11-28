@@ -592,9 +592,7 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
   const handleInvitationSuccess = () => {
-    setShowInvitationModal(false);
-    setSuccess('Invitation sent successfully!');
-    loadMembers(); // Reload members to show invited users
+    loadMembers(); // Reload members to show invited users (modal stays open for results)
   };
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>, member: OrganizationMember) => {
