@@ -108,12 +108,11 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
     try {
       const token = localStorage.getItem('teamified_access_token');
       const response = await axios.post(
-        `${API_BASE_URL}/v1/invitations`,
+        `${API_BASE_URL}/v1/invitations/send-email`,
         {
           email,
           organizationId,
           roleType: emailRoleType,
-          maxUses: 1,
         },
         {
           headers: {
@@ -148,7 +147,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
     try {
       const token = localStorage.getItem('teamified_access_token');
       const response = await axios.post(
-        `${API_BASE_URL}/v1/invitations`,
+        `${API_BASE_URL}/v1/invitations/generate-link`,
         {
           organizationId,
           roleType: linkRoleType,
