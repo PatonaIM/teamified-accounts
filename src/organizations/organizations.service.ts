@@ -614,6 +614,7 @@ export class OrganizationsService {
       .leftJoinAndSelect('member.user', 'user')
       .leftJoinAndSelect('user.userRoles', 'userRole')
       .where('member.organizationId = :organizationId', { organizationId })
+      .andWhere('user.deletedAt IS NULL')
       .getMany();
 
     return members.map(member => this.mapMemberToResponseDto(member));

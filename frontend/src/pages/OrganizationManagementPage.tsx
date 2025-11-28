@@ -110,7 +110,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
-  const [showInactiveUsers, setShowInactiveUsers] = useState(false);
+  const [memberStatusFilter, setMemberStatusFilter] = useState<'default' | 'all' | 'active' | 'invited' | 'inactive' | 'nlwf'>('default');
   
   // Members pagination state (Load More strategy)
   const [displayedMembersCount, setDisplayedMembersCount] = useState(10);
@@ -640,17 +640,37 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
 
-  // Helper to check if a user is inactive/NLWF
-  const isUserInactive = (member: OrganizationMember) => {
-    const status = member.status?.toLowerCase();
-    return status === 'inactive' || status === 'nlwf';
+  // Helper to check member status
+  const getMemberStatusCategory = (member: OrganizationMember): string => {
+    const status = member.status?.toLowerCase() || '';
+    if (status === 'nlwf') return 'nlwf';
+    if (status === 'inactive') return 'inactive';
+    if (status === 'invited') return 'invited';
+    if (status === 'suspended') return 'suspended';
+    if (status === 'deleted') return 'deleted';
+    return 'active';
   };
 
-  // Filter members based on search query and active/inactive toggle
+  // Filter members based on search query and status filter
   const filteredMembers = members.filter((member) => {
-    // First filter by active/inactive status
-    if (!showInactiveUsers && isUserInactive(member)) {
+    const status = getMemberStatusCategory(member);
+    
+    // Always hide deleted users
+    if (status === 'deleted') {
       return false;
+    }
+    
+    // Apply status filter
+    if (memberStatusFilter === 'default') {
+      // Default: show only active and invited
+      if (status !== 'active' && status !== 'invited') {
+        return false;
+      }
+    } else if (memberStatusFilter !== 'all') {
+      // Specific status filter
+      if (status !== memberStatusFilter) {
+        return false;
+      }
     }
     
     // Then filter by search query
@@ -664,9 +684,17 @@ const OrganizationManagementPage: React.FC = () => {
     return name.includes(query) || email.includes(query) || role.includes(query);
   });
 
-  // Count inactive users for display
-  const inactiveUsersCount = members.filter(isUserInactive).length;
-  const activeUsersCount = members.length - inactiveUsersCount;
+  // Count members by status for filter display
+  const statusCounts = members.reduce((acc, member) => {
+    const status = getMemberStatusCategory(member);
+    if (status !== 'deleted') {
+      acc[status] = (acc[status] || 0) + 1;
+      acc.total = (acc.total || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const defaultCount = (statusCounts['active'] || 0) + (statusCounts['invited'] || 0);
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
     return getRolePriority(a.roleType) - getRolePriority(b.roleType);
@@ -1201,7 +1229,7 @@ const OrganizationManagementPage: React.FC = () => {
                     </Box>
                   ) : (
                     <>
-                      {/* User Search Bar, Toggle, and Invite Button */}
+                      {/* User Search Bar with Status Filter and Invite Button */}
                       <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
                         <TextField
                           fullWidth
@@ -1218,30 +1246,52 @@ const OrganizationManagementPage: React.FC = () => {
                                 <Search />
                               </InputAdornment>
                             ),
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <FormControl size="small" variant="standard" sx={{ minWidth: 120 }}>
+                                  <Select
+                                    value={memberStatusFilter}
+                                    onChange={(e) => {
+                                      setMemberStatusFilter(e.target.value as typeof memberStatusFilter);
+                                      setDisplayedMembersCount(10);
+                                    }}
+                                    disableUnderline
+                                    sx={{
+                                      fontSize: '0.875rem',
+                                      '& .MuiSelect-select': {
+                                        py: 0.5,
+                                        pr: 3,
+                                      },
+                                    }}
+                                  >
+                                    <MenuItem value="default">
+                                      Active & Invited ({defaultCount})
+                                    </MenuItem>
+                                    <MenuItem value="all">
+                                      All ({statusCounts.total || 0})
+                                    </MenuItem>
+                                    <MenuItem value="active">
+                                      Active ({statusCounts['active'] || 0})
+                                    </MenuItem>
+                                    <MenuItem value="invited">
+                                      Invited ({statusCounts['invited'] || 0})
+                                    </MenuItem>
+                                    {(statusCounts['inactive'] || 0) > 0 && (
+                                      <MenuItem value="inactive">
+                                        Inactive ({statusCounts['inactive'] || 0})
+                                      </MenuItem>
+                                    )}
+                                    {(statusCounts['nlwf'] || 0) > 0 && (
+                                      <MenuItem value="nlwf">
+                                        NLWF ({statusCounts['nlwf'] || 0})
+                                      </MenuItem>
+                                    )}
+                                  </Select>
+                                </FormControl>
+                              </InputAdornment>
+                            ),
                           }}
                         />
-                        {inactiveUsersCount > 0 && (
-                          <Tooltip title={`${inactiveUsersCount} inactive/NLWF user${inactiveUsersCount !== 1 ? 's' : ''}`}>
-                            <FormControlLabel
-                              control={
-                                <Switch
-                                  checked={showInactiveUsers}
-                                  onChange={(e) => {
-                                    setShowInactiveUsers(e.target.checked);
-                                    setDisplayedMembersCount(10); // Reset pagination
-                                  }}
-                                  size="small"
-                                />
-                              }
-                              label={
-                                <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
-                                  Show Inactive ({inactiveUsersCount})
-                                </Typography>
-                              }
-                              sx={{ mx: 1 }}
-                            />
-                          </Tooltip>
-                        )}
                         <Button
                           variant="contained"
                           startIcon={<Add />}
@@ -1260,7 +1310,8 @@ const OrganizationManagementPage: React.FC = () => {
 
                       <Box>
                         {paginatedMembers.map((member) => {
-                          const inactive = isUserInactive(member);
+                          const memberStatus = getMemberStatusCategory(member);
+                          const inactive = memberStatus === 'inactive' || memberStatus === 'nlwf';
                           return (
                             <Paper
                               key={member.id}
@@ -1363,7 +1414,8 @@ const OrganizationManagementPage: React.FC = () => {
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 3, gap: 1 }}>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Showing {paginatedMembers.length} of {sortedMembers.length} users
-                          {!showInactiveUsers && inactiveUsersCount > 0 && ` (${inactiveUsersCount} inactive hidden)`}
+                          {memberStatusFilter !== 'all' && (statusCounts.total || 0) > sortedMembers.length && 
+                            ` (${(statusCounts.total || 0) - sortedMembers.length} hidden by filter)`}
                           {memberSearchQuery && ` (filtered)`}
                         </Typography>
                         {hasMoreMembers && (
