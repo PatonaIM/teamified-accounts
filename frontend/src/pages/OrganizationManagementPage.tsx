@@ -27,6 +27,9 @@ import {
   MenuItem,
   Avatar,
   Menu,
+  FormControlLabel,
+  Switch,
+  Tooltip,
 } from '@mui/material';
 import { Search, Add, Business, ArrowBack, Edit, Warning, CameraAlt, MoreVert, PersonRemove, PersonOff } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -106,6 +109,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [showInactiveUsers, setShowInactiveUsers] = useState(false);
   
   // Members pagination state (Load More strategy)
   const [displayedMembersCount, setDisplayedMembersCount] = useState(10);
@@ -532,8 +536,20 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
 
-  // Filter members based on search query
+  // Helper to check if a user is inactive/NLWF
+  const isUserInactive = (member: OrganizationMember) => {
+    const status = member.status?.toLowerCase();
+    return status === 'inactive' || status === 'nlwf';
+  };
+
+  // Filter members based on search query and active/inactive toggle
   const filteredMembers = members.filter((member) => {
+    // First filter by active/inactive status
+    if (!showInactiveUsers && isUserInactive(member)) {
+      return false;
+    }
+    
+    // Then filter by search query
     if (!memberSearchQuery.trim()) return true;
     
     const query = memberSearchQuery.toLowerCase();
@@ -543,6 +559,10 @@ const OrganizationManagementPage: React.FC = () => {
     
     return name.includes(query) || email.includes(query) || role.includes(query);
   });
+
+  // Count inactive users for display
+  const inactiveUsersCount = members.filter(isUserInactive).length;
+  const activeUsersCount = members.length - inactiveUsersCount;
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
     return getRolePriority(a.roleType) - getRolePriority(b.roleType);
@@ -1063,8 +1083,8 @@ const OrganizationManagementPage: React.FC = () => {
                     </Box>
                   ) : (
                     <>
-                      {/* User Search Bar and Invite Button */}
-                      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                      {/* User Search Bar, Toggle, and Invite Button */}
+                      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center' }}>
                         <TextField
                           fullWidth
                           size="small"
@@ -1082,6 +1102,28 @@ const OrganizationManagementPage: React.FC = () => {
                             ),
                           }}
                         />
+                        {inactiveUsersCount > 0 && (
+                          <Tooltip title={`${inactiveUsersCount} inactive/NLWF user${inactiveUsersCount !== 1 ? 's' : ''}`}>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={showInactiveUsers}
+                                  onChange={(e) => {
+                                    setShowInactiveUsers(e.target.checked);
+                                    setDisplayedMembersCount(10); // Reset pagination
+                                  }}
+                                  size="small"
+                                />
+                              }
+                              label={
+                                <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                                  Show Inactive ({inactiveUsersCount})
+                                </Typography>
+                              }
+                              sx={{ mx: 1 }}
+                            />
+                          </Tooltip>
+                        )}
                         <Button
                           variant="contained"
                           startIcon={<Add />}
@@ -1099,84 +1141,112 @@ const OrganizationManagementPage: React.FC = () => {
                       </Box>
 
                       <Box>
-                        {paginatedMembers.map((member) => (
-                          <Paper
-                            key={member.id}
-                            onClick={() => navigate(`/admin/users/${member.userId}`, {
-                              state: {
-                                organizationId: selectedOrg?.id,
-                                organizationName: selectedOrg?.name
-                              }
-                            })}
-                            sx={{
-                              p: 2,
-                              mb: 2,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                borderColor: 'primary.main',
-                                bgcolor: 'action.hover',
-                                transform: 'translateY(-2px)',
-                                boxShadow: 2,
-                              },
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar
-                                  src={member.profilePicture || undefined}
-                                  sx={{
-                                    width: 48,
-                                    height: 48,
-                                    bgcolor: 'primary.main',
-                                  }}
-                                >
-                                  {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                    {member.userName}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {member.userEmail}
-                                  </Typography>
+                        {paginatedMembers.map((member) => {
+                          const inactive = isUserInactive(member);
+                          return (
+                            <Paper
+                              key={member.id}
+                              onClick={() => navigate(`/admin/users/${member.userId}`, {
+                                state: {
+                                  organizationId: selectedOrg?.id,
+                                  organizationName: selectedOrg?.name
+                                }
+                              })}
+                              sx={{
+                                p: 2,
+                                mb: 2,
+                                border: '1px solid',
+                                borderColor: inactive ? 'action.disabled' : 'divider',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                bgcolor: inactive ? 'action.disabledBackground' : 'background.paper',
+                                opacity: inactive ? 0.75 : 1,
+                                '&:hover': {
+                                  borderColor: 'primary.main',
+                                  bgcolor: inactive ? 'action.hover' : 'action.hover',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 2,
+                                  opacity: 1,
+                                },
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Avatar
+                                    src={member.profilePicture || undefined}
+                                    sx={{
+                                      width: 48,
+                                      height: 48,
+                                      bgcolor: inactive ? 'grey.500' : 'primary.main',
+                                      filter: inactive ? 'grayscale(100%)' : 'none',
+                                    }}
+                                  >
+                                    {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                  </Avatar>
+                                  <Box>
+                                    <Typography 
+                                      variant="body1" 
+                                      sx={{ 
+                                        fontWeight: 600,
+                                        color: inactive ? 'text.secondary' : 'text.primary',
+                                      }}
+                                    >
+                                      {member.userName}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {member.userEmail}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  {inactive && (
+                                    <Chip
+                                      label="Inactive"
+                                      size="small"
+                                      sx={{
+                                        bgcolor: 'grey.600',
+                                        color: 'white',
+                                        fontWeight: 500,
+                                      }}
+                                    />
+                                  )}
+                                  {member.status === 'invited' && (
+                                    <Chip
+                                      label="Invited"
+                                      size="small"
+                                      color="warning"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                  <Chip
+                                    label={member.roleType || 'No role'}
+                                    size="small"
+                                    color={getRoleColor(member.roleType)}
+                                    variant="outlined"
+                                    sx={{
+                                      opacity: inactive ? 0.6 : 1,
+                                    }}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleOpenUserMenu(e, member)}
+                                    sx={{ ml: 1 }}
+                                  >
+                                    <MoreVert />
+                                  </IconButton>
                                 </Box>
                               </Box>
-                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                {member.status === 'invited' && (
-                                  <Chip
-                                    label="Invited"
-                                    size="small"
-                                    color="warning"
-                                    variant="outlined"
-                                  />
-                                )}
-                                <Chip
-                                  label={member.roleType || 'No role'}
-                                  size="small"
-                                  color={getRoleColor(member.roleType)}
-                                  variant="outlined"
-                                />
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => handleOpenUserMenu(e, member)}
-                                  sx={{ ml: 1 }}
-                                >
-                                  <MoreVert />
-                                </IconButton>
-                              </Box>
-                            </Box>
-                          </Paper>
-                        ))}
+                            </Paper>
+                          );
+                        })}
                       </Box>
                       
                       {/* Members Pagination */}
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 3, gap: 1 }}>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Showing {paginatedMembers.length} of {sortedMembers.length} users
-                          {memberSearchQuery && ` (filtered from ${members.length})`}
+                          {!showInactiveUsers && inactiveUsersCount > 0 && ` (${inactiveUsersCount} inactive hidden)`}
+                          {memberSearchQuery && ` (filtered)`}
                         </Typography>
                         {hasMoreMembers && (
                           <Button 
