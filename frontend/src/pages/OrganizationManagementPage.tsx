@@ -1247,13 +1247,13 @@ const OrganizationManagementPage: React.FC = () => {
                         <Button
                           variant="contained"
                           startIcon={<Add />}
-                          size="small"
                           onClick={() => setShowInvitationModal(true)}
                           sx={{
                             bgcolor: '#4CAF50',
                             '&:hover': { bgcolor: '#45a049' },
                             whiteSpace: 'nowrap',
                             px: 3,
+                            height: 40,
                           }}
                         >
                           Invite User
