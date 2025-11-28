@@ -125,6 +125,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
       const inviteCode = response.data.inviteCode;
       const link = `${window.location.origin}/invite/${inviteCode}`;
       setEmailInvitationUrl(link);
+      onSuccess(); // Refresh member list immediately
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message || err.message || 'Failed to send invitation';
@@ -190,9 +191,6 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
   };
 
   const handleClose = () => {
-    if (emailInvitationUrl || shareableLink) {
-      onSuccess();
-    }
     setEmail('');
     setEmailRoleType('');
     setEmailError(null);
