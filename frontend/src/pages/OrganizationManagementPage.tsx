@@ -1592,73 +1592,82 @@ const OrganizationManagementPage: React.FC = () => {
         maxWidth="sm" 
         fullWidth
       >
-        <DialogTitle>Create New Organization</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Organization Name"
-            value={newOrgName}
-            onChange={(e) => handleOrgNameChange(e.target.value)}
-            sx={{ mt: 2, mb: 2 }}
-            placeholder="e.g., Acme Corporation"
-          />
-          <TextField
-            fullWidth
-            label="Slug (URL-friendly identifier)"
-            value={newOrgSlug}
-            onChange={(e) => handleSlugChange(e.target.value)}
-            error={!!slugError}
-            helperText={slugError || slugInfo || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
-            placeholder="e.g., acme-corporation"
-            sx={{ 
-              mb: 2,
-              '& .MuiFormHelperText-root': slugInfo && !slugError ? {
-                color: '#1976d2',
-                fontWeight: 500,
-              } : {},
-            }}
-          />
-          <TextField
-            fullWidth
-            label="Client Admin Email (optional)"
-            value={clientAdminEmail}
-            onChange={(e) => {
-              setClientAdminEmail(e.target.value);
-              setClientAdminEmailError(null);
-            }}
-            error={!!clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
-            helperText={clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail) ? 'Please enter a valid email' : 'An invitation email will be sent to this address')}
-            placeholder="admin@company.com"
-            type="email"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              setShowCreateOrgDialog(false);
-              setNewOrgName('');
-              setNewOrgSlug('');
-              setSlugError(null);
-              setClientAdminEmail('');
-              setClientAdminEmailError(null);
-            }}
-            disabled={createOrgLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleCreateOrganization}
-            disabled={!newOrgName || !newOrgSlug || !!slugError || createOrgLoading || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
-            startIcon={createOrgLoading ? <CircularProgress size={20} color="inherit" /> : null}
-            sx={{
-              bgcolor: '#4CAF50',
-              '&:hover': { bgcolor: '#45a049' },
-            }}
-          >
-            {createOrgLoading ? 'Creating...' : 'Create'}
-          </Button>
-        </DialogActions>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const isFormValid = newOrgName && newOrgSlug && !slugError && !createOrgLoading && !(clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail));
+          if (isFormValid) {
+            handleCreateOrganization();
+          }
+        }}>
+          <DialogTitle>Create New Organization</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Organization Name"
+              value={newOrgName}
+              onChange={(e) => handleOrgNameChange(e.target.value)}
+              sx={{ mt: 2, mb: 2 }}
+              placeholder="e.g., Acme Corporation"
+            />
+            <TextField
+              fullWidth
+              label="Slug (URL-friendly identifier)"
+              value={newOrgSlug}
+              onChange={(e) => handleSlugChange(e.target.value)}
+              error={!!slugError}
+              helperText={slugError || slugInfo || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
+              placeholder="e.g., acme-corporation"
+              sx={{ 
+                mb: 2,
+                '& .MuiFormHelperText-root': slugInfo && !slugError ? {
+                  color: '#1976d2',
+                  fontWeight: 500,
+                } : {},
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Client Admin Email (optional)"
+              value={clientAdminEmail}
+              onChange={(e) => {
+                setClientAdminEmail(e.target.value);
+                setClientAdminEmailError(null);
+              }}
+              error={!!clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
+              helperText={clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail) ? 'Please enter a valid email' : 'An invitation email will be sent to this address')}
+              placeholder="admin@company.com"
+              type="email"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              type="button"
+              onClick={() => {
+                setShowCreateOrgDialog(false);
+                setNewOrgName('');
+                setNewOrgSlug('');
+                setSlugError(null);
+                setClientAdminEmail('');
+                setClientAdminEmailError(null);
+              }}
+              disabled={createOrgLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={!newOrgName || !newOrgSlug || !!slugError || createOrgLoading || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
+              startIcon={createOrgLoading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                bgcolor: '#4CAF50',
+                '&:hover': { bgcolor: '#45a049' },
+              }}
+            >
+              {createOrgLoading ? 'Creating...' : 'Create'}
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
 
       {/* Organization Invitation Modal */}
