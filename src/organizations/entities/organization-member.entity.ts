@@ -17,7 +17,7 @@ import { User } from '../../auth/entities/user.entity';
 @Index(['organizationId'])
 @Index(['userId'])
 @Index(['status'])
-@Check(`"status" IN ('active', 'inactive', 'suspended')`)
+@Check(`"status" IN ('active', 'inactive', 'suspended', 'invited')`)
 export class OrganizationMember {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -32,7 +32,7 @@ export class OrganizationMember {
     length: 20, 
     default: 'active' 
   })
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'invited';
 
   @Column({ name: 'joined_at', type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   joinedAt: Date;

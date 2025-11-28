@@ -609,6 +609,80 @@ export class InvitationsService {
       throw new BadRequestException('Organization not found');
     }
 
+    // Check if user already exists with this email
+    let user = await this.userRepository.findOne({
+      where: { email: email.toLowerCase() },
+    });
+
+    // Check if user is already a member of this organization
+    if (user) {
+      const existingMembership = await this.memberRepository.findOne({
+        where: { 
+          organizationId, 
+          userId: user.id,
+        },
+      });
+      
+      if (existingMembership && existingMembership.status !== 'invited') {
+        throw new BadRequestException('User is already a member of this organization');
+      }
+    }
+
+    // Create user account with 'invited' status if they don't exist
+    if (!user) {
+      user = this.userRepository.create({
+        email: email.toLowerCase(),
+        firstName: firstName || 'Invited',
+        lastName: lastName || 'User',
+        passwordHash: null, // No password until they accept the invitation
+        status: 'invited',
+        isActive: false,
+        emailVerified: false,
+      });
+      user = await this.userRepository.save(user);
+      this.logger.log(`Created invited user account for ${email}: ${user.id}`);
+    }
+
+    // Create organization membership with 'invited' status if it doesn't exist
+    let membership = await this.memberRepository.findOne({
+      where: { 
+        organizationId, 
+        userId: user.id,
+      },
+    });
+
+    if (!membership) {
+      membership = this.memberRepository.create({
+        organizationId,
+        userId: user.id,
+        status: 'invited',
+        invitedBy: currentUser.id,
+      });
+      await this.memberRepository.save(membership);
+      this.logger.log(`Created invited membership for user ${user.id} in org ${organizationId}`);
+    }
+
+    // Create UserRole for the invited user
+    const existingRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: user.id,
+        roleType,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      },
+    });
+
+    if (!existingRole) {
+      const userRole = this.userRoleRepository.create({
+        userId: user.id,
+        roleType,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      });
+      await this.userRoleRepository.save(userRole);
+      this.logger.log(`Created role ${roleType} for invited user ${user.id}`);
+    }
+
     let inviteCode: string;
     let attempts = 0;
     const maxAttempts = 5;
@@ -637,6 +711,8 @@ export class InvitationsService {
       organizationId,
       inviteCode,
       invitedBy: currentUser.id,
+      invitedUserId: user.id,
+      email: email.toLowerCase(),
       roleType,
       maxUses: 1,
       currentUses: 0,
@@ -673,6 +749,7 @@ export class InvitationsService {
         inviteCode,
         expiresAt,
         invitationType: 'email',
+        invitedUserId: user.id,
       },
       ip,
       userAgent,
