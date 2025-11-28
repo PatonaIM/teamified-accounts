@@ -124,6 +124,8 @@ const OrganizationManagementPage: React.FC = () => {
   const [newOrgName, setNewOrgName] = useState('');
   const [newOrgSlug, setNewOrgSlug] = useState('');
   const [slugError, setSlugError] = useState<string | null>(null);
+  const [clientAdminEmail, setClientAdminEmail] = useState('');
+  const [clientAdminEmailError, setClientAdminEmailError] = useState<string | null>(null);
   
   // Edit state (now inline in Company Profile tab)
   const [editOrgData, setEditOrgData] = useState<Organization | null>(null);
@@ -302,6 +304,11 @@ const OrganizationManagementPage: React.FC = () => {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleCreateOrganization = async () => {
     if (!newOrgName || !newOrgSlug) return;
 
@@ -309,18 +316,58 @@ const OrganizationManagementPage: React.FC = () => {
       return;
     }
 
+    if (clientAdminEmail && !validateEmail(clientAdminEmail)) {
+      setClientAdminEmailError('Please enter a valid email address');
+      return;
+    }
+
     setCreateOrgLoading(true);
+    setClientAdminEmailError(null);
     try {
       const newOrg = await organizationsService.create({
         name: newOrgName,
         slug: newOrgSlug,
       });
       setOrganizations([...organizations, newOrg]);
+      
+      let successMessage = 'Organization created successfully!';
+      
+      if (clientAdminEmail) {
+        try {
+          const token = localStorage.getItem('teamified_access_token');
+          const response = await fetch('/api/v1/invitations', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: clientAdminEmail,
+              organizationId: newOrg.id,
+              roleType: 'client_admin',
+              maxUses: 1,
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+          }
+          
+          successMessage = `Organization created and invitation sent to ${clientAdminEmail}!`;
+        } catch (inviteErr) {
+          console.error('Failed to send invitation:', inviteErr);
+          successMessage = 'Organization created, but failed to send invitation email. You can invite the admin manually.';
+        }
+      }
+      
       setShowCreateOrgDialog(false);
       setNewOrgName('');
       setNewOrgSlug('');
       setSlugError(null);
-      setSuccess('Organization created successfully!');
+      setClientAdminEmail('');
+      setClientAdminEmailError(null);
+      setSuccess(successMessage);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create organization';
       if (errorMessage.includes('slug') && errorMessage.includes('already exists')) {
@@ -869,9 +916,27 @@ const OrganizationManagementPage: React.FC = () => {
                       <Business sx={{ fontSize: 20 }} />
                     </Avatar>
                     <ListItemText
-                      primary={org.name}
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {org.name}
+                          </Typography>
+                          {(org.memberCount === 0 || org.memberCount === undefined) && (
+                            <Chip
+                              label="No Users"
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.65rem',
+                                fontWeight: 600,
+                                bgcolor: 'warning.main',
+                                color: 'warning.contrastText',
+                              }}
+                            />
+                          )}
+                        </Box>
+                      }
                       secondary={`${org.memberCount || 0} users`}
-                      primaryTypographyProps={{ fontWeight: 600 }}
                     />
                     {org.subscriptionTier && (
                       <Box sx={{ position: 'relative', display: 'inline-block' }}>
@@ -1466,6 +1531,8 @@ const OrganizationManagementPage: React.FC = () => {
           setNewOrgName('');
           setNewOrgSlug('');
           setSlugError(null);
+          setClientAdminEmail('');
+          setClientAdminEmailError(null);
         }} 
         maxWidth="sm" 
         fullWidth
@@ -1488,6 +1555,20 @@ const OrganizationManagementPage: React.FC = () => {
             error={!!slugError}
             helperText={slugError || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
             placeholder="e.g., acme-corporation"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="Client Admin Email (optional)"
+            value={clientAdminEmail}
+            onChange={(e) => {
+              setClientAdminEmail(e.target.value);
+              setClientAdminEmailError(null);
+            }}
+            error={!!clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
+            helperText={clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail) ? 'Please enter a valid email' : 'An invitation email will be sent to this address')}
+            placeholder="admin@company.com"
+            type="email"
           />
         </DialogContent>
         <DialogActions>
@@ -1497,6 +1578,8 @@ const OrganizationManagementPage: React.FC = () => {
               setNewOrgName('');
               setNewOrgSlug('');
               setSlugError(null);
+              setClientAdminEmail('');
+              setClientAdminEmailError(null);
             }}
             disabled={createOrgLoading}
           >
@@ -1505,7 +1588,7 @@ const OrganizationManagementPage: React.FC = () => {
           <Button
             variant="contained"
             onClick={handleCreateOrganization}
-            disabled={!newOrgName || !newOrgSlug || !!slugError || createOrgLoading}
+            disabled={!newOrgName || !newOrgSlug || !!slugError || createOrgLoading || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
             startIcon={createOrgLoading ? <CircularProgress size={20} color="inherit" /> : null}
             sx={{
               bgcolor: '#4CAF50',
