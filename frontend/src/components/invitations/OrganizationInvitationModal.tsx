@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,6 +17,8 @@ import {
   IconButton,
   Paper,
   Divider,
+  Chip,
+  InputAdornment,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
@@ -67,12 +70,12 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
   // Determine which roles to show based on organization type
   const isInternal = subscriptionTier === 'internal';
   const availableRoles = isInternal ? internalRoles : clientRoles;
-  const [emails, setEmails] = useState('');
+  const [emailTags, setEmailTags] = useState<string[]>([]);
+  const [emailInput, setEmailInput] = useState('');
   const [emailRoleType, setEmailRoleType] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailResults, setEmailResults] = useState<{ successful: string[]; failed: { email: string; error: string }[] } | null>(null);
-  const [emailCopied, setEmailCopied] = useState(false);
 
   const [linkRoleType, setLinkRoleType] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -85,32 +88,55 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
     return emailRegex.test(email.trim());
   };
 
-  const parseEmails = (input: string): string[] => {
-    return input
-      .split(',')
-      .map(e => e.trim().toLowerCase())
-      .filter(e => e.length > 0);
+  const addEmailTag = (email: string) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (trimmedEmail && validateEmail(trimmedEmail) && !emailTags.includes(trimmedEmail)) {
+      setEmailTags([...emailTags, trimmedEmail]);
+      setEmailInput('');
+      setEmailError(null);
+    } else if (trimmedEmail && !validateEmail(trimmedEmail)) {
+      setEmailError(`"${trimmedEmail}" is not a valid email address`);
+    } else if (emailTags.includes(trimmedEmail)) {
+      setEmailError(`"${trimmedEmail}" is already added`);
+      setEmailInput('');
+    }
+  };
+
+  const removeEmailTag = (emailToRemove: string) => {
+    setEmailTags(emailTags.filter(email => email !== emailToRemove));
+  };
+
+  const handleEmailInputKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ' ' || e.key === 'Tab') {
+      e.preventDefault();
+      if (emailInput.trim()) {
+        addEmailTag(emailInput);
+      }
+    } else if (e.key === 'Backspace' && !emailInput && emailTags.length > 0) {
+      removeEmailTag(emailTags[emailTags.length - 1]);
+    }
+  };
+
+  const handleEmailInputChange = (value: string) => {
+    if (value.includes(',')) {
+      const parts = value.split(',');
+      parts.forEach((part, index) => {
+        if (index < parts.length - 1 && part.trim()) {
+          addEmailTag(part);
+        }
+      });
+      setEmailInput(parts[parts.length - 1]);
+    } else {
+      setEmailInput(value);
+    }
   };
 
   const handleEmailSubmit = async () => {
     setEmailError(null);
     setEmailResults(null);
 
-    if (!emails.trim()) {
+    if (emailTags.length === 0) {
       setEmailError('Please enter at least one email address');
-      return;
-    }
-
-    const emailList = parseEmails(emails);
-    
-    if (emailList.length === 0) {
-      setEmailError('Please enter at least one valid email address');
-      return;
-    }
-
-    const invalidEmails = emailList.filter(e => !validateEmail(e));
-    if (invalidEmails.length > 0) {
-      setEmailError(`Invalid email address${invalidEmails.length > 1 ? 'es' : ''}: ${invalidEmails.join(', ')}`);
       return;
     }
 
@@ -127,7 +153,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
     try {
       const token = localStorage.getItem('teamified_access_token');
       
-      for (const email of emailList) {
+      for (const email of emailTags) {
         try {
           await axios.post(
             `${API_BASE_URL}/v1/invitations/send-email`,
@@ -208,7 +234,8 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
   };
 
   const handleClose = () => {
-    setEmails('');
+    setEmailTags([]);
+    setEmailInput('');
     setEmailRoleType('');
     setEmailError(null);
     setEmailResults(null);
@@ -303,7 +330,8 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                   size="small"
                   onClick={() => {
                     setEmailResults(null);
-                    setEmails('');
+                    setEmailTags([]);
+                    setEmailInput('');
                   }}
                   sx={{ mt: 1 }}
                 >
@@ -318,18 +346,69 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                   </Alert>
                 )}
 
-                <TextField
-                  fullWidth
-                  label="Email Addresses"
-                  value={emails}
-                  onChange={(e) => setEmails(e.target.value)}
-                  placeholder="user1@example.com, user2@example.com"
-                  sx={{ mb: 2 }}
-                  helperText="Separate multiple emails with commas"
-                  disabled={emailLoading}
-                  multiline
-                  minRows={2}
-                />
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 1,
+                    mb: 2,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    minHeight: 48,
+                    '&:focus-within': {
+                      borderColor: 'primary.main',
+                      borderWidth: 2,
+                    },
+                  }}
+                >
+                  {emailTags.map((email) => (
+                    <Chip
+                      key={email}
+                      label={email}
+                      onDelete={() => removeEmailTag(email)}
+                      size="small"
+                      sx={{
+                        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                        '& .MuiChip-deleteIcon': {
+                          color: 'text.secondary',
+                          '&:hover': {
+                            color: 'error.main',
+                          },
+                        },
+                      }}
+                      disabled={emailLoading}
+                    />
+                  ))}
+                  <TextField
+                    variant="standard"
+                    value={emailInput}
+                    onChange={(e) => handleEmailInputChange(e.target.value)}
+                    onKeyDown={handleEmailInputKeyDown}
+                    onBlur={() => {
+                      if (emailInput.trim()) {
+                        addEmailTag(emailInput);
+                      }
+                    }}
+                    placeholder={emailTags.length === 0 ? "Type email and press Enter..." : ""}
+                    disabled={emailLoading}
+                    InputProps={{
+                      disableUnderline: true,
+                    }}
+                    sx={{
+                      flex: 1,
+                      minWidth: 150,
+                      '& .MuiInputBase-input': {
+                        p: 0.5,
+                      },
+                    }}
+                  />
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2, mt: -1.5 }}>
+                  Press Enter, comma, or space to add an email
+                </Typography>
 
                 <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel>Role</InputLabel>
@@ -355,7 +434,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                 <Button
                   variant="contained"
                   onClick={handleEmailSubmit}
-                  disabled={!emails.trim() || !emailRoleType || emailLoading}
+                  disabled={emailTags.length === 0 || !emailRoleType || emailLoading}
                   startIcon={emailLoading ? <CircularProgress size={20} color="inherit" /> : null}
                   fullWidth
                   sx={{
@@ -365,7 +444,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                     },
                   }}
                 >
-                  {emailLoading ? 'Sending...' : `Send Invitation${parseEmails(emails).length > 1 ? 's' : ''}`}
+                  {emailLoading ? 'Sending...' : `Send Invitation${emailTags.length > 1 ? 's' : ''}`}
                 </Button>
               </Box>
             )}
