@@ -67,11 +67,11 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
   // Determine which roles to show based on organization type
   const isInternal = subscriptionTier === 'internal';
   const availableRoles = isInternal ? internalRoles : clientRoles;
-  const [email, setEmail] = useState('');
+  const [emails, setEmails] = useState('');
   const [emailRoleType, setEmailRoleType] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
-  const [emailInvitationUrl, setEmailInvitationUrl] = useState<string | null>(null);
+  const [emailResults, setEmailResults] = useState<{ successful: string[]; failed: { email: string; error: string }[] } | null>(null);
   const [emailCopied, setEmailCopied] = useState(false);
 
   const [linkRoleType, setLinkRoleType] = useState('');
@@ -82,19 +82,35 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return emailRegex.test(email.trim());
+  };
+
+  const parseEmails = (input: string): string[] => {
+    return input
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e.length > 0);
   };
 
   const handleEmailSubmit = async () => {
     setEmailError(null);
+    setEmailResults(null);
 
-    if (!email) {
-      setEmailError('Please enter an email address');
+    if (!emails.trim()) {
+      setEmailError('Please enter at least one email address');
       return;
     }
 
-    if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
+    const emailList = parseEmails(emails);
+    
+    if (emailList.length === 0) {
+      setEmailError('Please enter at least one valid email address');
+      return;
+    }
+
+    const invalidEmails = emailList.filter(e => !validateEmail(e));
+    if (invalidEmails.length > 0) {
+      setEmailError(`Invalid email address${invalidEmails.length > 1 ? 'es' : ''}: ${invalidEmails.join(', ')}`);
       return;
     }
 
@@ -105,31 +121,40 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
 
     setEmailLoading(true);
 
+    const successful: string[] = [];
+    const failed: { email: string; error: string }[] = [];
+
     try {
       const token = localStorage.getItem('teamified_access_token');
-      const response = await axios.post(
-        `${API_BASE_URL}/v1/invitations/send-email`,
-        {
-          email,
-          organizationId,
-          roleType: emailRoleType,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+      
+      for (const email of emailList) {
+        try {
+          await axios.post(
+            `${API_BASE_URL}/v1/invitations/send-email`,
+            {
+              email,
+              organizationId,
+              roleType: emailRoleType,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          successful.push(email);
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to send';
+          failed.push({ email, error: errorMessage });
         }
-      );
+      }
 
-      const inviteCode = response.data.inviteCode;
-      const link = `${window.location.origin}/invite/${inviteCode}`;
-      setEmailInvitationUrl(link);
-      onSuccess(); // Refresh member list immediately
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || err.message || 'Failed to send invitation';
-      setEmailError(errorMessage);
+      setEmailResults({ successful, failed });
+      
+      if (successful.length > 0) {
+        onSuccess(); // Refresh member list immediately
+      }
     } finally {
       setEmailLoading(false);
     }
@@ -174,14 +199,6 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
     }
   };
 
-  const handleCopyEmailLink = () => {
-    if (emailInvitationUrl) {
-      navigator.clipboard.writeText(emailInvitationUrl);
-      setEmailCopied(true);
-      setTimeout(() => setEmailCopied(false), 2000);
-    }
-  };
-
   const handleCopyShareableLink = () => {
     if (shareableLink) {
       navigator.clipboard.writeText(shareableLink);
@@ -191,11 +208,10 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
   };
 
   const handleClose = () => {
-    setEmail('');
+    setEmails('');
     setEmailRoleType('');
     setEmailError(null);
-    setEmailInvitationUrl(null);
-    setEmailCopied(false);
+    setEmailResults(null);
     setLinkRoleType('');
     setLinkError(null);
     setShareableLink(null);
@@ -253,55 +269,46 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
               Send Email Invitation
             </Typography>
 
-            {emailInvitationUrl ? (
+            {emailResults ? (
               <Box>
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    ✓ Invitation email sent to {email}
-                  </Typography>
-                  <Typography variant="caption">
-                    Assigned role: <strong>{availableRoles.find(r => r.value === emailRoleType)?.label}</strong> • Expires in 7 days
-                  </Typography>
-                </Alert>
-
-                <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary' }}>
-                  You can also share this link manually:
-                </Typography>
-                
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 1.5,
-                    bgcolor: 'grey.100',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    mb: 1,
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        flex: 1,
-                        wordBreak: 'break-all',
-                        fontFamily: 'monospace',
-                        fontSize: '0.85rem',
-                        color: '#1a1a1a',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {emailInvitationUrl}
+                {emailResults.successful.length > 0 && (
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      ✓ {emailResults.successful.length} invitation{emailResults.successful.length > 1 ? 's' : ''} sent successfully
                     </Typography>
-                    <IconButton
-                      onClick={handleCopyEmailLink}
-                      color={emailCopied ? 'success' : 'primary'}
-                      size="small"
-                    >
-                      {emailCopied ? <CheckIcon /> : <CopyIcon />}
-                    </IconButton>
-                  </Box>
-                </Paper>
+                    <Typography variant="caption" component="div" sx={{ mt: 0.5 }}>
+                      {emailResults.successful.join(', ')}
+                    </Typography>
+                    <Typography variant="caption">
+                      Assigned role: <strong>{availableRoles.find(r => r.value === emailRoleType)?.label}</strong> • Expires in 7 days
+                    </Typography>
+                  </Alert>
+                )}
+                
+                {emailResults.failed.length > 0 && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {emailResults.failed.length} invitation{emailResults.failed.length > 1 ? 's' : ''} failed
+                    </Typography>
+                    {emailResults.failed.map((f, i) => (
+                      <Typography key={i} variant="caption" component="div">
+                        {f.email}: {f.error}
+                      </Typography>
+                    ))}
+                  </Alert>
+                )}
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    setEmailResults(null);
+                    setEmails('');
+                  }}
+                  sx={{ mt: 1 }}
+                >
+                  Send More Invitations
+                </Button>
               </Box>
             ) : (
               <Box>
@@ -313,14 +320,15 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
 
                 <TextField
                   fullWidth
-                  label="Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@example.com"
+                  label="Email Addresses"
+                  value={emails}
+                  onChange={(e) => setEmails(e.target.value)}
+                  placeholder="user1@example.com, user2@example.com"
                   sx={{ mb: 2 }}
-                  error={email.length > 0 && !validateEmail(email)}
-                  helperText={email.length > 0 && !validateEmail(email) ? 'Please enter a valid email' : ''}
+                  helperText="Separate multiple emails with commas"
                   disabled={emailLoading}
+                  multiline
+                  minRows={2}
                 />
 
                 <FormControl fullWidth sx={{ mb: 2 }}>
@@ -347,7 +355,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                 <Button
                   variant="contained"
                   onClick={handleEmailSubmit}
-                  disabled={!email || !emailRoleType || emailLoading || (email.length > 0 && !validateEmail(email))}
+                  disabled={!emails.trim() || !emailRoleType || emailLoading}
                   startIcon={emailLoading ? <CircularProgress size={20} color="inherit" /> : null}
                   fullWidth
                   sx={{
@@ -357,7 +365,7 @@ const OrganizationInvitationModal: React.FC<OrganizationInvitationModalProps> = 
                     },
                   }}
                 >
-                  {emailLoading ? 'Sending...' : 'Send Invitation'}
+                  {emailLoading ? 'Sending...' : `Send Invitation${parseEmails(emails).length > 1 ? 's' : ''}`}
                 </Button>
               </Box>
             )}
