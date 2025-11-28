@@ -468,7 +468,7 @@ export class InvitationsController {
   }
 
   @Post('generate-link')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -582,7 +582,7 @@ export class InvitationsController {
   }
 
   @Post('send-email')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
