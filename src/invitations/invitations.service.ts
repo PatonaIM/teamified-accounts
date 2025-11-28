@@ -939,8 +939,8 @@ export class InvitationsService {
       where: { email: email.toLowerCase() },
     });
 
-    // 5. If user exists and is active: throw ConflictException
-    if (user && user.isActive) {
+    // 5. If user exists and is active (not invited status): throw ConflictException
+    if (user && user.isActive && user.status !== 'invited') {
       throw new ConflictException('User already has an account');
     }
 
@@ -955,16 +955,18 @@ export class InvitationsService {
         firstName,
         lastName,
         passwordHash: hashedPassword,
+        status: 'active',
         isActive: true,
         emailVerified: false,
         emailVerificationToken: uuidv4(),
         emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
     } else {
-      // Reactivate inactive user
+      // Activate invited or inactive user
       user.passwordHash = hashedPassword;
       user.firstName = firstName;
       user.lastName = lastName;
+      user.status = 'active';
       user.isActive = true;
       user.emailVerified = false;
       user.emailVerificationToken = uuidv4();
@@ -973,26 +975,49 @@ export class InvitationsService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // 8. Create organization membership
-    const membership = this.memberRepository.create({
-      organizationId: invitation.organizationId,
-      userId: savedUser.id,
-      status: 'active',
-      invitedBy: invitation.invitedBy,
+    // 8. Check for existing membership (may exist with 'invited' status) or create new one
+    let membership = await this.memberRepository.findOne({
+      where: {
+        organizationId: invitation.organizationId,
+        userId: savedUser.id,
+      },
     });
 
-    await this.memberRepository.save(membership);
+    if (membership) {
+      // Update existing membership to active
+      membership.status = 'active';
+      await this.memberRepository.save(membership);
+    } else {
+      // Create new membership
+      membership = this.memberRepository.create({
+        organizationId: invitation.organizationId,
+        userId: savedUser.id,
+        status: 'active',
+        invitedBy: invitation.invitedBy,
+      });
+      await this.memberRepository.save(membership);
+    }
 
-    // 9. Create user role
-    const userRole = this.userRoleRepository.create({
-      userId: savedUser.id,
-      roleType: invitation.roleType,
-      scope: 'organization',
-      scopeEntityId: invitation.organizationId,
-      grantedBy: invitation.invitedBy,
+    // 9. Check for existing user role or create new one
+    let userRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: savedUser.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+      },
     });
 
-    await this.userRoleRepository.save(userRole);
+    if (!userRole) {
+      userRole = this.userRoleRepository.create({
+        userId: savedUser.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+        grantedBy: invitation.invitedBy,
+      });
+      await this.userRoleRepository.save(userRole);
+    }
 
     // 10. Call acceptInvitation to increment usage counter
     await this.acceptInvitation(inviteCode, savedUser.id);

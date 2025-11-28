@@ -51,10 +51,10 @@ export class OrganizationMemberResponseDto {
 
   @ApiProperty({ 
     description: 'Membership status',
-    enum: ['active', 'inactive', 'suspended'],
+    enum: ['active', 'inactive', 'suspended', 'invited'],
     example: 'active'
   })
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'invited';
 
   @ApiProperty({ 
     description: 'Timestamp when user joined the organization',
