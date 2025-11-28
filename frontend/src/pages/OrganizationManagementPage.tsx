@@ -640,23 +640,12 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
 
-  // Helper to check member status
-  const getMemberStatusCategory = (member: OrganizationMember): string => {
-    const status = member.status?.toLowerCase() || '';
-    if (status === 'inactive') return 'inactive'; // NLWF users are stored as 'inactive'
-    if (status === 'invited') return 'invited';
-    if (status === 'suspended') return 'suspended';
-    if (status === 'deleted') return 'deleted';
-    return 'active';
-  };
-
-  // Count members by status for filter display (computed before filtering)
+  // Count members by status for filter display
+  // Status values from backend: 'active', 'invited', 'nlwf'
   const statusCounts = members.reduce((acc, member) => {
-    const status = getMemberStatusCategory(member);
-    if (status !== 'deleted') {
-      acc[status] = (acc[status] || 0) + 1;
-      acc.total = (acc.total || 0) + 1;
-    }
+    const status = member.status?.toLowerCase() || 'active';
+    acc[status] = (acc[status] || 0) + 1;
+    acc.total = (acc.total || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
@@ -683,16 +672,17 @@ const OrganizationManagementPage: React.FC = () => {
   const effectiveFilters = memberStatusFilters || new Set<string>();
 
   // Filter members based on search query and status filter checkboxes
+  // Filters are additive - only show members whose status is checked
   const filteredMembers = members.filter((member) => {
-    const status = getMemberStatusCategory(member);
+    const status = member.status?.toLowerCase() || 'active';
     
-    // Always hide deleted users
-    if (status === 'deleted') {
+    // If no filters selected, show nothing (empty selection = no results)
+    if (effectiveFilters.size === 0) {
       return false;
     }
     
-    // Apply checkbox filters - show member if their status is checked
-    if (effectiveFilters.size > 0 && !effectiveFilters.has(status)) {
+    // Only show members whose status is checked
+    if (!effectiveFilters.has(status)) {
       return false;
     }
     
@@ -1310,13 +1300,13 @@ const OrganizationManagementPage: React.FC = () => {
                           variant={effectiveFilters.has('invited') ? 'filled' : 'outlined'}
                           sx={{ cursor: 'pointer' }}
                         />
-                        {(statusCounts['inactive'] || 0) > 0 && (
+                        {(statusCounts['nlwf'] || 0) > 0 && (
                           <Chip
-                            label={`Inactive/NLWF (${statusCounts['inactive'] || 0})`}
+                            label={`NLWF (${statusCounts['nlwf'] || 0})`}
                             size="small"
-                            onClick={() => toggleStatusFilter('inactive')}
-                            color={effectiveFilters.has('inactive') ? 'warning' : 'default'}
-                            variant={effectiveFilters.has('inactive') ? 'filled' : 'outlined'}
+                            onClick={() => toggleStatusFilter('nlwf')}
+                            color={effectiveFilters.has('nlwf') ? 'warning' : 'default'}
+                            variant={effectiveFilters.has('nlwf') ? 'filled' : 'outlined'}
                             sx={{ cursor: 'pointer' }}
                           />
                         )}
@@ -1334,13 +1324,12 @@ const OrganizationManagementPage: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Member List - only render if there are active or invited users */}
-                      {((statusCounts['active'] || 0) > 0 || (statusCounts['invited'] || 0) > 0) && (
+                      {/* Member List - only render if there are any members */}
+                      {((statusCounts['active'] || 0) > 0 || (statusCounts['invited'] || 0) > 0 || (statusCounts['nlwf'] || 0) > 0) && (
                         <>
                       <Box>
                         {paginatedMembers.map((member) => {
-                          const memberStatus = getMemberStatusCategory(member);
-                          const inactive = memberStatus === 'inactive';
+                          const isNlwf = member.status === 'nlwf';
                           return (
                             <Paper
                               key={member.id}
@@ -1354,14 +1343,14 @@ const OrganizationManagementPage: React.FC = () => {
                                 p: 2,
                                 mb: 2,
                                 border: '1px solid',
-                                borderColor: inactive ? 'action.disabled' : 'divider',
+                                borderColor: isNlwf ? 'action.disabled' : 'divider',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                bgcolor: inactive ? 'action.disabledBackground' : 'background.paper',
-                                opacity: inactive ? 0.75 : 1,
+                                bgcolor: isNlwf ? 'action.disabledBackground' : 'background.paper',
+                                opacity: isNlwf ? 0.75 : 1,
                                 '&:hover': {
                                   borderColor: 'primary.main',
-                                  bgcolor: inactive ? 'action.hover' : 'action.hover',
+                                  bgcolor: isNlwf ? 'action.hover' : 'action.hover',
                                   transform: 'translateY(-2px)',
                                   boxShadow: 2,
                                   opacity: 1,
@@ -1375,8 +1364,8 @@ const OrganizationManagementPage: React.FC = () => {
                                     sx={{
                                       width: 48,
                                       height: 48,
-                                      bgcolor: inactive ? 'grey.500' : 'primary.main',
-                                      filter: inactive ? 'grayscale(100%)' : 'none',
+                                      bgcolor: isNlwf ? 'grey.500' : 'primary.main',
+                                      filter: isNlwf ? 'grayscale(100%)' : 'none',
                                     }}
                                   >
                                     {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -1387,7 +1376,7 @@ const OrganizationManagementPage: React.FC = () => {
                                         variant="body1" 
                                         sx={{ 
                                           fontWeight: 600,
-                                          color: inactive ? 'text.secondary' : 'text.primary',
+                                          color: isNlwf ? 'text.secondary' : 'text.primary',
                                         }}
                                       >
                                         {member.userName}
@@ -1395,6 +1384,15 @@ const OrganizationManagementPage: React.FC = () => {
                                       {member.status === 'invited' && (
                                         <Chip
                                           label="Invited"
+                                          size="small"
+                                          color="info"
+                                          variant="filled"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                      {member.status === 'nlwf' && (
+                                        <Chip
+                                          label="NLWF"
                                           size="small"
                                           color="warning"
                                           variant="filled"
@@ -1408,24 +1406,13 @@ const OrganizationManagementPage: React.FC = () => {
                                   </Box>
                                 </Box>
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                  {inactive && (
-                                    <Chip
-                                      label="Inactive"
-                                      size="small"
-                                      sx={{
-                                        bgcolor: 'grey.600',
-                                        color: 'white',
-                                        fontWeight: 500,
-                                      }}
-                                    />
-                                  )}
                                   <Chip
                                     label={member.roleType || 'No role'}
                                     size="small"
                                     color={getRoleColor(member.roleType)}
                                     variant="outlined"
                                     sx={{
-                                      opacity: inactive ? 0.6 : 1,
+                                      opacity: isNlwf ? 0.6 : 1,
                                     }}
                                   />
                                   <IconButton

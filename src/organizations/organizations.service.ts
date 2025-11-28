@@ -1210,6 +1210,16 @@ Welcome to the ${organization.name} team!
       role => role.scope === 'organization' && role.scopeEntityId === member.organizationId
     );
 
+    // Derive status: if user is inactive, they're NLWF; otherwise use member status
+    let derivedStatus: 'active' | 'invited' | 'nlwf' = 'active';
+    if (member.status === 'invited') {
+      derivedStatus = 'invited';
+    } else if (member.user?.status === 'inactive') {
+      derivedStatus = 'nlwf';
+    } else {
+      derivedStatus = 'active';
+    }
+
     return {
       id: member.id,
       organizationId: member.organizationId,
@@ -1218,7 +1228,7 @@ Welcome to the ${organization.name} team!
       userName: member.user ? `${member.user.firstName} ${member.user.lastName}` : '',
       profilePicture: member.user?.profileData?.profilePicture || null,
       roleType: (userRole?.roleType as RoleType) || RoleType.CLIENT_EMPLOYEE,
-      status: member.status,
+      status: derivedStatus,
       joinedAt: member.joinedAt,
       invitedBy: member.invitedBy,
       createdAt: member.createdAt,
