@@ -1300,20 +1300,18 @@ const OrganizationManagementPage: React.FC = () => {
                           variant={effectiveFilters.has('invited') ? 'filled' : 'outlined'}
                           sx={{ cursor: 'pointer' }}
                         />
-                        {(statusCounts['nlwf'] || 0) > 0 && (
-                          <Chip
-                            label={`NLWF (${statusCounts['nlwf'] || 0})`}
-                            size="small"
-                            onClick={() => toggleStatusFilter('nlwf')}
-                            color={effectiveFilters.has('nlwf') ? 'warning' : 'default'}
-                            variant={effectiveFilters.has('nlwf') ? 'filled' : 'outlined'}
-                            sx={{ cursor: 'pointer' }}
-                          />
-                        )}
+                        <Chip
+                          label={`NLWF (${statusCounts['nlwf'] || 0})`}
+                          size="small"
+                          onClick={() => toggleStatusFilter('nlwf')}
+                          color={effectiveFilters.has('nlwf') ? 'warning' : 'default'}
+                          variant={effectiveFilters.has('nlwf') ? 'filled' : 'outlined'}
+                          sx={{ cursor: 'pointer' }}
+                        />
                       </Box>
 
-                      {/* No Users Message - only show if no active AND no invited users */}
-                      {(statusCounts['active'] || 0) === 0 && (statusCounts['invited'] || 0) === 0 && (
+                      {/* No Users Message - only show if truly no members in organization */}
+                      {(statusCounts.total || 0) === 0 && (
                         <Box sx={{ textAlign: 'center', py: 4 }}>
                           <Typography variant="body1" color="text.secondary">
                             No users in this organization yet.
@@ -1324,8 +1322,20 @@ const OrganizationManagementPage: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Member List - only render if there are any members */}
-                      {((statusCounts['active'] || 0) > 0 || (statusCounts['invited'] || 0) > 0 || (statusCounts['nlwf'] || 0) > 0) && (
+                      {/* No results from current filter */}
+                      {(statusCounts.total || 0) > 0 && filteredMembers.length === 0 && (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No users match the current filter.
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Try selecting different status filters above.
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Member List - only render if there are filtered members */}
+                      {filteredMembers.length > 0 && (
                         <>
                       <Box>
                         {paginatedMembers.map((member) => {
