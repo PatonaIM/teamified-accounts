@@ -615,6 +615,7 @@ export class OrganizationsService {
       .leftJoinAndSelect('user.userRoles', 'userRole')
       .where('member.organizationId = :organizationId', { organizationId })
       .andWhere('user.deletedAt IS NULL')
+      .andWhere('user.status != :archived', { archived: 'archived' })
       .getMany();
 
     return members.map(member => this.mapMemberToResponseDto(member));
