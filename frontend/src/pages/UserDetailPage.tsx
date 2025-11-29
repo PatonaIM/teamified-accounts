@@ -93,7 +93,7 @@ interface UserActivity {
   }>;
 }
 
-type TabType = 'basic' | 'organizations' | 'billing' | 'activity';
+type TabType = 'basic' | 'organizations' | 'billing' | 'activity' | 'reset-password' | 'delete';
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -430,6 +430,8 @@ export default function UserDetailPage() {
     { id: 'organizations', label: 'Organizations', icon: <Business /> },
     { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
     { id: 'activity', label: 'User Activity', icon: <History /> },
+    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
+    { id: 'delete', label: 'Delete User', icon: <Delete /> },
   ];
 
   const renderTabContent = () => {
@@ -960,25 +962,37 @@ export default function UserDetailPage() {
           <Divider />
 
           {/* Navigation Tabs */}
-          <List sx={{ py: 1 }}>
+          <List sx={{ py: 1, flex: 1 }}>
             {tabs.map((tab) => (
               <ListItemButton
                 key={tab.id}
-                selected={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                selected={activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'}
+                onClick={() => {
+                  if (tab.id === 'reset-password') {
+                    handleOpenResetPasswordModal();
+                  } else if (tab.id === 'delete') {
+                    handleOpenDeleteDialog();
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
                 sx={{
                   py: 1.5,
                   px: 2,
-                  borderLeft: activeTab === tab.id ? 3 : 0,
+                  borderLeft: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete' ? 3 : 0,
                   borderColor: 'primary.main',
-                  bgcolor: activeTab === tab.id 
+                  bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'
                     ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
                     : 'transparent',
                   '&:hover': {
-                    bgcolor: activeTab === tab.id 
+                    bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'
                       ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
                       : 'action.hover',
                   },
+                  ...(tab.id === 'delete' && {
+                    color: 'error.main',
+                    '& .MuiListItemIcon-root': { color: 'error.main' },
+                  }),
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
@@ -987,37 +1001,12 @@ export default function UserDetailPage() {
                 <ListItemText 
                   primary={tab.label}
                   primaryTypographyProps={{
-                    fontWeight: activeTab === tab.id ? 600 : 400,
+                    fontWeight: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete' ? 600 : 400,
                   }}
                 />
               </ListItemButton>
             ))}
           </List>
-
-          {/* Action Buttons */}
-          <Box sx={{ p: 2, mt: 'auto', borderTop: 1, borderColor: 'divider' }}>
-            <Stack spacing={1.5}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<LockReset />}
-                onClick={handleOpenResetPasswordModal}
-                sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
-              >
-                Reset Password
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                color="error"
-                startIcon={<Delete />}
-                onClick={handleOpenDeleteDialog}
-                sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
-              >
-                Delete User
-              </Button>
-            </Stack>
-          </Box>
         </Box>
 
         {/* Right Content Area */}
