@@ -20,6 +20,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { plainToInstance } from 'class-transformer';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -189,7 +190,8 @@ export class UserController {
   })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.findOne(id);
-    return { user };
+    const userDto = plainToInstance(UserResponseDto, user, { excludeExtraneousValues: true });
+    return { user: userDto };
   }
 
   @Get('me/profile')

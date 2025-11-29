@@ -93,7 +93,7 @@ interface UserActivity {
   }>;
 }
 
-type TabType = 'basic' | 'organizations' | 'reset-password' | 'billing' | 'activity' | 'delete';
+type TabType = 'basic' | 'organizations' | 'billing' | 'activity';
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -111,8 +111,8 @@ export default function UserDetailPage() {
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Reset password state
-  const [resetPasswordMode, setResetPasswordMode] = useState<'link' | 'direct'>('link');
+  // Reset password modal state
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [sendingResetLink, setSendingResetLink] = useState(false);
@@ -254,8 +254,21 @@ export default function UserDetailPage() {
     setTimeout(() => setPasswordCopied(false), 2000);
   };
 
-  const handleDeleteClick = () => {
+  const handleOpenResetPasswordModal = () => {
+    setShowResetPasswordModal(true);
+    setNewPassword('');
+    setResetSuccess(null);
+  };
+
+  const handleCloseResetPasswordModal = () => {
+    setShowResetPasswordModal(false);
+    setNewPassword('');
+    setResetSuccess(null);
+  };
+
+  const handleOpenDeleteDialog = () => {
     setShowDeleteDialog(true);
+    setDeleteConfirmEmail('');
   };
 
   const handleCancelDelete = () => {
@@ -415,10 +428,8 @@ export default function UserDetailPage() {
   const tabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
     { id: 'basic', label: 'Basic Information', icon: <Person /> },
     { id: 'organizations', label: 'Organizations', icon: <Business /> },
-    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
     { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
     { id: 'activity', label: 'User Activity', icon: <History /> },
-    { id: 'delete', label: 'Delete User', icon: <Delete /> },
   ];
 
   const renderTabContent = () => {
@@ -641,113 +652,6 @@ export default function UserDetailPage() {
           </Box>
         );
 
-      case 'reset-password':
-        return (
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
-              <LockReset color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Reset Password
-              </Typography>
-            </Stack>
-
-            {resetSuccess && (
-              <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResetSuccess(null)}>
-                {resetSuccess}
-              </Alert>
-            )}
-
-            <Stack spacing={4}>
-              <Paper variant="outlined" sx={{ p: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Option 1: Send Password Reset Link
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Send a secure password reset link to the user's email address ({user.email}).
-                  The user will be able to set their own password.
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={sendingResetLink ? <CircularProgress size={16} /> : <Send />}
-                  onClick={handleSendResetLink}
-                  disabled={sendingResetLink}
-                  sx={{ textTransform: 'none' }}
-                >
-                  {sendingResetLink ? 'Sending...' : 'Send Reset Link'}
-                </Button>
-              </Paper>
-
-              <Divider>
-                <Typography variant="body2" color="text.secondary">OR</Typography>
-              </Divider>
-
-              <Paper variant="outlined" sx={{ p: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Option 2: Set Password Directly
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Set a new password for this user. You will need to communicate this password to the user securely.
-                </Typography>
-                
-                <Stack spacing={2}>
-                  <TextField
-                    fullWidth
-                    label="New Password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                    helperText="Password must be at least 8 characters with uppercase, lowercase, number, and special character"
-                  />
-                  
-                  <Stack direction="row" spacing={2}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Refresh />}
-                      onClick={generateStrongPassword}
-                      sx={{ textTransform: 'none' }}
-                    >
-                      Generate Strong Password
-                    </Button>
-                    
-                    {newPassword && (
-                      <Tooltip title={passwordCopied ? 'Copied!' : 'Copy to clipboard'}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<ContentCopy />}
-                          onClick={copyPasswordToClipboard}
-                          color={passwordCopied ? 'success' : 'primary'}
-                          sx={{ textTransform: 'none' }}
-                        >
-                          {passwordCopied ? 'Copied!' : 'Copy Password'}
-                        </Button>
-                      </Tooltip>
-                    )}
-                  </Stack>
-
-                  <Button
-                    variant="contained"
-                    startIcon={settingPassword ? <CircularProgress size={16} /> : <LockReset />}
-                    onClick={handleSetPassword}
-                    disabled={settingPassword || !newPassword || newPassword.length < 8}
-                    sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
-                  >
-                    {settingPassword ? 'Setting Password...' : 'Set Password'}
-                  </Button>
-                </Stack>
-              </Paper>
-            </Stack>
-          </Box>
-        );
-
       case 'billing':
         return (
           <Box sx={{ py: 6, textAlign: 'center' }}>
@@ -893,55 +797,6 @@ export default function UserDetailPage() {
                 </Alert>
               </Stack>
             )}
-          </Box>
-        );
-
-      case 'delete':
-        return (
-          <Box>
-            <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
-              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                Delete User Account
-              </Typography>
-              <Typography variant="body2">
-                This action will permanently delete the user and all associated data. This cannot be undone.
-              </Typography>
-            </Alert>
-
-            <Paper variant="outlined" sx={{ p: 3 }}>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                To confirm deletion, please type the user's email address:
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 2, fontWeight: 600 }}>
-                {user.email}
-              </Typography>
-              
-              <TextField
-                fullWidth
-                label="Confirm email address"
-                value={deleteConfirmEmail}
-                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
-                placeholder={user.email}
-                sx={{ mb: 3 }}
-                error={deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email}
-                helperText={
-                  deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email
-                    ? 'Email does not match'
-                    : ''
-                }
-              />
-
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<Delete />}
-                onClick={handleDeleteClick}
-                disabled={deleteConfirmEmail.trim() !== user.email}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
-              >
-                Delete User Permanently
-              </Button>
-            </Paper>
           </Box>
         );
 
@@ -1105,7 +960,7 @@ export default function UserDetailPage() {
           <Divider />
 
           {/* Navigation Tabs */}
-          <List sx={{ py: 1, flex: 1 }}>
+          <List sx={{ py: 1 }}>
             {tabs.map((tab) => (
               <ListItemButton
                 key={tab.id}
@@ -1124,10 +979,6 @@ export default function UserDetailPage() {
                       ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
                       : 'action.hover',
                   },
-                  ...(tab.id === 'delete' && {
-                    color: 'error.main',
-                    '& .MuiListItemIcon-root': { color: 'error.main' },
-                  }),
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
@@ -1142,6 +993,31 @@ export default function UserDetailPage() {
               </ListItemButton>
             ))}
           </List>
+
+          {/* Action Buttons */}
+          <Box sx={{ p: 2, mt: 'auto', borderTop: 1, borderColor: 'divider' }}>
+            <Stack spacing={1.5}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<LockReset />}
+                onClick={handleOpenResetPasswordModal}
+                sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
+              >
+                Reset Password
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="error"
+                startIcon={<Delete />}
+                onClick={handleOpenDeleteDialog}
+                sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
+              >
+                Delete User
+              </Button>
+            </Stack>
+          </Box>
         </Box>
 
         {/* Right Content Area */}
@@ -1150,6 +1026,122 @@ export default function UserDetailPage() {
         </Box>
       </Box>
 
+      {/* Reset Password Modal */}
+      <Dialog
+        open={showResetPasswordModal}
+        onClose={handleCloseResetPasswordModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LockReset color="primary" />
+          Reset Password
+        </DialogTitle>
+        <DialogContent>
+          {resetSuccess && (
+            <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResetSuccess(null)}>
+              {resetSuccess}
+            </Alert>
+          )}
+
+          <Stack spacing={3}>
+            <Paper variant="outlined" sx={{ p: 2.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Option 1: Send Password Reset Link
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Send a secure password reset link to {user.email}
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={sendingResetLink ? <CircularProgress size={16} /> : <Send />}
+                onClick={handleSendResetLink}
+                disabled={sendingResetLink}
+                sx={{ textTransform: 'none' }}
+              >
+                {sendingResetLink ? 'Sending...' : 'Send Reset Link'}
+              </Button>
+            </Paper>
+
+            <Divider>
+              <Typography variant="body2" color="text.secondary">OR</Typography>
+            </Divider>
+
+            <Paper variant="outlined" sx={{ p: 2.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Option 2: Set Password Directly
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Set a new password and securely communicate it to the user.
+              </Typography>
+              
+              <Stack spacing={2}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="New Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText="Min 8 chars with uppercase, lowercase, number, and symbol"
+                />
+                
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Refresh />}
+                    onClick={generateStrongPassword}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Generate
+                  </Button>
+                  
+                  {newPassword && (
+                    <Tooltip title={passwordCopied ? 'Copied!' : 'Copy to clipboard'}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ContentCopy />}
+                        onClick={copyPasswordToClipboard}
+                        color={passwordCopied ? 'success' : 'primary'}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        {passwordCopied ? 'Copied!' : 'Copy'}
+                      </Button>
+                    </Tooltip>
+                  )}
+                </Stack>
+
+                <Button
+                  variant="contained"
+                  startIcon={settingPassword ? <CircularProgress size={16} /> : <LockReset />}
+                  onClick={handleSetPassword}
+                  disabled={settingPassword || !newPassword || newPassword.length < 8}
+                  sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+                >
+                  {settingPassword ? 'Setting...' : 'Set Password'}
+                </Button>
+              </Stack>
+            </Paper>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseResetPasswordModal} sx={{ textTransform: 'none' }}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={showDeleteDialog}
@@ -1157,25 +1149,51 @@ export default function UserDetailPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Confirm User Deletion</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <Warning color="error" />
+          Delete User Account
+        </DialogTitle>
         <DialogContent>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            This action will permanently delete the user and all associated data. This cannot be undone.
+          </Alert>
+          
           <DialogContentText sx={{ mb: 2 }}>
             You are about to permanently delete <strong>{userFullName}</strong>.
           </DialogContentText>
-          <DialogContentText sx={{ mb: 2, color: 'error.main', fontWeight: 'bold' }}>
-            This action cannot be undone. All user data will be permanently removed.
-          </DialogContentText>
+          
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            To confirm deletion, please type the user's email address:
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, fontFamily: 'monospace' }}>
+            {user.email}
+          </Typography>
+          
+          <TextField
+            fullWidth
+            label="Confirm email address"
+            value={deleteConfirmEmail}
+            onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+            placeholder={user.email}
+            error={deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email}
+            helperText={
+              deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email
+                ? 'Email does not match'
+                : ''
+            }
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelDelete} disabled={deleting}>
+          <Button onClick={handleCancelDelete} disabled={deleting} sx={{ textTransform: 'none' }}>
             Cancel
           </Button>
           <Button
             onClick={handleConfirmDelete}
             color="error"
             variant="contained"
-            disabled={deleting}
+            disabled={deleting || deleteConfirmEmail.trim() !== user.email}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
+            sx={{ textTransform: 'none' }}
           >
             {deleting ? 'Deleting...' : 'Delete Permanently'}
           </Button>
