@@ -73,13 +73,13 @@ export class SessionService {
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    // Check for 48-hour inactivity timeout
+    // Check for 72-hour inactivity timeout
     const now = new Date();
     const hoursSinceLastActivity = (now.getTime() - session.lastActivityAt.getTime()) / (1000 * 60 * 60);
     
-    if (hoursSinceLastActivity >= 48) {
+    if (hoursSinceLastActivity >= 72) {
       await this.revokeSession(session.id);
-      this.logger.log(`Session expired due to 48 hours of inactivity for user ${user.id}`);
+      this.logger.log(`Session expired due to 72 hours of inactivity for user ${user.id}`);
       throw new UnauthorizedException('Session expired due to inactivity. Please log in again.');
     }
 

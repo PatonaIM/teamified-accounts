@@ -105,9 +105,14 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           
           return api(originalRequest);
+        } else {
+          // No refresh token available - session expired
+          logoutDueToSessionExpiry();
+          return Promise.reject(new Error('No refresh token available'));
         }
-      } catch (refreshError) {
-        // Refresh failed, logout user and notify
+      } catch (refreshError: any) {
+        // Refresh failed - handle various error cases
+        // Token not found, expired, or any other refresh error
         logoutDueToSessionExpiry();
         return Promise.reject(refreshError);
       }

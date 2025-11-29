@@ -62,13 +62,13 @@ const SessionExpiredModal: React.FC = () => {
             <LogoutIcon sx={{ fontSize: 24, color: 'warning.main' }} />
           </Box>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Session Expired
+            You've Been Logged Out
           </Typography>
         </Box>
       </DialogTitle>
       <DialogContent>
         <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1 }}>
-          You've been logged out due to an expired session. Please sign in again to continue using the application.
+          Your session has expired due to inactivity. Please log in again to continue.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ p: 3, pt: 2 }}>
@@ -83,7 +83,7 @@ const SessionExpiredModal: React.FC = () => {
             textTransform: 'none',
           }}
         >
-          Sign In Again
+          Log In
         </Button>
       </DialogActions>
     </Dialog>
