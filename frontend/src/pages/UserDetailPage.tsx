@@ -31,6 +31,7 @@ import {
   InputAdornment,
   Tooltip,
   Snackbar,
+  useTheme,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -97,6 +98,8 @@ export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
@@ -544,7 +547,7 @@ export default function UserDetailPage() {
               <TableContainer component={Paper} variant="outlined">
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableRow sx={{ bgcolor: isDarkMode ? 'action.hover' : 'grey.50' }}>
                       <TableCell sx={{ fontWeight: 600 }}>Organization</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
@@ -990,7 +993,7 @@ export default function UserDetailPage() {
             flexShrink: 0,
             borderRight: 1,
             borderColor: 'divider',
-            bgcolor: 'grey.50',
+            bgcolor: isDarkMode ? 'background.paper' : 'grey.50',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'auto',
@@ -1080,9 +1083,13 @@ export default function UserDetailPage() {
                   px: 2,
                   borderLeft: activeTab === tab.id ? 3 : 0,
                   borderColor: 'primary.main',
-                  bgcolor: activeTab === tab.id ? 'primary.lighter' : 'transparent',
+                  bgcolor: activeTab === tab.id 
+                    ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
+                    : 'transparent',
                   '&:hover': {
-                    bgcolor: activeTab === tab.id ? 'primary.lighter' : 'action.hover',
+                    bgcolor: activeTab === tab.id 
+                      ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
+                      : 'action.hover',
                   },
                   ...(tab.id === 'delete' && {
                     color: 'error.main',
