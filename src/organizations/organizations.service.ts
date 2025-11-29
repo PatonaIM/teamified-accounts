@@ -256,8 +256,9 @@ export class OrganizationsService {
     
     const queryBuilder = this.organizationRepository
       .createQueryBuilder('org')
-      .leftJoin('org.members', 'members')
-      .addSelect('COUNT(members.id)', 'membercount')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .addSelect('COUNT(memberUser.id)', 'membercount')
       .where('org.deletedAt IS NULL')
       .groupBy('org.id');
     
@@ -351,10 +352,11 @@ export class OrganizationsService {
 
     const result = await this.organizationRepository
       .createQueryBuilder('org')
-      .leftJoin('org.members', 'members')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
       .where('org.id = :id', { id })
       .andWhere('org.deletedAt IS NULL')
-      .addSelect('COUNT(members.id)', 'membercount')
+      .addSelect('COUNT(memberUser.id)', 'membercount')
       .groupBy('org.id')
       .getRawAndEntities();
 
