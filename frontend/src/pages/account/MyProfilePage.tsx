@@ -10,6 +10,7 @@ import {
   Tooltip,
   Badge,
   Alert,
+  useTheme as useMuiTheme,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
@@ -39,6 +40,8 @@ export default function MyProfilePage() {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const { showSnackbar } = useSnackbar();
+  const theme = useMuiTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -326,10 +329,10 @@ export default function MyProfilePage() {
                 sx={{
                   width: 64,
                   height: 64,
-                  bgcolor: profilePicture ? 'transparent' : '#90CAF9',
+                  bgcolor: profilePicture ? 'transparent' : (isDarkMode ? '#7C3AED' : '#90CAF9'),
                   fontSize: '1.75rem',
                   fontWeight: 600,
-                  color: '#1E1E1E',
+                  color: isDarkMode ? '#FFFFFF' : '#1E1E1E',
                   cursor: isEditing ? 'pointer' : 'default',
                 }}
                 onClick={isEditing ? handleProfilePictureClick : undefined}
@@ -357,7 +360,7 @@ export default function MyProfilePage() {
                     sx={{
                       color: 'text.secondary',
                       '&:hover': {
-                        bgcolor: 'rgba(0, 0, 0, 0.04)',
+                        bgcolor: 'action.hover',
                       },
                     }}
                   >
@@ -371,7 +374,7 @@ export default function MyProfilePage() {
                     sx={{
                       color: 'primary.main',
                       '&:hover': {
-                        bgcolor: 'rgba(161, 106, 232, 0.08)',
+                        bgcolor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(161, 106, 232, 0.08)',
                       },
                     }}
                   >
@@ -386,7 +389,7 @@ export default function MyProfilePage() {
                   sx={{
                     color: 'primary.main',
                     '&:hover': {
-                      bgcolor: 'rgba(161, 106, 232, 0.08)',
+                      bgcolor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(161, 106, 232, 0.08)',
                     },
                   }}
                 >
