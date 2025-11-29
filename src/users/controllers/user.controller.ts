@@ -602,4 +602,64 @@ export class UserController {
   ): Promise<BulkOperationResponseDto> {
     return await this.userService.bulkAssignRole(bulkRoleAssignmentDto);
   }
+
+  @Get(`:id(${UUID_PARAM_PATTERN})/activity`)
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'hr')
+  @ApiOperation({ 
+    summary: 'Get user activity',
+    description: 'Retrieves login history, connected apps, and recent actions for a user. Useful for user analytics and security monitoring.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User activity retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        loginHistory: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              timestamp: { type: 'string', format: 'date-time' },
+              ip: { type: 'string' },
+              userAgent: { type: 'string' },
+              deviceType: { type: 'string', enum: ['Desktop', 'Mobile', 'Tablet'] },
+            },
+          },
+        },
+        lastAppsUsed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              appName: { type: 'string' },
+              clientId: { type: 'string' },
+              lastUsed: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+        recentActions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              action: { type: 'string' },
+              entityType: { type: 'string' },
+              timestamp: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async getUserActivity(
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return await this.userService.getUserActivity(id);
+  }
 }

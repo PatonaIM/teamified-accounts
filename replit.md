@@ -30,7 +30,7 @@ Core features include:
 
 ### System Design Choices
 
-The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field for user profiles, normalized employment/salary histories, and a `UserRole` entity for scope-based permissions. Security is enforced with Argon2 for password hashing, NestJS Throttler for rate limiting, and Redis-backed session storage. CORS restrictions are disabled for OAuth 2.0 integrations, and a dual-token strategy (Bearer + httpOnly cookie) secures SSO flows. Session management includes a 48-hour inactivity timeout and a 30-day absolute expiry. The platform is designed for production deployment on Replit Reserved VMs, serving both static frontend and backend API from a single process.
+The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field for user profiles, normalized employment/salary histories, and a `UserRole` entity for scope-based permissions. Security is enforced with Argon2 for password hashing, NestJS Throttler for rate limiting, and Redis-backed session storage. CORS restrictions are disabled for OAuth 2.0 integrations, and a dual-token strategy (Bearer + httpOnly cookie) secures SSO flows. Session management includes a 72-hour inactivity timeout and a 30-day absolute expiry. The platform is designed for production deployment on Replit Reserved VMs, serving both static frontend and backend API from a single process.
 
 ## External Dependencies
 

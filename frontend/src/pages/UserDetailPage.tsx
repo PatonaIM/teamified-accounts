@@ -4,14 +4,11 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
   Chip,
   Avatar,
   Button,
   Stack,
   Divider,
-  Card,
-  CardContent,
   IconButton,
   Alert,
   CircularProgress,
@@ -19,8 +16,6 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Tabs,
-  Tab,
   TextField,
   TableContainer,
   TableHead,
@@ -29,6 +24,13 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  InputAdornment,
+  Tooltip,
+  Snackbar,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -36,7 +38,6 @@ import {
   Phone,
   LocationOn,
   Person,
-  Edit,
   Delete,
   VerifiedUser,
   Business,
@@ -46,10 +47,22 @@ import {
   Cancel,
   ChevronRight,
   Warning,
+  LockReset,
+  History,
+  ContentCopy,
+  Refresh,
+  Send,
+  Visibility,
+  VisibilityOff,
+  CreditCard,
+  Login,
+  Devices,
+  Timeline,
 } from '@mui/icons-material';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
 import roleService from '../services/roleService';
+import api from '../services/api';
 
 interface UserRole {
   id: string;
@@ -59,26 +72,26 @@ interface UserRole {
   createdAt: string;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  value: number;
-  index: number;
+interface UserActivity {
+  loginHistory: Array<{
+    timestamp: string;
+    ip: string;
+    userAgent: string;
+    deviceType: string;
+  }>;
+  lastAppsUsed: Array<{
+    appName: string;
+    clientId: string;
+    lastUsed: string;
+  }>;
+  recentActions: Array<{
+    action: string;
+    entityType: string;
+    timestamp: string;
+  }>;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`user-tabpanel-${index}`}
-      aria-labelledby={`user-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+type TabType = 'basic' | 'organizations' | 'reset-password' | 'billing' | 'activity' | 'delete';
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -89,12 +102,31 @@ export default function UserDetailPage() {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Get navigation context from location state
+  // Reset password state
+  const [resetPasswordMode, setResetPasswordMode] = useState<'link' | 'direct'>('link');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [sendingResetLink, setSendingResetLink] = useState(false);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  // Activity state
+  const [activity, setActivity] = useState<UserActivity | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
   const navigationState = location.state as { 
     organizationId?: string; 
     organizationName?: string;
@@ -105,6 +137,12 @@ export default function UserDetailPage() {
       fetchUserDetails();
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (activeTab === 'activity' && userId && !activity) {
+      fetchUserActivity();
+    }
+  }, [activeTab, userId]);
 
   const fetchUserDetails = async () => {
     if (!userId) return;
@@ -131,8 +169,85 @@ export default function UserDetailPage() {
     }
   };
 
-  const handleEdit = () => {
-    navigate(`/admin/users/${userId}/edit`);
+  const fetchUserActivity = async () => {
+    if (!userId) return;
+    
+    setActivityLoading(true);
+    try {
+      const response = await api.get(`/v1/users/${userId}/activity`);
+      setActivity(response.data);
+    } catch (err) {
+      console.warn('Failed to load user activity:', err);
+      setActivity({
+        loginHistory: [],
+        lastAppsUsed: [],
+        recentActions: [],
+      });
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const handleSendResetLink = async () => {
+    if (!user) return;
+    
+    setSendingResetLink(true);
+    try {
+      await api.post('/v1/auth/admin/send-password-reset', { email: user.email });
+      setResetSuccess('Password reset link has been sent to the user\'s email.');
+      setSnackbar({ open: true, message: 'Password reset link sent successfully', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to send reset link', severity: 'error' });
+    } finally {
+      setSendingResetLink(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!user || !newPassword) return;
+    
+    setSettingPassword(true);
+    try {
+      await api.post('/v1/auth/admin/set-password', { 
+        userId: user.id, 
+        newPassword 
+      });
+      setResetSuccess('Password has been set successfully.');
+      setNewPassword('');
+      setSnackbar({ open: true, message: 'Password set successfully', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to set password', severity: 'error' });
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
+  const generateStrongPassword = () => {
+    const length = 16;
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    const allChars = uppercase + lowercase + numbers + symbols;
+    
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    setNewPassword(password);
+  };
+
+  const copyPasswordToClipboard = () => {
+    navigator.clipboard.writeText(newPassword);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 2000);
   };
 
   const handleDeleteClick = () => {
@@ -147,7 +262,6 @@ export default function UserDetailPage() {
   const handleConfirmDelete = async () => {
     if (!userId || !user) return;
 
-    // Verify email confirmation
     if (deleteConfirmEmail.trim() !== user.email) {
       return;
     }
@@ -187,18 +301,31 @@ export default function UserDetailPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'default' | 'info' | 'warning' => {
     switch (status) {
       case 'active':
         return 'success';
-      case 'inactive':
-        return 'default';
       case 'invited':
         return 'info';
-      case 'archived':
-        return 'error';
+      case 'nlwf':
+      case 'inactive':
+        return 'warning';
       default:
         return 'default';
+    }
+  };
+
+  const getDisplayStatus = (status: string): string => {
+    switch (status) {
+      case 'active':
+        return 'ACTIVE';
+      case 'invited':
+        return 'INVITED';
+      case 'nlwf':
+      case 'inactive':
+        return 'NLWF';
+      default:
+        return status.toUpperCase();
     }
   };
 
@@ -224,6 +351,17 @@ export default function UserDetailPage() {
       default:
         return { bgcolor: '#f5f5f5', color: '#616161' };
     }
+  };
+
+  const getDeviceIcon = (userAgent: string) => {
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return 'Mobile';
+    }
+    if (ua.includes('tablet') || ua.includes('ipad')) {
+      return 'Tablet';
+    }
+    return 'Desktop';
   };
 
   if (loading) {
@@ -270,388 +408,707 @@ export default function UserDetailPage() {
     }
   };
 
-  return (
-    <Box sx={{ p: 4, maxWidth: 1400, mx: 'auto' }}>
-      {/* Header with Breadcrumb */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
-        <Stack direction="row" alignItems="center">
-          <IconButton onClick={handleBackNavigation} sx={{ mr: 2 }}>
-            <ArrowBack />
-          </IconButton>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            {isFromOrganization ? (
-              <>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' }
-                  }}
-                  onClick={handleBackNavigation}
-                >
-                  Organization Management
-                </Typography>
-                <ChevronRight sx={{ color: 'text.secondary' }} />
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' }
-                  }}
-                  onClick={handleBackNavigation}
-                >
-                  {navigationState.organizationName}
-                </Typography>
-                <ChevronRight sx={{ color: 'text.secondary' }} />
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {userFullName}
-                </Typography>
-              </>
-            ) : (
-              <>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' }
-                  }}
-                  onClick={handleBackNavigation}
-                >
-                  Internal Users
-                </Typography>
-                <ChevronRight sx={{ color: 'text.secondary' }} />
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {userFullName}
-                </Typography>
-              </>
-            )}
-          </Stack>
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <Button
-            variant="outlined"
-            startIcon={<Edit />}
-            onClick={handleEdit}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            Edit
-          </Button>
-        </Stack>
-      </Stack>
+  const tabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
+    { id: 'basic', label: 'Basic Information', icon: <Person /> },
+    { id: 'organizations', label: 'Organizations', icon: <Business /> },
+    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
+    { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
+    { id: 'activity', label: 'User Activity', icon: <History /> },
+    { id: 'delete', label: 'Delete User', icon: <Delete /> },
+  ];
 
-      <Grid container spacing={3}>
-        {/* Left Column - Profile Card (Persistent) */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Stack alignItems="center" spacing={2}>
-              <Avatar
-                sx={{
-                  width: 120,
-                  height: 120,
-                  bgcolor: '#A16AE8',
-                  fontSize: '3rem',
-                  fontWeight: 600,
-                }}
-              >
-                {(user.firstName?.[0] || '?').toUpperCase()}{(user.lastName?.[0] || '?').toUpperCase()}
-              </Avatar>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {user.firstName || 'Unknown'} {user.lastName || 'User'}
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'basic':
+        return (
+          <Stack spacing={4}>
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <VerifiedUser color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Profile Information
                 </Typography>
-              </Box>
-              <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
-                {user.status && (
-                  <Chip
-                    label={user.status.toUpperCase()}
-                    color={getStatusColor(user.status)}
-                    size="small"
-                  />
-                )}
-                {user.emailVerified && (
-                  <Chip
-                    icon={<CheckCircle />}
-                    label="Verified"
-                    color="success"
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
-                {user.isActive === false && (
-                  <Chip
-                    icon={<Cancel />}
-                    label="Inactive"
-                    color="error"
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
               </Stack>
-            </Stack>
-
-            <Divider sx={{ my: 3 }} />
-
-            {/* Contact Information */}
-            <Stack spacing={2}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Contact Information
-              </Typography>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Email color="action" fontSize="small" />
-                <Typography variant="body2">{user.email}</Typography>
-              </Stack>
-              {user.phone && (
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Phone color="action" fontSize="small" />
-                  <Typography variant="body2">{user.phone}</Typography>
-                </Stack>
-              )}
-              {user.address?.city && (
-                <Stack direction="row" spacing={2} alignItems="flex-start">
-                  <LocationOn color="action" fontSize="small" />
-                  <Typography variant="body2">
-                    {[
-                      user.address.street,
-                      user.address.city,
-                      user.address.state,
-                      user.address.zip,
-                      user.address.country,
-                    ]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </Typography>
-                </Stack>
-              )}
-            </Stack>
-
-            <Divider sx={{ my: 3 }} />
-
-            {/* Activity */}
-            <Stack spacing={2}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Activity
-              </Typography>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <CalendarToday color="action" fontSize="small" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Last Login
-                  </Typography>
-                  <Typography variant="body2">{formatLastLogin(user.lastLoginAt)}</Typography>
-                </Box>
-              </Stack>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Person color="action" fontSize="small" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Created
-                  </Typography>
-                  <Typography variant="body2">{formatDate(user.createdAt)}</Typography>
-                </Box>
-              </Stack>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* Right Column - Tabbed Content */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ borderRadius: 2 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(_, newValue) => setActiveTab(newValue)}
-              sx={{ borderBottom: 1, borderColor: 'divider', px: 3, pt: 2 }}
-            >
-              <Tab label="Basic Information" />
-              <Tab label="Organizations" />
-              <Tab label="Billing Details" />
-              <Tab label="Delete User" />
-            </Tabs>
-
-            {/* Tab 0: Basic Information */}
-            <TabPanel value={activeTab} index={0}>
-              <Stack spacing={3} sx={{ px: 3 }}>
-                {/* Profile Information Card */}
-                <Box>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <VerifiedUser color="primary" />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Profile Information
-                    </Typography>
-                  </Stack>
-                  <Table size="small">
-                    <TableBody>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600, width: '30%' }}>User ID</TableCell>
-                        <TableCell>{user.id}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                      </TableRow>
-                      {user.status && (
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                          <TableCell>
-                            <Chip label={user.status} color={getStatusColor(user.status)} size="small" />
-                          </TableCell>
-                        </TableRow>
+              <Table size="small">
+                <TableBody>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, width: '30%', border: 'none' }}>User ID</TableCell>
+                    <TableCell sx={{ border: 'none' }}>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                        {user.id}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Email</TableCell>
+                    <TableCell sx={{ border: 'none' }}>{user.email}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Phone</TableCell>
+                    <TableCell sx={{ border: 'none' }}>{user.phone || 'Not provided'}</TableCell>
+                  </TableRow>
+                  {user.address?.city && (
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, border: 'none' }}>Address</TableCell>
+                      <TableCell sx={{ border: 'none' }}>
+                        {[user.address.street, user.address.city, user.address.state, user.address.zip, user.address.country]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {user.status && (
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, border: 'none' }}>Status</TableCell>
+                      <TableCell sx={{ border: 'none' }}>
+                        <Chip label={getDisplayStatus(user.status)} color={getStatusColor(user.status)} size="small" />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Email Verified</TableCell>
+                    <TableCell sx={{ border: 'none' }}>
+                      {user.emailVerified ? (
+                        <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
+                      ) : (
+                        <Chip icon={<Cancel />} label="No" color="error" size="small" />
                       )}
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Email Verified</TableCell>
-                        <TableCell>
-                          {user.emailVerified ? (
-                            <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
-                          ) : (
-                            <Chip icon={<Cancel />} label="No" color="error" size="small" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Account Active</TableCell>
-                        <TableCell>
-                          {user.isActive ? (
-                            <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
-                          ) : (
-                            <Chip icon={<Cancel />} label="No" color="error" size="small" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </Box>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Account Active</TableCell>
+                    <TableCell sx={{ border: 'none' }}>
+                      {user.isActive ? (
+                        <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
+                      ) : (
+                        <Chip icon={<Cancel />} label="No" color="error" size="small" />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Created</TableCell>
+                    <TableCell sx={{ border: 'none' }}>{formatDate(user.createdAt)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Last Login</TableCell>
+                    <TableCell sx={{ border: 'none' }}>{formatLastLogin(user.lastLoginAt)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Box>
 
-                {/* Roles & Permissions Card */}
-                <Box>
+            <Divider />
+
+            <Box>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <AdminPanelSettings color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Roles & Permissions
+                </Typography>
+              </Stack>
+              {roles.length > 0 ? (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {roles.map((role) => (
+                    <Chip
+                      key={role.id}
+                      label={role.role}
+                      sx={{
+                        bgcolor: getRoleBadgeColor(role.role),
+                        color: 'white',
+                        fontWeight: 600,
+                        mb: 1,
+                      }}
+                    />
+                  ))}
+                </Stack>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No roles assigned
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        );
+
+      case 'organizations':
+        return (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
+              <Business color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Organization Memberships
+              </Typography>
+            </Stack>
+
+            {user.organizations && user.organizations.length > 0 ? (
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Organization</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {user.organizations.map((org) => (
+                      <TableRow key={org.organizationId} hover>
+                        <TableCell>
+                          <Stack>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {org.organizationName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {org.organizationSlug}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={org.roleType}
+                            size="small"
+                            sx={getRoleDisplayColor(org.roleType)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {org.joinedAt ? formatDate(org.joinedAt) : 'Unknown'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            onClick={() => navigate('/admin/organizations', {
+                              state: { selectedOrganizationId: org.organizationId }
+                            })}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            View Org
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Alert severity="info">
+                This user is not a member of any organizations.
+              </Alert>
+            )}
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+              Users can belong to multiple organizations with different roles in each.
+              To manage a user's role within an organization, visit the organization's member management page.
+            </Typography>
+          </Box>
+        );
+
+      case 'reset-password':
+        return (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
+              <LockReset color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Reset Password
+              </Typography>
+            </Stack>
+
+            {resetSuccess && (
+              <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResetSuccess(null)}>
+                {resetSuccess}
+              </Alert>
+            )}
+
+            <Stack spacing={4}>
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Option 1: Send Password Reset Link
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Send a secure password reset link to the user's email address ({user.email}).
+                  The user will be able to set their own password.
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={sendingResetLink ? <CircularProgress size={16} /> : <Send />}
+                  onClick={handleSendResetLink}
+                  disabled={sendingResetLink}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {sendingResetLink ? 'Sending...' : 'Send Reset Link'}
+                </Button>
+              </Paper>
+
+              <Divider>
+                <Typography variant="body2" color="text.secondary">OR</Typography>
+              </Divider>
+
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                  Option 2: Set Password Directly
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Set a new password for this user. You will need to communicate this password to the user securely.
+                </Typography>
+                
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    label="New Password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    helperText="Password must be at least 8 characters with uppercase, lowercase, number, and special character"
+                  />
+                  
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Refresh />}
+                      onClick={generateStrongPassword}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      Generate Strong Password
+                    </Button>
+                    
+                    {newPassword && (
+                      <Tooltip title={passwordCopied ? 'Copied!' : 'Copy to clipboard'}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<ContentCopy />}
+                          onClick={copyPasswordToClipboard}
+                          color={passwordCopied ? 'success' : 'primary'}
+                          sx={{ textTransform: 'none' }}
+                        >
+                          {passwordCopied ? 'Copied!' : 'Copy Password'}
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </Stack>
+
+                  <Button
+                    variant="contained"
+                    startIcon={settingPassword ? <CircularProgress size={16} /> : <LockReset />}
+                    onClick={handleSetPassword}
+                    disabled={settingPassword || !newPassword || newPassword.length < 8}
+                    sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+                  >
+                    {settingPassword ? 'Setting Password...' : 'Set Password'}
+                  </Button>
+                </Stack>
+              </Paper>
+            </Stack>
+          </Box>
+        );
+
+      case 'billing':
+        return (
+          <Box sx={{ py: 6, textAlign: 'center' }}>
+            <CreditCard sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              Billing Details
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Billing information and payment history will be available here in a future update.
+            </Typography>
+          </Box>
+        );
+
+      case 'activity':
+        return (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
+              <History color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                User Activity
+              </Typography>
+            </Stack>
+
+            {activityLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Stack spacing={4}>
+                <Paper variant="outlined" sx={{ p: 3 }}>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <AdminPanelSettings color="primary" />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Roles & Permissions
+                    <Login fontSize="small" color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Login History
                     </Typography>
                   </Stack>
-                  {roles.length > 0 ? (
-                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                      {roles.map((role) => (
-                        <Chip
-                          key={role.id}
-                          label={role.role}
-                          sx={{
-                            bgcolor: getRoleBadgeColor(role.role),
-                            color: 'white',
-                            fontWeight: 600,
-                            mb: 1,
-                          }}
-                        />
+                  
+                  {activity?.loginHistory && activity.loginHistory.length > 0 ? (
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Device</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>IP Address</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {activity.loginHistory.slice(0, 10).map((login, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
+                              </TableCell>
+                              <TableCell>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                  <Devices fontSize="small" color="action" />
+                                  <Typography variant="body2">{getDeviceIcon(login.userAgent)}</Typography>
+                                </Stack>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                  {login.ip}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No login history available. Last login: {formatLastLogin(user.lastLoginAt)}
+                    </Typography>
+                  )}
+                </Paper>
+
+                <Paper variant="outlined" sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                    <Devices fontSize="small" color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Connected Applications
+                    </Typography>
+                  </Stack>
+                  
+                  {activity?.lastAppsUsed && activity.lastAppsUsed.length > 0 ? (
+                    <Stack spacing={2}>
+                      {activity.lastAppsUsed.map((app, index) => (
+                        <Stack key={index} direction="row" justifyContent="space-between" alignItems="center">
+                          <Stack>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {app.appName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Client ID: {app.clientId}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="body2" color="text.secondary">
+                            Last used: {formatDistanceToNow(new Date(app.lastUsed), { addSuffix: true })}
+                          </Typography>
+                        </Stack>
                       ))}
                     </Stack>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      No roles assigned
+                      No connected applications found.
                     </Typography>
                   )}
-                </Box>
-              </Stack>
-            </TabPanel>
+                </Paper>
 
-            {/* Tab 1: Organizations */}
-            <TabPanel value={activeTab} index={1}>
-              <Box sx={{ px: 3 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
-                  <Business color="primary" />
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Organization Memberships
-                  </Typography>
-                </Stack>
+                <Paper variant="outlined" sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                    <Timeline fontSize="small" color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Recent Activity
+                    </Typography>
+                  </Stack>
+                  
+                  {activity?.recentActions && activity.recentActions.length > 0 ? (
+                    <Stack spacing={1}>
+                      {activity.recentActions.slice(0, 10).map((action, index) => (
+                        <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                          <Typography variant="body2">
+                            {action.action.replace(/_/g, ' ')} - {action.entityType}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
+                          </Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No recent activity recorded.
+                    </Typography>
+                  )}
+                </Paper>
 
-                {user.organizations && user.organizations.length > 0 ? (
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Organization</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {user.organizations.map((org) => (
-                          <TableRow key={org.organizationId} hover>
-                            <TableCell>
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                {org.organizationName}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {org.organizationSlug}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={org.roleType}
-                                size="small"
-                                sx={getRoleDisplayColor(org.roleType)}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" color="text.secondary">
-                                {org.joinedAt ? formatDate(org.joinedAt) : 'Unknown'}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Alert severity="info">
-                    This user is not a member of any organizations.
-                  </Alert>
-                )}
-              </Box>
-            </TabPanel>
-
-            {/* Tab 2: Billing Details */}
-            <TabPanel value={activeTab} index={2}>
-              <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  Billing Details
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Coming soon...
-                </Typography>
-              </Box>
-            </TabPanel>
-
-            {/* Tab 3: Delete User */}
-            <TabPanel value={activeTab} index={3}>
-              <Box sx={{ px: 3 }}>
-                <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
-                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                    Delete User
-                  </Typography>
+                <Alert severity="info" icon={<Timeline />}>
                   <Typography variant="body2">
-                    This action will permanently delete the user and all associated data. This cannot be undone.
+                    Activity tracking helps you understand how users interact with the platform.
+                    This data is used to improve the user experience and identify potential issues.
                   </Typography>
                 </Alert>
+              </Stack>
+            )}
+          </Box>
+        );
 
-                <Button
-                  variant="contained"
-                  color="error"
-                  fullWidth
-                  onClick={handleDeleteClick}
-                  sx={{ textTransform: 'none', fontWeight: 600 }}
-                >
-                  Delete User
-                </Button>
-              </Box>
-            </TabPanel>
-          </Paper>
-        </Grid>
-      </Grid>
+      case 'delete':
+        return (
+          <Box>
+            <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                Delete User Account
+              </Typography>
+              <Typography variant="body2">
+                This action will permanently delete the user and all associated data. This cannot be undone.
+              </Typography>
+            </Alert>
+
+            <Paper variant="outlined" sx={{ p: 3 }}>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                To confirm deletion, please type the user's email address:
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2, fontWeight: 600 }}>
+                {user.email}
+              </Typography>
+              
+              <TextField
+                fullWidth
+                label="Confirm email address"
+                value={deleteConfirmEmail}
+                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                placeholder={user.email}
+                sx={{ mb: 3 }}
+                error={deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email}
+                helperText={
+                  deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email
+                    ? 'Email does not match'
+                    : ''
+                }
+              />
+
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<Delete />}
+                onClick={handleDeleteClick}
+                disabled={deleteConfirmEmail.trim() !== user.email}
+                sx={{ textTransform: 'none', fontWeight: 600 }}
+              >
+                Delete User Permanently
+              </Button>
+            </Paper>
+          </Box>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header - Full Width */}
+      <Box sx={{ px: 3, pt: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" alignItems="center">
+            <IconButton onClick={handleBackNavigation} sx={{ mr: 2 }}>
+              <ArrowBack />
+            </IconButton>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              {isFromOrganization ? (
+                <>
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: 'text.secondary',
+                      cursor: 'pointer',
+                      '&:hover': { color: 'primary.main' }
+                    }}
+                    onClick={handleBackNavigation}
+                  >
+                    Organization Management
+                  </Typography>
+                  <ChevronRight sx={{ color: 'text.secondary' }} />
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: 'text.secondary',
+                      cursor: 'pointer',
+                      '&:hover': { color: 'primary.main' }
+                    }}
+                    onClick={handleBackNavigation}
+                  >
+                    {navigationState.organizationName}
+                  </Typography>
+                  <ChevronRight sx={{ color: 'text.secondary' }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    {userFullName}
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 600,
+                      color: 'text.secondary',
+                      cursor: 'pointer',
+                      '&:hover': { color: 'primary.main' }
+                    }}
+                    onClick={handleBackNavigation}
+                  >
+                    Internal Users
+                  </Typography>
+                  <ChevronRight sx={{ color: 'text.secondary' }} />
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    {userFullName}
+                  </Typography>
+                </>
+              )}
+            </Stack>
+          </Stack>
+        </Stack>
+      </Box>
+
+      {/* Main Content - Two Column Layout */}
+      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left Sidebar - Profile + Navigation */}
+        <Box
+          sx={{
+            width: 280,
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'auto',
+          }}
+        >
+          {/* Profile Section */}
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Avatar
+              src={user.profileData?.profilePicture ? `/api/objects${user.profileData.profilePicture.replace('/api/objects', '')}` : undefined}
+              sx={{
+                width: 100,
+                height: 100,
+                bgcolor: '#A16AE8',
+                fontSize: '2.5rem',
+                fontWeight: 600,
+                mx: 'auto',
+                mb: 2,
+              }}
+            >
+              {(user.firstName?.[0] || '?').toUpperCase()}{(user.lastName?.[0] || '?').toUpperCase()}
+            </Avatar>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {user.firstName || 'Unknown'} {user.lastName || 'User'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              {user.email}
+            </Typography>
+            <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+              {user.status && (
+                <Chip
+                  label={getDisplayStatus(user.status)}
+                  color={getStatusColor(user.status)}
+                  size="small"
+                />
+              )}
+              {user.emailVerified && (
+                <Chip
+                  icon={<CheckCircle />}
+                  label="Verified"
+                  color="success"
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+            </Stack>
+          </Box>
+
+          <Divider />
+
+          {/* Contact Info Summary */}
+          <Box sx={{ p: 2 }}>
+            <Stack spacing={1.5}>
+              {user.phone && (
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Phone fontSize="small" color="action" />
+                  <Typography variant="body2">{user.phone}</Typography>
+                </Stack>
+              )}
+              {user.address?.city && (
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <LocationOn fontSize="small" color="action" />
+                  <Typography variant="body2">
+                    {user.address.city}, {user.address.state}
+                  </Typography>
+                </Stack>
+              )}
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <CalendarToday fontSize="small" color="action" />
+                <Typography variant="body2">
+                  Last login: {formatLastLogin(user.lastLoginAt)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </Box>
+
+          <Divider />
+
+          {/* Navigation Tabs */}
+          <List sx={{ py: 1, flex: 1 }}>
+            {tabs.map((tab) => (
+              <ListItemButton
+                key={tab.id}
+                selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                sx={{
+                  py: 1.5,
+                  px: 2,
+                  borderLeft: activeTab === tab.id ? 3 : 0,
+                  borderColor: 'primary.main',
+                  bgcolor: activeTab === tab.id ? 'primary.lighter' : 'transparent',
+                  '&:hover': {
+                    bgcolor: activeTab === tab.id ? 'primary.lighter' : 'action.hover',
+                  },
+                  ...(tab.id === 'delete' && {
+                    color: 'error.main',
+                    '& .MuiListItemIcon-root': { color: 'error.main' },
+                  }),
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {tab.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={tab.label}
+                  primaryTypographyProps={{
+                    fontWeight: activeTab === tab.id ? 600 : 400,
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+
+        {/* Right Content Area */}
+        <Box sx={{ flex: 1, overflow: 'auto', p: 4 }}>
+          {renderTabContent()}
+        </Box>
+      </Box>
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -660,32 +1117,14 @@ export default function UserDetailPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Delete User</DialogTitle>
+        <DialogTitle>Confirm User Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Are you sure you want to delete {userFullName}?
+            You are about to permanently delete <strong>{userFullName}</strong>.
           </DialogContentText>
-          <DialogContentText sx={{ mb: 3, fontWeight: 'bold' }}>
-            This action cannot be undone. The user and all their data will be permanently removed.
+          <DialogContentText sx={{ mb: 2, color: 'error.main', fontWeight: 'bold' }}>
+            This action cannot be undone. All user data will be permanently removed.
           </DialogContentText>
-          <DialogContentText sx={{ mb: 2 }}>
-            To confirm, please type the user's email address: <strong>{user.email}</strong>
-          </DialogContentText>
-          <TextField
-            fullWidth
-            label="Confirm email address"
-            value={deleteConfirmEmail}
-            onChange={(e) => setDeleteConfirmEmail(e.target.value)}
-            placeholder={user.email}
-            autoFocus
-            disabled={deleting}
-            error={deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email}
-            helperText={
-              deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email
-                ? 'Email does not match'
-                : ''
-            }
-          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCancelDelete} disabled={deleting}>
@@ -695,13 +1134,28 @@ export default function UserDetailPage() {
             onClick={handleConfirmDelete}
             color="error"
             variant="contained"
-            disabled={deleting || deleteConfirmEmail.trim() !== user.email}
+            disabled={deleting}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
           >
             {deleting ? 'Deleting...' : 'Delete Permanently'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={snackbar.severity} 
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

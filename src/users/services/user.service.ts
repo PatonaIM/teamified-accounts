@@ -569,4 +569,93 @@ export class UserService {
 
     return { user: savedUser, verificationToken };
   }
+
+  async getUserActivity(userId: string): Promise<{
+    loginHistory: Array<{
+      timestamp: string;
+      ip: string;
+      userAgent: string;
+      deviceType: string;
+    }>;
+    lastAppsUsed: Array<{
+      appName: string;
+      clientId: string;
+      lastUsed: string;
+    }>;
+    recentActions: Array<{
+      action: string;
+      entityType: string;
+      timestamp: string;
+    }>;
+  }> {
+    // Verify user exists
+    await this.findOne(userId);
+
+    // Get login history from sessions
+    const sessions = await this.dataSource.query(
+      `SELECT created_at, device_metadata, last_activity_at 
+       FROM sessions 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC 
+       LIMIT 20`,
+      [userId]
+    );
+
+    const loginHistory = sessions.map((session: any) => ({
+      timestamp: session.created_at?.toISOString() || new Date().toISOString(),
+      ip: session.device_metadata?.ip || 'Unknown',
+      userAgent: session.device_metadata?.userAgent || 'Unknown',
+      deviceType: this.getDeviceType(session.device_metadata?.userAgent || ''),
+    }));
+
+    // Get connected apps from user_app_permissions
+    const appPermissions = await this.dataSource.query(
+      `SELECT uap.oauth_client_id, uap.updated_at, oc.name as app_name
+       FROM user_app_permissions uap
+       LEFT JOIN oauth_clients oc ON uap.oauth_client_id = oc.id
+       WHERE uap.user_id = $1 AND uap.permission = 'allow'
+       ORDER BY uap.updated_at DESC
+       LIMIT 10`,
+      [userId]
+    );
+
+    const lastAppsUsed = appPermissions.map((app: any) => ({
+      appName: app.app_name || 'Unknown App',
+      clientId: app.oauth_client_id,
+      lastUsed: app.updated_at?.toISOString() || new Date().toISOString(),
+    }));
+
+    // Get recent actions from audit logs
+    const auditLogs = await this.dataSource.query(
+      `SELECT action, entity_type, created_at
+       FROM audit_logs
+       WHERE actor_user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [userId]
+    );
+
+    const recentActions = auditLogs.map((log: any) => ({
+      action: log.action,
+      entityType: log.entity_type,
+      timestamp: log.created_at?.toISOString() || new Date().toISOString(),
+    }));
+
+    return {
+      loginHistory,
+      lastAppsUsed,
+      recentActions,
+    };
+  }
+
+  private getDeviceType(userAgent: string): string {
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return 'Mobile';
+    }
+    if (ua.includes('tablet') || ua.includes('ipad')) {
+      return 'Tablet';
+    }
+    return 'Desktop';
+  }
 }
