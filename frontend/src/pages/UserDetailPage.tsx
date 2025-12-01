@@ -853,9 +853,9 @@ export default function UserDetailPage() {
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header - Full Width */}
-      <Box sx={{ px: 3, pt: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ px: 3, pt: 3, pb: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack direction="row" alignItems="center">
             <IconButton onClick={handleBackNavigation} sx={{ mr: 2 }}>
