@@ -946,27 +946,9 @@ export default function UserDetailPage() {
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
               {user.firstName || 'Unknown'} {user.lastName || 'User'}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            <Typography variant="body2" color="text.secondary">
               {user.email}
             </Typography>
-            <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
-              {user.status && (
-                <Chip
-                  label={getDisplayStatus(user.status)}
-                  color={getStatusColor(user.status)}
-                  size="small"
-                />
-              )}
-              {user.emailVerified && (
-                <Chip
-                  icon={<CheckCircle />}
-                  label="Verified"
-                  color="success"
-                  size="small"
-                  variant="outlined"
-                />
-              )}
-            </Stack>
           </Box>
 
           <Divider />
