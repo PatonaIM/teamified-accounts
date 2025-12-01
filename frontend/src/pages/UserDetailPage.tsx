@@ -324,11 +324,13 @@ export default function UserDetailPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      await api.post(`/objects/users/${userId}/profile-picture`, formData, {
+      const response = await api.post(`/objects/users/${userId}/profile-picture`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      await fetchUserDetails();
+      if (response.data?.url && user) {
+        setUser({ ...user, profilePictureUrl: response.data.url });
+      }
       setSnackbar({ open: true, message: 'Profile picture updated successfully', severity: 'success' });
     } catch (err: any) {
       setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to update profile picture', severity: 'error' });

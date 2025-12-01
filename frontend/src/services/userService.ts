@@ -18,6 +18,7 @@ export interface User {
   phone?: string;
   address?: any;
   profileData?: any;
+  profilePictureUrl?: string | null;
   clientId?: string;
   status: 'active' | 'inactive' | 'archived' | 'invited';
   isActive: boolean;

@@ -12,12 +12,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ObjectStorageService, ObjectNotFoundError } from './object-storage.service';
 import { AzureBlobStorageService } from './azure-blob-storage.service';
 import { ObjectPermission } from './object-acl.service';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '../auth/entities/user.entity';
 
 @ApiTags('Storage')
 @Controller('objects')
@@ -25,6 +28,8 @@ export class BlobStorageController {
   constructor(
     private readonly objectStorageService: ObjectStorageService,
     private readonly azureBlobStorageService: AzureBlobStorageService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   @Get('azure/:blobPath(*)')
@@ -94,6 +99,10 @@ export class BlobStorageController {
       file.buffer,
       file.originalname,
     );
+
+    await this.userRepository.update(userId, {
+      profilePictureUrl: result.url,
+    });
 
     return {
       success: true,
