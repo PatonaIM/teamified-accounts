@@ -522,48 +522,6 @@ export default function UserDetailPage() {
                     <TableCell sx={{ border: 'none' }}>{user.email}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Phone</TableCell>
-                    <TableCell sx={{ border: 'none' }}>{user.phone || 'Not provided'}</TableCell>
-                  </TableRow>
-                  {user.address?.city && (
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600, border: 'none' }}>Address</TableCell>
-                      <TableCell sx={{ border: 'none' }}>
-                        {[user.address.street, user.address.city, user.address.state, user.address.zip, user.address.country]
-                          .filter(Boolean)
-                          .join(', ')}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {user.status && (
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600, border: 'none' }}>Status</TableCell>
-                      <TableCell sx={{ border: 'none' }}>
-                        <Chip label={getDisplayStatus(user.status)} color={getStatusColor(user.status)} size="small" />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Email Verified</TableCell>
-                    <TableCell sx={{ border: 'none' }}>
-                      {user.emailVerified ? (
-                        <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
-                      ) : (
-                        <Chip icon={<Cancel />} label="No" color="error" size="small" />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Account Active</TableCell>
-                    <TableCell sx={{ border: 'none' }}>
-                      {user.isActive ? (
-                        <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
-                      ) : (
-                        <Chip icon={<Cancel />} label="No" color="error" size="small" />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
                     <TableCell sx={{ fontWeight: 600, border: 'none' }}>Created</TableCell>
                     <TableCell sx={{ border: 'none' }}>{formatDate(user.createdAt)}</TableCell>
                   </TableRow>
@@ -855,68 +813,71 @@ export default function UserDetailPage() {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header - Full Width */}
-      <Box sx={{ px: 3, pt: 3, pb: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" alignItems="center">
-            <IconButton onClick={handleBackNavigation} sx={{ mr: 2 }}>
-              <ArrowBack />
-            </IconButton>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              {isFromOrganization ? (
-                <>
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: 'text.secondary',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' }
-                    }}
-                    onClick={handleBackNavigation}
-                  >
-                    Organization Management
-                  </Typography>
-                  <ChevronRight sx={{ color: 'text.secondary' }} />
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: 'text.secondary',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' }
-                    }}
-                    onClick={handleBackNavigation}
-                  >
-                    {navigationState.organizationName}
-                  </Typography>
-                  <ChevronRight sx={{ color: 'text.secondary' }} />
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {userFullName}
-                  </Typography>
-                </>
-              ) : (
-                <>
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      fontWeight: 600,
-                      color: 'text.secondary',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' }
-                    }}
-                    onClick={handleBackNavigation}
-                  >
-                    Internal Users
-                  </Typography>
-                  <ChevronRight sx={{ color: 'text.secondary' }} />
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {userFullName}
-                  </Typography>
-                </>
-              )}
-            </Stack>
+      <Box sx={{ display: 'flex', alignItems: 'center', px: 3, pt: 3, pb: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+        <IconButton 
+          onClick={handleBackNavigation}
+          sx={{ 
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': { 
+              bgcolor: 'rgba(161, 106, 232, 0.08)' 
+            }
+          }}
+        >
+          <ArrowBack />
+        </IconButton>
+        {isFromOrganization ? (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                color: 'text.secondary',
+                cursor: 'pointer',
+                '&:hover': { color: 'primary.main' }
+              }}
+              onClick={handleBackNavigation}
+            >
+              Organization Management
+            </Typography>
+            <ChevronRight sx={{ color: 'text.secondary' }} />
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                color: 'text.secondary',
+                cursor: 'pointer',
+                '&:hover': { color: 'primary.main' }
+              }}
+              onClick={handleBackNavigation}
+            >
+              {navigationState.organizationName}
+            </Typography>
+            <ChevronRight sx={{ color: 'text.secondary' }} />
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {userFullName}
+            </Typography>
           </Stack>
-        </Stack>
+        ) : (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700,
+                color: 'text.secondary',
+                cursor: 'pointer',
+                '&:hover': { color: 'primary.main' }
+              }}
+              onClick={handleBackNavigation}
+            >
+              Internal Users
+            </Typography>
+            <ChevronRight sx={{ color: 'text.secondary' }} />
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {userFullName}
+            </Typography>
+          </Stack>
+        )}
       </Box>
 
       {/* Main Content - Two Column Layout */}
