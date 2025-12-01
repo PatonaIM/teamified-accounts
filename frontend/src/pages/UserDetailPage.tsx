@@ -782,8 +782,8 @@ export default function UserDetailPage() {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Header - Full Width */}
-      <Box sx={{ display: 'flex', alignItems: 'center', px: 3, pt: 1, pb: 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+      {/* Header - Matching OrganizationManagementPage */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <IconButton 
           onClick={handleBackNavigation}
           sx={{ 
