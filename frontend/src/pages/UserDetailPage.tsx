@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -60,6 +60,7 @@ import {
   Devices,
   Timeline,
   Edit,
+  CameraAlt,
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
@@ -130,6 +131,10 @@ export default function UserDetailPage() {
     message: '',
     severity: 'success',
   });
+
+  // Profile picture upload state
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const navigationState = location.state as { 
     organizationId?: string; 
@@ -292,6 +297,46 @@ export default function UserDetailPage() {
       setShowDeleteDialog(false);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfilePictureChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userId) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setSnackbar({ open: true, message: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)', severity: 'error' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'Image size must be less than 5MB', severity: 'error' });
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      await api.post(`/objects/users/${userId}/profile-picture`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      await fetchUserDetails();
+      setSnackbar({ open: true, message: 'Profile picture updated successfully', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to update profile picture', severity: 'error' });
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -892,20 +937,75 @@ export default function UserDetailPage() {
         >
           {/* Profile Section */}
           <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Avatar
-              src={user.profileData?.profilePicture ? `/api/objects${user.profileData.profilePicture.replace('/api/objects', '')}` : undefined}
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleProfilePictureChange}
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              style={{ display: 'none' }}
+            />
+            
+            {/* Avatar with camera overlay */}
+            <Box
               sx={{
+                position: 'relative',
                 width: 100,
                 height: 100,
-                bgcolor: '#A16AE8',
-                fontSize: '2.5rem',
-                fontWeight: 600,
                 mx: 'auto',
                 mb: 2,
+                cursor: 'pointer',
+                '&:hover .camera-overlay': {
+                  opacity: 1,
+                },
               }}
+              onClick={handleProfilePictureClick}
             >
-              {(user.firstName?.[0] || '?').toUpperCase()}{(user.lastName?.[0] || '?').toUpperCase()}
-            </Avatar>
+              <Avatar
+                src={user.profileData?.profilePicture ? `/api/objects${user.profileData.profilePicture.replace('/api/objects', '')}` : undefined}
+                sx={{
+                  width: 100,
+                  height: 100,
+                  bgcolor: '#A16AE8',
+                  fontSize: '2.5rem',
+                  fontWeight: 600,
+                }}
+              >
+                {(user.firstName?.[0] || '?').toUpperCase()}{(user.lastName?.[0] || '?').toUpperCase()}
+              </Avatar>
+              
+              {/* Camera icon overlay */}
+              <Box
+                className="camera-overlay"
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid',
+                  borderColor: 'background.paper',
+                  boxShadow: 1,
+                  transition: 'opacity 0.2s ease',
+                  opacity: 0.9,
+                  '&:hover': {
+                    opacity: 1,
+                    bgcolor: 'primary.dark',
+                  },
+                }}
+              >
+                {uploadingPhoto ? (
+                  <CircularProgress size={16} sx={{ color: 'white' }} />
+                ) : (
+                  <CameraAlt sx={{ fontSize: 16, color: 'white' }} />
+                )}
+              </Box>
+            </Box>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
               {user.firstName || 'Unknown'} {user.lastName || 'User'}
             </Typography>
