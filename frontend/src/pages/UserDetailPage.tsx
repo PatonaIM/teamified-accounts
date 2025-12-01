@@ -558,8 +558,13 @@ export default function UserDetailPage() {
                   <TableCell sx={{ border: 'none' }}>
                     <Chip
                       label={getDisplayStatus(user.status || 'active')}
-                      color={getStatusColor(user.status || 'active')}
+                      color={(['nlwf', 'inactive'] as string[]).includes(user.status || '') ? undefined : getStatusColor(user.status || 'active')}
                       size="small"
+                      sx={(['nlwf', 'inactive'] as string[]).includes(user.status || '') ? {
+                        bgcolor: '#757575',
+                        color: 'white',
+                        fontWeight: 600
+                      } : undefined}
                     />
                   </TableCell>
                 </TableRow>
