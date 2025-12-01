@@ -155,13 +155,23 @@ export class UserResponseDto {
   })
   @Expose()
   @Transform(({ obj }) => {
-    // Extract organization memberships
+    // Extract organization memberships and match with roles
     if (obj.organizationMembers && Array.isArray(obj.organizationMembers)) {
+      // Build a map of organization-scoped roles from userRoles
+      const orgRolesMap: Record<string, string> = {};
+      if (obj.userRoles && Array.isArray(obj.userRoles)) {
+        obj.userRoles.forEach((ur: any) => {
+          if (ur.scope === 'organization' && ur.scopeEntityId) {
+            orgRolesMap[ur.scopeEntityId] = ur.roleType;
+          }
+        });
+      }
+      
       return obj.organizationMembers.map((om: any) => ({
         organizationId: om.organizationId,
         organizationName: om.organization?.name || 'Unknown',
         organizationSlug: om.organization?.slug || '',
-        roleType: om.roleType || '',
+        roleType: orgRolesMap[om.organizationId] || 'member',
         joinedAt: om.createdAt?.toISOString() || null,
       })).filter((org: any) => org.organizationId);
     }
