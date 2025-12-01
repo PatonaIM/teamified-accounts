@@ -886,7 +886,8 @@ export default function UserDetailPage() {
             bgcolor: isDarkMode ? 'background.paper' : 'grey.50',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'auto',
+            overflowY: 'auto',
+            overflowX: 'hidden',
           }}
         >
           {/* Profile Section */}
@@ -1010,7 +1011,7 @@ export default function UserDetailPage() {
         </Box>
 
         {/* Right Content Area */}
-        <Box sx={{ flex: 1, overflow: 'auto', p: 4 }}>
+        <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', p: 4 }}>
           {renderTabContent()}
         </Box>
       </Box>
