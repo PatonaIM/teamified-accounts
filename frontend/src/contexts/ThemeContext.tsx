@@ -516,10 +516,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         <CssBaseline />
         <Box
           sx={{
-            transition: 'background-color 0.3s ease-in-out, color 0.3s ease-in-out',
-            opacity: isTransitioning ? 0.7 : 1,
+            transition: 'background-color 0.15s ease-in-out, color 0.15s ease-in-out',
+            opacity: isTransitioning ? 0.85 : 1,
             '& *': {
-              transition: 'background-color 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out',
+              transition: 'background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out',
             },
           }}
         >
