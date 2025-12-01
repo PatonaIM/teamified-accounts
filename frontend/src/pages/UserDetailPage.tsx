@@ -417,20 +417,22 @@ export default function UserDetailPage() {
     return '#757575';
   };
 
-  const getRoleDisplayColor = (roleType: string): { bgcolor: string; color: string } => {
+  const getRoleDisplayColor = (roleType: string): { bgcolor: string; color: string; fontWeight: number } => {
     switch (true) {
       case roleType.includes('super_admin'):
-        return { bgcolor: '#ffebee', color: '#c62828' };
+        return { bgcolor: '#c62828', color: 'white', fontWeight: 600 };
       case roleType.includes('admin'):
-        return { bgcolor: '#f3e5f5', color: '#7b1fa2' };
+        return { bgcolor: '#A16AE8', color: 'white', fontWeight: 600 };
       case roleType.includes('hr'):
-        return { bgcolor: '#e8f5e9', color: '#2e7d32' };
+        return { bgcolor: '#4CAF50', color: 'white', fontWeight: 600 };
       case roleType.includes('finance'):
-        return { bgcolor: '#fff3e0', color: '#e65100' };
+        return { bgcolor: '#FF9800', color: 'white', fontWeight: 600 };
       case roleType.includes('recruiter'):
-        return { bgcolor: '#e3f2fd', color: '#1565c0' };
+        return { bgcolor: '#2196F3', color: 'white', fontWeight: 600 };
+      case roleType.includes('employee'):
+        return { bgcolor: '#607D8B', color: 'white', fontWeight: 600 };
       default:
-        return { bgcolor: '#f5f5f5', color: '#616161' };
+        return { bgcolor: '#757575', color: 'white', fontWeight: 600 };
     }
   };
 
@@ -641,11 +643,6 @@ export default function UserDetailPage() {
                 This user is not a member of any organizations.
               </Alert>
             )}
-
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-              Users can belong to multiple organizations with different roles in each.
-              To manage a user's role within an organization, visit the organization's member management page.
-            </Typography>
           </Box>
         );
 
