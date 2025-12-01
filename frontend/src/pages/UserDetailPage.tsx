@@ -965,34 +965,6 @@ export default function UserDetailPage() {
 
           <Divider />
 
-          {/* Contact Info Summary */}
-          <Box sx={{ p: 2 }}>
-            <Stack spacing={1.5}>
-              {user.phone && (
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Phone fontSize="small" color="action" />
-                  <Typography variant="body2">{user.phone}</Typography>
-                </Stack>
-              )}
-              {user.address?.city && (
-                <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                  <LocationOn fontSize="small" color="action" />
-                  <Typography variant="body2">
-                    {user.address.city}, {user.address.state}
-                  </Typography>
-                </Stack>
-              )}
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <CalendarToday fontSize="small" color="action" />
-                <Typography variant="body2">
-                  Last login: {formatLastLogin(user.lastLoginAt)}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Box>
-
-          <Divider />
-
           {/* Navigation Tabs */}
           <List sx={{ py: 1, flex: 1 }}>
             {tabs.map((tab) => (
