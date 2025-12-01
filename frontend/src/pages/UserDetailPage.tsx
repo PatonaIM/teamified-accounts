@@ -485,27 +485,11 @@ export default function UserDetailPage() {
         return (
           <Stack spacing={4}>
             <Box>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <VerifiedUser color="primary" />
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Profile Information
-                  </Typography>
-                </Stack>
-                <Tooltip title="Edit Profile Information">
-                  <IconButton
-                    size="small"
-                    onClick={() => navigate(`/admin/users/${userId}/edit`)}
-                    sx={{
-                      color: 'primary.main',
-                      '&:hover': {
-                        bgcolor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)',
-                      },
-                    }}
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <VerifiedUser color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Profile Information
+                </Typography>
               </Stack>
               <Table size="small">
                 <TableBody>
@@ -536,27 +520,11 @@ export default function UserDetailPage() {
             <Divider />
 
             <Box>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <AdminPanelSettings color="primary" />
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Roles & Permissions
-                  </Typography>
-                </Stack>
-                <Tooltip title="Edit Roles & Permissions">
-                  <IconButton
-                    size="small"
-                    onClick={() => navigate(`/admin/users/${userId}/edit?tab=roles`)}
-                    sx={{
-                      color: 'primary.main',
-                      '&:hover': {
-                        bgcolor: isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)',
-                      },
-                    }}
-                  >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <AdminPanelSettings color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Roles & Permissions
+                </Typography>
               </Stack>
               {roles.length > 0 ? (
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
