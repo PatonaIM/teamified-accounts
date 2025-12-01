@@ -893,7 +893,13 @@ export default function UserDetailPage() {
               onClick={handleProfilePictureClick}
             >
               <Avatar
-                src={user.profileData?.profilePicture ? `/api/objects${user.profileData.profilePicture.replace('/api/objects', '')}` : undefined}
+                src={
+                  user.profilePictureUrl 
+                    ? (user.profilePictureUrl.startsWith('/api/') ? user.profilePictureUrl : `/api/objects${user.profilePictureUrl.replace('/api/objects', '')}`)
+                    : user.profileData?.profilePicture 
+                      ? `/api/objects${user.profileData.profilePicture.replace('/api/objects', '')}`
+                      : undefined
+                }
                 sx={{
                   width: 100,
                   height: 100,
