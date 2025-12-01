@@ -136,6 +136,9 @@ export default function UserDetailPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Verification email state
+  const [sendingVerification, setSendingVerification] = useState(false);
+
   const navigationState = location.state as { 
     organizationId?: string; 
     organizationName?: string;
@@ -342,6 +345,20 @@ export default function UserDetailPage() {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!userId || !user) return;
+    
+    setSendingVerification(true);
+    try {
+      await api.post(`/v1/users/${userId}/resend-verification`);
+      setSnackbar({ open: true, message: 'Verification email sent successfully', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to send verification email', severity: 'error' });
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Unknown';
     try {
@@ -485,71 +502,76 @@ export default function UserDetailPage() {
     switch (activeTab) {
       case 'basic':
         return (
-          <Stack spacing={4}>
-            <Box>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                <VerifiedUser color="primary" />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Profile Information
-                </Typography>
-              </Stack>
-              <Table size="small">
-                <TableBody>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, width: '30%', border: 'none' }}>User ID</TableCell>
-                    <TableCell sx={{ border: 'none' }}>
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                        {user.id}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Email</TableCell>
-                    <TableCell sx={{ border: 'none' }}>{user.email}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Created</TableCell>
-                    <TableCell sx={{ border: 'none' }}>{formatDate(user.createdAt)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600, border: 'none' }}>Last Login</TableCell>
-                    <TableCell sx={{ border: 'none' }}>{formatLastLogin(user.lastLoginAt)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                <AdminPanelSettings color="primary" />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Roles & Permissions
-                </Typography>
-              </Stack>
-              {roles.length > 0 ? (
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {roles.map((role) => (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <VerifiedUser color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Profile Information
+              </Typography>
+            </Stack>
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, width: '30%', border: 'none' }}>User ID</TableCell>
+                  <TableCell sx={{ border: 'none' }}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      {user.id}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Email</TableCell>
+                  <TableCell sx={{ border: 'none' }}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography variant="body2">{user.email}</Typography>
+                      {user.emailVerified ? (
+                        <Tooltip title="Email verified">
+                          <CheckCircle sx={{ fontSize: 18, color: 'success.main' }} />
+                        </Tooltip>
+                      ) : (
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Chip 
+                            label="Needs Verification" 
+                            size="small" 
+                            color="warning"
+                            sx={{ height: 24 }}
+                          />
+                          <Button
+                            size="small"
+                            variant="text"
+                            startIcon={sendingVerification ? <CircularProgress size={14} /> : <Send />}
+                            onClick={handleResendVerification}
+                            disabled={sendingVerification}
+                            sx={{ textTransform: 'none', minWidth: 'auto' }}
+                          >
+                            {sendingVerification ? 'Sending...' : 'Resend'}
+                          </Button>
+                        </Stack>
+                      )}
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Status</TableCell>
+                  <TableCell sx={{ border: 'none' }}>
                     <Chip
-                      key={role.id}
-                      label={role.role}
-                      sx={{
-                        bgcolor: getRoleBadgeColor(role.role),
-                        color: 'white',
-                        fontWeight: 600,
-                        mb: 1,
-                      }}
+                      label={getDisplayStatus(user.status || 'active')}
+                      color={getStatusColor(user.status || 'active')}
+                      size="small"
                     />
-                  ))}
-                </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No roles assigned
-                </Typography>
-              )}
-            </Box>
-          </Stack>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Created</TableCell>
+                  <TableCell sx={{ border: 'none' }}>{formatDate(user.createdAt)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Last Login</TableCell>
+                  <TableCell sx={{ border: 'none' }}>{formatLastLogin(user.lastLoginAt)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Box>
         );
 
       case 'organizations':

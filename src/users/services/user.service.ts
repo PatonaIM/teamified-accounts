@@ -570,6 +570,22 @@ export class UserService {
     return { user: savedUser, verificationToken };
   }
 
+  async generateEmailVerificationToken(userId: string): Promise<string> {
+    const user = await this.findOne(userId);
+    
+    const { v4: uuidv4 } = await import('uuid');
+    const verificationToken = uuidv4();
+    
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
+    await this.userRepository.save(user);
+    
+    this.logger.log(`Generated new email verification token for user ${userId}`);
+    
+    return verificationToken;
+  }
+
   async getUserActivity(userId: string): Promise<{
     loginHistory: Array<{
       timestamp: string;

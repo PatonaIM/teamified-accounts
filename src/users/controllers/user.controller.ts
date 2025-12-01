@@ -567,6 +567,52 @@ export class UserController {
     };
   }
 
+  @Post(`:id(${UUID_PARAM_PATTERN})/resend-verification`)
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'hr')
+  @ApiOperation({ summary: 'Resend verification email to user (Admin/HR only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already verified',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async resendVerificationEmail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    const user = await this.userService.findOne(id);
+    
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const verificationToken = await this.userService.generateEmailVerificationToken(id);
+    
+    const baseUrl = req.headers.origin || req.headers.referer?.replace(/\/$/, '') || 'http://localhost:5000';
+    
+    try {
+      await this.emailService.sendEmailVerificationReminder(
+        user.email,
+        user.firstName,
+        verificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      throw new BadRequestException('Failed to send verification email');
+    }
+
+    return {
+      message: 'Verification email sent successfully'
+    };
+  }
+
   @Post('bulk/status')
   @UseGuards(RolesGuard)
   @Roles('admin')
