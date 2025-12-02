@@ -9,6 +9,7 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  Avatar,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Lock, Warning } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +20,7 @@ import { clearLastPath } from '../components/SessionAwareRedirect';
 
 const ForceChangePasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const { updateUser, refreshUser } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -189,9 +190,40 @@ const ForceChangePasswordPage: React.FC = () => {
             <Typography variant="h5" component="h1" sx={{ fontWeight: 600, mb: 1 }}>
               Password Change Required
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
               Your password was reset by an administrator. Please create a new password to continue.
             </Typography>
+            
+            {user && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: 2,
+                p: 2,
+                bgcolor: 'action.hover',
+                borderRadius: 2,
+              }}>
+                <Avatar
+                  sx={{ 
+                    width: 48, 
+                    height: 48,
+                    bgcolor: 'primary.main',
+                    fontSize: '1.25rem',
+                  }}
+                >
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </Avatar>
+                <Box sx={{ textAlign: 'left' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    {user.firstName} {user.lastName}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {user.email}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
           </Box>
 
           <Alert severity="info" sx={{ mb: 2 }}>
