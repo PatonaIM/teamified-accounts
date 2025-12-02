@@ -671,9 +671,9 @@ This is an automated message from Teamified.
         return { message: securityMessage };
       }
 
-      // Generate reset token
+      // Generate reset token (24 hours expiry)
       const resetToken = uuidv4();
-      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       // Save reset token to user
       await this.userRepository.update(user.id, {
@@ -832,6 +832,45 @@ This is an automated message from Teamified.
     return { 
       message: 'Password set successfully. User will be required to change password on first login.',
       warning: 'IMPORTANT: Copy and save this password now. Share it securely with the user. This password will not be shown again.',
+    };
+  }
+
+  async validateResetToken(token: string): Promise<{
+    valid: boolean;
+    user?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      profilePictureUrl: string | null;
+    };
+    expiresAt?: Date;
+  }> {
+    if (!token) {
+      return { valid: false };
+    }
+
+    const user = await this.userRepository.findOne({
+      where: {
+        passwordResetToken: token,
+        passwordResetTokenExpiry: MoreThan(new Date()),
+        isActive: true,
+      },
+      select: ['id', 'firstName', 'lastName', 'email', 'profilePictureUrl', 'passwordResetTokenExpiry'],
+    });
+
+    if (!user) {
+      return { valid: false };
+    }
+
+    return {
+      valid: true,
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profilePictureUrl: user.profilePictureUrl,
+      },
+      expiresAt: user.passwordResetTokenExpiry,
     };
   }
 

@@ -4,6 +4,7 @@ import {
   Get,
   Put,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   Request,
@@ -17,6 +18,7 @@ import {
   ApiResponse, 
   ApiBearerAuth, 
   ApiBody,
+  ApiQuery,
   ApiSecurity,
   ApiHeader,
   ApiConsumes,
@@ -863,6 +865,61 @@ export class AuthController {
     );
   }
 
+  @Get('validate-reset-token')
+  @Throttle({ default: { limit: 20, ttl: 300000 } })
+  @ApiOperation({
+    summary: 'Validate password reset token and get user info',
+    description: `
+      Validates a password reset token and returns the associated user's basic information.
+      This endpoint is used by the reset password page to show the user's name and profile picture
+      before they enter their new password, confirming which account is being reset.
+      
+      ## Response:
+      - valid: boolean indicating if the token is valid and not expired
+      - user: object containing firstName, lastName, email, and profilePictureUrl (if valid)
+      - expiresAt: token expiration timestamp (if valid)
+    `,
+  })
+  @ApiQuery({
+    name: 'token',
+    required: true,
+    description: 'The password reset token from the email link',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token validation result with user info if valid',
+    schema: {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean' },
+        user: {
+          type: 'object',
+          properties: {
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            email: { type: 'string' },
+            profilePictureUrl: { type: 'string', nullable: true },
+          },
+        },
+        expiresAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  async validateResetToken(
+    @Query('token') token: string,
+  ): Promise<{
+    valid: boolean;
+    user?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      profilePictureUrl: string | null;
+    };
+    expiresAt?: Date;
+  }> {
+    return this.authService.validateResetToken(token);
+  }
+
   @Post('reset-password')
   @Throttle({ default: { limit: 5, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
@@ -880,7 +937,7 @@ export class AuthController {
       
       ## Security Features:
       - Rate limited to 5 attempts per 5 minutes
-      - Token expires after 1 hour
+      - Token expires after 24 hours
       - Password must meet security requirements
       - All existing sessions are invalidated after reset
       - All attempts are logged for security monitoring
