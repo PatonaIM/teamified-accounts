@@ -136,18 +136,42 @@ export class EmailService {
     });
   }
 
-  private generateInviteLink(token: string): string{
-    const baseUrl = this.configService.get('FRONTEND_URL', 'https://teamified.com');
+  /**
+   * Get the frontend URL dynamically based on environment
+   * Priority: FRONTEND_URL > REPLIT_DOMAINS > default
+   */
+  private getFrontendUrl(): string {
+    // First check for explicit FRONTEND_URL configuration
+    const frontendUrl = this.configService.get('FRONTEND_URL');
+    if (frontendUrl) {
+      return frontendUrl;
+    }
+
+    // For Replit environments, use REPLIT_DOMAINS
+    const replitDomains = this.configService.get('REPLIT_DOMAINS');
+    if (replitDomains) {
+      // REPLIT_DOMAINS can contain multiple domains separated by comma, use the first one
+      const primaryDomain = replitDomains.split(',')[0].trim();
+      return `https://${primaryDomain}`;
+    }
+
+    // Fallback to default
+    this.logger.warn('No FRONTEND_URL or REPLIT_DOMAINS configured, using default');
+    return 'https://teamified.com';
+  }
+
+  private generateInviteLink(token: string): string {
+    const baseUrl = this.getFrontendUrl();
     return `${baseUrl}/accept-invitation?token=${token}`;
   }
 
   private generateVerificationLink(token: string): string {
-    const baseUrl = this.configService.get('FRONTEND_URL', 'https://teamified.com');
+    const baseUrl = this.getFrontendUrl();
     return `${baseUrl}/verify-email?token=${token}`;
   }
 
   private generatePasswordResetLink(token: string): string {
-    const baseUrl = this.configService.get('FRONTEND_URL', 'https://teamified.com');
+    const baseUrl = this.getFrontendUrl();
     return `${baseUrl}/reset-password?token=${token}`;
   }
 
