@@ -1031,14 +1031,16 @@ export default function UserDetailPage() {
                 Set a new password and securely communicate it to the user.
               </Typography>
               
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  Important: Copy and save this password now!
-                </Typography>
-                <Typography variant="body2">
-                  The password will not be shown again after you close this dialog. You must share it securely with the user (e.g., in person, phone call, or encrypted message).
-                </Typography>
-              </Alert>
+              {newPassword && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Important: Copy and save this password now!
+                  </Typography>
+                  <Typography variant="body2">
+                    The password will not be shown again after you close this dialog. You must share it securely with the user (e.g., in person, phone call, or encrypted message).
+                  </Typography>
+                </Alert>
+              )}
               
               <Stack spacing={2}>
                 <TextField
