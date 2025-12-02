@@ -453,6 +453,178 @@ export default function DocsPage() {
                 </Paper>
               </Stack>
             </Box>
+
+            <Divider />
+
+            {/* Password Reset Section */}
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <VpnKey color="primary" />
+                Password Reset & Recovery
+              </Typography>
+
+              <Typography variant="body1" paragraph>
+                Teamified Accounts provides secure password reset functionality for users who have forgotten their passwords, 
+                as well as administrative tools for authorized personnel to assist users with account recovery.
+              </Typography>
+
+              <Stack spacing={3}>
+                {/* Self-Service Password Reset */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                    Self-Service Password Reset
+                  </Typography>
+                  <Typography variant="body2" paragraph>
+                    Users can reset their own password through the login page without administrator assistance.
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                    <List dense>
+                      <ListItem>
+                        <ListItemText 
+                          primary="1. Click 'Forgot Password' on the login page" 
+                          secondary="Navigate to the forgot password form"
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="2. Enter your registered email address" 
+                          secondary="The system will send a password reset link"
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="3. Check your email for the reset link" 
+                          secondary="Link expires after 24 hours for security"
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="4. Click the link and create a new password" 
+                          secondary="Must meet password complexity requirements"
+                        />
+                      </ListItem>
+                    </List>
+                  </Paper>
+                </Box>
+
+                {/* Admin Password Reset */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                    Administrative Password Reset
+                  </Typography>
+                  <Typography variant="body2" paragraph>
+                    Authorized administrators can help users reset their passwords through two methods:
+                  </Typography>
+                  
+                  <Stack spacing={2}>
+                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+                        Option 1: Send Reset Link (Recommended)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        Sends an email with a secure password reset link to the user. The user clicks the link and 
+                        creates their own new password. This is the most secure method. The link expires after 24 hours.
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        <strong>Available to:</strong> Super Admin, Internal HR, Internal Account Manager, Internal Recruiter, 
+                        Internal Finance, Internal Marketing, Client Admin, Client HR, Client Finance, Client Recruiter
+                      </Typography>
+                    </Paper>
+
+                    <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'warning.main' }}>
+                        Option 2: Set Password Directly (Restricted)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        Administrator sets a temporary password directly. The user will be required to change this 
+                        password on their next login. Use when the user cannot receive emails or needs immediate access.
+                      </Typography>
+                      <Alert severity="warning" sx={{ mb: 1 }}>
+                        <Typography variant="body2">
+                          The temporary password is shown only once and is not emailed. The administrator must 
+                          securely communicate it to the user (e.g., via phone call, secure messaging).
+                        </Typography>
+                      </Alert>
+                      <Typography variant="caption" color="text.secondary">
+                        <strong>Available to:</strong> Super Admin, Internal HR, Internal Account Manager only
+                      </Typography>
+                    </Paper>
+                  </Stack>
+                </Box>
+
+                {/* Forced Password Change */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                    Forced Password Change
+                  </Typography>
+                  <Typography variant="body2" paragraph>
+                    When an administrator sets a user's password directly (Option 2), the user will be required to 
+                    change their password immediately upon their next login:
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                    <List dense>
+                      <ListItem>
+                        <ListItemText 
+                          primary="1. User logs in with temporary password" 
+                          secondary="Using the password provided by the administrator"
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="2. System redirects to password change page" 
+                          secondary="User cannot access any other features until password is changed"
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="3. User creates a new personal password" 
+                          secondary="Must meet all password complexity requirements"
+                        />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText 
+                          primary="4. New session is created" 
+                          secondary="User can now access the platform normally"
+                        />
+                      </ListItem>
+                    </List>
+                  </Paper>
+                </Box>
+
+                {/* Password Requirements */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                    Password Requirements
+                  </Typography>
+                  <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                    <List dense>
+                      <ListItem>
+                        <ListItemText primary="Minimum 8 characters" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="At least one uppercase letter (A-Z)" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="At least one lowercase letter (a-z)" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="At least one number (0-9)" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="At least one special character (@$!%*?&.)" />
+                      </ListItem>
+                    </List>
+                  </Paper>
+                </Box>
+
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    <strong>Security Best Practice:</strong> Always use Option 1 (Send Reset Link) when possible. 
+                    Option 2 should only be used when email delivery is not possible or immediate access is required.
+                  </Typography>
+                </Alert>
+              </Stack>
+            </Box>
           </Stack>
         </TabPanel>
 
@@ -858,6 +1030,303 @@ Authorization: Bearer <access_token>
 }`}
                   </Typography>
                 </Paper>
+              </Stack>
+            </Box>
+
+            <Divider />
+
+            {/* Password Reset API */}
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <VpnKey color="primary" />
+                Password Reset API
+              </Typography>
+
+              <Typography variant="body1" paragraph>
+                API endpoints for password reset operations. Each endpoint has specific role-based authorization requirements.
+              </Typography>
+
+              <Stack spacing={3}>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>Endpoint</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Auth</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell><code>/api/v1/auth/forgot-password</code></TableCell>
+                        <TableCell>POST</TableCell>
+                        <TableCell><Chip label="Public" size="small" /></TableCell>
+                        <TableCell>User requests password reset email</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><code>/api/v1/auth/reset-password</code></TableCell>
+                        <TableCell>POST</TableCell>
+                        <TableCell><Chip label="Public" size="small" /></TableCell>
+                        <TableCell>User resets password using token from email</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><code>/api/v1/auth/admin/send-password-reset</code></TableCell>
+                        <TableCell>POST</TableCell>
+                        <TableCell><Chip label="Restricted" color="primary" size="small" /></TableCell>
+                        <TableCell>Admin sends password reset link to user</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><code>/api/v1/auth/admin/set-password</code></TableCell>
+                        <TableCell>POST</TableCell>
+                        <TableCell><Chip label="Restricted" color="warning" size="small" /></TableCell>
+                        <TableCell>Admin sets user password directly</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><code>/api/v1/auth/force-change-password</code></TableCell>
+                        <TableCell>POST</TableCell>
+                        <TableCell><Chip label="Authenticated" color="secondary" size="small" /></TableCell>
+                        <TableCell>User changes password after admin reset</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {/* Authorization Requirements */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+                    Authorization Requirements
+                  </Typography>
+                  
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', mb: 0.5 }}>
+                        Send Password Reset Link (Option 1)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Endpoint:</strong> <code>POST /api/v1/auth/admin/send-password-reset</code>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        <strong>Allowed Roles:</strong> super_admin, internal_hr, internal_account_manager, internal_recruiter, 
+                        internal_finance, internal_marketing, client_admin, client_hr, client_finance, client_recruiter
+                      </Typography>
+                    </Box>
+                    
+                    <Divider />
+                    
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.main', mb: 0.5 }}>
+                        Set Password Directly (Option 2)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Endpoint:</strong> <code>POST /api/v1/auth/admin/set-password</code>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        <strong>Allowed Roles:</strong> super_admin, internal_hr, internal_account_manager
+                      </Typography>
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        <Typography variant="body2">
+                          This endpoint sets <code>mustChangePassword: true</code> on the user, forcing them to 
+                          change their password on next login. All actions are logged for audit purposes.
+                        </Typography>
+                      </Alert>
+                    </Box>
+                    
+                    <Divider />
+                    
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'secondary.main', mb: 0.5 }}>
+                        Forced Password Change Behavior
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        When an admin sets a user's password directly (Option 2):
+                      </Typography>
+                      <List dense sx={{ py: 0 }}>
+                        <ListItem sx={{ py: 0.25 }}>
+                          <ListItemText 
+                            primary="User's mustChangePassword flag is set to true"
+                            primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                          />
+                        </ListItem>
+                        <ListItem sx={{ py: 0.25 }}>
+                          <ListItemText 
+                            primary="All protected API endpoints will return 403 Forbidden until password is changed"
+                            primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                          />
+                        </ListItem>
+                        <ListItem sx={{ py: 0.25 }}>
+                          <ListItemText 
+                            primary="Only /auth/me, /auth/force-change-password, /auth/login, and /auth/logout remain accessible"
+                            primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                          />
+                        </ListItem>
+                        <ListItem sx={{ py: 0.25 }}>
+                          <ListItemText 
+                            primary="After successful password change, new tokens are issued and previous sessions are invalidated"
+                            primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                          />
+                        </ListItem>
+                      </List>
+                    </Box>
+                  </Stack>
+                </Paper>
+
+                {/* Example: Self-Service Password Reset */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Example: Self-Service Password Reset Request
+                  </Typography>
+                  <Typography variant="body2" component="pre" sx={{ overflow: 'auto', fontSize: '0.875rem' }}>
+{`POST /api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com"
+}
+
+Response (200 OK):
+{
+  "message": "Password reset email sent successfully"
+}`}
+                  </Typography>
+                </Paper>
+
+                {/* Example: Reset Password with Token */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Example: Reset Password with Token
+                  </Typography>
+                  <Typography variant="body2" component="pre" sx={{ overflow: 'auto', fontSize: '0.875rem' }}>
+{`POST /api/v1/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "newPassword": "NewSecure@Pass123"
+}
+
+Response (200 OK):
+{
+  "message": "Password reset successful"
+}`}
+                  </Typography>
+                </Paper>
+
+                {/* Example: Admin Send Reset Link */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Example: Admin Sends Password Reset Link
+                  </Typography>
+                  <Typography variant="body2" component="pre" sx={{ overflow: 'auto', fontSize: '0.875rem' }}>
+{`POST /api/v1/auth/admin/send-password-reset
+Authorization: Bearer <admin_access_token>
+Content-Type: application/json
+
+{
+  "userId": "user-uuid-here"
+}
+
+Response (200 OK):
+{
+  "message": "Password reset email sent to user"
+}`}
+                  </Typography>
+                </Paper>
+
+                {/* Example: Admin Set Password */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Example: Admin Sets Password Directly
+                  </Typography>
+                  <Typography variant="body2" component="pre" sx={{ overflow: 'auto', fontSize: '0.875rem' }}>
+{`POST /api/v1/auth/admin/set-password
+Authorization: Bearer <admin_access_token>
+Content-Type: application/json
+
+{
+  "userId": "user-uuid-here",
+  "newPassword": "TempPass@123"
+}
+
+Response (200 OK):
+{
+  "message": "Password set successfully",
+  "mustChangePassword": true,
+  "warning": "User will be required to change password on next login"
+}`}
+                  </Typography>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Important:</strong> The password is not emailed to the user. The admin must 
+                      securely communicate the temporary password. The user will be forced to change it on next login.
+                    </Typography>
+                  </Alert>
+                </Paper>
+
+                {/* Example: Force Change Password */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Example: User Changes Password After Admin Reset
+                  </Typography>
+                  <Typography variant="body2" component="pre" sx={{ overflow: 'auto', fontSize: '0.875rem' }}>
+{`POST /api/v1/auth/force-change-password
+Authorization: Bearer <user_access_token>
+Content-Type: application/json
+
+{
+  "newPassword": "MyNewSecure@Pass456",
+  "confirmPassword": "MyNewSecure@Pass456"
+}
+
+Response (200 OK):
+{
+  "message": "Password changed successfully",
+  "accessToken": "<new_access_token>",
+  "refreshToken": "<new_refresh_token>"
+}`}
+                  </Typography>
+                  <Alert severity="success" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Note:</strong> New tokens are issued after password change. All previous sessions 
+                      are invalidated. Store the new tokens to continue accessing protected endpoints.
+                    </Typography>
+                  </Alert>
+                </Paper>
+
+                {/* Password Validation */}
+                <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                    Password Validation Requirements
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    All password endpoints validate passwords against these requirements:
+                  </Typography>
+                  <Typography variant="body2" component="pre" sx={{ overflow: 'auto', fontSize: '0.875rem' }}>
+{`Password must contain:
+- Minimum 8 characters
+- At least one uppercase letter (A-Z)
+- At least one lowercase letter (a-z)
+- At least one number (0-9)
+- At least one special character (@$!%*?&.)
+
+Example Error Response (400 Bad Request):
+{
+  "message": "Password does not meet security requirements",
+  "errors": [
+    "at least one uppercase letter",
+    "at least one special character (@$!%*?&.)"
+  ]
+}`}
+                  </Typography>
+                </Paper>
+
+                {/* Rate Limiting */}
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    <strong>Rate Limiting:</strong> Password reset endpoints are rate-limited to prevent abuse. 
+                    Self-service endpoints: 5 requests per 5 minutes per IP. Admin endpoints: 10 requests per minute.
+                  </Typography>
+                </Alert>
               </Stack>
             </Box>
 
