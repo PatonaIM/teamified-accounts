@@ -799,13 +799,28 @@ export default function UserDetailPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+          sx={{ 
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': { 
+              bgcolor: 'rgba(161, 106, 232, 0.08)' 
+            }
+          }}
+        >
+          <ArrowBack />
+        </IconButton>
         <Stack direction="row" alignItems="center" spacing={1}>
           <Typography 
             variant="h4" 
             sx={{ 
               fontWeight: 700,
               color: 'text.secondary',
+              cursor: 'pointer',
+              '&:hover': { color: 'primary.main' }
             }}
+            onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
           >
             {isCandidate ? 'Candidate User' : 'Organization Management'}
           </Typography>
