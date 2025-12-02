@@ -207,7 +207,6 @@ export default function UserDetailPage() {
     try {
       await api.post('/v1/auth/admin/send-password-reset', { userId: user.id });
       setResetSuccess('Password reset link has been sent to the user\'s email.');
-      setSnackbar({ open: true, message: 'Password reset link sent successfully', severity: 'success' });
     } catch (err: any) {
       setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to send reset link', severity: 'error' });
     } finally {
