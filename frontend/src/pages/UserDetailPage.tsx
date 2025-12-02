@@ -778,13 +778,6 @@ export default function UserDetailPage() {
                     </Typography>
                   )}
                 </Paper>
-
-                <Alert severity="info" icon={<Timeline />}>
-                  <Typography variant="body2">
-                    Activity tracking helps you understand how users interact with the platform.
-                    This data is used to improve the user experience and identify potential issues.
-                  </Typography>
-                </Alert>
               </Stack>
             )}
           </Box>
