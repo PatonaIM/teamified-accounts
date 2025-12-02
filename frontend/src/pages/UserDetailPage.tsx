@@ -894,7 +894,7 @@ export default function UserDetailPage() {
                                 </Stack>
                               </Stack>
                               <Stack direction="row" alignItems="center" spacing={1}>
-                                {app.topFeatures.length > 0 && (
+                                {!isExpanded && app.topFeatures.length > 0 && (
                                   <Stack direction="row" spacing={0.5}>
                                     {app.topFeatures.slice(0, 3).map((f, idx) => (
                                       <Chip
