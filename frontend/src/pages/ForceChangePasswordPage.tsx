@@ -14,11 +14,12 @@ import { Visibility, VisibilityOff, Lock, Warning } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { setAccessToken, setRefreshToken } from '../services/authService';
+import { setAccessToken, setRefreshToken, setUserData, getUserData } from '../services/authService';
+import { clearLastPath } from '../components/SessionAwareRedirect';
 
 const ForceChangePasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { updateUser, refreshUser } = useAuth();
 
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -106,21 +107,23 @@ const ForceChangePasswordPage: React.FC = () => {
           setRefreshToken(refreshToken);
         }
         
-        updateUser({ mustChangePassword: false });
-        
-        const cachedUser = localStorage.getItem('teamified_user_data');
+        // Update the cached user data in localStorage FIRST
+        const cachedUser = getUserData();
         if (cachedUser) {
-          try {
-            const userData = JSON.parse(cachedUser);
-            userData.mustChangePassword = false;
-            localStorage.setItem('teamified_user_data', JSON.stringify(userData));
-          } catch (e) {
-            console.warn('Failed to update cached user data');
-          }
+          cachedUser.mustChangePassword = false;
+          setUserData(cachedUser);
         }
         
+        // Update the React context
+        updateUser({ mustChangePassword: false });
+        
+        // Clear any saved last path to prevent redirect loops
+        clearLastPath();
+        
+        // Wait a moment for state to propagate, then navigate
         setTimeout(() => {
-          navigate('/');
+          // Navigate to profile page (not root to avoid SessionAwareRedirect issues)
+          navigate('/account/profile', { replace: true });
         }, 2000);
       }
     } catch (error: any) {
