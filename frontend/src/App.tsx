@@ -6,6 +6,7 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import LoginPageMUI from './pages/LoginPageMUI';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
 import SignupPathSelectionPage from './pages/SignupPathSelectionPage';
@@ -60,6 +61,14 @@ function App() {
                 <Route 
                   path="/reset-password" 
                   element={<ResetPasswordPage />} 
+                />
+                <Route 
+                  path="/force-change-password" 
+                  element={
+                    <ProtectedRoute>
+                      <ForceChangePasswordPage />
+                    </ProtectedRoute>
+                  } 
                 />
                 <Route 
                   path="/verify-email" 

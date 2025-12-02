@@ -438,6 +438,7 @@ This is an automated message from Teamified.
         emailVerified: user.emailVerified,
         roles: roles,
         themePreference: themePreference,
+        mustChangePassword: user.mustChangePassword || false,
       },
     };
   }
@@ -793,11 +794,14 @@ This is an automated message from Teamified.
     // Hash the new password
     const hashedPassword = await this.passwordService.hashPassword(password);
 
-    // Update password and clear any reset tokens
+    // Update password, set mustChangePassword flag, and clear any reset tokens
     await this.userRepository.update(user.id, {
       passwordHash: hashedPassword,
       passwordResetToken: null,
       passwordResetTokenExpiry: null,
+      mustChangePassword: true,
+      passwordChangedByAdminAt: new Date(),
+      passwordChangedByAdminId: adminUserId,
     });
 
     // Invalidate all existing sessions for security
@@ -805,6 +809,15 @@ This is an automated message from Teamified.
       { userId: user.id },
       { revokedAt: new Date() },
     );
+
+    // Send notification email to user (without the password)
+    try {
+      await this.emailService.sendAdminPasswordResetNotification(user);
+      this.logger.log(`Admin password reset notification sent to ${user.email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send admin password reset notification to ${user.email}: ${error.message}`);
+      // Don't throw error - password was still set successfully
+    }
 
     // Log the admin password set action
     await this.auditService.log({
@@ -817,6 +830,8 @@ This is an automated message from Teamified.
         targetUserEmail: user.email,
         passwordChanged: true,
         sessionsInvalidated: true,
+        mustChangePassword: true,
+        notificationEmailSent: true,
       },
       ip,
       userAgent,
@@ -824,7 +839,7 @@ This is an automated message from Teamified.
 
     this.logger.log(`Admin ${adminUserId} set password for user ${user.email}`);
 
-    return { message: 'Password set successfully' };
+    return { message: 'Password set successfully. User will be required to change password on first login.' };
   }
 
   async resetPassword(
@@ -1081,6 +1096,75 @@ This is an automated message from Teamified.
       },
       message: 'Account and organization created successfully',
     };
+  }
+
+  /**
+   * Force Change Password - For users who must change password on first login
+   */
+  async forceChangePassword(
+    userId: string,
+    newPassword: string,
+    confirmPassword: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    // Find the user
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify that user actually needs to change password
+    if (!user.mustChangePassword) {
+      throw new BadRequestException('Password change is not required for this user');
+    }
+
+    // Validate password policy
+    const passwordValidation = this.passwordService.validatePasswordPolicy(newPassword);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await this.passwordService.hashPassword(newPassword);
+
+    // Update password and clear the mustChangePassword flag
+    await this.userRepository.update(user.id, {
+      passwordHash: hashedPassword,
+      mustChangePassword: false,
+      passwordChangedByAdminAt: null,
+      passwordChangedByAdminId: null,
+    });
+
+    // Log the password change
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: await this.getUserPrimaryRole(user.id),
+      action: 'password_changed_after_admin_reset',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        mustChangePassword: false,
+        passwordChanged: true,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`User ${user.email} changed password after admin reset`);
+
+    return { message: 'Password changed successfully' };
   }
 
   /**

@@ -1043,5 +1043,69 @@ export class AuthController {
       req.get('user-agent'),
     );
   }
+
+  @Post('force-change-password')
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Force change password after admin reset',
+    description: `
+      Change password when user is required to do so after admin password reset.
+      
+      ## Process Flow:
+      1. Verify user is logged in and has mustChangePassword flag set
+      2. Validate new password meets security requirements
+      3. Update password and clear the mustChangePassword flag
+      4. User can now access the application normally
+      
+      ## Security Features:
+      - Rate limited to 5 attempts per 5 minutes
+      - Requires valid JWT token
+      - Password must meet complexity requirements
+      - All password changes are logged for audit
+      
+      ## Use Cases:
+      - Users whose password was reset by admin
+      - First login after admin-initiated password reset
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/reset-password.dto').ForceChangePasswordDto,
+    description: 'New password and confirmation',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    type: () => require('./dto/reset-password.dto').ForceChangePasswordResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid input, passwords do not match, or password change not required',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    type: AuthErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async forceChangePassword(
+    @Body() forceChangePasswordDto: { newPassword: string; confirmPassword: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    return this.authService.forceChangePassword(
+      req.user.sub,
+      forceChangePasswordDto.newPassword,
+      forceChangePasswordDto.confirmPassword,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
 }
 

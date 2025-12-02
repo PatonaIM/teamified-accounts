@@ -9,6 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   refreshUser: () => Promise<void>;
   clearUser: () => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,12 +51,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    console.log('[AuthContext] Updating user data with:', updates);
+    setUser(prev => prev ? { ...prev, ...updates } : null);
+  }, []);
+
   useEffect(() => {
     loadUser();
   }, []); // Only run once on mount
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, refreshUser, clearUser }}>
+    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, refreshUser, clearUser, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

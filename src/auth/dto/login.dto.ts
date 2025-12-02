@@ -34,6 +34,7 @@ export class LoginResponseDto {
     emailVerified: boolean;
     roles: string[];
     themePreference?: 'light' | 'dark' | 'teamified' | 'custom';
+    mustChangePassword?: boolean;
   };
 }
 

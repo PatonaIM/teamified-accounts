@@ -28,6 +28,7 @@ export interface User {
   themePreference?: 'light' | 'dark' | 'teamified' | 'custom' | null;
   hasOnboardingRecord?: boolean;
   hasEmploymentRecord?: boolean;
+  mustChangePassword?: boolean;
 }
 
 // Rate limiting configuration

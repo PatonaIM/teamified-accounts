@@ -475,62 +475,66 @@ Welcome to the Teamified family!
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
         .content { padding: 30px 20px; background-color: #f8f9fa; }
         .cta-button { 
             display: inline-block; 
-            background-color: #3498db; 
+            background-color: #4CAF50;
             color: white; 
-            padding: 12px 30px; 
+            padding: 14px 36px; 
             text-decoration: none; 
-            border-radius: 5px; 
+            border-radius: 6px; 
             margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
         }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .warning { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 15px 0; }
-        .security-notice { background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .expiry-warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .link-box { background-color: #e8eaf6; padding: 15px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border-left: 4px solid #667eea; }
+        .security-note { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin: 20px 0; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔒 Reset Your Password</h1>
+            <h1 style="margin: 0; font-size: 28px;">🔒 Reset Your Password</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Password Recovery Request</p>
         </div>
         <div class="content">
-            <h2>Hello ${firstName},</h2>
+            <h2 style="margin-top: 0; color: #667eea;">Hello ${firstName},</h2>
             
-            <p>We received a request to reset your password for your Teamified account.</p>
+            <p style="font-size: 16px;">We received a request to reset your password for your <strong>Teamified account</strong>.</p>
             
             <p>Click the button below to reset your password:</p>
             
-            <div style="text-align: center;">
-                <a href="${resetLink}" class="cta-button">Reset Password</a>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetLink}" class="cta-button" style="color: white !important; text-decoration: none;">Reset Password</a>
             </div>
             
-            <div class="warning">
-                <strong>⏰ Important:</strong> This password reset link will expire in 1 hour for security reasons.
+            <div class="expiry-warning">
+                <strong>⏰ Important:</strong> This password reset link will expire in <strong>1 hour</strong> for security reasons.
             </div>
             
-            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f1f1f1; padding: 10px; border-radius: 3px;">
+            <p style="margin-top: 25px;"><strong>Can't click the button?</strong> Copy and paste this link into your browser:</p>
+            <div class="link-box">
                 ${resetLink}
-            </p>
+            </div>
             
-            <div class="security-notice">
+            <div class="security-note">
                 <strong>🛡️ Security Notice:</strong> If you didn't request this password reset, please ignore this email. 
                 Your password will remain unchanged, and no action is needed.
             </div>
             
-            <p>For your security:</p>
-            <ul>
+            <h3 style="color: #667eea; margin-top: 30px;">For your security:</h3>
+            <ul style="padding-left: 20px; line-height: 1.8;">
                 <li>Never share this link with anyone</li>
                 <li>Make sure you're on the official Teamified website before entering your new password</li>
                 <li>Choose a strong, unique password</li>
             </ul>
         </div>
         <div class="footer">
-            <p>This is an automated security message from Teamified.</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p style="margin: 5px 0;">This is an automated security message from Teamified.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -557,6 +561,108 @@ For your security:
 - Never share this link with anyone
 - Make sure you're on the official Teamified website before entering your new password
 - Choose a strong, unique password
+
+This is an automated security message from Teamified.
+© ${new Date().getFullYear()} Teamified. All rights reserved.
+`;
+  }
+
+  async sendAdminPasswordResetNotification(user: { email: string; firstName: string }): Promise<boolean> {
+    const htmlTemplate = this.generateAdminPasswordResetNotificationHtmlTemplate(user.firstName);
+    const textTemplate = this.generateAdminPasswordResetNotificationTextTemplate(user.firstName);
+
+    return this.sendEmail({
+      to: user.email,
+      subject: 'Your Password Has Been Reset - Teamified',
+      html: htmlTemplate,
+      text: textTemplate,
+    });
+  }
+
+  private generateAdminPasswordResetNotificationHtmlTemplate(firstName: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Password Has Been Reset</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        .info-box { background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .action-box { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Password Reset Notification</h1>
+        </div>
+        <div class="content">
+            <h2>Hello ${firstName},</h2>
+            
+            <div class="info-box">
+                <strong>ℹ️ Important Notice:</strong> Your password for your Teamified account has been reset by a Teamified administrator.
+            </div>
+            
+            <p>A temporary password has been set for your account by an administrator. For security reasons, the password is not included in this email and will be provided to you separately by your administrator.</p>
+            
+            <div class="action-box">
+                <strong>📋 What to Expect:</strong>
+                <ul style="margin: 10px 0;">
+                    <li>Your administrator will provide you with a temporary password through a secure channel</li>
+                    <li>When you log in with the temporary password, you will be <strong>required</strong> to set a new password immediately</li>
+                    <li>You will not be able to access your account until you set a new password</li>
+                </ul>
+            </div>
+            
+            <p><strong>Password Requirements:</strong></p>
+            <ul>
+                <li>At least 8 characters long</li>
+                <li>At least one uppercase letter</li>
+                <li>At least one lowercase letter</li>
+                <li>At least one number</li>
+                <li>At least one special character (@$!%*?&.)</li>
+            </ul>
+            
+            <p>If you did not expect this password reset or have any concerns, please contact the Teamified support team immediately.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated security message from Teamified.</p>
+            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generateAdminPasswordResetNotificationTextTemplate(firstName: string): string {
+    return `
+Password Reset Notification - Teamified
+
+Hello ${firstName},
+
+IMPORTANT NOTICE: Your password for your Teamified account has been reset by a Teamified administrator.
+
+A temporary password has been set for your account by an administrator. For security reasons, the password is not included in this email and will be provided to you separately by your administrator.
+
+WHAT TO EXPECT:
+- Your administrator will provide you with a temporary password through a secure channel
+- When you log in with the temporary password, you will be REQUIRED to set a new password immediately
+- You will not be able to access your account until you set a new password
+
+PASSWORD REQUIREMENTS:
+- At least 8 characters long
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character (@$!%*?&.)
+
+If you did not expect this password reset or have any concerns, please contact the Teamified support team immediately.
 
 This is an automated security message from Teamified.
 © ${new Date().getFullYear()} Teamified. All rights reserved.
