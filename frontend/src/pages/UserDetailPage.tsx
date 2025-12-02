@@ -1007,8 +1007,9 @@ export default function UserDetailPage() {
                 Send a secure password reset link to {user.email}
               </Typography>
               <Button
-                variant="outlined"
-                startIcon={sendingResetLink ? <CircularProgress size={16} /> : <Send />}
+                variant="contained"
+                color="success"
+                startIcon={sendingResetLink ? <CircularProgress size={16} color="inherit" /> : <Send />}
                 onClick={handleSendResetLink}
                 disabled={sendingResetLink}
                 sx={{ textTransform: 'none' }}
@@ -1069,8 +1070,9 @@ export default function UserDetailPage() {
                   
                   <Button
                     variant="contained"
+                    color="success"
                     size="small"
-                    startIcon={settingPassword ? <CircularProgress size={16} /> : <LockReset />}
+                    startIcon={settingPassword ? <CircularProgress size={16} color="inherit" /> : <LockReset />}
                     onClick={handleSetPassword}
                     disabled={settingPassword || !newPassword || newPassword.length < 8}
                     sx={{ textTransform: 'none' }}
