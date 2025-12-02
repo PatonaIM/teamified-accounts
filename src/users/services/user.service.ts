@@ -643,10 +643,10 @@ export class UserService {
 
     // Get recent actions from audit logs
     const auditLogs = await this.dataSource.query(
-      `SELECT action, entity_type, created_at
+      `SELECT action, entity_type, at
        FROM audit_logs
        WHERE actor_user_id = $1
-       ORDER BY created_at DESC
+       ORDER BY at DESC
        LIMIT 20`,
       [userId]
     );
@@ -654,7 +654,7 @@ export class UserService {
     const recentActions = auditLogs.map((log: any) => ({
       action: log.action,
       entityType: log.entity_type,
-      timestamp: log.created_at?.toISOString() || new Date().toISOString(),
+      timestamp: log.at?.toISOString() || new Date().toISOString(),
     }));
 
     return {
