@@ -687,13 +687,6 @@ export default function UserDetailPage() {
       case 'activity':
         return (
           <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
-              <History color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                User Activity
-              </Typography>
-            </Stack>
-
             {activityLoading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress />
@@ -751,7 +744,7 @@ export default function UserDetailPage() {
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                     <Apps fontSize="small" color="primary" />
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Connected Applications & Activity
+                      Connected Applications
                     </Typography>
                   </Stack>
                   
@@ -932,41 +925,41 @@ export default function UserDetailPage() {
                       No connected applications found.
                     </Typography>
                   )}
-                  
-                  {/* General Recent Activity (non-app specific) */}
-                  {activity?.recentActions && activity.recentActions.length > 0 && (
-                    <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-                      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                        <Timeline fontSize="small" color="primary" />
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          General Activity
-                        </Typography>
-                      </Stack>
-                      <Stack spacing={1}>
-                        {activity.recentActions.slice(0, 10).map((action, index) => {
-                          const formatActionLabel = (act: typeof action) => {
-                            const baseAction = act.action.replace(/_/g, ' ');
-                            if ((act.action === 'admin_password_set' || act.action === 'admin_password_reset_sent') && act.targetUserEmail) {
-                              return `${baseAction} for ${act.targetUserEmail}`;
-                            }
-                            return `${baseAction} - ${act.entityType}`;
-                          };
-                          
-                          return (
-                            <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
-                              <Typography variant="body2" sx={{ flex: 1, mr: 2 }}>
-                                {formatActionLabel(action)}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                                {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
-                              </Typography>
-                            </Stack>
-                          );
-                        })}
-                      </Stack>
-                    </Box>
-                  )}
                 </Paper>
+
+                {/* General Recent Activity (non-app specific) */}
+                {activity?.recentActions && activity.recentActions.length > 0 && (
+                  <Paper variant="outlined" sx={{ p: 3 }}>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                      <Timeline fontSize="small" color="primary" />
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        General Activity
+                      </Typography>
+                    </Stack>
+                    <Stack spacing={1}>
+                      {activity.recentActions.slice(0, 10).map((action, index) => {
+                        const formatActionLabel = (act: typeof action) => {
+                          const baseAction = act.action.replace(/_/g, ' ');
+                          if ((act.action === 'admin_password_set' || act.action === 'admin_password_reset_sent') && act.targetUserEmail) {
+                            return `${baseAction} for ${act.targetUserEmail}`;
+                          }
+                          return `${baseAction} - ${act.entityType}`;
+                        };
+                        
+                        return (
+                          <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                            <Typography variant="body2" sx={{ flex: 1, mr: 2 }}>
+                              {formatActionLabel(action)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                              {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
+                            </Typography>
+                          </Stack>
+                        );
+                      })}
+                    </Stack>
+                  </Paper>
+                )}
               </Stack>
             )}
           </Box>
