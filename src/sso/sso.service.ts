@@ -6,6 +6,8 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { AuthCodeStorageService } from '../auth/services/auth-code-storage.service';
 import { OAuthClientsService } from '../oauth-clients/oauth-clients.service';
 import { JwtTokenService } from '../auth/services/jwt.service';
@@ -15,12 +17,15 @@ import { AuthorizeDto } from './dto/authorize.dto';
 import { TokenExchangeDto, TokenResponseDto } from './dto/token.dto';
 import { createHash, randomUUID } from 'crypto';
 import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
+import { UserOAuthLogin } from './entities/user-oauth-login.entity';
 
 @Injectable()
 export class SsoService {
   private readonly logger = new Logger(SsoService.name);
 
   constructor(
+    @InjectRepository(UserOAuthLogin)
+    private readonly userOAuthLoginRepository: Repository<UserOAuthLogin>,
     private readonly authCodeStorage: AuthCodeStorageService,
     private readonly oauthClientsService: OAuthClientsService,
     private readonly jwtTokenService: JwtTokenService,
@@ -208,6 +213,9 @@ export class SsoService {
     // Get user roles
     const userRoles = await this.userRolesService.getUserRoles(user.id);
 
+    // Record OAuth login for connected applications tracking
+    await this.recordOAuthLogin(user.id, client.id);
+
     this.logger.log(
       `Token exchanged for user ${user.id} (${user.email}) via client ${client_id}`,
     );
@@ -225,6 +233,45 @@ export class SsoService {
         roles: userRoles.length > 0 ? userRoles : ['client_employee'],
       },
     };
+  }
+
+  /**
+   * Record OAuth login for tracking connected applications
+   */
+  private async recordOAuthLogin(userId: string, oauthClientId: string): Promise<void> {
+    try {
+      const now = new Date();
+      
+      // Check if login record already exists
+      let loginRecord = await this.userOAuthLoginRepository.findOne({
+        where: {
+          user_id: userId,
+          oauth_client_id: oauthClientId,
+        },
+      });
+
+      if (loginRecord) {
+        // Update existing record
+        loginRecord.login_count += 1;
+        loginRecord.last_login_at = now;
+        await this.userOAuthLoginRepository.save(loginRecord);
+        this.logger.debug(`Updated OAuth login record for user ${userId} on client ${oauthClientId}`);
+      } else {
+        // Create new record
+        loginRecord = this.userOAuthLoginRepository.create({
+          user_id: userId,
+          oauth_client_id: oauthClientId,
+          login_count: 1,
+          first_login_at: now,
+          last_login_at: now,
+        });
+        await this.userOAuthLoginRepository.save(loginRecord);
+        this.logger.debug(`Created OAuth login record for user ${userId} on client ${oauthClientId}`);
+      }
+    } catch (error) {
+      // Log but don't fail the token exchange if tracking fails
+      this.logger.warn(`Failed to record OAuth login: ${error.message}`);
+    }
   }
 
   /**
