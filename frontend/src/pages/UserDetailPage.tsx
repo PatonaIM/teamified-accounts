@@ -1009,6 +1009,7 @@ export default function UserDetailPage() {
               <Button
                 variant="contained"
                 color="success"
+                size="small"
                 startIcon={sendingResetLink ? <CircularProgress size={16} color="inherit" /> : <Send />}
                 onClick={handleSendResetLink}
                 disabled={sendingResetLink}
