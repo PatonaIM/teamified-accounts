@@ -1040,6 +1040,13 @@ export default function UserDetailPage() {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
+                        {newPassword && (
+                          <Tooltip title={passwordCopied ? 'Copied!' : 'Copy to clipboard'}>
+                            <IconButton onClick={copyPasswordToClipboard} edge="end" size="small">
+                              <ContentCopy fontSize="small" color={passwordCopied ? 'success' : 'inherit'} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
                           {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                         </IconButton>
@@ -1049,7 +1056,7 @@ export default function UserDetailPage() {
                   helperText="Min 8 chars with uppercase, lowercase, number, and symbol"
                 />
                 
-                <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Stack direction="row" spacing={1}>
                   <Button
                     size="small"
                     variant="outlined"
@@ -1060,31 +1067,17 @@ export default function UserDetailPage() {
                     Generate
                   </Button>
                   
-                  {newPassword && (
-                    <Tooltip title={passwordCopied ? 'Copied!' : 'Copy to clipboard'}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<ContentCopy />}
-                        onClick={copyPasswordToClipboard}
-                        color={passwordCopied ? 'success' : 'primary'}
-                        sx={{ textTransform: 'none' }}
-                      >
-                        {passwordCopied ? 'Copied!' : 'Copy'}
-                      </Button>
-                    </Tooltip>
-                  )}
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={settingPassword ? <CircularProgress size={16} /> : <LockReset />}
+                    onClick={handleSetPassword}
+                    disabled={settingPassword || !newPassword || newPassword.length < 8}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {settingPassword ? 'Setting...' : 'Set Password'}
+                  </Button>
                 </Stack>
-
-                <Button
-                  variant="contained"
-                  startIcon={settingPassword ? <CircularProgress size={16} /> : <LockReset />}
-                  onClick={handleSetPassword}
-                  disabled={settingPassword || !newPassword || newPassword.length < 8}
-                  sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
-                >
-                  {settingPassword ? 'Setting...' : 'Set Password'}
-                </Button>
               </Stack>
             </Paper>
           </Stack>
