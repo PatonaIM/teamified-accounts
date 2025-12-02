@@ -801,7 +801,7 @@ export class AuthController {
   ): Promise<{ message: string }> {
     return this.authService.adminSendPasswordReset(
       body.userId,
-      req.user.id,
+      req.user.sub,
       req.ip,
       req.get('user-agent'),
     );
@@ -859,7 +859,7 @@ export class AuthController {
     return this.authService.adminSetPassword(
       body.userId,
       body.password,
-      req.user.id,
+      req.user.sub,
       req.ip,
       req.get('user-agent'),
     );
