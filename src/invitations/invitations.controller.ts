@@ -122,7 +122,7 @@ export class InvitationsController {
                 message: 'Password does not meet security requirements',
                 errors: [
                   'Password must contain at least one uppercase letter',
-                  'Password must contain at least one special character (@$!%*?&)'
+                  'Password must contain at least one special character (@$!%*?&.)'
                 ]
               },
               error: 'Bad Request'
