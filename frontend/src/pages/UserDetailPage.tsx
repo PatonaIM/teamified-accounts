@@ -294,7 +294,8 @@ export default function UserDetailPage() {
     setDeleting(true);
     try {
       await userService.deleteUser(userId);
-      navigate(isFromOrganization ? '/admin/organizations' : '/admin/tools/internal-users');
+      const isCandidateUser = roles.some(r => r.role === 'candidate');
+      navigate(isCandidateUser ? '/admin/tools/candidate-users' : '/admin/organizations');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to delete user');
       setShowDeleteDialog(false);
@@ -479,18 +480,7 @@ export default function UserDetailPage() {
   }
 
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
-  const isFromOrganization = navigationState?.organizationId && navigationState?.organizationName;
-  const hasNavigationHistory = !!navigationState;
-
-  const handleBackNavigation = () => {
-    if (isFromOrganization) {
-      navigate('/admin/organizations', {
-        state: { selectedOrganizationId: navigationState.organizationId }
-      });
-    } else {
-      navigate('/admin/tools/internal-users');
-    }
-  };
+  const isCandidate = roles.some(r => r.role === 'candidate');
 
   const tabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
     { id: 'basic', label: 'Basic Information', icon: <Person /> },
@@ -807,78 +797,23 @@ export default function UserDetailPage() {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Header - Matching OrganizationManagementPage */}
+      {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        {hasNavigationHistory && (
-          <IconButton 
-            onClick={handleBackNavigation}
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography 
+            variant="h4" 
             sx={{ 
-              mr: 2,
-              color: 'primary.main',
-              '&:hover': { 
-                bgcolor: 'rgba(161, 106, 232, 0.08)' 
-              }
+              fontWeight: 700,
+              color: 'text.secondary',
             }}
           >
-            <ArrowBack />
-          </IconButton>
-        )}
-        {isFromOrganization ? (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700,
-                color: 'text.secondary',
-                cursor: 'pointer',
-                '&:hover': { color: 'primary.main' }
-              }}
-              onClick={handleBackNavigation}
-            >
-              Organization Management
-            </Typography>
-            <ChevronRight sx={{ color: 'text.secondary' }} />
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700,
-                color: 'text.secondary',
-                cursor: 'pointer',
-                '&:hover': { color: 'primary.main' }
-              }}
-              onClick={handleBackNavigation}
-            >
-              {navigationState.organizationName}
-            </Typography>
-            <ChevronRight sx={{ color: 'text.secondary' }} />
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              {userFullName}
-            </Typography>
-          </Stack>
-        ) : hasNavigationHistory ? (
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700,
-                color: 'text.secondary',
-                cursor: 'pointer',
-                '&:hover': { color: 'primary.main' }
-              }}
-              onClick={handleBackNavigation}
-            >
-              Internal Users
-            </Typography>
-            <ChevronRight sx={{ color: 'text.secondary' }} />
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              {userFullName}
-            </Typography>
-          </Stack>
-        ) : (
+            {isCandidate ? 'Candidate User' : 'Organization Management'}
+          </Typography>
+          <ChevronRight sx={{ color: 'text.secondary' }} />
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
             {userFullName}
           </Typography>
-        )}
+        </Stack>
       </Box>
 
       {/* Main Content - Two Column Layout */}
