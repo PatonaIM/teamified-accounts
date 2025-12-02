@@ -222,7 +222,7 @@ export default function UserDetailPage() {
     try {
       await api.post('/v1/auth/admin/set-password', { 
         userId: user.id, 
-        newPassword 
+        password: newPassword 
       });
       setResetSuccess('Password has been set successfully.');
       setNewPassword('');
