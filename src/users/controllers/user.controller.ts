@@ -658,6 +658,12 @@ export class UserController {
     summary: 'Get user activity',
     description: 'Retrieves login history, connected apps, and recent actions for a user. Useful for user analytics and security monitoring.'
   })
+  @ApiQuery({
+    name: 'timeRange',
+    required: false,
+    description: 'Time range filter for activity data',
+    enum: ['1h', '3h', '6h', '12h', '24h', '3d', '7d', '30d'],
+  })
   @ApiResponse({
     status: 200,
     description: 'User activity retrieved successfully',
@@ -707,7 +713,8 @@ export class UserController {
   })
   async getUserActivity(
     @Param('id', ParseUUIDPipe) id: string,
+    @Query('timeRange') timeRange?: string,
   ) {
-    return await this.userService.getUserActivity(id);
+    return await this.userService.getUserActivity(id, timeRange);
   }
 }

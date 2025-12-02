@@ -586,7 +586,24 @@ export class UserService {
     return verificationToken;
   }
 
-  async getUserActivity(userId: string): Promise<{
+  private getTimeRangeDate(timeRange?: string): Date | null {
+    if (!timeRange) return null;
+    
+    const now = new Date();
+    switch (timeRange) {
+      case '1h': return new Date(now.getTime() - 1 * 60 * 60 * 1000);
+      case '3h': return new Date(now.getTime() - 3 * 60 * 60 * 1000);
+      case '6h': return new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      case '12h': return new Date(now.getTime() - 12 * 60 * 60 * 1000);
+      case '24h': return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      case '3d': return new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+      case '7d': return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case '30d': return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      default: return null;
+    }
+  }
+
+  async getUserActivity(userId: string, timeRange?: string): Promise<{
     loginHistory: Array<{
       timestamp: string;
       ip: string;
@@ -627,16 +644,22 @@ export class UserService {
   }> {
     // Verify user exists
     await this.findOne(userId);
+    
+    const timeRangeDate = this.getTimeRangeDate(timeRange);
 
     // Get login history from sessions
-    const sessions = await this.dataSource.query(
-      `SELECT created_at, device_metadata, last_activity_at 
+    let sessionQuery = `SELECT created_at, device_metadata, last_activity_at 
        FROM sessions 
-       WHERE user_id = $1 
-       ORDER BY created_at DESC 
-       LIMIT 20`,
-      [userId]
-    );
+       WHERE user_id = $1`;
+    const sessionParams: any[] = [userId];
+    
+    if (timeRangeDate) {
+      sessionQuery += ` AND created_at >= $2`;
+      sessionParams.push(timeRangeDate);
+    }
+    sessionQuery += ` ORDER BY created_at DESC LIMIT 20`;
+    
+    const sessions = await this.dataSource.query(sessionQuery, sessionParams);
 
     const loginHistory = sessions.map((session: any) => ({
       timestamp: session.created_at?.toISOString() || new Date().toISOString(),
@@ -676,15 +699,19 @@ export class UserService {
       'token_refreshed'
     ];
     
-    const auditLogs = await this.dataSource.query(
-      `SELECT action, entity_type, at, changes
+    let auditQuery = `SELECT action, entity_type, at, changes
        FROM audit_logs
        WHERE actor_user_id = $1
-         AND action NOT IN (${loginRelatedActions.map((_, i) => `$${i + 2}`).join(', ')})
-       ORDER BY at DESC
-       LIMIT 20`,
-      [userId, ...loginRelatedActions]
-    );
+         AND action NOT IN (${loginRelatedActions.map((_, i) => `$${i + 2}`).join(', ')})`;
+    const auditParams: any[] = [userId, ...loginRelatedActions];
+    
+    if (timeRangeDate) {
+      auditQuery += ` AND at >= $${auditParams.length + 1}`;
+      auditParams.push(timeRangeDate);
+    }
+    auditQuery += ` ORDER BY at DESC LIMIT 20`;
+    
+    const auditLogs = await this.dataSource.query(auditQuery, auditParams);
 
     const recentActions = auditLogs.map((log: any) => {
       const result: any = {
@@ -705,7 +732,7 @@ export class UserService {
     });
 
     // Get connected apps with grouped activity
-    const connectedApps = await this.getConnectedAppsWithActivity(userId);
+    const connectedApps = await this.getConnectedAppsWithActivity(userId, timeRangeDate);
 
     return {
       loginHistory,
@@ -715,7 +742,7 @@ export class UserService {
     };
   }
 
-  private async getConnectedAppsWithActivity(userId: string): Promise<Array<{
+  private async getConnectedAppsWithActivity(userId: string, timeRangeDate?: Date | null): Promise<Array<{
     oauthClientId: string;
     appName: string;
     firstLoginAt: string;
@@ -751,26 +778,33 @@ export class UserService {
     // Get recent activities for each app
     const connectedApps = await Promise.all(
       oauthLogins.map(async (login: any) => {
-        // Get recent activities for this app
-        const activities = await this.dataSource.query(
-          `SELECT id, action, feature, description, created_at
+        // Build activities query with optional time filter
+        let activitiesQuery = `SELECT id, action, feature, description, created_at
            FROM user_app_activity
-           WHERE user_id = $1 AND oauth_client_id = $2
-           ORDER BY created_at DESC
-           LIMIT 10`,
-          [userId, login.oauth_client_id]
-        );
+           WHERE user_id = $1 AND oauth_client_id = $2`;
+        const activitiesParams: any[] = [userId, login.oauth_client_id];
+        
+        if (timeRangeDate) {
+          activitiesQuery += ` AND created_at >= $3`;
+          activitiesParams.push(timeRangeDate);
+        }
+        activitiesQuery += ` ORDER BY created_at DESC LIMIT 50`;
+        
+        const activities = await this.dataSource.query(activitiesQuery, activitiesParams);
 
-        // Get top features for this app
-        const topFeatures = await this.dataSource.query(
-          `SELECT feature, COUNT(*) as count
+        // Build top features query with optional time filter
+        let topFeaturesQuery = `SELECT feature, COUNT(*) as count
            FROM user_app_activity
-           WHERE user_id = $1 AND oauth_client_id = $2 AND feature IS NOT NULL
-           GROUP BY feature
-           ORDER BY count DESC
-           LIMIT 5`,
-          [userId, login.oauth_client_id]
-        );
+           WHERE user_id = $1 AND oauth_client_id = $2 AND feature IS NOT NULL`;
+        const topFeaturesParams: any[] = [userId, login.oauth_client_id];
+        
+        if (timeRangeDate) {
+          topFeaturesQuery += ` AND created_at >= $3`;
+          topFeaturesParams.push(timeRangeDate);
+        }
+        topFeaturesQuery += ` GROUP BY feature ORDER BY count DESC LIMIT 10`;
+        
+        const topFeatures = await this.dataSource.query(topFeaturesQuery, topFeaturesParams);
 
         return {
           oauthClientId: login.oauth_client_id,

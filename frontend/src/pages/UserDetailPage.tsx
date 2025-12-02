@@ -33,6 +33,11 @@ import {
   Snackbar,
   useTheme,
   Collapse,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  LinearProgress,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -65,6 +70,7 @@ import {
   ExpandLess,
   ExpandMore,
   Apps,
+  FilterList,
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
@@ -148,6 +154,7 @@ export default function UserDetailPage() {
   const [activity, setActivity] = useState<UserActivity | null>(null);
   const [activityLoading, setActivityLoading] = useState(false);
   const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
+  const [activityTimeRange, setActivityTimeRange] = useState<string>('7d');
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -175,10 +182,10 @@ export default function UserDetailPage() {
   }, [userId]);
 
   useEffect(() => {
-    if (activeTab === 'activity' && userId && !activity) {
+    if (activeTab === 'activity' && userId) {
       fetchUserActivity();
     }
-  }, [activeTab, userId]);
+  }, [activeTab, userId, activityTimeRange]);
 
   const fetchUserDetails = async () => {
     if (!userId) return;
@@ -205,12 +212,14 @@ export default function UserDetailPage() {
     }
   };
 
-  const fetchUserActivity = async () => {
+  const fetchUserActivity = async (forceRefresh = false) => {
     if (!userId) return;
     
     setActivityLoading(true);
     try {
-      const response = await api.get(`/v1/users/${userId}/activity`);
+      const response = await api.get(`/v1/users/${userId}/activity`, {
+        params: { timeRange: activityTimeRange }
+      });
       setActivity(response.data);
     } catch (err) {
       console.warn('Failed to load user activity:', err);
@@ -685,283 +694,380 @@ export default function UserDetailPage() {
         );
 
       case 'activity':
+        const timeRangeOptions = [
+          { value: '1h', label: 'Last 1 hour' },
+          { value: '3h', label: 'Last 3 hours' },
+          { value: '6h', label: 'Last 6 hours' },
+          { value: '12h', label: 'Last 12 hours' },
+          { value: '24h', label: 'Last 24 hours' },
+          { value: '3d', label: 'Last 3 days' },
+          { value: '7d', label: 'Last week' },
+          { value: '30d', label: 'Last 30 days' },
+        ];
+
+        const mergeAndSortActivities = (activities: typeof activity.connectedApps[0]['activities']) => {
+          const grouped = new Map<string, { action: string; feature?: string; description?: string; count: number; lastOccurrence: string }>();
+          
+          activities.forEach(act => {
+            const key = `${act.action}|${act.feature || ''}`;
+            const existing = grouped.get(key);
+            if (existing) {
+              existing.count++;
+              if (new Date(act.createdAt) > new Date(existing.lastOccurrence)) {
+                existing.lastOccurrence = act.createdAt;
+                existing.description = act.description;
+              }
+            } else {
+              grouped.set(key, {
+                action: act.action,
+                feature: act.feature,
+                description: act.description,
+                count: 1,
+                lastOccurrence: act.createdAt,
+              });
+            }
+          });
+          
+          return Array.from(grouped.values()).sort((a, b) => b.count - a.count);
+        };
+
         return (
           <Box>
-            {activityLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <Stack spacing={4}>
-                <Paper variant="outlined" sx={{ p: 3 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <Login fontSize="small" color="primary" />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Login History
-                    </Typography>
-                  </Stack>
-                  
-                  {activity?.loginHistory && activity.loginHistory.length > 0 ? (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Device</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>IP Address</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {activity.loginHistory.slice(0, 10).map((login, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
-                              </TableCell>
-                              <TableCell>
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                  <Devices fontSize="small" color="action" />
-                                  <Typography variant="body2">{getDeviceIcon(login.userAgent)}</Typography>
-                                </Stack>
-                              </TableCell>
-                              <TableCell>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                  {login.ip}
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No login history available. Last login: {formatLastLogin(user.lastLoginAt)}
-                    </Typography>
-                  )}
-                </Paper>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel id="time-range-label">
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <FilterList fontSize="small" />
+                      <span>Time Range</span>
+                    </Stack>
+                  </InputLabel>
+                  <Select
+                    labelId="time-range-label"
+                    value={activityTimeRange}
+                    label="Time Range"
+                    onChange={(e) => setActivityTimeRange(e.target.value)}
+                  >
+                    {timeRangeOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={activityLoading ? <CircularProgress size={16} /> : <Refresh />}
+                onClick={() => fetchUserActivity(true)}
+                disabled={activityLoading}
+                sx={{ textTransform: 'none' }}
+              >
+                {activityLoading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </Stack>
 
-                <Paper variant="outlined" sx={{ p: 3 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <Apps fontSize="small" color="primary" />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Connected Applications
-                    </Typography>
-                  </Stack>
-                  
-                  {activity?.connectedApps && activity.connectedApps.length > 0 ? (
-                    <Stack spacing={2}>
-                      {activity.connectedApps.map((app) => {
-                        const isExpanded = expandedApps.has(app.oauthClientId);
-                        const toggleExpand = () => {
-                          setExpandedApps(prev => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(app.oauthClientId)) {
-                              newSet.delete(app.oauthClientId);
-                            } else {
-                              newSet.add(app.oauthClientId);
-                            }
-                            return newSet;
-                          });
-                        };
-                        
-                        return (
-                          <Paper 
-                            key={app.oauthClientId} 
-                            variant="outlined" 
-                            sx={{ 
-                              overflow: 'hidden',
-                              bgcolor: isDarkMode ? 'background.default' : 'grey.50',
+            {activityLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+            <Stack spacing={4}>
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Login fontSize="small" color="primary" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Login History
+                  </Typography>
+                </Stack>
+                
+                {activity?.loginHistory && activity.loginHistory.length > 0 ? (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Device</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>IP Address</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {activity.loginHistory.slice(0, 10).map((login, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
+                            </TableCell>
+                            <TableCell>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Devices fontSize="small" color="action" />
+                                <Typography variant="body2">{getDeviceIcon(login.userAgent)}</Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                {login.ip}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No login history available in this time range. Last login: {formatLastLogin(user.lastLoginAt)}
+                  </Typography>
+                )}
+              </Paper>
+
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Apps fontSize="small" color="primary" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Connected Applications
+                  </Typography>
+                </Stack>
+                
+                {activity?.connectedApps && activity.connectedApps.length > 0 ? (
+                  <Stack spacing={2}>
+                    {activity.connectedApps.map((app) => {
+                      const isExpanded = expandedApps.has(app.oauthClientId);
+                      const toggleExpand = () => {
+                        setExpandedApps(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(app.oauthClientId)) {
+                            newSet.delete(app.oauthClientId);
+                          } else {
+                            newSet.add(app.oauthClientId);
+                          }
+                          return newSet;
+                        });
+                      };
+                      
+                      const mergedActivities = mergeAndSortActivities(app.activities);
+                      const totalActivityCount = app.activities.length;
+                      
+                      return (
+                        <Paper 
+                          key={app.oauthClientId} 
+                          variant="outlined" 
+                          sx={{ 
+                            overflow: 'hidden',
+                            bgcolor: isDarkMode ? 'background.default' : 'grey.50',
+                          }}
+                        >
+                          <Box
+                            onClick={toggleExpand}
+                            sx={{
+                              p: 2,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
+                              },
                             }}
                           >
-                            <Box
-                              onClick={toggleExpand}
-                              sx={{
-                                p: 2,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
-                                },
-                              }}
-                            >
-                              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <Stack direction="row" alignItems="center" spacing={2}>
-                                  <Avatar 
-                                    sx={{ 
-                                      bgcolor: 'primary.main', 
-                                      width: 40, 
-                                      height: 40,
-                                      fontSize: '1rem',
-                                    }}
-                                  >
-                                    {app.appName.charAt(0).toUpperCase()}
-                                  </Avatar>
-                                  <Stack>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                      {app.appName}
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Stack direction="row" alignItems="center" spacing={2}>
+                                <Avatar 
+                                  sx={{ 
+                                    bgcolor: 'primary.main', 
+                                    width: 40, 
+                                    height: 40,
+                                    fontSize: '1rem',
+                                  }}
+                                >
+                                  {app.appName.charAt(0).toUpperCase()}
+                                </Avatar>
+                                <Stack>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                    {app.appName}
+                                  </Typography>
+                                  <Stack direction="row" spacing={2} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary">
+                                      {app.loginCount} login{app.loginCount !== 1 ? 's' : ''}
                                     </Typography>
-                                    <Stack direction="row" spacing={2} alignItems="center">
+                                    {totalActivityCount > 0 && (
                                       <Typography variant="caption" color="text.secondary">
-                                        {app.loginCount} login{app.loginCount !== 1 ? 's' : ''}
+                                        {totalActivityCount} action{totalActivityCount !== 1 ? 's' : ''}
                                       </Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        Last used: {formatDistanceToNow(new Date(app.lastLoginAt), { addSuffix: true })}
-                                      </Typography>
-                                    </Stack>
+                                    )}
+                                    <Typography variant="caption" color="text.secondary">
+                                      Last used: {formatDistanceToNow(new Date(app.lastLoginAt), { addSuffix: true })}
+                                    </Typography>
                                   </Stack>
-                                </Stack>
-                                <Stack direction="row" alignItems="center" spacing={1}>
-                                  {app.topFeatures.length > 0 && (
-                                    <Stack direction="row" spacing={0.5}>
-                                      {app.topFeatures.slice(0, 2).map((f, idx) => (
-                                        <Chip
-                                          key={idx}
-                                          label={f.feature}
-                                          size="small"
-                                          sx={{ fontSize: '0.7rem' }}
-                                        />
-                                      ))}
-                                    </Stack>
-                                  )}
-                                  <IconButton size="small">
-                                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                                  </IconButton>
                                 </Stack>
                               </Stack>
-                            </Box>
-                            
-                            <Collapse in={isExpanded}>
-                              <Divider />
-                              <Box sx={{ p: 2 }}>
-                                {app.activities.length > 0 ? (
-                                  <Stack spacing={1}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                                      Recent Activity in {app.appName}
-                                    </Typography>
-                                    {app.activities.slice(0, 5).map((act) => (
-                                      <Stack 
-                                        key={act.id} 
-                                        direction="row" 
-                                        justifyContent="space-between" 
-                                        alignItems="flex-start"
-                                        sx={{ 
-                                          py: 1, 
-                                          px: 1.5, 
-                                          borderRadius: 1,
-                                          bgcolor: isDarkMode ? 'background.paper' : 'white',
-                                        }}
-                                      >
-                                        <Stack spacing={0.5}>
-                                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                            {act.action.replace(/_/g, ' ')}
-                                          </Typography>
-                                          {act.feature && (
-                                            <Chip 
-                                              label={act.feature} 
-                                              size="small" 
-                                              variant="outlined"
-                                              sx={{ fontSize: '0.7rem', width: 'fit-content' }}
-                                            />
-                                          )}
-                                          {act.description && (
-                                            <Typography variant="caption" color="text.secondary">
-                                              {act.description}
-                                            </Typography>
-                                          )}
-                                        </Stack>
-                                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 2 }}>
-                                          {formatDistanceToNow(new Date(act.createdAt), { addSuffix: true })}
-                                        </Typography>
-                                      </Stack>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                {app.topFeatures.length > 0 && (
+                                  <Stack direction="row" spacing={0.5}>
+                                    {app.topFeatures.slice(0, 3).map((f, idx) => (
+                                      <Chip
+                                        key={idx}
+                                        label={`${f.feature} (${f.count})`}
+                                        size="small"
+                                        sx={{ fontSize: '0.7rem' }}
+                                      />
                                     ))}
                                   </Stack>
-                                ) : (
-                                  <Stack spacing={1}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
-                                      Application Details
-                                    </Typography>
-                                    <Stack direction="row" spacing={4}>
-                                      <Stack>
-                                        <Typography variant="caption" color="text.secondary">First Login</Typography>
-                                        <Typography variant="body2">
-                                          {format(new Date(app.firstLoginAt), 'MMM d, yyyy')}
-                                        </Typography>
-                                      </Stack>
-                                      <Stack>
-                                        <Typography variant="caption" color="text.secondary">Total Logins</Typography>
-                                        <Typography variant="body2">{app.loginCount}</Typography>
-                                      </Stack>
-                                    </Stack>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
-                                      No feature usage data recorded yet.
-                                    </Typography>
-                                  </Stack>
                                 )}
-                              </Box>
-                            </Collapse>
-                          </Paper>
-                        );
-                      })}
-                    </Stack>
-                  ) : activity?.lastAppsUsed && activity.lastAppsUsed.length > 0 ? (
-                    <Stack spacing={2}>
-                      {activity.lastAppsUsed.map((app, index) => (
-                        <Stack key={index} direction="row" justifyContent="space-between" alignItems="center">
-                          <Stack>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {app.appName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Client ID: {app.clientId}
-                            </Typography>
-                          </Stack>
-                          <Typography variant="body2" color="text.secondary">
-                            Last used: {formatDistanceToNow(new Date(app.lastUsed), { addSuffix: true })}
+                                <IconButton size="small">
+                                  {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                </IconButton>
+                              </Stack>
+                            </Stack>
+                          </Box>
+                          
+                          <Collapse in={isExpanded}>
+                            <Divider />
+                            <Box sx={{ p: 2 }}>
+                              {mergedActivities.length > 0 ? (
+                                <Stack spacing={2}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+                                    Feature Usage Summary (sorted by frequency)
+                                  </Typography>
+                                  <Stack spacing={1}>
+                                    {mergedActivities.map((activity, idx) => {
+                                      const maxCount = mergedActivities[0]?.count || 1;
+                                      const percentage = (activity.count / maxCount) * 100;
+                                      
+                                      return (
+                                        <Box key={idx} sx={{ position: 'relative' }}>
+                                          <Box
+                                            sx={{
+                                              position: 'absolute',
+                                              top: 0,
+                                              left: 0,
+                                              height: '100%',
+                                              width: `${percentage}%`,
+                                              bgcolor: isDarkMode ? 'primary.dark' : 'primary.light',
+                                              opacity: 0.15,
+                                              borderRadius: 1,
+                                            }}
+                                          />
+                                          <Stack 
+                                            direction="row" 
+                                            justifyContent="space-between" 
+                                            alignItems="center"
+                                            sx={{ 
+                                              py: 1.5, 
+                                              px: 2, 
+                                              borderRadius: 1,
+                                              position: 'relative',
+                                            }}
+                                          >
+                                            <Stack direction="row" alignItems="center" spacing={2}>
+                                              <Chip 
+                                                label={activity.count} 
+                                                size="small" 
+                                                color="primary"
+                                                sx={{ 
+                                                  minWidth: 36,
+                                                  fontWeight: 600,
+                                                }}
+                                              />
+                                              <Stack spacing={0.25}>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                  {activity.action.replace(/_/g, ' ')}
+                                                </Typography>
+                                                {activity.feature && (
+                                                  <Typography variant="caption" color="text.secondary">
+                                                    Feature: {activity.feature}
+                                                  </Typography>
+                                                )}
+                                              </Stack>
+                                            </Stack>
+                                            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                                              Last: {formatDistanceToNow(new Date(activity.lastOccurrence), { addSuffix: true })}
+                                            </Typography>
+                                          </Stack>
+                                        </Box>
+                                      );
+                                    })}
+                                  </Stack>
+                                </Stack>
+                              ) : (
+                                <Stack spacing={1}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+                                    Application Details
+                                  </Typography>
+                                  <Stack direction="row" spacing={4}>
+                                    <Stack>
+                                      <Typography variant="caption" color="text.secondary">First Login</Typography>
+                                      <Typography variant="body2">
+                                        {format(new Date(app.firstLoginAt), 'MMM d, yyyy')}
+                                      </Typography>
+                                    </Stack>
+                                    <Stack>
+                                      <Typography variant="caption" color="text.secondary">Total Logins</Typography>
+                                      <Typography variant="body2">{app.loginCount}</Typography>
+                                    </Stack>
+                                  </Stack>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                                    No feature usage data recorded in this time range.
+                                  </Typography>
+                                </Stack>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
+                ) : activity?.lastAppsUsed && activity.lastAppsUsed.length > 0 ? (
+                  <Stack spacing={2}>
+                    {activity.lastAppsUsed.map((app, index) => (
+                      <Stack key={index} direction="row" justifyContent="space-between" alignItems="center">
+                        <Stack>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {app.appName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Client ID: {app.clientId}
                           </Typography>
                         </Stack>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No connected applications found.
-                    </Typography>
-                  )}
-                </Paper>
-
-                {/* General Recent Activity (non-app specific) */}
-                {activity?.recentActions && activity.recentActions.length > 0 && (
-                  <Paper variant="outlined" sx={{ p: 3 }}>
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                      <Timeline fontSize="small" color="primary" />
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                        General Activity
-                      </Typography>
-                    </Stack>
-                    <Stack spacing={1}>
-                      {activity.recentActions.slice(0, 10).map((action, index) => {
-                        const formatActionLabel = (act: typeof action) => {
-                          const baseAction = act.action.replace(/_/g, ' ');
-                          if ((act.action === 'admin_password_set' || act.action === 'admin_password_reset_sent') && act.targetUserEmail) {
-                            return `${baseAction} for ${act.targetUserEmail}`;
-                          }
-                          return `${baseAction} - ${act.entityType}`;
-                        };
-                        
-                        return (
-                          <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
-                            <Typography variant="body2" sx={{ flex: 1, mr: 2 }}>
-                              {formatActionLabel(action)}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                              {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
-                            </Typography>
-                          </Stack>
-                        );
-                      })}
-                    </Stack>
-                  </Paper>
+                        <Typography variant="body2" color="text.secondary">
+                          Last used: {formatDistanceToNow(new Date(app.lastUsed), { addSuffix: true })}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No connected applications found.
+                  </Typography>
                 )}
-              </Stack>
-            )}
+              </Paper>
+
+              {/* General Recent Activity (non-app specific) */}
+              {activity?.recentActions && activity.recentActions.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                    <Timeline fontSize="small" color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      General Activity
+                    </Typography>
+                  </Stack>
+                  <Stack spacing={1}>
+                    {activity.recentActions.slice(0, 10).map((action, index) => {
+                      const formatActionLabel = (act: typeof action) => {
+                        const baseAction = act.action.replace(/_/g, ' ');
+                        if ((act.action === 'admin_password_set' || act.action === 'admin_password_reset_sent') && act.targetUserEmail) {
+                          return `${baseAction} for ${act.targetUserEmail}`;
+                        }
+                        return `${baseAction} - ${act.entityType}`;
+                      };
+                      
+                      return (
+                        <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                          <Typography variant="body2" sx={{ flex: 1, mr: 2 }}>
+                            {formatActionLabel(action)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                            {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
+                          </Typography>
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
           </Box>
         );
 
