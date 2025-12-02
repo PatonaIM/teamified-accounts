@@ -274,6 +274,14 @@ export const logout = async (): Promise<void> => {
     localStorage.removeItem('teamified_last_path');
     localStorage.removeItem('teamified_last_path_user');
     
+    // Clear theme preference cache
+    localStorage.removeItem('teamified_theme_auth');
+    
+    // Clear any SSO/OAuth related session storage (PKCE verifiers, state, etc.)
+    sessionStorage.removeItem('pkce_code_verifier');
+    sessionStorage.removeItem('pkce_state');
+    sessionStorage.removeItem('oauth_state');
+    
     // Clear theme preferences on logout
     try {
       const { clearThemePreferences } = await import('../contexts/ThemeContext');
