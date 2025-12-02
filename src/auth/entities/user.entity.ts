@@ -85,6 +85,15 @@ export class User {
   @Column({ name: 'profile_picture_url', type: 'text', nullable: true })
   profilePictureUrl: string | null;
 
+  @Column({ name: 'must_change_password', default: false })
+  mustChangePassword: boolean;
+
+  @Column({ name: 'password_changed_by_admin_at', type: 'timestamptz', nullable: true })
+  passwordChangedByAdminAt: Date | null;
+
+  @Column({ name: 'password_changed_by_admin_id', type: 'uuid', nullable: true })
+  passwordChangedByAdminId: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
