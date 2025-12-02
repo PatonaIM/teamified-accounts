@@ -597,6 +597,8 @@ export class UserService {
       appName: string;
       clientId: string;
       lastUsed: string;
+      firstUsed?: string;
+      loginCount?: number;
     }>;
     recentActions: Array<{
       action: string;
@@ -624,21 +626,23 @@ export class UserService {
       deviceType: this.getDeviceType(session.device_metadata?.userAgent || ''),
     }));
 
-    // Get connected apps from user_app_permissions
-    const appPermissions = await this.dataSource.query(
-      `SELECT uap.oauth_client_id, uap.updated_at, oc.name as app_name
-       FROM user_app_permissions uap
-       LEFT JOIN oauth_clients oc ON uap.oauth_client_id = oc.id
-       WHERE uap.user_id = $1 AND uap.permission = 'allow'
-       ORDER BY uap.updated_at DESC
+    // Get connected apps from user_oauth_logins (tracks actual OAuth logins)
+    const oauthLogins = await this.dataSource.query(
+      `SELECT uol.oauth_client_id, uol.last_login_at, uol.first_login_at, uol.login_count, oc.name as app_name
+       FROM user_oauth_logins uol
+       LEFT JOIN oauth_clients oc ON uol.oauth_client_id = oc.id
+       WHERE uol.user_id = $1
+       ORDER BY uol.last_login_at DESC
        LIMIT 10`,
       [userId]
     );
 
-    const lastAppsUsed = appPermissions.map((app: any) => ({
+    const lastAppsUsed = oauthLogins.map((app: any) => ({
       appName: app.app_name || 'Unknown App',
       clientId: app.oauth_client_id,
-      lastUsed: app.updated_at?.toISOString() || new Date().toISOString(),
+      lastUsed: app.last_login_at?.toISOString() || new Date().toISOString(),
+      firstUsed: app.first_login_at?.toISOString() || null,
+      loginCount: app.login_count || 1,
     }));
 
     // Get recent actions from audit logs
