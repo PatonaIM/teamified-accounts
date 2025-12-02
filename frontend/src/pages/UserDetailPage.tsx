@@ -226,6 +226,11 @@ export default function UserDetailPage() {
       const successMsg = response.data?.message || 'Password has been set successfully.';
       setResetSuccess(successMsg);
       setSnackbar({ open: true, message: 'Password set successfully. Make sure to share the password securely with the user.', severity: 'success' });
+      
+      // Close modal after a brief delay to allow user to see success message
+      setTimeout(() => {
+        handleCloseResetPasswordModal();
+      }, 2000);
     } catch (err: any) {
       setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to set password', severity: 'error' });
     } finally {
