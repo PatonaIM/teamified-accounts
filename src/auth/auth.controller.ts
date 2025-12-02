@@ -744,7 +744,18 @@ export class AuthController {
 
   @Post('admin/send-password-reset')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('super_admin', 'internal_hr', 'internal_account_manager')
+  @Roles(
+    'super_admin',
+    'internal_hr',
+    'internal_finance',
+    'internal_account_manager',
+    'internal_recruiter',
+    'internal_marketing',
+    'client_admin',
+    'client_hr',
+    'client_finance',
+    'client_recruiter'
+  )
   @Throttle({ default: { limit: 10, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -753,7 +764,11 @@ export class AuthController {
     description: `
       Admin endpoint to send a password reset email on behalf of a user.
       This endpoint requires authentication and logs which admin initiated the reset.
-      Only super admins and internal users can access this endpoint.
+      
+      ## Authorized Roles:
+      - super_admin
+      - All internal roles except internal_member
+      - All client roles except client_employee
       
       ## Process Flow:
       1. Admin provides user ID
@@ -788,7 +803,7 @@ export class AuthController {
 
   @Post('admin/set-password')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('super_admin', 'internal_hr', 'internal_account_manager')
+  @Roles('super_admin', 'internal_account_manager', 'internal_hr')
   @Throttle({ default: { limit: 10, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -797,14 +812,22 @@ export class AuthController {
     description: `
       Admin endpoint to directly set a user's password without requiring a reset token.
       This endpoint requires authentication and logs which admin initiated the password change.
-      Only super admins and internal users can access this endpoint.
+      
+      ## Authorized Roles:
+      - super_admin
+      - internal_account_manager
+      - internal_hr
+      
+      **Note:** This is a restricted operation. The admin must securely communicate the 
+      new password to the user. The user will be required to change it on first login.
       
       ## Process Flow:
       1. Admin provides user ID and new password
       2. System validates admin permissions
       3. Password is validated against security policy
       4. Password is updated and all user sessions are invalidated
-      5. Action is logged with admin as the actor
+      5. User's mustChangePassword flag is set to true
+      6. Action is logged with admin as the actor
     `,
   })
   @ApiResponse({
