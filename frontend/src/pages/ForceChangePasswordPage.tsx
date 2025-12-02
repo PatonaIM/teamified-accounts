@@ -14,6 +14,7 @@ import { Visibility, VisibilityOff, Lock, Warning } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { setAccessToken, setRefreshToken } from '../services/authService';
 
 const ForceChangePasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -96,6 +97,14 @@ const ForceChangePasswordPage: React.FC = () => {
 
       if (response.status === 200) {
         setSuccess(true);
+        
+        const { accessToken, refreshToken } = response.data;
+        if (accessToken) {
+          setAccessToken(accessToken);
+        }
+        if (refreshToken) {
+          setRefreshToken(refreshToken);
+        }
         
         updateUser({ mustChangePassword: false });
         

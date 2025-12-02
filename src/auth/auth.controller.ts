@@ -43,6 +43,7 @@ import { ClientAdminSignupDto, ClientAdminSignupResponseDto } from './dto/client
 import { CandidateSignupDto, CandidateSignupResponseDto } from './dto/candidate-signup.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { MustChangePasswordGuard, SkipPasswordChangeCheck } from '../common/guards/must-change-password.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { ErrorResponseDto, ValidationErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
 import { ApiResponseDto, CreatedResponseDto, UpdatedResponseDto } from '../common/dto/api-response.dto';
@@ -558,6 +559,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @ApiOperation({
     summary: 'Get current user profile',
     description: `
@@ -603,6 +605,7 @@ export class AuthController {
 
   @Get('me/completion-status')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @ApiOperation({
     summary: 'Get profile completion status',
     description: `
@@ -648,6 +651,7 @@ export class AuthController {
 
   @Get('me/profile')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @ApiOperation({
     summary: 'Get user profile data',
     description: `
@@ -1069,6 +1073,7 @@ export class AuthController {
 
   @Post('force-change-password')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @Throttle({ default: { limit: 5, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -1081,13 +1086,15 @@ export class AuthController {
       1. Verify user is logged in and has mustChangePassword flag set
       2. Validate new password meets security requirements
       3. Update password and clear the mustChangePassword flag
-      4. User can now access the application normally
+      4. Issue new tokens with mustChangePassword=false
+      5. User can now access the application normally
       
       ## Security Features:
       - Rate limited to 5 attempts per 5 minutes
       - Requires valid JWT token
       - Password must meet complexity requirements
       - All password changes are logged for audit
+      - New tokens issued after successful password change
       
       ## Use Cases:
       - Users whose password was reset by admin
@@ -1100,7 +1107,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Password changed successfully',
+    description: 'Password changed successfully. New tokens returned.',
     type: () => require('./dto/reset-password.dto').ForceChangePasswordResponseDto,
   })
   @ApiResponse({
@@ -1121,7 +1128,7 @@ export class AuthController {
   async forceChangePassword(
     @Body() forceChangePasswordDto: { newPassword: string; confirmPassword: string },
     @Request() req: any,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
     return this.authService.forceChangePassword(
       req.user.sub,
       forceChangePasswordDto.newPassword,

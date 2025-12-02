@@ -1093,6 +1093,7 @@ This is an automated message from Teamified.
 
   /**
    * Force Change Password - For users who must change password on first login
+   * Returns new tokens with mustChangePassword=false after successful password change
    */
   async forceChangePassword(
     userId: string,
@@ -1100,7 +1101,7 @@ This is an automated message from Teamified.
     confirmPassword: string,
     ip?: string,
     userAgent?: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
     // Validate password confirmation
     if (newPassword !== confirmPassword) {
       throw new BadRequestException('Passwords do not match');
@@ -1140,6 +1141,31 @@ This is an automated message from Teamified.
       passwordChangedByAdminId: null,
     });
 
+    // Reload user to get updated mustChangePassword=false for token generation
+    const updatedUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    // Invalidate all existing sessions (they have old tokens with mustChangePassword=true)
+    await this.sessionRepository.update(
+      { userId: user.id },
+      { revokedAt: new Date() },
+    );
+
+    // Generate new tokens with mustChangePassword=false
+    const tokens = await this.jwtService.generateTokenPair(updatedUser!);
+
+    // Create new session with fresh tokens
+    const deviceMetadata: DeviceMetadata = {
+      ip: ip || 'unknown',
+      userAgent: userAgent || 'unknown',
+    };
+    await this.sessionService.createSession(
+      updatedUser!,
+      tokens.refreshToken,
+      deviceMetadata,
+    );
+
     // Log the password change
     await this.auditService.log({
       actorUserId: user.id,
@@ -1150,6 +1176,7 @@ This is an automated message from Teamified.
       changes: {
         mustChangePassword: false,
         passwordChanged: true,
+        newSessionCreated: true,
       },
       ip,
       userAgent,
@@ -1157,7 +1184,11 @@ This is an automated message from Teamified.
 
     this.logger.log(`User ${user.email} changed password after admin reset`);
 
-    return { message: 'Password changed successfully' };
+    return { 
+      message: 'Password changed successfully',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
   /**
