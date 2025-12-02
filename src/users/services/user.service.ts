@@ -604,6 +604,7 @@ export class UserService {
       action: string;
       entityType: string;
       timestamp: string;
+      targetUserEmail?: string;
     }>;
   }> {
     // Verify user exists
@@ -645,21 +646,45 @@ export class UserService {
       loginCount: app.login_count || 1,
     }));
 
-    // Get recent actions from audit logs
+    // Get recent actions from audit logs (excluding login-related events since we have login history)
+    const loginRelatedActions = [
+      'login_success', 
+      'login_failed', 
+      'logout', 
+      'session_created', 
+      'session_expired',
+      'session_invalidated',
+      'token_refresh',
+      'token_refreshed'
+    ];
+    
     const auditLogs = await this.dataSource.query(
-      `SELECT action, entity_type, at
+      `SELECT action, entity_type, at, changes
        FROM audit_logs
        WHERE actor_user_id = $1
+         AND action NOT IN (${loginRelatedActions.map((_, i) => `$${i + 2}`).join(', ')})
        ORDER BY at DESC
        LIMIT 20`,
-      [userId]
+      [userId, ...loginRelatedActions]
     );
 
-    const recentActions = auditLogs.map((log: any) => ({
-      action: log.action,
-      entityType: log.entity_type,
-      timestamp: log.at?.toISOString() || new Date().toISOString(),
-    }));
+    const recentActions = auditLogs.map((log: any) => {
+      const result: any = {
+        action: log.action,
+        entityType: log.entity_type,
+        timestamp: log.at?.toISOString() || new Date().toISOString(),
+      };
+      
+      // For admin password actions, include target user email
+      if (log.action === 'admin_password_set' || log.action === 'admin_password_reset_sent') {
+        const changes = typeof log.changes === 'string' ? JSON.parse(log.changes) : log.changes;
+        if (changes?.targetUserEmail) {
+          result.targetUserEmail = changes.targetUserEmail;
+        }
+      }
+      
+      return result;
+    });
 
     return {
       loginHistory,
