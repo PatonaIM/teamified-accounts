@@ -606,6 +606,24 @@ export class UserService {
       timestamp: string;
       targetUserEmail?: string;
     }>;
+    connectedApps: Array<{
+      oauthClientId: string;
+      appName: string;
+      firstLoginAt: string;
+      lastLoginAt: string;
+      loginCount: number;
+      activities: Array<{
+        id: string;
+        action: string;
+        feature?: string;
+        description?: string;
+        createdAt: string;
+      }>;
+      topFeatures: Array<{
+        feature: string;
+        count: number;
+      }>;
+    }>;
   }> {
     // Verify user exists
     await this.findOne(userId);
@@ -686,11 +704,96 @@ export class UserService {
       return result;
     });
 
+    // Get connected apps with grouped activity
+    const connectedApps = await this.getConnectedAppsWithActivity(userId);
+
     return {
       loginHistory,
       lastAppsUsed,
       recentActions,
+      connectedApps,
     };
+  }
+
+  private async getConnectedAppsWithActivity(userId: string): Promise<Array<{
+    oauthClientId: string;
+    appName: string;
+    firstLoginAt: string;
+    lastLoginAt: string;
+    loginCount: number;
+    activities: Array<{
+      id: string;
+      action: string;
+      feature?: string;
+      description?: string;
+      createdAt: string;
+    }>;
+    topFeatures: Array<{
+      feature: string;
+      count: number;
+    }>;
+  }>> {
+    // Get all OAuth apps the user has logged into
+    const oauthLogins = await this.dataSource.query(
+      `SELECT uol.oauth_client_id, uol.last_login_at, uol.first_login_at, uol.login_count, 
+              oc.name as app_name, oc.client_id
+       FROM user_oauth_logins uol
+       LEFT JOIN oauth_clients oc ON uol.oauth_client_id = oc.id
+       WHERE uol.user_id = $1
+       ORDER BY uol.last_login_at DESC`,
+      [userId]
+    );
+
+    if (oauthLogins.length === 0) {
+      return [];
+    }
+
+    // Get recent activities for each app
+    const connectedApps = await Promise.all(
+      oauthLogins.map(async (login: any) => {
+        // Get recent activities for this app
+        const activities = await this.dataSource.query(
+          `SELECT id, action, feature, description, created_at
+           FROM user_app_activity
+           WHERE user_id = $1 AND oauth_client_id = $2
+           ORDER BY created_at DESC
+           LIMIT 10`,
+          [userId, login.oauth_client_id]
+        );
+
+        // Get top features for this app
+        const topFeatures = await this.dataSource.query(
+          `SELECT feature, COUNT(*) as count
+           FROM user_app_activity
+           WHERE user_id = $1 AND oauth_client_id = $2 AND feature IS NOT NULL
+           GROUP BY feature
+           ORDER BY count DESC
+           LIMIT 5`,
+          [userId, login.oauth_client_id]
+        );
+
+        return {
+          oauthClientId: login.oauth_client_id,
+          appName: login.app_name || 'Unknown App',
+          firstLoginAt: login.first_login_at?.toISOString() || new Date().toISOString(),
+          lastLoginAt: login.last_login_at?.toISOString() || new Date().toISOString(),
+          loginCount: parseInt(login.login_count) || 1,
+          activities: activities.map((a: any) => ({
+            id: a.id,
+            action: a.action,
+            feature: a.feature || undefined,
+            description: a.description || undefined,
+            createdAt: a.created_at?.toISOString() || new Date().toISOString(),
+          })),
+          topFeatures: topFeatures.map((f: any) => ({
+            feature: f.feature,
+            count: parseInt(f.count) || 0,
+          })),
+        };
+      })
+    );
+
+    return connectedApps;
   }
 
   private getDeviceType(userAgent: string): string {

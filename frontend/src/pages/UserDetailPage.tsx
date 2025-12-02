@@ -32,6 +32,7 @@ import {
   Tooltip,
   Snackbar,
   useTheme,
+  Collapse,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -61,6 +62,9 @@ import {
   Timeline,
   Edit,
   CameraAlt,
+  ExpandLess,
+  ExpandMore,
+  Apps,
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
@@ -92,6 +96,24 @@ interface UserActivity {
     entityType: string;
     timestamp: string;
     targetUserEmail?: string;
+  }>;
+  connectedApps: Array<{
+    oauthClientId: string;
+    appName: string;
+    firstLoginAt: string;
+    lastLoginAt: string;
+    loginCount: number;
+    activities: Array<{
+      id: string;
+      action: string;
+      feature?: string;
+      description?: string;
+      createdAt: string;
+    }>;
+    topFeatures: Array<{
+      feature: string;
+      count: number;
+    }>;
   }>;
 }
 
@@ -125,6 +147,7 @@ export default function UserDetailPage() {
   // Activity state
   const [activity, setActivity] = useState<UserActivity | null>(null);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -195,6 +218,7 @@ export default function UserDetailPage() {
         loginHistory: [],
         lastAppsUsed: [],
         recentActions: [],
+        connectedApps: [],
       });
     } finally {
       setActivityLoading(false);
@@ -725,13 +749,167 @@ export default function UserDetailPage() {
 
                 <Paper variant="outlined" sx={{ p: 3 }}>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <Devices fontSize="small" color="primary" />
+                    <Apps fontSize="small" color="primary" />
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Connected Applications
+                      Connected Applications & Activity
                     </Typography>
                   </Stack>
                   
-                  {activity?.lastAppsUsed && activity.lastAppsUsed.length > 0 ? (
+                  {activity?.connectedApps && activity.connectedApps.length > 0 ? (
+                    <Stack spacing={2}>
+                      {activity.connectedApps.map((app) => {
+                        const isExpanded = expandedApps.has(app.oauthClientId);
+                        const toggleExpand = () => {
+                          setExpandedApps(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(app.oauthClientId)) {
+                              newSet.delete(app.oauthClientId);
+                            } else {
+                              newSet.add(app.oauthClientId);
+                            }
+                            return newSet;
+                          });
+                        };
+                        
+                        return (
+                          <Paper 
+                            key={app.oauthClientId} 
+                            variant="outlined" 
+                            sx={{ 
+                              overflow: 'hidden',
+                              bgcolor: isDarkMode ? 'background.default' : 'grey.50',
+                            }}
+                          >
+                            <Box
+                              onClick={toggleExpand}
+                              sx={{
+                                p: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
+                                },
+                              }}
+                            >
+                              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Stack direction="row" alignItems="center" spacing={2}>
+                                  <Avatar 
+                                    sx={{ 
+                                      bgcolor: 'primary.main', 
+                                      width: 40, 
+                                      height: 40,
+                                      fontSize: '1rem',
+                                    }}
+                                  >
+                                    {app.appName.charAt(0).toUpperCase()}
+                                  </Avatar>
+                                  <Stack>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                      {app.appName}
+                                    </Typography>
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                      <Typography variant="caption" color="text.secondary">
+                                        {app.loginCount} login{app.loginCount !== 1 ? 's' : ''}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Last used: {formatDistanceToNow(new Date(app.lastLoginAt), { addSuffix: true })}
+                                      </Typography>
+                                    </Stack>
+                                  </Stack>
+                                </Stack>
+                                <Stack direction="row" alignItems="center" spacing={1}>
+                                  {app.topFeatures.length > 0 && (
+                                    <Stack direction="row" spacing={0.5}>
+                                      {app.topFeatures.slice(0, 2).map((f, idx) => (
+                                        <Chip
+                                          key={idx}
+                                          label={f.feature}
+                                          size="small"
+                                          sx={{ fontSize: '0.7rem' }}
+                                        />
+                                      ))}
+                                    </Stack>
+                                  )}
+                                  <IconButton size="small">
+                                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                  </IconButton>
+                                </Stack>
+                              </Stack>
+                            </Box>
+                            
+                            <Collapse in={isExpanded}>
+                              <Divider />
+                              <Box sx={{ p: 2 }}>
+                                {app.activities.length > 0 ? (
+                                  <Stack spacing={1}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+                                      Recent Activity in {app.appName}
+                                    </Typography>
+                                    {app.activities.slice(0, 5).map((act) => (
+                                      <Stack 
+                                        key={act.id} 
+                                        direction="row" 
+                                        justifyContent="space-between" 
+                                        alignItems="flex-start"
+                                        sx={{ 
+                                          py: 1, 
+                                          px: 1.5, 
+                                          borderRadius: 1,
+                                          bgcolor: isDarkMode ? 'background.paper' : 'white',
+                                        }}
+                                      >
+                                        <Stack spacing={0.5}>
+                                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                            {act.action.replace(/_/g, ' ')}
+                                          </Typography>
+                                          {act.feature && (
+                                            <Chip 
+                                              label={act.feature} 
+                                              size="small" 
+                                              variant="outlined"
+                                              sx={{ fontSize: '0.7rem', width: 'fit-content' }}
+                                            />
+                                          )}
+                                          {act.description && (
+                                            <Typography variant="caption" color="text.secondary">
+                                              {act.description}
+                                            </Typography>
+                                          )}
+                                        </Stack>
+                                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 2 }}>
+                                          {formatDistanceToNow(new Date(act.createdAt), { addSuffix: true })}
+                                        </Typography>
+                                      </Stack>
+                                    ))}
+                                  </Stack>
+                                ) : (
+                                  <Stack spacing={1}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+                                      Application Details
+                                    </Typography>
+                                    <Stack direction="row" spacing={4}>
+                                      <Stack>
+                                        <Typography variant="caption" color="text.secondary">First Login</Typography>
+                                        <Typography variant="body2">
+                                          {format(new Date(app.firstLoginAt), 'MMM d, yyyy')}
+                                        </Typography>
+                                      </Stack>
+                                      <Stack>
+                                        <Typography variant="caption" color="text.secondary">Total Logins</Typography>
+                                        <Typography variant="body2">{app.loginCount}</Typography>
+                                      </Stack>
+                                    </Stack>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                                      No feature usage data recorded yet.
+                                    </Typography>
+                                  </Stack>
+                                )}
+                              </Box>
+                            </Collapse>
+                          </Paper>
+                        );
+                      })}
+                    </Stack>
+                  ) : activity?.lastAppsUsed && activity.lastAppsUsed.length > 0 ? (
                     <Stack spacing={2}>
                       {activity.lastAppsUsed.map((app, index) => (
                         <Stack key={index} direction="row" justifyContent="space-between" alignItems="center">

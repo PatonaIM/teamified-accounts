@@ -457,4 +457,12 @@ export class SsoService {
   async getOAuthClientByClientId(clientId: string) {
     return this.oauthClientsService.findByClientId(clientId);
   }
+
+  /**
+   * Validate client credentials using the OAuth clients service
+   * This provides consistent credential validation across the application
+   */
+  async validateClientCredentials(clientId: string, clientSecret: string) {
+    return this.oauthClientsService.validateClient(clientId, clientSecret);
+  }
 }
