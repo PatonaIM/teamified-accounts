@@ -480,6 +480,7 @@ export default function UserDetailPage() {
 
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
   const isFromOrganization = navigationState?.organizationId && navigationState?.organizationName;
+  const hasNavigationHistory = !!navigationState;
 
   const handleBackNavigation = () => {
     if (isFromOrganization) {
@@ -808,18 +809,20 @@ export default function UserDetailPage() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header - Matching OrganizationManagementPage */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton 
-          onClick={handleBackNavigation}
-          sx={{ 
-            mr: 2,
-            color: 'primary.main',
-            '&:hover': { 
-              bgcolor: 'rgba(161, 106, 232, 0.08)' 
-            }
-          }}
-        >
-          <ArrowBack />
-        </IconButton>
+        {hasNavigationHistory && (
+          <IconButton 
+            onClick={handleBackNavigation}
+            sx={{ 
+              mr: 2,
+              color: 'primary.main',
+              '&:hover': { 
+                bgcolor: 'rgba(161, 106, 232, 0.08)' 
+              }
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+        )}
         {isFromOrganization ? (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography 
@@ -852,7 +855,7 @@ export default function UserDetailPage() {
               {userFullName}
             </Typography>
           </Stack>
-        ) : (
+        ) : hasNavigationHistory ? (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography 
               variant="h4" 
@@ -871,6 +874,10 @@ export default function UserDetailPage() {
               {userFullName}
             </Typography>
           </Stack>
+        ) : (
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            {userFullName}
+          </Typography>
         )}
       </Box>
 
