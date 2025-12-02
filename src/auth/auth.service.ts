@@ -772,7 +772,7 @@ This is an automated message from Teamified.
     adminUserId: string,
     ip?: string,
     userAgent?: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; warning: string }> {
     // Find the user
     const user = await this.userRepository.findOne({
       where: { id: userId, isActive: true },
@@ -810,15 +810,6 @@ This is an automated message from Teamified.
       { revokedAt: new Date() },
     );
 
-    // Send notification email to user (without the password)
-    try {
-      await this.emailService.sendAdminPasswordResetNotification(user);
-      this.logger.log(`Admin password reset notification sent to ${user.email}`);
-    } catch (error) {
-      this.logger.error(`Failed to send admin password reset notification to ${user.email}: ${error.message}`);
-      // Don't throw error - password was still set successfully
-    }
-
     // Log the admin password set action
     await this.auditService.log({
       actorUserId: adminUserId,
@@ -831,7 +822,6 @@ This is an automated message from Teamified.
         passwordChanged: true,
         sessionsInvalidated: true,
         mustChangePassword: true,
-        notificationEmailSent: true,
       },
       ip,
       userAgent,
@@ -839,7 +829,10 @@ This is an automated message from Teamified.
 
     this.logger.log(`Admin ${adminUserId} set password for user ${user.email}`);
 
-    return { message: 'Password set successfully. User will be required to change password on first login.' };
+    return { 
+      message: 'Password set successfully. User will be required to change password on first login.',
+      warning: 'IMPORTANT: Copy and save this password now. Share it securely with the user. This password will not be shown again.',
+    };
   }
 
   async resetPassword(

@@ -219,13 +219,13 @@ export default function UserDetailPage() {
     
     setSettingPassword(true);
     try {
-      await api.post('/v1/auth/admin/set-password', { 
+      const response = await api.post('/v1/auth/admin/set-password', { 
         userId: user.id, 
         password: newPassword 
       });
-      setResetSuccess('Password has been set successfully.');
-      setNewPassword('');
-      setSnackbar({ open: true, message: 'Password set successfully', severity: 'success' });
+      const successMsg = response.data?.message || 'Password has been set successfully.';
+      setResetSuccess(successMsg);
+      setSnackbar({ open: true, message: 'Password set successfully. Make sure to share the password securely with the user.', severity: 'success' });
     } catch (err: any) {
       setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to set password', severity: 'error' });
     } finally {
@@ -1030,6 +1030,15 @@ export default function UserDetailPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Set a new password and securely communicate it to the user.
               </Typography>
+              
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  Important: Copy and save this password now!
+                </Typography>
+                <Typography variant="body2">
+                  The password will not be shown again after you close this dialog. You must share it securely with the user (e.g., in person, phone call, or encrypted message).
+                </Typography>
+              </Alert>
               
               <Stack spacing={2}>
                 <TextField
