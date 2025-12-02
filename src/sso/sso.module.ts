@@ -8,10 +8,11 @@ import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { UserRolesModule } from '../user-roles/user-roles.module';
 import { UserOAuthLogin } from './entities/user-oauth-login.entity';
+import { UserAppActivity } from './entities/user-app-activity.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserOAuthLogin]),
+    TypeOrmModule.forFeature([UserOAuthLogin, UserAppActivity]),
     OAuthClientsModule,
     AuthModule,
     UsersModule,

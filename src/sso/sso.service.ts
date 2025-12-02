@@ -15,9 +15,11 @@ import { UserService } from '../users/services/user.service';
 import { UserRolesService } from '../user-roles/services/user-roles.service';
 import { AuthorizeDto } from './dto/authorize.dto';
 import { TokenExchangeDto, TokenResponseDto } from './dto/token.dto';
+import { RecordActivityDto } from './dto/user-activity.dto';
 import { createHash, randomUUID } from 'crypto';
 import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
 import { UserOAuthLogin } from './entities/user-oauth-login.entity';
+import { UserAppActivity } from './entities/user-app-activity.entity';
 
 @Injectable()
 export class SsoService {
@@ -26,6 +28,8 @@ export class SsoService {
   constructor(
     @InjectRepository(UserOAuthLogin)
     private readonly userOAuthLoginRepository: Repository<UserOAuthLogin>,
+    @InjectRepository(UserAppActivity)
+    private readonly userAppActivityRepository: Repository<UserAppActivity>,
     private readonly authCodeStorage: AuthCodeStorageService,
     private readonly oauthClientsService: OAuthClientsService,
     private readonly jwtTokenService: JwtTokenService,
@@ -402,5 +406,55 @@ export class SsoService {
     }
 
     return null;
+  }
+
+  /**
+   * Record user activity from an OAuth client application
+   * Called by OAuth clients to track user actions within their app
+   */
+  async recordUserActivity(
+    userId: string,
+    oauthClientId: string,
+    activityDto: RecordActivityDto,
+  ): Promise<{ id: string; createdAt: string }> {
+    // Verify OAuth client exists
+    const client = await this.oauthClientsService.findOne(oauthClientId);
+    if (!client) {
+      throw new NotFoundException('OAuth client not found');
+    }
+
+    // Verify user exists
+    const user = await this.userService.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Create activity record
+    const activity = this.userAppActivityRepository.create({
+      user_id: userId,
+      oauth_client_id: oauthClientId,
+      action: activityDto.action,
+      feature: activityDto.feature,
+      description: activityDto.description,
+      metadata: activityDto.metadata,
+    });
+
+    const savedActivity = await this.userAppActivityRepository.save(activity);
+
+    this.logger.debug(
+      `Recorded activity for user ${userId} in app ${client.name}: ${activityDto.action}`,
+    );
+
+    return {
+      id: savedActivity.id,
+      createdAt: savedActivity.created_at.toISOString(),
+    };
+  }
+
+  /**
+   * Get OAuth client by client_id (for activity recording endpoint)
+   */
+  async getOAuthClientByClientId(clientId: string) {
+    return this.oauthClientsService.findByClientId(clientId);
   }
 }
