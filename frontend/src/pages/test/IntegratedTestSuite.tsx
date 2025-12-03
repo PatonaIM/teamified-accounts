@@ -53,14 +53,74 @@ export default function IntegratedTestSuite() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [selectedIntent, setSelectedIntent] = useState<IntentType>('both');
   const [featureLoading, setFeatureLoading] = useState<string | null>(null);
-  const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>([]);
+  const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>(
+    [],
+  );
   const callbackProcessedRef = useRef(false);
   const sessionCheckRef = useRef(false);
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
   const SESSION_STORAGE_KEY = 'sso_test_session';
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const redirectUri = typeof window !== 'undefined' ? window.location.origin + '/test' : '';
+  const redirectUri =
+    typeof window !== 'undefined' ? window.location.origin + '/test' : '';
+
+  const saveSession = (token: string, user: UserInfo) => {
+    try {
+      sessionStorage.setItem(
+        SESSION_STORAGE_KEY,
+        JSON.stringify({ token, user, timestamp: Date.now() }),
+      );
+    } catch (err) {
+      console.error('Failed to save session:', err);
+    }
+  };
+
+  const clearStoredSession = () => {
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (err) {
+      console.error('Failed to clear session:', err);
+    }
+  };
+
+  const restoreSession = async () => {
+    if (typeof window === 'undefined') return false;
+
+    try {
+      const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (!stored) return false;
+
+      const { token, user, timestamp } = JSON.parse(stored);
+
+      const SESSION_MAX_AGE = 60 * 60 * 1000;
+      if (Date.now() - timestamp > SESSION_MAX_AGE) {
+        clearStoredSession();
+        return false;
+      }
+
+      const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        clearStoredSession();
+        return false;
+      }
+
+      const freshUser = await userResponse.json();
+      setAccessToken(token);
+      setUserInfo(freshUser);
+      saveSession(token, freshUser);
+      return true;
+    } catch (err) {
+      console.error('Session restoration failed:', err);
+      clearStoredSession();
+      return false;
+    }
+  };
 
   const saveSession = (token: string, user: UserInfo) => {
     try {
@@ -143,7 +203,9 @@ export default function IntegratedTestSuite() {
     }
   }, []);
 
-  const generateCodeChallenge = async (codeVerifier: string): Promise<string> => {
+  const generateCodeChallenge = async (
+    codeVerifier: string,
+  ): Promise<string> => {
     const encoder = new TextEncoder();
     const data = encoder.encode(codeVerifier);
     const digest = await crypto.subtle.digest('SHA-256', data);
@@ -237,7 +299,7 @@ export default function IntegratedTestSuite() {
 
       const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -248,6 +310,8 @@ export default function IntegratedTestSuite() {
       const user = await userResponse.json();
       setUserInfo(user);
       
+      saveSession(token, user);
+
       saveSession(token, user);
 
       sessionStorage.removeItem('pkce_code_verifier');
@@ -264,8 +328,7 @@ export default function IntegratedTestSuite() {
   };
 
   const handleCopyToken = async () => {
-    if (!accessToken) return;
-    try {
+    if (!accessToken) return; try {
       await navigator.clipboard.writeText(accessToken);
       setCopySuccess(true);
     } catch (err) {
@@ -286,24 +349,28 @@ export default function IntegratedTestSuite() {
     } catch (err) {
       console.error('Clear session failed:', err);
     }
-    
+
     setUserInfo(null);
     setAccessToken(null);
     setError(null);
     setLoading(false);
-    
+
     clearStoredSession();
-    
+
     sessionStorage.removeItem('pkce_code_verifier');
     sessionStorage.removeItem('pkce_state');
-    
+
     callbackProcessedRef.current = false;
     sessionCheckRef.current = false;
-    
+
     window.history.replaceState({}, document.title, '/test');
   };
 
-  const recordFeatureUsage = async (action: string, feature: string, description: string) => {
+  const recordFeatureUsage = async (
+    action: string,
+    feature: string,
+    description: string,
+  ) => {
     if (!accessToken) return;
 
     setFeatureLoading(action);
@@ -312,7 +379,7 @@ export default function IntegratedTestSuite() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
           'x-client-id': DEVELOPER_SANDBOX_CLIENT_ID,
         },
         body: JSON.stringify({
@@ -334,7 +401,7 @@ export default function IntegratedTestSuite() {
         timestamp: new Date().toLocaleTimeString(),
       };
 
-      setFeatureResults(prev => [result, ...prev].slice(0, 5));
+      setFeatureResults((prev) => [result, ...prev].slice(0, 5));
 
       if (!success) {
         const errorData = await response.json();
@@ -342,12 +409,17 @@ export default function IntegratedTestSuite() {
       }
     } catch (err) {
       console.error('Failed to record feature usage:', err);
-      setFeatureResults(prev => [{
-        action,
-        feature,
-        success: false,
-        timestamp: new Date().toLocaleTimeString(),
-      }, ...prev].slice(0, 5));
+      setFeatureResults((prev) =>
+        [
+          {
+            action,
+            feature,
+            success: false,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+          ...prev,
+        ].slice(0, 5),
+      );
     } finally {
       setFeatureLoading(null);
     }
@@ -355,11 +427,15 @@ export default function IntegratedTestSuite() {
 
   return (
     <Box sx={{ p: 4, maxWidth: 900, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
+      <Typography
+        variant="h4"
+        sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}
+      >
         SSO Test Application
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        This is a demo application to test the SSO authentication flow using OAuth 2.0 with PKCE.
+        This is a demo application to test the SSO authentication flow using
+        OAuth 2.0 with PKCE.
       </Typography>
 
       {error && (
@@ -370,7 +446,9 @@ export default function IntegratedTestSuite() {
 
       {loading && !sessionRestored && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">Checking for existing session...</Typography>
+          <Typography variant="body2">
+            Checking for existing session...
+          </Typography>
         </Alert>
       )}
 
@@ -378,7 +456,9 @@ export default function IntegratedTestSuite() {
         <>
           <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
             <Typography variant="body2">
-              Click the button below to test the SSO login flow. You'll be redirected to the SSO provider to authenticate, then redirected back here with your user information.
+              Click the button below to test the SSO login flow. You'll be
+              redirected to the SSO provider to authenticate, then redirected
+              back here with your user information.
             </Typography>
           </Alert>
 
@@ -390,14 +470,20 @@ export default function IntegratedTestSuite() {
                 id="intent-select"
                 value={selectedIntent}
                 label="User Intent"
-                onChange={(e) => setSelectedIntent(e.target.value as IntentType)}
+                onChange={(e) =>
+                  setSelectedIntent(e.target.value as IntentType)
+                }
               >
-                <MenuItem value="both">Both (Default - Allow All Users)</MenuItem>
+                <MenuItem value="both">
+                  Both (Default - Allow All Users)
+                </MenuItem>
                 <MenuItem value="client">Client Only</MenuItem>
                 <MenuItem value="candidate">Candidate Only</MenuItem>
               </Select>
               <FormHelperText>
-                Select the target user audience for this SSO login. The runtime intent can only narrow the OAuth client's default intent, never widen it (security protection).
+                Select the target user audience for this SSO login. The runtime
+                intent can only narrow the OAuth client's default intent, never
+                widen it (security protection).
               </FormHelperText>
             </FormControl>
           </Paper>
@@ -448,7 +534,9 @@ export default function IntegratedTestSuite() {
             </Stack>
             <Alert severity="warning" icon={<Warning />} sx={{ mt: 2 }}>
               <Typography variant="body2">
-                This is a public client suitable for browser-based apps. Never embed client secrets in frontend code - use PKCE instead for security.
+                This is a public client suitable for browser-based apps. Never
+                embed client secrets in frontend code - use PKCE instead for
+                security.
               </Typography>
             </Alert>
           </Paper>
@@ -469,7 +557,11 @@ export default function IntegratedTestSuite() {
             </Typography>
             <Stack spacing={2}>
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 0.5 }}
+                >
                   User ID
                 </Typography>
                 <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>
@@ -478,16 +570,22 @@ export default function IntegratedTestSuite() {
               </Box>
               <Divider />
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 0.5 }}
+                >
                   Email
                 </Typography>
-                <Typography variant="body1">
-                  {userInfo.email}
-                </Typography>
+                <Typography variant="body1">{userInfo.email}</Typography>
               </Box>
               <Divider />
               <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 0.5 }}
+                >
                   Name
                 </Typography>
                 <Typography variant="body1">
@@ -498,7 +596,11 @@ export default function IntegratedTestSuite() {
                 <>
                   <Divider />
                   <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 0.5 }}
+                    >
                       Roles
                     </Typography>
                     <Typography variant="body1">
@@ -512,32 +614,41 @@ export default function IntegratedTestSuite() {
 
           {accessToken && (
             <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  mb: 2,
+                }}
+              >
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Access Token
                 </Typography>
-                <IconButton 
+                <IconButton
                   onClick={handleCopyToken}
                   size="small"
-                  sx={{ 
+                  sx={{
                     color: 'primary.main',
-                    '&:hover': { bgcolor: 'action.hover' }
+                    '&:hover': { bgcolor: 'action.hover' },
                   }}
                   title="Copy token"
                 >
                   <ContentCopy fontSize="small" />
                 </IconButton>
               </Box>
-              <Box sx={{ 
-                p: 2, 
-                bgcolor: 'action.hover', 
-                borderRadius: 1,
-                fontFamily: 'monospace',
-                fontSize: '0.75rem',
-                wordBreak: 'break-all',
-                maxHeight: '200px',
-                overflowY: 'auto'
-              }}>
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: 'action.hover',
+                  borderRadius: 1,
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  wordBreak: 'break-all',
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                }}
+              >
                 {accessToken}
               </Box>
             </Paper>
@@ -545,75 +656,121 @@ export default function IntegratedTestSuite() {
 
           {accessToken && (
             <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={1}
+                sx={{ mb: 2 }}
+              >
                 <TouchApp color="primary" />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Feature Usage Test
                 </Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Click the buttons below to record feature usage. These activities will appear in the Connected Applications section of the User Activity tab.
+                Click the buttons below to record feature usage. These
+                activities will appear in the Connected Applications section of
+                the User Activity tab.
               </Typography>
-              
+
               <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 3 }}>
                 <Button
                   variant="outlined"
                   startIcon={<Dashboard />}
-                  onClick={() => recordFeatureUsage('view_dashboard', 'Dashboard', 'Viewed the main dashboard')}
+                  onClick={() =>
+                    recordFeatureUsage(
+                      'view_dashboard',
+                      'Dashboard',
+                      'Viewed the main dashboard',
+                    )
+                  }
                   disabled={featureLoading === 'view_dashboard'}
                   sx={{ textTransform: 'none' }}
                 >
-                  {featureLoading === 'view_dashboard' ? 'Recording...' : 'View Dashboard'}
+                  {featureLoading === 'view_dashboard'
+                    ? 'Recording...'
+                    : 'View Dashboard'}
                 </Button>
                 <Button
                   variant="outlined"
                   startIcon={<Analytics />}
-                  onClick={() => recordFeatureUsage('run_report', 'Analytics', 'Generated analytics report')}
+                  onClick={() =>
+                    recordFeatureUsage(
+                      'run_report',
+                      'Analytics',
+                      'Generated analytics report',
+                    )
+                  }
                   disabled={featureLoading === 'run_report'}
                   sx={{ textTransform: 'none' }}
                 >
-                  {featureLoading === 'run_report' ? 'Recording...' : 'Run Report'}
+                  {featureLoading === 'run_report'
+                    ? 'Recording...'
+                    : 'Run Report'}
                 </Button>
                 <Button
                   variant="outlined"
                   startIcon={<Settings />}
-                  onClick={() => recordFeatureUsage('update_settings', 'Settings', 'Updated application settings')}
+                  onClick={() =>
+                    recordFeatureUsage(
+                      'update_settings',
+                      'Settings',
+                      'Updated application settings',
+                    )
+                  }
                   disabled={featureLoading === 'update_settings'}
                   sx={{ textTransform: 'none' }}
                 >
-                  {featureLoading === 'update_settings' ? 'Recording...' : 'Update Settings'}
+                  {featureLoading === 'update_settings'
+                    ? 'Recording...'
+                    : 'Update Settings'}
                 </Button>
               </Stack>
 
               {featureResults.length > 0 && (
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
+                  >
                     Recent Activity Records:
                   </Typography>
                   <Stack spacing={1}>
                     {featureResults.map((result, index) => (
-                      <Box 
+                      <Box
                         key={index}
-                        sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
                           justifyContent: 'space-between',
                           p: 1.5,
                           borderRadius: 1,
-                          bgcolor: result.success ? 'success.main' : 'error.main',
+                          bgcolor: result.success
+                            ? 'success.main'
+                            : 'error.main',
                           opacity: 0.9,
                         }}
                       >
                         <Stack direction="row" spacing={1} alignItems="center">
                           <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
-                          <Typography variant="body2" sx={{ color: 'white', fontWeight: 500 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: 'white', fontWeight: 500 }}
+                          >
                             {result.action.replace(/_/g, ' ')}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: 'rgba(255,255,255,0.8)' }}
+                          >
                             ({result.feature})
                           </Typography>
                         </Stack>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'rgba(255,255,255,0.8)' }}
+                        >
                           {result.timestamp}
                         </Typography>
                       </Box>
@@ -624,7 +781,13 @@ export default function IntegratedTestSuite() {
 
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
-                  Activities are recorded using the <code style={{ fontSize: '0.85em' }}>POST /api/v1/sso/user-activity</code> endpoint with your SSO access token and the <code style={{ fontSize: '0.85em' }}>x-client-id</code> header.
+                  Activities are recorded using the{' '}
+                  <code style={{ fontSize: '0.85em' }}>
+                    POST /api/v1/sso/user-activity
+                  </code>{' '}
+                  endpoint with your SSO access token and the{' '}
+                  <code style={{ fontSize: '0.85em' }}>x-client-id</code>{' '}
+                  header.
                 </Typography>
               </Alert>
             </Paper>
@@ -636,8 +799,8 @@ export default function IntegratedTestSuite() {
               fullWidth
               startIcon={<OpenInNew />}
               onClick={handleOpenSwagger}
-              sx={{ 
-                textTransform: 'none', 
+              sx={{
+                textTransform: 'none',
                 fontWeight: 600,
                 py: 1.5,
                 bgcolor: '#60a5fa',
@@ -650,8 +813,8 @@ export default function IntegratedTestSuite() {
               variant="outlined"
               fullWidth
               onClick={handleClearSession}
-              sx={{ 
-                textTransform: 'none', 
+              sx={{
+                textTransform: 'none',
                 fontWeight: 600,
                 py: 1.5,
                 borderColor: 'primary.main',
@@ -659,7 +822,7 @@ export default function IntegratedTestSuite() {
                 '&:hover': {
                   borderColor: 'primary.dark',
                   bgcolor: 'action.hover',
-                }
+                },
               }}
             >
               Clear Session & Test Again
