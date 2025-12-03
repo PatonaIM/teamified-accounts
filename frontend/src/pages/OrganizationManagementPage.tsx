@@ -1468,7 +1468,7 @@ const OrganizationManagementPage: React.FC = () => {
               <TabPanel value={activeTab} index={1}>
                 <Box sx={{ px: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       Company Profile
                     </Typography>
                     {!isEditingProfile ? (
@@ -1581,7 +1581,7 @@ const OrganizationManagementPage: React.FC = () => {
               {selectedOrg?.subscriptionTier !== 'internal' && (
                 <TabPanel value={activeTab} index={2}>
                   <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }} gutterBottom>
                       Billing Details
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -1652,7 +1652,7 @@ const OrganizationManagementPage: React.FC = () => {
             }}
           >
             <Business sx={{ fontSize: 80, color: 'text.disabled' }} />
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.secondary' }}>
               Select an organization to view details
             </Typography>
           </Paper>

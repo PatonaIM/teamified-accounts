@@ -820,8 +820,8 @@ export default function CandidateUsersPage() {
                 <Stack spacing={3}>
                   <Box>
                     <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                      variant="h5"
+                      sx={{ fontWeight: 600, mb: 2 }}
                     >
                       Contact Information
                     </Typography>
@@ -891,8 +891,8 @@ export default function CandidateUsersPage() {
 
                   <Box>
                     <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                      variant="h5"
+                      sx={{ fontWeight: 600, mb: 2 }}
                     >
                       Account Details
                     </Typography>
@@ -960,8 +960,8 @@ export default function CandidateUsersPage() {
                 <Stack spacing={4}>
                   <Box>
                     <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 600, color: 'text.secondary', mb: 2 }}
+                      variant="h5"
+                      sx={{ fontWeight: 600, mb: 2 }}
                     >
                       Password Information
                     </Typography>
@@ -1276,7 +1276,7 @@ export default function CandidateUsersPage() {
             }}
           >
             <Person sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 600 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.secondary' }}>
               Select a candidate
             </Typography>
             <Typography variant="body2" color="text.secondary">
