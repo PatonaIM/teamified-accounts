@@ -621,7 +621,7 @@ export default function ReleaseNote_v102() {
             </Typography>
             <Typography variant="body1" color="text.secondary" paragraph>
               A new Google Workspace-style app launcher in the sidebar that provides quick access to all 
-              connected applications with seamless single sign-on authentication.
+              connected applications with seamless session-based authentication.
             </Typography>
 
             <Box sx={{ ml: 2 }}>
@@ -677,8 +677,8 @@ export default function ReleaseNote_v102() {
                       <CheckCircle color="success" fontSize="small" />
                     </ListItemIcon>
                     <ListItemText 
-                      primary="Seamless SSO"
-                      secondary="Click any app to open it in a new tab with automatic single sign-on authentication"
+                      primary="Quick Access"
+                      secondary="Click any app to open it directly in a new tab - each app detects your active session"
                     />
                   </ListItem>
                   <ListItem>
