@@ -207,6 +207,10 @@ const OAuthClientsTab: React.FC = () => {
             variant="contained"
             startIcon={<Add />}
             onClick={handleAddClient}
+            sx={{
+              bgcolor: '#4caf50',
+              '&:hover': { bgcolor: '#43a047' },
+            }}
           >
             Add Application
           </Button>

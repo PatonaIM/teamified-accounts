@@ -63,6 +63,7 @@ const OAuthConfigurationPage: React.FC = () => {
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingClient, setTogglingClient] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<CreateOAuthClientDto>({
@@ -170,6 +171,7 @@ const OAuthConfigurationPage: React.FC = () => {
       return;
     }
 
+    setSubmitting(true);
     try {
       if (editingClient) {
         await oauthClientsService.update(editingClient.id, formData);
@@ -183,6 +185,8 @@ const OAuthConfigurationPage: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to save OAuth client';
       setError(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -273,8 +277,8 @@ const OAuthConfigurationPage: React.FC = () => {
           sx={{
             textTransform: 'none',
             fontWeight: 600,
-            bgcolor: '#A16AE8',
-            '&:hover': { bgcolor: '#8f5cd9' },
+            bgcolor: '#4caf50',
+            '&:hover': { bgcolor: '#43a047' },
           }}
         >
           Register New Client
@@ -540,20 +544,25 @@ const OAuthConfigurationPage: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={!formData.name || formData.redirect_uris.length === 0}
+                disabled={!formData.name || formData.redirect_uris.length === 0 || submitting}
                 fullWidth
                 sx={{
                   textTransform: 'none',
                   fontWeight: 600,
-                  bgcolor: '#A16AE8',
-                  '&:hover': { bgcolor: '#8f5cd9' },
+                  bgcolor: '#4caf50',
+                  '&:hover': { bgcolor: '#43a047' },
                 }}
               >
-                {editingClient ? 'Update Client' : 'Create Client'}
+                {submitting ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  editingClient ? 'Update Client' : 'Create Client'
+                )}
               </Button>
               <Button
                 variant="outlined"
                 onClick={handleCloseDrawer}
+                disabled={submitting}
                 fullWidth
                 sx={{ textTransform: 'none', fontWeight: 600 }}
               >

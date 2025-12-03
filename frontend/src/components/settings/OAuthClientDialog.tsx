@@ -14,6 +14,7 @@ import {
   Stack,
   IconButton,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
 import { Add, Delete, ContentCopy } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto } from '../../services/oauthClientsService';
@@ -297,7 +298,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       </DialogContent>
       
       <DialogActions>
-        <Button onClick={handleClose}>
+        <Button onClick={handleClose} disabled={loading}>
           {createdClient ? 'Close' : 'Cancel'}
         </Button>
         {!createdClient && (
@@ -305,8 +306,17 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             variant="contained"
             onClick={handleSubmit}
             disabled={loading || !name}
+            sx={{
+              bgcolor: '#4caf50',
+              '&:hover': { bgcolor: '#43a047' },
+              minWidth: 100,
+            }}
           >
-            {client ? 'Update' : 'Create'}
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              client ? 'Update' : 'Create'
+            )}
           </Button>
         )}
       </DialogActions>
