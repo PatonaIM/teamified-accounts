@@ -130,6 +130,7 @@ const UserFilters: React.FC<UserFiltersProps> = ({
                 <MenuItem value="all">All Status</MenuItem>
                 <MenuItem value="active">Active</MenuItem>
                 <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="suspended">Suspended</MenuItem>
                 <MenuItem value="archived">Archived</MenuItem>
               </Select>
             </FormControl>
