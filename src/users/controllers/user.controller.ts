@@ -19,6 +19,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
+import { plainToInstance } from 'class-transformer';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -34,6 +36,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
+import { AzureBlobStorageService } from '../../blob-storage/azure-blob-storage.service';
+import { EmailService } from '../../email/services/email.service';
 import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
@@ -45,6 +49,9 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly objectStorageService: ObjectStorageService,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post()
@@ -183,7 +190,8 @@ export class UserController {
   })
   async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
     const user = await this.userService.findOne(id);
-    return { user };
+    const userDto = plainToInstance(UserResponseDto, user, { excludeExtraneousValues: true });
+    return { user: userDto };
   }
 
   @Get('me/profile')
@@ -243,6 +251,62 @@ export class UserController {
     };
   }
 
+  @Put('me/email')
+  @ApiOperation({ summary: 'Update current user primary email address' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email updated successfully, verification email sent',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid email format or same as current email',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Email already in use by another account',
+  })
+  async updateMyEmail(
+    @CurrentUser() user: User,
+    @Body() emailData: { email: string; secondaryEmail?: string | null },
+    @Request() req: any,
+  ): Promise<{ message: string; emailVerificationRequired: boolean }> {
+    const ip = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.get('user-agent');
+
+    if (!emailData.email || !emailData.email.trim()) {
+      throw new BadRequestException('Email address is required');
+    }
+
+    const { user: updatedUser, verificationToken } = await this.userService.updatePrimaryEmail(
+      user.id,
+      emailData.email.trim(),
+      emailData.secondaryEmail?.trim() || null,
+      {
+        ip,
+        userAgent,
+      },
+    );
+
+    try {
+      await this.emailService.sendEmailVerificationReminder(
+        updatedUser.email,
+        updatedUser.firstName,
+        verificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+    }
+
+    return {
+      message: 'Email updated successfully. Please check your inbox to verify your new email address.',
+      emailVerificationRequired: true,
+    };
+  }
+
   @Post('me/profile-picture')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload profile picture' })
@@ -278,7 +342,7 @@ export class UserController {
     @CurrentUser() user: User,
     @UploadedFile() file: any,
     @Request() req: any,
-  ): Promise<{ message: string; profilePicture: string }> {
+  ): Promise<{ message: string; profilePictureUrl: string }> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -295,36 +359,22 @@ export class UserController {
       throw new BadRequestException('File size exceeds 5MB limit');
     }
 
-    // Get file extension
-    const ext = path.extname(file.originalname).toLowerCase();
-    
-    // Get upload URL from object storage
-    const { uploadURL, objectKey } = await this.objectStorageService.getProfilePictureUploadURL(
+    // Upload to Azure Blob Storage
+    const result = await this.azureBlobStorageService.uploadUserProfilePicture(
       user.id,
-      ext,
+      file.buffer,
+      file.originalname,
     );
 
-    // Upload file to object storage
-    const response = await fetch(uploadURL, {
-      method: 'PUT',
-      body: file.buffer,
-      headers: {
-        'Content-Type': file.mimetype,
-      },
-    });
-
-    if (!response.ok) {
-      throw new BadRequestException('Failed to upload file to storage');
-    }
-
-    // Update user profile with new picture path
+    // Update user profile picture URL in database
     const ip = req.ip || req.connection?.remoteAddress;
     const userAgent = req.get('user-agent');
 
-    const updatedUser = await this.userService.updateProfileData(
+    await this.userService.updateProfilePictureUrl(
       user.id,
-      { profilePicture: objectKey },
+      result.url,
       {
+        actorUserId: user.id,
         ip,
         userAgent,
       },
@@ -332,7 +382,7 @@ export class UserController {
 
     return {
       message: 'Profile picture uploaded successfully',
-      profilePicture: objectKey,
+      profilePictureUrl: result.url,
     };
   }
 
@@ -517,6 +567,52 @@ export class UserController {
     };
   }
 
+  @Post(`:id(${UUID_PARAM_PATTERN})/resend-verification`)
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'hr')
+  @ApiOperation({ summary: 'Resend verification email to user (Admin/HR only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already verified',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async resendVerificationEmail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    const user = await this.userService.findOne(id);
+    
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const verificationToken = await this.userService.generateEmailVerificationToken(id);
+    
+    const baseUrl = req.headers.origin || req.headers.referer?.replace(/\/$/, '') || 'http://localhost:5000';
+    
+    try {
+      await this.emailService.sendEmailVerificationReminder(
+        user.email,
+        user.firstName,
+        verificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      throw new BadRequestException('Failed to send verification email');
+    }
+
+    return {
+      message: 'Verification email sent successfully'
+    };
+  }
+
   @Post('bulk/status')
   @UseGuards(RolesGuard)
   @Roles('admin')
@@ -553,5 +649,72 @@ export class UserController {
     @Body() bulkRoleAssignmentDto: BulkRoleAssignmentDto,
   ): Promise<BulkOperationResponseDto> {
     return await this.userService.bulkAssignRole(bulkRoleAssignmentDto);
+  }
+
+  @Get(`:id(${UUID_PARAM_PATTERN})/activity`)
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'hr')
+  @ApiOperation({ 
+    summary: 'Get user activity',
+    description: 'Retrieves login history, connected apps, and recent actions for a user. Useful for user analytics and security monitoring.'
+  })
+  @ApiQuery({
+    name: 'timeRange',
+    required: false,
+    description: 'Time range filter for activity data',
+    enum: ['1h', '3h', '6h', '12h', '24h', '3d', '7d', '30d'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User activity retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        loginHistory: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              timestamp: { type: 'string', format: 'date-time' },
+              ip: { type: 'string' },
+              userAgent: { type: 'string' },
+              deviceType: { type: 'string', enum: ['Desktop', 'Mobile', 'Tablet'] },
+            },
+          },
+        },
+        lastAppsUsed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              appName: { type: 'string' },
+              clientId: { type: 'string' },
+              lastUsed: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+        recentActions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              action: { type: 'string' },
+              entityType: { type: 'string' },
+              timestamp: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async getUserActivity(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('timeRange') timeRange?: string,
+  ) {
+    return await this.userService.getUserActivity(id, timeRange);
   }
 }

@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
@@ -320,9 +320,9 @@ This is an automated message from Teamified.
     const jitter = Math.floor(Math.random() * 200) + 200;
     await new Promise(resolve => setTimeout(resolve, jitter));
 
-    // Check if user exists and is active
+    // Check if user exists and is active (ignore soft-deleted users)
     const user = await this.userRepository.findOne({
-      where: { email, isActive: true },
+      where: { email, isActive: true, deletedAt: IsNull() },
     });
 
     if (!user) {
@@ -344,9 +344,9 @@ This is an automated message from Teamified.
   ): Promise<LoginResponseDto> {
     const { email, password } = loginDto;
 
-    // Find user by email with roles
+    // Find user by email with roles (ignore soft-deleted users)
     const user = await this.userRepository.findOne({
-      where: { email, isActive: true },
+      where: { email, isActive: true, deletedAt: IsNull() },
       relations: ['userRoles'],
     });
 
@@ -438,6 +438,7 @@ This is an automated message from Teamified.
         emailVerified: user.emailVerified,
         roles: roles,
         themePreference: themePreference,
+        mustChangePassword: user.mustChangePassword || false,
       },
     };
   }
@@ -646,9 +647,9 @@ This is an automated message from Teamified.
     const securityMessage = 'If an account exists with this email, a password reset link has been sent';
 
     try {
-      // Find user by email
+      // Find user by email (ignore soft-deleted users)
       const user = await this.userRepository.findOne({
-        where: { email: email.toLowerCase(), isActive: true },
+        where: { email: email.toLowerCase(), isActive: true, deletedAt: IsNull() },
       });
 
       // If user doesn't exist, still return success message (security)
@@ -670,9 +671,9 @@ This is an automated message from Teamified.
         return { message: securityMessage };
       }
 
-      // Generate reset token
+      // Generate reset token (24 hours expiry)
       const resetToken = uuidv4();
-      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       // Save reset token to user
       await this.userRepository.update(user.id, {
@@ -726,10 +727,10 @@ This is an automated message from Teamified.
       throw new NotFoundException('User not found');
     }
 
-    // Generate reset token and expiry
+    // Generate reset token and expiry (24 hours for admin-initiated resets)
     const resetToken = uuidv4();
     const resetTokenExpiry = new Date();
-    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 24);
 
     // Save reset token
     await this.userRepository.update(user.id, {
@@ -763,6 +764,114 @@ This is an automated message from Teamified.
     });
 
     return { message: 'Password reset email sent successfully' };
+  }
+
+  async adminSetPassword(
+    userId: string,
+    password: string,
+    adminUserId: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; warning: string }> {
+    // Find the user
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Validate password policy
+    const passwordValidation = this.passwordService.validatePasswordPolicy(password);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await this.passwordService.hashPassword(password);
+
+    // Update password, set mustChangePassword flag, and clear any reset tokens
+    await this.userRepository.update(user.id, {
+      passwordHash: hashedPassword,
+      passwordResetToken: null,
+      passwordResetTokenExpiry: null,
+      mustChangePassword: true,
+      passwordChangedByAdminAt: new Date(),
+      passwordChangedByAdminId: adminUserId,
+    });
+
+    // Invalidate all existing sessions for security
+    await this.sessionRepository.update(
+      { userId: user.id },
+      { revokedAt: new Date() },
+    );
+
+    // Log the admin password set action
+    await this.auditService.log({
+      actorUserId: adminUserId,
+      actorRole: await this.getUserPrimaryRole(adminUserId),
+      action: 'admin_password_set',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        targetUserEmail: user.email,
+        passwordChanged: true,
+        sessionsInvalidated: true,
+        mustChangePassword: true,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Admin ${adminUserId} set password for user ${user.email}`);
+
+    return { 
+      message: 'Password set successfully. User will be required to change password on first login.',
+      warning: 'IMPORTANT: Copy and save this password now. Share it securely with the user. This password will not be shown again.',
+    };
+  }
+
+  async validateResetToken(token: string): Promise<{
+    valid: boolean;
+    user?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      profilePictureUrl: string | null;
+    };
+    expiresAt?: Date;
+  }> {
+    if (!token) {
+      return { valid: false };
+    }
+
+    const user = await this.userRepository.findOne({
+      where: {
+        passwordResetToken: token,
+        passwordResetTokenExpiry: MoreThan(new Date()),
+        isActive: true,
+      },
+      select: ['id', 'firstName', 'lastName', 'email', 'profilePictureUrl', 'passwordResetTokenExpiry'],
+    });
+
+    if (!user) {
+      return { valid: false };
+    }
+
+    return {
+      valid: true,
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profilePictureUrl: user.profilePictureUrl,
+      },
+      expiresAt: user.passwordResetTokenExpiry,
+    };
   }
 
   async resetPassword(
@@ -898,8 +1007,9 @@ This is an automated message from Teamified.
   ): Promise<ClientAdminSignupResponseDto> {
     const { email, password, firstName, lastName, companyName, slug: providedSlug, industry, companySize } = signupDto;
 
+    // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
-      where: { email },
+      where: { email, deletedAt: IsNull() },
     });
 
     if (existingUser) {
@@ -1021,6 +1131,106 @@ This is an automated message from Teamified.
   }
 
   /**
+   * Force Change Password - For users who must change password on first login
+   * Returns new tokens with mustChangePassword=false after successful password change
+   */
+  async forceChangePassword(
+    userId: string,
+    newPassword: string,
+    confirmPassword: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    // Find the user
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify that user actually needs to change password
+    if (!user.mustChangePassword) {
+      throw new BadRequestException('Password change is not required for this user');
+    }
+
+    // Validate password policy
+    const passwordValidation = this.passwordService.validatePasswordPolicy(newPassword);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'Password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    // Hash the new password
+    const hashedPassword = await this.passwordService.hashPassword(newPassword);
+
+    // Update password and clear the mustChangePassword flag
+    await this.userRepository.update(user.id, {
+      passwordHash: hashedPassword,
+      mustChangePassword: false,
+      passwordChangedByAdminAt: null,
+      passwordChangedByAdminId: null,
+    });
+
+    // Reload user to get updated mustChangePassword=false for token generation
+    const updatedUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    // Invalidate all existing sessions (they have old tokens with mustChangePassword=true)
+    await this.sessionRepository.update(
+      { userId: user.id },
+      { revokedAt: new Date() },
+    );
+
+    // Generate new tokens with mustChangePassword=false
+    const tokens = await this.jwtService.generateTokenPair(updatedUser!);
+
+    // Create new session with fresh tokens
+    const deviceMetadata: DeviceMetadata = {
+      ip: ip || 'unknown',
+      userAgent: userAgent || 'unknown',
+    };
+    await this.sessionService.createSession(
+      updatedUser!,
+      tokens.refreshToken,
+      deviceMetadata,
+    );
+
+    // Log the password change
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: await this.getUserPrimaryRole(user.id),
+      action: 'password_changed_after_admin_reset',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        mustChangePassword: false,
+        passwordChanged: true,
+        newSessionCreated: true,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`User ${user.email} changed password after admin reset`);
+
+    return { 
+      message: 'Password changed successfully',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
+
+  /**
    * Candidate Signup - Quick signup for job applicants
    */
   async candidateSignup(
@@ -1030,8 +1240,9 @@ This is an automated message from Teamified.
   ): Promise<CandidateSignupResponseDto> {
     const { email, password, firstName, lastName } = signupDto;
 
+    // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
-      where: { email },
+      where: { email, deletedAt: IsNull() },
     });
 
     if (existingUser) {

@@ -18,6 +18,7 @@ export interface User {
   phone?: string;
   address?: any;
   profileData?: any;
+  profilePictureUrl?: string | null;
   clientId?: string;
   status: 'active' | 'inactive' | 'archived' | 'invited';
   isActive: boolean;
@@ -204,6 +205,24 @@ class UserService {
       { headers: this.getAuthHeaders() }
     );
     return response.data.user;
+  }
+
+  async adminSetPassword(userId: string, password: string): Promise<{ message: string }> {
+    const response = await axios.post(
+      `${this.baseURL}/v1/auth/admin/set-password`,
+      { userId, password },
+      { headers: this.getAuthHeaders() }
+    );
+    return response.data;
+  }
+
+  async adminSendPasswordResetEmail(userId: string): Promise<{ message: string }> {
+    const response = await axios.post(
+      `${this.baseURL}/v1/auth/admin/send-password-reset`,
+      { userId },
+      { headers: this.getAuthHeaders() }
+    );
+    return response.data;
   }
 }
 

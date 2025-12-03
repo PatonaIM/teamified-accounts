@@ -7,6 +7,7 @@ import { UserController } from './controllers/user.controller';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { BlobStorageModule } from '../blob-storage/blob-storage.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { BlobStorageModule } from '../blob-storage/blob-storage.module';
     forwardRef(() => AuthModule),
     AuditModule,
     BlobStorageModule,
+    EmailModule,
   ],
   controllers: [UserController],
   providers: [UserService],

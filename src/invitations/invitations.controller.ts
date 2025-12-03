@@ -122,7 +122,7 @@ export class InvitationsController {
                 message: 'Password does not meet security requirements',
                 errors: [
                   'Password must contain at least one uppercase letter',
-                  'Password must contain at least one special character (@$!%*?&)'
+                  'Password must contain at least one special character (@$!%*?&.)'
                 ]
               },
               error: 'Bad Request'
@@ -468,7 +468,7 @@ export class InvitationsController {
   }
 
   @Post('generate-link')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -582,7 +582,7 @@ export class InvitationsController {
   }
 
   @Post('send-email')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -686,26 +686,46 @@ export class InvitationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<InvitationResponseDto> {
+    this.logger.log(`sendOrgEmailInvitation called with:`, {
+      organizationId: emailDto.organizationId,
+      email: emailDto.email,
+      roleType: emailDto.roleType,
+      userId: user?.id,
+      userRoles: user?.userRoles?.map(r => r.roleType),
+    });
+    
     const baseUrl = process.env.FRONTEND_URL 
       || (process.env.REPLIT_DEV_DOMAIN 
           ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
           : `${req.protocol}://${req.get('host')}`);
     
-    return this.invitationsService.sendOrgEmailInvitation(
-      emailDto.organizationId,
-      emailDto.email,
-      emailDto.roleType,
-      emailDto.firstName,
-      emailDto.lastName,
-      user,
-      baseUrl,
-      req.ip,
-      req.get('user-agent'),
-    );
+    try {
+      const result = await this.invitationsService.sendOrgEmailInvitation(
+        emailDto.organizationId,
+        emailDto.email,
+        emailDto.roleType,
+        emailDto.firstName,
+        emailDto.lastName,
+        user,
+        baseUrl,
+        req.ip,
+        req.get('user-agent'),
+      );
+      this.logger.log(`sendOrgEmailInvitation succeeded for ${emailDto.email}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`sendOrgEmailInvitation failed:`, {
+        error: error.message,
+        stack: error.stack,
+        organizationId: emailDto.organizationId,
+        email: emailDto.email,
+      });
+      throw error;
+    }
   }
 
   @Post()
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')

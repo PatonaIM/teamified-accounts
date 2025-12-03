@@ -28,6 +28,7 @@ export interface User {
   themePreference?: 'light' | 'dark' | 'teamified' | 'custom' | null;
   hasOnboardingRecord?: boolean;
   hasEmploymentRecord?: boolean;
+  mustChangePassword?: boolean;
 }
 
 // Rate limiting configuration
@@ -105,10 +106,15 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           
           return api(originalRequest);
+        } else {
+          // No refresh token available - session expired
+          logoutDueToSessionExpiry();
+          return Promise.reject(new Error('No refresh token available'));
         }
-      } catch (refreshError) {
-        // Refresh failed, logout user
-        logout();
+      } catch (refreshError: any) {
+        // Refresh failed - handle various error cases
+        // Token not found, expired, or any other refresh error
+        logoutDueToSessionExpiry();
         return Promise.reject(refreshError);
       }
     }
@@ -268,6 +274,14 @@ export const logout = async (): Promise<void> => {
     localStorage.removeItem('teamified_last_path');
     localStorage.removeItem('teamified_last_path_user');
     
+    // Clear theme preference cache
+    localStorage.removeItem('teamified_theme_auth');
+    
+    // Clear any SSO/OAuth related session storage (PKCE verifiers, state, etc.)
+    sessionStorage.removeItem('pkce_code_verifier');
+    sessionStorage.removeItem('pkce_state');
+    sessionStorage.removeItem('oauth_state');
+    
     // Clear theme preferences on logout
     try {
       const { clearThemePreferences } = await import('../contexts/ThemeContext');
@@ -276,6 +290,15 @@ export const logout = async (): Promise<void> => {
       console.warn('Failed to clear theme preferences:', error);
     }
   }
+};
+
+export const logoutDueToSessionExpiry = async (): Promise<void> => {
+  await logout();
+  
+  // Dispatch custom event to notify the app that session has expired
+  window.dispatchEvent(new CustomEvent('sessionExpired', {
+    detail: { reason: 'token_refresh_failed' }
+  }));
 };
 
 export const refreshAccessToken = async (refreshToken: string): Promise<{ data: { accessToken: string } }> => {
@@ -487,7 +510,7 @@ export const setupTokenRefresh = (): void => {
           })
           .catch((error) => {
             console.error('Auto token refresh failed:', error);
-            logout();
+            logoutDueToSessionExpiry();
           });
       }
     }

@@ -16,6 +16,7 @@ export interface Organization {
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
+  wasRestored?: boolean;
 }
 
 export interface OrganizationMember {
@@ -159,6 +160,11 @@ class OrganizationsService {
     return response.data;
   }
 
+  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
+    const response = await api.get(`${API_BASE_URL}/check-slug/${encodeURIComponent(slug)}`);
+    return response.data;
+  }
+
   async create(data: CreateOrganizationDto): Promise<Organization> {
     const response = await api.post(API_BASE_URL, data);
     return response.data;
@@ -173,36 +179,18 @@ class OrganizationsService {
     await api.delete(`${API_BASE_URL}/${id}`);
   }
 
-  // Logo upload
-  async getLogoUploadUrl(organizationId: string, extension: string): Promise<{ uploadURL: string; objectKey: string }> {
-    const response = await api.post(`${API_BASE_URL}/${organizationId}/logo/upload-url`, { extension });
-    return response.data;
-  }
-
+  // Logo upload - Direct upload to Azure Blob Storage
   async uploadLogo(organizationId: string, file: File): Promise<string> {
-    const extension = file.name.split('.').pop() || 'png';
+    const formData = new FormData();
+    formData.append('file', file);
     
-    // Get upload URL
-    const { uploadURL, objectKey } = await this.getLogoUploadUrl(organizationId, extension);
-    
-    // Upload to blob storage
-    const uploadResponse = await fetch(uploadURL, {
-      method: 'PUT',
-      body: file,
+    const response = await api.post(`${API_BASE_URL}/${organizationId}/logo`, formData, {
       headers: {
-        'Content-Type': file.type,
+        'Content-Type': 'multipart/form-data',
       },
     });
 
-    if (!uploadResponse.ok) {
-      throw new Error('Failed to upload logo');
-    }
-
-    // Update organization with logo URL
-    const logoUrl = objectKey;
-    await this.update(organizationId, { logoUrl });
-
-    return logoUrl;
+    return response.data.logoUrl;
   }
 
   // Member management
@@ -235,6 +223,24 @@ class OrganizationsService {
   // Candidate conversion
   async convertCandidate(organizationId: string, userId: string): Promise<void> {
     await api.post(`${API_BASE_URL}/${organizationId}/convert-candidate`, { userId });
+  }
+
+  async convertCandidateToEmployee(
+    organizationId: string,
+    data: {
+      candidateEmail: string;
+      hiredBy: string;
+      jobTitle?: string;
+      startDate?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    user: { id: string; email: string; firstName: string; lastName: string };
+    organizationMembership: { organizationId: string; role: string; status: string };
+    message?: string;
+  }> {
+    const response = await api.post(`${API_BASE_URL}/${organizationId}/convert-candidate`, data);
+    return response.data;
   }
 
   // Subscription management

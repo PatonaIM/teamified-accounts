@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { databaseConfig } from './config/database.config';
 import { AuthModule } from './auth/auth.module';
 import { AuditModule } from './audit/audit.module';
@@ -19,6 +20,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { UserAppPermissionsModule } from './user-app-permissions/user-app-permissions.module';
+import { MustChangePasswordGuard } from './common/guards/must-change-password.guard';
 
 @Module({
   imports: [
@@ -67,5 +69,11 @@ import { UserAppPermissionsModule } from './user-app-permissions/user-app-permis
     UserAppPermissionsModule, // App Permissions Management
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: MustChangePasswordGuard,
+    },
+  ],
 })
 export class AppModule {}

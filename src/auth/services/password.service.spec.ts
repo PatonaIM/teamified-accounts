@@ -104,7 +104,7 @@ describe('PasswordService', () => {
       const result = service.validatePasswordPolicy(password);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Password must contain at least one special character (@$!%*?&)');
+      expect(result.errors).toContain('Password must contain at least one special character (@$!%*?&.)');
     });
 
     it('should return multiple errors for weak password', () => {

@@ -163,10 +163,48 @@ export class OrganizationsService {
       );
     }
     
+    // Check for existing org including soft-deleted ones
     const existingOrg = await this.organizationRepository.findOne({
       where: { slug: normalizedSlug },
+      withDeleted: true,
     });
 
+    const roles = this.getAllRoles(currentUser);
+
+    // If org exists and is soft-deleted, restore it with updated info
+    if (existingOrg && existingOrg.deletedAt) {
+      this.logger.log(`Restoring soft-deleted organization: ${existingOrg.name} (${existingOrg.id})`);
+      
+      // Restore the organization with new data
+      existingOrg.deletedAt = null;
+      existingOrg.name = createDto.name;
+      existingOrg.subscriptionTier = createDto.subscriptionTier || existingOrg.subscriptionTier || 'free';
+      existingOrg.subscriptionStatus = 'active';
+      
+      const restoredOrg = await this.organizationRepository.save(existingOrg);
+      
+      this.logger.log(`Organization restored: ${restoredOrg.name} (${restoredOrg.id}) by user ${currentUser.id}`);
+
+      await this.auditService.log({
+        actorUserId: currentUser.id,
+        actorRole: roles[0] || 'unknown',
+        action: 'organization_restored',
+        entityType: 'Organization',
+        entityId: restoredOrg.id,
+        changes: {
+          name: restoredOrg.name,
+          slug: restoredOrg.slug,
+          subscriptionTier: restoredOrg.subscriptionTier,
+          restoredFrom: 'soft_deleted',
+        },
+        ip,
+        userAgent,
+      });
+
+      return { ...this.mapToResponseDto(restoredOrg), wasRestored: true };
+    }
+
+    // If org exists and is active, throw conflict error
     if (existingOrg) {
       throw new ConflictException(`Organization with slug '${normalizedSlug}' already exists`);
     }
@@ -183,7 +221,6 @@ export class OrganizationsService {
 
     this.logger.log(`Organization created: ${savedOrg.name} (${savedOrg.id}) by user ${currentUser.id}`);
 
-    const roles = this.getAllRoles(currentUser);
     await this.auditService.log({
       actorUserId: currentUser.id,
       actorRole: roles[0] || 'unknown',
@@ -219,8 +256,9 @@ export class OrganizationsService {
     
     const queryBuilder = this.organizationRepository
       .createQueryBuilder('org')
-      .leftJoin('org.members', 'members')
-      .addSelect('COUNT(members.id)', 'membercount')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .addSelect('COUNT(memberUser.id)', 'membercount')
       .where('org.deletedAt IS NULL')
       .groupBy('org.id');
     
@@ -314,10 +352,11 @@ export class OrganizationsService {
 
     const result = await this.organizationRepository
       .createQueryBuilder('org')
-      .leftJoin('org.members', 'members')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
       .where('org.id = :id', { id })
       .andWhere('org.deletedAt IS NULL')
-      .addSelect('COUNT(members.id)', 'membercount')
+      .addSelect('COUNT(memberUser.id)', 'membercount')
       .groupBy('org.id')
       .getRawAndEntities();
 
@@ -358,7 +397,7 @@ export class OrganizationsService {
     return this.mapToResponseDto(organization);
   }
 
-  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string }> {
+  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
     if (!slug || slug.length < 2 || slug.length > 100) {
       throw new BadRequestException('Slug must be between 2 and 100 characters');
     }
@@ -369,13 +408,37 @@ export class OrganizationsService {
       throw new BadRequestException('Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)');
     }
 
-    const existingOrg = await this.organizationRepository.findOne({
+    // Check for active organizations
+    const activeOrg = await this.organizationRepository.findOne({
       where: { slug: normalizedSlug },
     });
 
+    if (activeOrg) {
+      return {
+        available: false,
+        slug: normalizedSlug,
+        isSoftDeleted: false,
+      };
+    }
+
+    // Check for soft-deleted organizations
+    const softDeletedOrg = await this.organizationRepository.findOne({
+      where: { slug: normalizedSlug },
+      withDeleted: true,
+    });
+
+    if (softDeletedOrg) {
+      return {
+        available: true,
+        slug: normalizedSlug,
+        isSoftDeleted: true,
+      };
+    }
+
     return {
-      available: !existingOrg,
+      available: true,
       slug: normalizedSlug,
+      isSoftDeleted: false,
     };
   }
 
@@ -505,6 +568,46 @@ export class OrganizationsService {
     return this.objectStorageService.getOrganizationLogoUploadURL(organizationId, extension);
   }
 
+  async updateLogoUrl(
+    organizationId: string,
+    logoUrl: string,
+    currentUser: User,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<Organization> {
+    this.validateOrgAccess(organizationId, currentUser);
+
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with ID ${organizationId} not found`);
+    }
+
+    const previousLogoUrl = organization.logoUrl;
+    organization.logoUrl = logoUrl;
+    const savedOrganization = await this.organizationRepository.save(organization);
+
+    const roles = this.getAllRoles(currentUser);
+    await this.auditService.log({
+      actorUserId: currentUser.id,
+      actorRole: roles[0] || 'unknown',
+      action: 'organization_logo_updated',
+      entityType: 'Organization',
+      entityId: organizationId,
+      changes: {
+        previousLogoUrl,
+        newLogoUrl: logoUrl,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Organization logo updated: ${organization.name} (${organizationId}) by user ${currentUser.id}`);
+    return savedOrganization;
+  }
+
   async getMembers(organizationId: string, currentUser: User): Promise<OrganizationMemberResponseDto[]> {
     this.validateOrgAccess(organizationId, currentUser);
 
@@ -513,6 +616,8 @@ export class OrganizationsService {
       .leftJoinAndSelect('member.user', 'user')
       .leftJoinAndSelect('user.userRoles', 'userRole')
       .where('member.organizationId = :organizationId', { organizationId })
+      .andWhere('user.deletedAt IS NULL')
+      .andWhere('user.status != :archived', { archived: 'archived' })
       .getMany();
 
     return members.map(member => this.mapMemberToResponseDto(member));
@@ -1094,6 +1199,7 @@ Welcome to the ${organization.name} team!
       industry: organization.industry,
       companySize: organization.companySize,
       logoUrl: organization.logoUrl,
+      website: organization.website,
       settings: organization.settings,
       subscriptionTier: organization.subscriptionTier,
       subscriptionStatus: organization.subscriptionStatus,
@@ -1107,6 +1213,16 @@ Welcome to the ${organization.name} team!
       role => role.scope === 'organization' && role.scopeEntityId === member.organizationId
     );
 
+    // Derive status: if user is inactive, they're NLWF; otherwise use member status
+    let derivedStatus: 'active' | 'invited' | 'nlwf' = 'active';
+    if (member.status === 'invited') {
+      derivedStatus = 'invited';
+    } else if (member.user?.status === 'inactive') {
+      derivedStatus = 'nlwf';
+    } else {
+      derivedStatus = 'active';
+    }
+
     return {
       id: member.id,
       organizationId: member.organizationId,
@@ -1115,7 +1231,7 @@ Welcome to the ${organization.name} team!
       userName: member.user ? `${member.user.firstName} ${member.user.lastName}` : '',
       profilePicture: member.user?.profileData?.profilePicture || null,
       roleType: (userRole?.roleType as RoleType) || RoleType.CLIENT_EMPLOYEE,
-      status: member.status,
+      status: derivedStatus,
       joinedAt: member.joinedAt,
       invitedBy: member.invitedBy,
       createdAt: member.createdAt,

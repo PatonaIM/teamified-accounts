@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
   Paper,
-  Grid,
   Chip,
   Avatar,
   Button,
   Stack,
   Divider,
-  Card,
-  CardContent,
   IconButton,
   Alert,
   CircularProgress,
@@ -19,8 +16,6 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Tabs,
-  Tab,
   TextField,
   TableContainer,
   TableHead,
@@ -29,6 +24,20 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  InputAdornment,
+  Tooltip,
+  Snackbar,
+  useTheme,
+  Collapse,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  LinearProgress,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -36,7 +45,6 @@ import {
   Phone,
   LocationOn,
   Person,
-  Edit,
   Delete,
   VerifiedUser,
   Business,
@@ -46,10 +54,28 @@ import {
   Cancel,
   ChevronRight,
   Warning,
+  LockReset,
+  History,
+  ContentCopy,
+  Refresh,
+  Send,
+  Visibility,
+  VisibilityOff,
+  CreditCard,
+  Login,
+  Devices,
+  Timeline,
+  Edit,
+  CameraAlt,
+  ExpandLess,
+  ExpandMore,
+  Apps,
+  FilterList,
 } from '@mui/icons-material';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
 import roleService from '../services/roleService';
+import api from '../services/api';
 
 interface UserRole {
   id: string;
@@ -59,42 +85,91 @@ interface UserRole {
   createdAt: string;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  value: number;
-  index: number;
+interface UserActivity {
+  loginHistory: Array<{
+    timestamp: string;
+    ip: string;
+    userAgent: string;
+    deviceType: string;
+  }>;
+  lastAppsUsed: Array<{
+    appName: string;
+    clientId: string;
+    lastUsed: string;
+  }>;
+  recentActions: Array<{
+    action: string;
+    entityType: string;
+    timestamp: string;
+    targetUserEmail?: string;
+  }>;
+  connectedApps: Array<{
+    oauthClientId: string;
+    appName: string;
+    firstLoginAt: string;
+    lastLoginAt: string;
+    loginCount: number;
+    activities: Array<{
+      id: string;
+      action: string;
+      feature?: string;
+      description?: string;
+      createdAt: string;
+    }>;
+    topFeatures: Array<{
+      feature: string;
+      count: number;
+    }>;
+  }>;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`user-tabpanel-${index}`}
-      aria-labelledby={`user-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+type TabType = 'basic' | 'organizations' | 'billing' | 'activity' | 'reset-password' | 'delete';
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Get navigation context from location state
+  // Reset password modal state
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [sendingResetLink, setSendingResetLink] = useState(false);
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  // Activity state
+  const [activity, setActivity] = useState<UserActivity | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
+  const [activityTimeRange, setActivityTimeRange] = useState<string>('7d');
+
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
+  // Profile picture upload state
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Verification email state
+  const [sendingVerification, setSendingVerification] = useState(false);
+
   const navigationState = location.state as { 
     organizationId?: string; 
     organizationName?: string;
@@ -105,6 +180,12 @@ export default function UserDetailPage() {
       fetchUserDetails();
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (activeTab === 'activity' && userId) {
+      fetchUserActivity();
+    }
+  }, [activeTab, userId, activityTimeRange]);
 
   const fetchUserDetails = async () => {
     if (!userId) return;
@@ -131,12 +212,109 @@ export default function UserDetailPage() {
     }
   };
 
-  const handleEdit = () => {
-    navigate(`/admin/users/${userId}/edit`);
+  const fetchUserActivity = async (forceRefresh = false) => {
+    if (!userId) return;
+    
+    setActivityLoading(true);
+    try {
+      const response = await api.get(`/v1/users/${userId}/activity`, {
+        params: { timeRange: activityTimeRange }
+      });
+      setActivity(response.data);
+    } catch (err) {
+      console.warn('Failed to load user activity:', err);
+      setActivity({
+        loginHistory: [],
+        lastAppsUsed: [],
+        recentActions: [],
+        connectedApps: [],
+      });
+    } finally {
+      setActivityLoading(false);
+    }
   };
 
-  const handleDeleteClick = () => {
+  const handleSendResetLink = async () => {
+    if (!user) return;
+    
+    setSendingResetLink(true);
+    try {
+      await api.post('/v1/auth/admin/send-password-reset', { userId: user.id });
+      setResetSuccess('Password reset link has been sent to the user\'s email.');
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to send reset link', severity: 'error' });
+    } finally {
+      setSendingResetLink(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!user || !newPassword) return;
+    
+    setSettingPassword(true);
+    try {
+      const response = await api.post('/v1/auth/admin/set-password', { 
+        userId: user.id, 
+        password: newPassword 
+      });
+      const successMsg = response.data?.message || 'Password has been set successfully.';
+      setResetSuccess(successMsg);
+      setSnackbar({ open: true, message: 'Password set successfully. Make sure to share the password securely with the user.', severity: 'success' });
+      
+      // Close modal after a brief delay to allow user to see success message
+      setTimeout(() => {
+        handleCloseResetPasswordModal();
+      }, 2000);
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to set password', severity: 'error' });
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
+  const generateStrongPassword = () => {
+    const length = 16;
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    const allChars = uppercase + lowercase + numbers + symbols;
+    
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    setNewPassword(password);
+  };
+
+  const copyPasswordToClipboard = () => {
+    navigator.clipboard.writeText(newPassword);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 2000);
+  };
+
+  const handleOpenResetPasswordModal = () => {
+    setShowResetPasswordModal(true);
+    setNewPassword('');
+    setResetSuccess(null);
+  };
+
+  const handleCloseResetPasswordModal = () => {
+    setShowResetPasswordModal(false);
+    setNewPassword('');
+    setResetSuccess(null);
+  };
+
+  const handleOpenDeleteDialog = () => {
     setShowDeleteDialog(true);
+    setDeleteConfirmEmail('');
   };
 
   const handleCancelDelete = () => {
@@ -147,7 +325,6 @@ export default function UserDetailPage() {
   const handleConfirmDelete = async () => {
     if (!userId || !user) return;
 
-    // Verify email confirmation
     if (deleteConfirmEmail.trim() !== user.email) {
       return;
     }
@@ -155,12 +332,69 @@ export default function UserDetailPage() {
     setDeleting(true);
     try {
       await userService.deleteUser(userId);
-      navigate(isFromOrganization ? '/admin/organizations' : '/admin/tools/internal-users');
+      const isCandidateUser = roles.some(r => r.role === 'candidate');
+      navigate(isCandidateUser ? '/admin/tools/candidate-users' : '/admin/organizations');
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to delete user');
       setShowDeleteDialog(false);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfilePictureChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userId) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setSnackbar({ open: true, message: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)', severity: 'error' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSnackbar({ open: true, message: 'Image size must be less than 5MB', severity: 'error' });
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(`/objects/users/${userId}/profile-picture`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (response.data?.url && user) {
+        setUser({ ...user, profilePictureUrl: response.data.url });
+      }
+      setSnackbar({ open: true, message: 'Profile picture updated successfully', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to update profile picture', severity: 'error' });
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!userId || !user) return;
+    
+    setSendingVerification(true);
+    try {
+      await api.post(`/v1/users/${userId}/resend-verification`);
+      setSnackbar({ open: true, message: 'Verification email sent successfully', severity: 'success' });
+    } catch (err: any) {
+      setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to send verification email', severity: 'error' });
+    } finally {
+      setSendingVerification(false);
     }
   };
 
@@ -187,18 +421,31 @@ export default function UserDetailPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'success' | 'default' | 'info' | 'warning' => {
     switch (status) {
       case 'active':
         return 'success';
-      case 'inactive':
-        return 'default';
       case 'invited':
         return 'info';
-      case 'archived':
-        return 'error';
+      case 'nlwf':
+      case 'inactive':
+        return 'warning';
       default:
         return 'default';
+    }
+  };
+
+  const getDisplayStatus = (status: string): string => {
+    switch (status) {
+      case 'active':
+        return 'ACTIVE';
+      case 'invited':
+        return 'INVITED';
+      case 'nlwf':
+      case 'inactive':
+        return 'NLWF';
+      default:
+        return status.toUpperCase();
     }
   };
 
@@ -209,21 +456,34 @@ export default function UserDetailPage() {
     return '#757575';
   };
 
-  const getRoleDisplayColor = (roleType: string): { bgcolor: string; color: string } => {
+  const getRoleDisplayColor = (roleType: string): { bgcolor: string; color: string; fontWeight: number } => {
     switch (true) {
       case roleType.includes('super_admin'):
-        return { bgcolor: '#ffebee', color: '#c62828' };
+        return { bgcolor: '#c62828', color: 'white', fontWeight: 600 };
       case roleType.includes('admin'):
-        return { bgcolor: '#f3e5f5', color: '#7b1fa2' };
+        return { bgcolor: '#A16AE8', color: 'white', fontWeight: 600 };
       case roleType.includes('hr'):
-        return { bgcolor: '#e8f5e9', color: '#2e7d32' };
+        return { bgcolor: '#4CAF50', color: 'white', fontWeight: 600 };
       case roleType.includes('finance'):
-        return { bgcolor: '#fff3e0', color: '#e65100' };
+        return { bgcolor: '#FF9800', color: 'white', fontWeight: 600 };
       case roleType.includes('recruiter'):
-        return { bgcolor: '#e3f2fd', color: '#1565c0' };
+        return { bgcolor: '#2196F3', color: 'white', fontWeight: 600 };
+      case roleType.includes('employee'):
+        return { bgcolor: '#607D8B', color: 'white', fontWeight: 600 };
       default:
-        return { bgcolor: '#f5f5f5', color: '#616161' };
+        return { bgcolor: '#757575', color: 'white', fontWeight: 600 };
     }
+  };
+
+  const getDeviceIcon = (userAgent: string) => {
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return 'Mobile';
+    }
+    if (ua.includes('tablet') || ua.includes('ipad')) {
+      return 'Tablet';
+    }
+    return 'Desktop';
   };
 
   if (loading) {
@@ -258,347 +518,290 @@ export default function UserDetailPage() {
   }
 
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
-  const isFromOrganization = navigationState?.organizationId && navigationState?.organizationName;
+  const isCandidate = roles.some(r => r.role === 'candidate');
 
-  const handleBackNavigation = () => {
-    if (isFromOrganization) {
-      navigate('/admin/organizations', {
-        state: { selectedOrganizationId: navigationState.organizationId }
-      });
-    } else {
-      navigate('/admin/tools/internal-users');
-    }
-  };
+  const tabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
+    { id: 'basic', label: 'Basic Information', icon: <Person /> },
+    { id: 'organizations', label: 'Organizations', icon: <Business /> },
+    { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
+    { id: 'activity', label: 'User Activity', icon: <History /> },
+    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
+    { id: 'delete', label: 'Delete User', icon: <Delete /> },
+  ];
 
-  return (
-    <Box sx={{ p: 4, maxWidth: 1400, mx: 'auto' }}>
-      {/* Header with Breadcrumb */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
-        <Stack direction="row" alignItems="center">
-          <IconButton onClick={handleBackNavigation} sx={{ mr: 2 }}>
-            <ArrowBack />
-          </IconButton>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            {isFromOrganization ? (
-              <>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' }
-                  }}
-                  onClick={handleBackNavigation}
-                >
-                  Organization Management
-                </Typography>
-                <ChevronRight sx={{ color: 'text.secondary' }} />
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' }
-                  }}
-                  onClick={handleBackNavigation}
-                >
-                  {navigationState.organizationName}
-                </Typography>
-                <ChevronRight sx={{ color: 'text.secondary' }} />
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {userFullName}
-                </Typography>
-              </>
-            ) : (
-              <>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': { color: 'primary.main' }
-                  }}
-                  onClick={handleBackNavigation}
-                >
-                  Internal Users
-                </Typography>
-                <ChevronRight sx={{ color: 'text.secondary' }} />
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {userFullName}
-                </Typography>
-              </>
-            )}
-          </Stack>
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <Button
-            variant="outlined"
-            startIcon={<Edit />}
-            onClick={handleEdit}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            Edit
-          </Button>
-        </Stack>
-      </Stack>
-
-      <Grid container spacing={3}>
-        {/* Left Column - Profile Card (Persistent) */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Stack alignItems="center" spacing={2}>
-              <Avatar
-                sx={{
-                  width: 120,
-                  height: 120,
-                  bgcolor: '#A16AE8',
-                  fontSize: '3rem',
-                  fontWeight: 600,
-                }}
-              >
-                {(user.firstName?.[0] || '?').toUpperCase()}{(user.lastName?.[0] || '?').toUpperCase()}
-              </Avatar>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {user.firstName || 'Unknown'} {user.lastName || 'User'}
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
-                {user.status && (
-                  <Chip
-                    label={user.status.toUpperCase()}
-                    color={getStatusColor(user.status)}
-                    size="small"
-                  />
-                )}
-                {user.emailVerified && (
-                  <Chip
-                    icon={<CheckCircle />}
-                    label="Verified"
-                    color="success"
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
-                {user.isActive === false && (
-                  <Chip
-                    icon={<Cancel />}
-                    label="Inactive"
-                    color="error"
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
-              </Stack>
-            </Stack>
-
-            <Divider sx={{ my: 3 }} />
-
-            {/* Contact Information */}
-            <Stack spacing={2}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Contact Information
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'basic':
+        return (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <VerifiedUser color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Profile Information
               </Typography>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Email color="action" fontSize="small" />
-                <Typography variant="body2">{user.email}</Typography>
-              </Stack>
-              {user.phone && (
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Phone color="action" fontSize="small" />
-                  <Typography variant="body2">{user.phone}</Typography>
-                </Stack>
-              )}
-              {user.address?.city && (
-                <Stack direction="row" spacing={2} alignItems="flex-start">
-                  <LocationOn color="action" fontSize="small" />
-                  <Typography variant="body2">
-                    {[
-                      user.address.street,
-                      user.address.city,
-                      user.address.state,
-                      user.address.zip,
-                      user.address.country,
-                    ]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </Typography>
-                </Stack>
-              )}
             </Stack>
-
-            <Divider sx={{ my: 3 }} />
-
-            {/* Activity */}
-            <Stack spacing={2}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Activity
-              </Typography>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <CalendarToday color="action" fontSize="small" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Last Login
-                  </Typography>
-                  <Typography variant="body2">{formatLastLogin(user.lastLoginAt)}</Typography>
-                </Box>
-              </Stack>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Person color="action" fontSize="small" />
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Created
-                  </Typography>
-                  <Typography variant="body2">{formatDate(user.createdAt)}</Typography>
-                </Box>
-              </Stack>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* Right Column - Tabbed Content */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ borderRadius: 2 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(_, newValue) => setActiveTab(newValue)}
-              sx={{ borderBottom: 1, borderColor: 'divider', px: 3, pt: 2 }}
-            >
-              <Tab label="Basic Information" />
-              <Tab label="Organizations" />
-              <Tab label="Billing Details" />
-              <Tab label="Delete User" />
-            </Tabs>
-
-            {/* Tab 0: Basic Information */}
-            <TabPanel value={activeTab} index={0}>
-              <Stack spacing={3} sx={{ px: 3 }}>
-                {/* Profile Information Card */}
-                <Box>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <VerifiedUser color="primary" />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Profile Information
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, width: '30%', border: 'none' }}>User ID</TableCell>
+                  <TableCell sx={{ border: 'none' }}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      {user.id}
                     </Typography>
-                  </Stack>
-                  <Table size="small">
-                    <TableBody>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600, width: '30%' }}>User ID</TableCell>
-                        <TableCell>{user.id}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                      </TableRow>
-                      {user.status && (
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                          <TableCell>
-                            <Chip label={user.status} color={getStatusColor(user.status)} size="small" />
-                          </TableCell>
-                        </TableRow>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Email</TableCell>
+                  <TableCell sx={{ border: 'none' }}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography variant="body2">{user.email}</Typography>
+                      {user.emailVerified ? (
+                        <Tooltip title="Email verified">
+                          <CheckCircle sx={{ fontSize: 18, color: 'success.main' }} />
+                        </Tooltip>
+                      ) : (
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Chip 
+                            label="Needs Verification" 
+                            size="small" 
+                            color="warning"
+                            sx={{ height: 24 }}
+                          />
+                          <Button
+                            size="small"
+                            variant="text"
+                            startIcon={sendingVerification ? <CircularProgress size={14} /> : <Send />}
+                            onClick={handleResendVerification}
+                            disabled={sendingVerification}
+                            sx={{ textTransform: 'none', minWidth: 'auto' }}
+                          >
+                            {sendingVerification ? 'Sending...' : 'Resend'}
+                          </Button>
+                        </Stack>
                       )}
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Email Verified</TableCell>
-                        <TableCell>
-                          {user.emailVerified ? (
-                            <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
-                          ) : (
-                            <Chip icon={<Cancel />} label="No" color="error" size="small" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Account Active</TableCell>
-                        <TableCell>
-                          {user.isActive ? (
-                            <Chip icon={<CheckCircle />} label="Yes" color="success" size="small" />
-                          ) : (
-                            <Chip icon={<Cancel />} label="No" color="error" size="small" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </Box>
-
-                {/* Roles & Permissions Card */}
-                <Box>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <AdminPanelSettings color="primary" />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Roles & Permissions
-                    </Typography>
-                  </Stack>
-                  {roles.length > 0 ? (
-                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                      {roles.map((role) => (
-                        <Chip
-                          key={role.id}
-                          label={role.role}
-                          sx={{
-                            bgcolor: getRoleBadgeColor(role.role),
-                            color: 'white',
-                            fontWeight: 600,
-                            mb: 1,
-                          }}
-                        />
-                      ))}
                     </Stack>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No roles assigned
-                    </Typography>
-                  )}
-                </Box>
-              </Stack>
-            </TabPanel>
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Status</TableCell>
+                  <TableCell sx={{ border: 'none' }}>
+                    <Chip
+                      label={getDisplayStatus(user.status || 'active')}
+                      color={(['nlwf', 'inactive'] as string[]).includes(user.status || '') ? undefined : getStatusColor(user.status || 'active')}
+                      size="small"
+                      sx={(['nlwf', 'inactive'] as string[]).includes(user.status || '') ? {
+                        bgcolor: '#757575',
+                        color: 'white',
+                        fontWeight: 600
+                      } : undefined}
+                    />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Created</TableCell>
+                  <TableCell sx={{ border: 'none' }}>{formatDate(user.createdAt)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, border: 'none' }}>Last Login</TableCell>
+                  <TableCell sx={{ border: 'none' }}>{formatLastLogin(user.lastLoginAt)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Box>
+        );
 
-            {/* Tab 1: Organizations */}
-            <TabPanel value={activeTab} index={1}>
-              <Box sx={{ px: 3 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
-                  <Business color="primary" />
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Organization Memberships
+      case 'organizations':
+        return (
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 3 }}>
+              <Business color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Organization Memberships
+              </Typography>
+            </Stack>
+
+            {user.organizations && user.organizations.length > 0 ? (
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: isDarkMode ? 'action.hover' : 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Organization</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {user.organizations.map((org) => (
+                      <TableRow key={org.organizationId} hover>
+                        <TableCell>
+                          <Stack>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {org.organizationName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {org.organizationSlug}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={org.roleType}
+                            size="small"
+                            sx={getRoleDisplayColor(org.roleType)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {org.joinedAt ? formatDate(org.joinedAt) : 'Unknown'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            onClick={() => navigate('/admin/organizations', {
+                              state: { selectedOrganizationId: org.organizationId }
+                            })}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            View Org
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Alert severity="info">
+                This user is not a member of any organizations.
+              </Alert>
+            )}
+          </Box>
+        );
+
+      case 'billing':
+        return (
+          <Box sx={{ py: 6, textAlign: 'center' }}>
+            <CreditCard sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              Billing Details
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Billing information and payment history will be available here in a future update.
+            </Typography>
+          </Box>
+        );
+
+      case 'activity':
+        const timeRangeOptions = [
+          { value: '1h', label: 'Last 1 hour' },
+          { value: '3h', label: 'Last 3 hours' },
+          { value: '6h', label: 'Last 6 hours' },
+          { value: '12h', label: 'Last 12 hours' },
+          { value: '24h', label: 'Last 24 hours' },
+          { value: '3d', label: 'Last 3 days' },
+          { value: '7d', label: 'Last week' },
+          { value: '30d', label: 'Last 30 days' },
+        ];
+
+        const mergeAndSortActivities = (activities: typeof activity.connectedApps[0]['activities']) => {
+          const grouped = new Map<string, { action: string; feature?: string; description?: string; count: number; lastOccurrence: string }>();
+          
+          activities.forEach(act => {
+            const key = `${act.action}|${act.feature || ''}`;
+            const existing = grouped.get(key);
+            if (existing) {
+              existing.count++;
+              if (new Date(act.createdAt) > new Date(existing.lastOccurrence)) {
+                existing.lastOccurrence = act.createdAt;
+                existing.description = act.description;
+              }
+            } else {
+              grouped.set(key, {
+                action: act.action,
+                feature: act.feature,
+                description: act.description,
+                count: 1,
+                lastOccurrence: act.createdAt,
+              });
+            }
+          });
+          
+          return Array.from(grouped.values()).sort((a, b) => b.count - a.count);
+        };
+
+        return (
+          <Box>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel id="time-range-label">
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <FilterList fontSize="small" />
+                      <span>Time Range</span>
+                    </Stack>
+                  </InputLabel>
+                  <Select
+                    labelId="time-range-label"
+                    value={activityTimeRange}
+                    label="Time Range"
+                    onChange={(e) => setActivityTimeRange(e.target.value)}
+                  >
+                    {timeRangeOptions.map(opt => (
+                      <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={activityLoading ? <CircularProgress size={16} /> : <Refresh />}
+                onClick={() => fetchUserActivity(true)}
+                disabled={activityLoading}
+                sx={{ textTransform: 'none' }}
+              >
+                {activityLoading ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </Stack>
+
+            {activityLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+            <Stack spacing={4}>
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Login fontSize="small" color="primary" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Login History
                   </Typography>
                 </Stack>
-
-                {user.organizations && user.organizations.length > 0 ? (
+                
+                {activity?.loginHistory && activity.loginHistory.length > 0 ? (
                   <TableContainer>
-                    <Table>
+                    <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Organization</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Device</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>IP Address</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {user.organizations.map((org) => (
-                          <TableRow key={org.organizationId} hover>
+                        {activity.loginHistory.slice(0, 10).map((login, index) => (
+                          <TableRow key={index}>
                             <TableCell>
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                {org.organizationName}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {org.organizationSlug}
-                              </Typography>
+                              {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
                             </TableCell>
                             <TableCell>
-                              <Chip
-                                label={org.roleType}
-                                size="small"
-                                sx={getRoleDisplayColor(org.roleType)}
-                              />
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Devices fontSize="small" color="action" />
+                                <Typography variant="body2">{getDeviceIcon(login.userAgent)}</Typography>
+                              </Stack>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="body2" color="text.secondary">
-                                {org.joinedAt ? formatDate(org.joinedAt) : 'Unknown'}
+                              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                {login.ip}
                               </Typography>
                             </TableCell>
                           </TableRow>
@@ -607,51 +810,587 @@ export default function UserDetailPage() {
                     </Table>
                   </TableContainer>
                 ) : (
-                  <Alert severity="info">
-                    This user is not a member of any organizations.
-                  </Alert>
+                  <Typography variant="body2" color="text.secondary">
+                    No login history available in this time range. Last login: {formatLastLogin(user.lastLoginAt)}
+                  </Typography>
+                )}
+              </Paper>
+
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Apps fontSize="small" color="primary" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Connected Applications
+                  </Typography>
+                </Stack>
+                
+                {activity?.connectedApps && activity.connectedApps.length > 0 ? (
+                  <Stack spacing={2}>
+                    {activity.connectedApps.map((app) => {
+                      const isExpanded = expandedApps.has(app.oauthClientId);
+                      const toggleExpand = () => {
+                        setExpandedApps(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(app.oauthClientId)) {
+                            newSet.delete(app.oauthClientId);
+                          } else {
+                            newSet.add(app.oauthClientId);
+                          }
+                          return newSet;
+                        });
+                      };
+                      
+                      const mergedActivities = mergeAndSortActivities(app.activities);
+                      const totalActivityCount = app.activities.length;
+                      
+                      return (
+                        <Paper 
+                          key={app.oauthClientId} 
+                          variant="outlined" 
+                          sx={{ 
+                            overflow: 'hidden',
+                            bgcolor: isDarkMode ? 'background.default' : 'grey.50',
+                          }}
+                        >
+                          <Box
+                            onClick={toggleExpand}
+                            sx={{
+                              p: 2,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
+                              },
+                            }}
+                          >
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Stack direction="row" alignItems="center" spacing={2}>
+                                <Avatar 
+                                  sx={{ 
+                                    bgcolor: 'primary.main', 
+                                    width: 40, 
+                                    height: 40,
+                                    fontSize: '1rem',
+                                  }}
+                                >
+                                  {app.appName.charAt(0).toUpperCase()}
+                                </Avatar>
+                                <Stack>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                    {app.appName}
+                                  </Typography>
+                                  <Stack direction="row" spacing={2} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary">
+                                      {app.loginCount} login{app.loginCount !== 1 ? 's' : ''}
+                                    </Typography>
+                                    {totalActivityCount > 0 && (
+                                      <Typography variant="caption" color="text.secondary">
+                                        {totalActivityCount} action{totalActivityCount !== 1 ? 's' : ''}
+                                      </Typography>
+                                    )}
+                                    <Typography variant="caption" color="text.secondary">
+                                      Last used: {formatDistanceToNow(new Date(app.lastLoginAt), { addSuffix: true })}
+                                    </Typography>
+                                  </Stack>
+                                </Stack>
+                              </Stack>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                {!isExpanded && app.topFeatures.length > 0 && (
+                                  <Stack direction="row" spacing={0.5}>
+                                    {app.topFeatures.slice(0, 3).map((f, idx) => (
+                                      <Chip
+                                        key={idx}
+                                        label={`${f.feature} (${f.count})`}
+                                        size="small"
+                                        sx={{ fontSize: '0.7rem' }}
+                                      />
+                                    ))}
+                                  </Stack>
+                                )}
+                                <IconButton size="small">
+                                  {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                </IconButton>
+                              </Stack>
+                            </Stack>
+                          </Box>
+                          
+                          <Collapse in={isExpanded}>
+                            <Divider />
+                            <Box sx={{ p: 2 }}>
+                              {mergedActivities.length > 0 ? (
+                                <Stack spacing={2}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+                                    Feature Usage Summary (sorted by frequency)
+                                  </Typography>
+                                  <Stack spacing={1}>
+                                    {mergedActivities.map((activity, idx) => {
+                                      const maxCount = mergedActivities[0]?.count || 1;
+                                      const percentage = (activity.count / maxCount) * 100;
+                                      
+                                      return (
+                                        <Box key={idx} sx={{ position: 'relative' }}>
+                                          <Box
+                                            sx={{
+                                              position: 'absolute',
+                                              top: 0,
+                                              left: 0,
+                                              height: '100%',
+                                              width: `${percentage}%`,
+                                              bgcolor: isDarkMode ? 'primary.dark' : 'primary.light',
+                                              opacity: 0.15,
+                                              borderRadius: 1,
+                                            }}
+                                          />
+                                          <Stack 
+                                            direction="row" 
+                                            justifyContent="space-between" 
+                                            alignItems="center"
+                                            sx={{ 
+                                              py: 1.5, 
+                                              px: 2, 
+                                              borderRadius: 1,
+                                              position: 'relative',
+                                            }}
+                                          >
+                                            <Stack direction="row" alignItems="center" spacing={2}>
+                                              <Chip 
+                                                label={activity.count} 
+                                                size="small" 
+                                                color="primary"
+                                                sx={{ 
+                                                  minWidth: 36,
+                                                  fontWeight: 600,
+                                                }}
+                                              />
+                                              <Stack spacing={0.25}>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                  {activity.action.replace(/_/g, ' ')}
+                                                </Typography>
+                                                {activity.feature && (
+                                                  <Typography variant="caption" color="text.secondary">
+                                                    Feature: {activity.feature}
+                                                  </Typography>
+                                                )}
+                                              </Stack>
+                                            </Stack>
+                                            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                                              Last: {formatDistanceToNow(new Date(activity.lastOccurrence), { addSuffix: true })}
+                                            </Typography>
+                                          </Stack>
+                                        </Box>
+                                      );
+                                    })}
+                                  </Stack>
+                                </Stack>
+                              ) : (
+                                <Stack spacing={1}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
+                                    Application Details
+                                  </Typography>
+                                  <Stack direction="row" spacing={4}>
+                                    <Stack>
+                                      <Typography variant="caption" color="text.secondary">First Login</Typography>
+                                      <Typography variant="body2">
+                                        {format(new Date(app.firstLoginAt), 'MMM d, yyyy')}
+                                      </Typography>
+                                    </Stack>
+                                    <Stack>
+                                      <Typography variant="caption" color="text.secondary">Total Logins</Typography>
+                                      <Typography variant="body2">{app.loginCount}</Typography>
+                                    </Stack>
+                                  </Stack>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                                    No feature usage data recorded in this time range.
+                                  </Typography>
+                                </Stack>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
+                ) : activity?.lastAppsUsed && activity.lastAppsUsed.length > 0 ? (
+                  <Stack spacing={2}>
+                    {activity.lastAppsUsed.map((app, index) => (
+                      <Stack key={index} direction="row" justifyContent="space-between" alignItems="center">
+                        <Stack>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {app.appName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Client ID: {app.clientId}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary">
+                          Last used: {formatDistanceToNow(new Date(app.lastUsed), { addSuffix: true })}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No connected applications found.
+                  </Typography>
+                )}
+              </Paper>
+
+              {/* General Recent Activity (non-app specific) */}
+              {activity?.recentActions && activity.recentActions.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                    <Timeline fontSize="small" color="primary" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      General Activity
+                    </Typography>
+                  </Stack>
+                  <Stack spacing={1}>
+                    {activity.recentActions.slice(0, 10).map((action, index) => {
+                      const formatActionLabel = (act: typeof action) => {
+                        const baseAction = act.action.replace(/_/g, ' ');
+                        if ((act.action === 'admin_password_set' || act.action === 'admin_password_reset_sent') && act.targetUserEmail) {
+                          return `${baseAction} for ${act.targetUserEmail}`;
+                        }
+                        return `${baseAction} - ${act.entityType}`;
+                      };
+                      
+                      return (
+                        <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                          <Typography variant="body2" sx={{ flex: 1, mr: 2 }}>
+                            {formatActionLabel(action)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                            {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
+                          </Typography>
+                        </Stack>
+                      );
+                    })}
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
+          </Box>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+          sx={{ 
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': { 
+              bgcolor: 'rgba(161, 106, 232, 0.08)' 
+            }
+          }}
+        >
+          <ArrowBack />
+        </IconButton>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700,
+              color: 'text.secondary',
+              cursor: 'pointer',
+              '&:hover': { color: 'primary.main' }
+            }}
+            onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+          >
+            {isCandidate ? 'Candidate User' : 'Organization Management'}
+          </Typography>
+          <ChevronRight sx={{ color: 'text.secondary' }} />
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            {userFullName}
+          </Typography>
+        </Stack>
+      </Box>
+
+      {/* Main Content - Two Column Layout */}
+      <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left Sidebar - Profile + Navigation */}
+        <Box
+          sx={{
+            width: 280,
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: 'divider',
+            bgcolor: isDarkMode ? 'background.paper' : 'grey.50',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
+          {/* Profile Section */}
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleProfilePictureChange}
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              style={{ display: 'none' }}
+            />
+            
+            {/* Avatar with camera overlay */}
+            <Box
+              sx={{
+                position: 'relative',
+                width: 100,
+                height: 100,
+                mx: 'auto',
+                mb: 2,
+                cursor: 'pointer',
+                '&:hover .camera-overlay': {
+                  opacity: 1,
+                },
+              }}
+              onClick={handleProfilePictureClick}
+            >
+              <Avatar
+                src={
+                  user.profilePictureUrl 
+                    ? (user.profilePictureUrl.startsWith('/api/') ? user.profilePictureUrl : `/api/objects${user.profilePictureUrl.replace('/api/objects', '')}`)
+                    : user.profileData?.profilePicture 
+                      ? `/api/objects${user.profileData.profilePicture.replace('/api/objects', '')}`
+                      : undefined
+                }
+                sx={{
+                  width: 100,
+                  height: 100,
+                  bgcolor: '#A16AE8',
+                  fontSize: '2.5rem',
+                  fontWeight: 600,
+                }}
+              >
+                {(user.firstName?.[0] || '?').toUpperCase()}{(user.lastName?.[0] || '?').toUpperCase()}
+              </Avatar>
+              
+              {/* Camera icon overlay */}
+              <Box
+                className="camera-overlay"
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid',
+                  borderColor: 'background.paper',
+                  boxShadow: 1,
+                  transition: 'opacity 0.2s ease',
+                  opacity: 0.9,
+                  '&:hover': {
+                    opacity: 1,
+                    bgcolor: 'primary.dark',
+                  },
+                }}
+              >
+                {uploadingPhoto ? (
+                  <CircularProgress size={16} sx={{ color: 'white' }} />
+                ) : (
+                  <CameraAlt sx={{ fontSize: 16, color: 'white' }} />
                 )}
               </Box>
-            </TabPanel>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+              {user.firstName || 'Unknown'} {user.lastName || 'User'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {user.email}
+            </Typography>
+          </Box>
 
-            {/* Tab 2: Billing Details */}
-            <TabPanel value={activeTab} index={2}>
-              <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  Billing Details
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Coming soon...
-                </Typography>
-              </Box>
-            </TabPanel>
+          <Divider />
 
-            {/* Tab 3: Delete User */}
-            <TabPanel value={activeTab} index={3}>
-              <Box sx={{ px: 3 }}>
-                <Alert severity="error" icon={<Warning />} sx={{ mb: 3 }}>
-                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-                    Delete User
+          {/* Navigation Tabs */}
+          <List sx={{ py: 1, flex: 1 }}>
+            {tabs.map((tab) => (
+              <ListItemButton
+                key={tab.id}
+                selected={activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'}
+                onClick={() => {
+                  if (tab.id === 'reset-password') {
+                    handleOpenResetPasswordModal();
+                  } else if (tab.id === 'delete') {
+                    handleOpenDeleteDialog();
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
+                sx={{
+                  py: 1.5,
+                  px: 2,
+                  borderLeft: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete' ? 3 : 0,
+                  borderColor: 'primary.main',
+                  bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'
+                    ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
+                    : 'transparent',
+                  '&:hover': {
+                    bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'
+                      ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
+                      : 'action.hover',
+                  },
+                  ...(tab.id === 'delete' && {
+                    color: 'error.main',
+                    '& .MuiListItemIcon-root': { color: 'error.main' },
+                  }),
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {tab.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={tab.label}
+                  primaryTypographyProps={{
+                    fontWeight: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete' ? 600 : 400,
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+
+        {/* Right Content Area */}
+        <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', p: 4 }}>
+          {renderTabContent()}
+        </Box>
+      </Box>
+
+      {/* Reset Password Modal */}
+      <Dialog
+        open={showResetPasswordModal}
+        onClose={handleCloseResetPasswordModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LockReset color="primary" />
+          Reset Password
+        </DialogTitle>
+        <DialogContent>
+          {resetSuccess && (
+            <Alert severity="success" sx={{ mb: 3 }} onClose={() => setResetSuccess(null)}>
+              {resetSuccess}
+            </Alert>
+          )}
+
+          <Stack spacing={3}>
+            <Paper variant="outlined" sx={{ p: 2.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Option 1: Send Password Reset Link
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Send a secure password reset link to {user.email}
+              </Typography>
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={sendingResetLink ? <CircularProgress size={16} color="inherit" /> : <Send />}
+                onClick={handleSendResetLink}
+                disabled={sendingResetLink}
+                sx={{ textTransform: 'none' }}
+              >
+                {sendingResetLink ? 'Sending...' : 'Send Reset Link'}
+              </Button>
+            </Paper>
+
+            <Divider>
+              <Typography variant="body2" color="text.secondary">OR</Typography>
+            </Divider>
+
+            <Paper variant="outlined" sx={{ p: 2.5 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Option 2: Set Password Directly
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Set a new password and securely communicate it to the user.
+              </Typography>
+              
+              {newPassword && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Important: Copy and save this password now!
                   </Typography>
                   <Typography variant="body2">
-                    This action will permanently delete the user and all associated data. This cannot be undone.
+                    The password will not be shown again after you close this dialog. You must share it securely with the user (e.g., in person, phone call, or encrypted message).
                   </Typography>
                 </Alert>
-
-                <Button
-                  variant="contained"
-                  color="error"
+              )}
+              
+              <Stack spacing={2}>
+                <TextField
                   fullWidth
-                  onClick={handleDeleteClick}
-                  sx={{ textTransform: 'none', fontWeight: 600 }}
-                >
-                  Delete User
-                </Button>
-              </Box>
-            </TabPanel>
-          </Paper>
-        </Grid>
-      </Grid>
+                  size="small"
+                  label="New Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {newPassword && (
+                          <Tooltip title={passwordCopied ? 'Copied!' : 'Copy to clipboard'}>
+                            <IconButton onClick={copyPasswordToClipboard} edge="end" size="small">
+                              <ContentCopy fontSize="small" color={passwordCopied ? 'success' : 'inherit'} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                          {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText="Min 8 chars with uppercase, lowercase, number, and symbol"
+                />
+                
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Refresh />}
+                    onClick={generateStrongPassword}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Generate
+                  </Button>
+                  
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="small"
+                    startIcon={settingPassword ? <CircularProgress size={16} color="inherit" /> : <LockReset />}
+                    onClick={handleSetPassword}
+                    disabled={settingPassword || !newPassword || newPassword.length < 8}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {settingPassword ? 'Setting...' : 'Set Password'}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Paper>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseResetPasswordModal} sx={{ textTransform: 'none' }}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog
@@ -660,25 +1399,32 @@ export default function UserDetailPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Delete User</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <Warning color="error" />
+          Delete User Account
+        </DialogTitle>
         <DialogContent>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            This action will permanently delete the user and all associated data. This cannot be undone.
+          </Alert>
+          
           <DialogContentText sx={{ mb: 2 }}>
-            Are you sure you want to delete {userFullName}?
+            You are about to permanently delete <strong>{userFullName}</strong>.
           </DialogContentText>
-          <DialogContentText sx={{ mb: 3, fontWeight: 'bold' }}>
-            This action cannot be undone. The user and all their data will be permanently removed.
-          </DialogContentText>
-          <DialogContentText sx={{ mb: 2 }}>
-            To confirm, please type the user's email address: <strong>{user.email}</strong>
-          </DialogContentText>
+          
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            To confirm deletion, please type the user's email address:
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, fontFamily: 'monospace' }}>
+            {user.email}
+          </Typography>
+          
           <TextField
             fullWidth
             label="Confirm email address"
             value={deleteConfirmEmail}
             onChange={(e) => setDeleteConfirmEmail(e.target.value)}
             placeholder={user.email}
-            autoFocus
-            disabled={deleting}
             error={deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email}
             helperText={
               deleteConfirmEmail !== '' && deleteConfirmEmail !== user.email
@@ -688,7 +1434,7 @@ export default function UserDetailPage() {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelDelete} disabled={deleting}>
+          <Button onClick={handleCancelDelete} disabled={deleting} sx={{ textTransform: 'none' }}>
             Cancel
           </Button>
           <Button
@@ -697,11 +1443,27 @@ export default function UserDetailPage() {
             variant="contained"
             disabled={deleting || deleteConfirmEmail.trim() !== user.email}
             startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
+            sx={{ textTransform: 'none' }}
           >
             {deleting ? 'Deleting...' : 'Delete Permanently'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={snackbar.severity} 
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

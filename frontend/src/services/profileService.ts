@@ -339,7 +339,10 @@ class ProfileService {
         convertedProfileData.emailAddress = userData.email || '';
         convertedProfileData.id = userData.id || '';
         convertedProfileData.roles = userData.roles || [];
+        // Include the profileData with profilePicture from the user data
+        convertedProfileData.profileData = userData.profileData || {};
         console.log('profileService: Set convertedProfileData.roles to:', convertedProfileData.roles);
+        console.log('profileService: Set convertedProfileData.profileData.profilePicture to:', userData.profileData?.profilePicture);
       } else {
         console.log('profileService: userData is null, using JWT fallback');
         // Use fallback data from JWT token

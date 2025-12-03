@@ -27,6 +27,9 @@ import {
   MenuItem,
   Avatar,
   Menu,
+  FormControlLabel,
+  Switch,
+  Tooltip,
 } from '@mui/material';
 import { Search, Add, Business, ArrowBack, Edit, Warning, CameraAlt, MoreVert, PersonRemove, PersonOff } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -90,6 +93,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   
   // Pagination state (Load More strategy)
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,6 +110,7 @@ const OrganizationManagementPage: React.FC = () => {
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [memberStatusFilters, setMemberStatusFilters] = useState<Set<string> | null>(null); // null = not initialized yet
   
   // Members pagination state (Load More strategy)
   const [displayedMembersCount, setDisplayedMembersCount] = useState(10);
@@ -120,10 +125,15 @@ const OrganizationManagementPage: React.FC = () => {
   const [newOrgName, setNewOrgName] = useState('');
   const [newOrgSlug, setNewOrgSlug] = useState('');
   const [slugError, setSlugError] = useState<string | null>(null);
+  const [slugInfo, setSlugInfo] = useState<string | null>(null);
+  const [isSoftDeletedSlug, setIsSoftDeletedSlug] = useState(false);
+  const [clientAdminEmail, setClientAdminEmail] = useState('');
+  const [clientAdminEmailError, setClientAdminEmailError] = useState<string | null>(null);
   
   // Edit state (now inline in Company Profile tab)
   const [editOrgData, setEditOrgData] = useState<Organization | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   
   // Delete state (for Delete Organization tab)
   const [deleteConfirmSlug, setDeleteConfirmSlug] = useState('');
@@ -247,14 +257,48 @@ const OrganizationManagementPage: React.FC = () => {
       .replace(/^-+|-+$/g, '');
   };
 
-  const validateSlugUniqueness = (slug: string): boolean => {
-    const exists = organizations.some(org => org.slug.toLowerCase() === slug.toLowerCase());
-    if (exists) {
-      setSlugError('This slug is already taken. Please choose a different one.');
-      return false;
+  const validateSlugUniqueness = async (slug: string): Promise<boolean> => {
+    if (!slug || slug.length < 2) {
+      setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      return true;
     }
-    setSlugError(null);
-    return true;
+
+    try {
+      const response = await organizationsService.checkSlugAvailability(slug);
+      
+      if (!response.available) {
+        setSlugError('This slug is already taken. Please choose a different one.');
+        setSlugInfo(null);
+        setIsSoftDeletedSlug(false);
+        return false;
+      }
+      
+      if (response.isSoftDeleted) {
+        setSlugError(null);
+        setSlugInfo('This organization was previously archived. Creating it will restore the archived organization.');
+        setIsSoftDeletedSlug(true);
+        return true;
+      }
+      
+      setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      return true;
+    } catch {
+      const exists = organizations.some(org => org.slug.toLowerCase() === slug.toLowerCase());
+      if (exists) {
+        setSlugError('This slug is already taken. Please choose a different one.');
+        setSlugInfo(null);
+        setIsSoftDeletedSlug(false);
+        return false;
+      }
+      setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      return true;
+    }
   };
 
   const loadOrganizations = async (append = false) => {
@@ -297,28 +341,91 @@ const OrganizationManagementPage: React.FC = () => {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleCreateOrganization = async () => {
     if (!newOrgName || !newOrgSlug) return;
 
-    if (!validateSlugUniqueness(newOrgSlug)) {
+    const isSlugValid = await validateSlugUniqueness(newOrgSlug);
+    if (!isSlugValid) {
+      return;
+    }
+
+    if (clientAdminEmail && !validateEmail(clientAdminEmail)) {
+      setClientAdminEmailError('Please enter a valid email address');
       return;
     }
 
     setCreateOrgLoading(true);
+    setClientAdminEmailError(null);
     try {
       const newOrg = await organizationsService.create({
         name: newOrgName,
         slug: newOrgSlug,
       });
       setOrganizations([...organizations, newOrg]);
+      
+      const wasRestored = newOrg.wasRestored === true;
+      let successMessage = wasRestored 
+        ? 'Organization restored successfully!' 
+        : 'Organization created successfully!';
+      
+      if (clientAdminEmail) {
+        try {
+          const token = localStorage.getItem('teamified_access_token');
+          const response = await fetch('/api/v1/invitations/send-email', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: clientAdminEmail,
+              organizationId: newOrg.id,
+              roleType: 'client_admin',
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+          }
+          
+          successMessage = wasRestored 
+            ? `Organization restored and invitation sent to ${clientAdminEmail}!`
+            : `Organization created and invitation sent to ${clientAdminEmail}!`;
+        } catch (inviteErr) {
+          console.error('Failed to send invitation:', inviteErr);
+          setShowCreateOrgDialog(false);
+          setNewOrgName('');
+          setNewOrgSlug('');
+          setSlugError(null);
+          setSlugInfo(null);
+          setIsSoftDeletedSlug(false);
+          setClientAdminEmail('');
+          setClientAdminEmailError(null);
+          setWarning(wasRestored 
+            ? 'Organization restored, but failed to send invitation email. You can invite the admin manually.'
+            : 'Organization created, but failed to send invitation email. You can invite the admin manually.');
+          return;
+        }
+      }
+      
       setShowCreateOrgDialog(false);
       setNewOrgName('');
       setNewOrgSlug('');
       setSlugError(null);
-      setSuccess('Organization created successfully!');
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
+      setClientAdminEmail('');
+      setClientAdminEmailError(null);
+      setSuccess(successMessage);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create organization';
-      if (errorMessage.includes('slug') && errorMessage.includes('already exists')) {
+      if (errorMessage.includes('slug') || errorMessage.includes('duplicate key') || errorMessage.includes('unique constraint')) {
         setSlugError('This slug is already taken. Please choose a different one.');
       } else {
         setError(errorMessage);
@@ -336,6 +443,8 @@ const OrganizationManagementPage: React.FC = () => {
       validateSlugUniqueness(generatedSlug);
     } else {
       setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
     }
   };
 
@@ -346,6 +455,8 @@ const OrganizationManagementPage: React.FC = () => {
       validateSlugUniqueness(cleanSlug);
     } else {
       setSlugError(null);
+      setSlugInfo(null);
+      setIsSoftDeletedSlug(false);
     }
   };
 
@@ -358,21 +469,21 @@ const OrganizationManagementPage: React.FC = () => {
       const logoUrl = await organizationsService.uploadLogo(selectedOrg.id, file);
       setSuccess('Logo uploaded successfully!');
       
-      // Refresh organizations list to show updated logo
-      const response = await organizationsService.getAll({
-        page: currentPage,
-        limit: 20,
-        search: searchQuery.trim() || undefined,
-      });
-      setOrganizations(response.organizations);
+      // Update logo locally without reloading the entire list
+      const updatedOrg = { ...selectedOrg, logoUrl };
+      setSelectedOrg(updatedOrg);
+      setEditOrgData(updatedOrg);
       
-      const updatedOrg = response.organizations.find(o => o.id === selectedOrg.id);
-      if (updatedOrg) {
-        setSelectedOrg(updatedOrg);
-        setEditOrgData(updatedOrg);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload logo');
+      // Update the organization in the list as well
+      setOrganizations(prev => 
+        prev.map(org => org.id === selectedOrg.id ? { ...org, logoUrl } : org)
+      );
+    } catch (err: any) {
+      // Extract error message from axios response or use generic message
+      const errorMessage = err?.response?.data?.message 
+        || err?.message 
+        || 'Failed to upload logo';
+      setError(errorMessage);
     } finally {
       setUploadingLogo(false);
       // Reset the input so the same file can be selected again
@@ -385,32 +496,32 @@ const OrganizationManagementPage: React.FC = () => {
   const handleSaveProfileChanges = async () => {
     if (!editOrgData) return;
     const orgIdToReselect = editOrgData.id;
+    setSavingProfile(true);
     try {
-      await organizationsService.update(editOrgData.id, {
+      // Get the updated organization directly from the update response
+      const updatedOrg = await organizationsService.update(editOrgData.id, {
         name: editOrgData.name,
         slug: editOrgData.slug,
         industry: editOrgData.industry,
         companySize: editOrgData.companySize,
         website: editOrgData.website,
       });
+      
       setIsEditingProfile(false);
       setSuccess('Organization updated successfully!');
       
-      const response = await organizationsService.getAll({
-        page: currentPage,
-        limit: 20,
-        search: searchQuery.trim() || undefined,
-      });
-      setOrganizations(response.organizations);
-      setTotalOrgs(response.pagination.total);
-      setHasMoreOrgs(response.pagination.page < response.pagination.totalPages);
+      // Update the local states immediately with the response
+      setSelectedOrg(updatedOrg);
+      setEditOrgData(updatedOrg);
       
-      const reselect = response.organizations.find(o => o.id === orgIdToReselect);
-      if (reselect) {
-        setSelectedOrg(reselect);
-      }
+      // Update the organization in the list
+      setOrganizations(prev => 
+        prev.map(org => org.id === orgIdToReselect ? updatedOrg : org)
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update organization');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -481,9 +592,7 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
   const handleInvitationSuccess = () => {
-    setShowInvitationModal(false);
-    setSuccess('Invitation sent successfully!');
-    loadMembers(); // Reload members to show invited users
+    loadMembers(); // Reload members to show invited users (modal stays open for results)
   };
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>, member: OrganizationMember) => {
@@ -531,8 +640,53 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
 
-  // Filter members based on search query
+  // Count members by status for filter display
+  // Status values from backend: 'active', 'invited', 'nlwf'
+  const statusCounts = members.reduce((acc, member) => {
+    const status = member.status?.toLowerCase() || 'active';
+    acc[status] = (acc[status] || 0) + 1;
+    acc.total = (acc.total || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Reset filters when organization changes
+  useEffect(() => {
+    setMemberStatusFilters(null); // Reset to null so it will be re-initialized
+  }, [selectedOrg?.id]);
+
+  // Initialize filters when members are loaded - default to 'active' unless no active users exist
+  useEffect(() => {
+    if (members.length > 0 && memberStatusFilters === null) {
+      const activeCount = statusCounts['active'] || 0;
+      if (activeCount === 0) {
+        // No active users, default to showing active + invited
+        setMemberStatusFilters(new Set(['active', 'invited']));
+      } else {
+        // Has active users, default to showing only active
+        setMemberStatusFilters(new Set(['active']));
+      }
+    }
+  }, [members, statusCounts, memberStatusFilters]);
+
+  // Get effective filters (use empty set during initialization)
+  const effectiveFilters = memberStatusFilters || new Set<string>();
+
+  // Filter members based on search query and status filter checkboxes
+  // Filters are additive - only show members whose status is checked
   const filteredMembers = members.filter((member) => {
+    const status = member.status?.toLowerCase() || 'active';
+    
+    // If no filters selected, show nothing (empty selection = no results)
+    if (effectiveFilters.size === 0) {
+      return false;
+    }
+    
+    // Only show members whose status is checked
+    if (!effectiveFilters.has(status)) {
+      return false;
+    }
+    
+    // Then filter by search query
     if (!memberSearchQuery.trim()) return true;
     
     const query = memberSearchQuery.toLowerCase();
@@ -542,6 +696,20 @@ const OrganizationManagementPage: React.FC = () => {
     
     return name.includes(query) || email.includes(query) || role.includes(query);
   });
+  
+  // Toggle a status filter checkbox
+  const toggleStatusFilter = (status: string) => {
+    setMemberStatusFilters(prev => {
+      const newSet = new Set(prev || []);
+      if (newSet.has(status)) {
+        newSet.delete(status);
+      } else {
+        newSet.add(status);
+      }
+      return newSet;
+    });
+    setDisplayedMembersCount(10); // Reset pagination when filter changes
+  };
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
     return getRolePriority(a.roleType) - getRolePriority(b.roleType);
@@ -832,7 +1000,12 @@ const OrganizationManagementPage: React.FC = () => {
                     }}
                   >
                     <Avatar
+                      key={`org-avatar-${org.id}-${org.logoUrl || 'default'}`}
                       src={org.logoUrl || undefined}
+                      imgProps={{ 
+                        crossOrigin: 'anonymous',
+                        onError: (e: any) => { e.target.style.display = 'none'; }
+                      }}
                       sx={{
                         width: 40,
                         height: 40,
@@ -843,11 +1016,25 @@ const OrganizationManagementPage: React.FC = () => {
                       <Business sx={{ fontSize: 20 }} />
                     </Avatar>
                     <ListItemText
-                      primary={org.name}
+                      primary={
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {org.name}
+                        </Typography>
+                      }
                       secondary={`${org.memberCount || 0} users`}
-                      primaryTypographyProps={{ fontWeight: 600 }}
                     />
-                    {org.subscriptionTier && (
+                    {(org.memberCount === 0 || org.memberCount === undefined) ? (
+                      <Chip
+                        label="No Users"
+                        size="small"
+                        sx={{
+                          ml: 1,
+                          fontWeight: 600,
+                          bgcolor: 'warning.main',
+                          color: 'warning.contrastText',
+                        }}
+                      />
+                    ) : org.subscriptionTier && (
                       <Box sx={{ position: 'relative', display: 'inline-block' }}>
                         {org.subscriptionTier?.toLowerCase() === 'enterprise' && (
                           <Box
@@ -922,15 +1109,39 @@ const OrganizationManagementPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Box sx={{ position: 'relative', display: 'inline-block' }}>
                     <Avatar
+                      key={`selected-org-avatar-${selectedOrg.id}-${selectedOrg.logoUrl || 'default'}`}
                       src={selectedOrg.logoUrl || undefined}
+                      imgProps={{ 
+                        crossOrigin: 'anonymous',
+                        onError: (e: any) => { e.target.style.display = 'none'; }
+                      }}
                       sx={{
                         width: 64,
                         height: 64,
                         bgcolor: 'primary.main',
+                        opacity: uploadingLogo ? 0.5 : 1,
+                        transition: 'opacity 0.2s ease-in-out',
                       }}
                     >
                       <Business sx={{ fontSize: 32 }} />
                     </Avatar>
+                    {uploadingLogo && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 64,
+                          height: 64,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '50%',
+                        }}
+                      >
+                        <CircularProgress size={32} thickness={4} />
+                      </Box>
+                    )}
                     <IconButton
                       onClick={() => logoFileInputRef.current?.click()}
                       disabled={uploadingLogo}
@@ -950,11 +1161,7 @@ const OrganizationManagementPage: React.FC = () => {
                         },
                       }}
                     >
-                      {uploadingLogo ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <CameraAlt sx={{ fontSize: 16 }} />
-                      )}
+                      <CameraAlt sx={{ fontSize: 16 }} />
                     </IconButton>
                     <input
                       ref={logoFileInputRef}
@@ -1038,7 +1245,7 @@ const OrganizationManagementPage: React.FC = () => {
                   ) : (
                     <>
                       {/* User Search Bar and Invite Button */}
-                      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                         <TextField
                           fullWidth
                           size="small"
@@ -1059,98 +1266,186 @@ const OrganizationManagementPage: React.FC = () => {
                         <Button
                           variant="contained"
                           startIcon={<Add />}
-                          size="small"
                           onClick={() => setShowInvitationModal(true)}
                           sx={{
                             bgcolor: '#4CAF50',
                             '&:hover': { bgcolor: '#45a049' },
                             whiteSpace: 'nowrap',
                             px: 3,
+                            height: 40,
                           }}
                         >
                           Invite User
                         </Button>
                       </Box>
 
+                      {/* Status Filter Checkboxes */}
+                      <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
+                          Show:
+                        </Typography>
+                        <Chip
+                          label={`Active (${statusCounts['active'] || 0})`}
+                          size="small"
+                          onClick={() => toggleStatusFilter('active')}
+                          color={effectiveFilters.has('active') ? 'primary' : 'default'}
+                          variant={effectiveFilters.has('active') ? 'filled' : 'outlined'}
+                          sx={{ cursor: 'pointer' }}
+                        />
+                        <Chip
+                          label={`Invited (${statusCounts['invited'] || 0})`}
+                          size="small"
+                          onClick={() => toggleStatusFilter('invited')}
+                          color={effectiveFilters.has('invited') ? 'info' : 'default'}
+                          variant={effectiveFilters.has('invited') ? 'filled' : 'outlined'}
+                          sx={{ cursor: 'pointer' }}
+                        />
+                        <Chip
+                          label={`NLWF (${statusCounts['nlwf'] || 0})`}
+                          size="small"
+                          onClick={() => toggleStatusFilter('nlwf')}
+                          color={effectiveFilters.has('nlwf') ? 'warning' : 'default'}
+                          variant={effectiveFilters.has('nlwf') ? 'filled' : 'outlined'}
+                          sx={{ cursor: 'pointer' }}
+                        />
+                      </Box>
+
+                      {/* No Users Message - only show if truly no members in organization */}
+                      {(statusCounts.total || 0) === 0 && (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No users in this organization yet.
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Click "Invite User" to add members.
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* No results from current filter */}
+                      {(statusCounts.total || 0) > 0 && filteredMembers.length === 0 && (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No users match the current filter.
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            Try selecting different status filters above.
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Member List - only render if there are filtered members */}
+                      {filteredMembers.length > 0 && (
+                        <>
                       <Box>
-                        {paginatedMembers.map((member) => (
-                          <Paper
-                            key={member.id}
-                            onClick={() => navigate(`/admin/users/${member.userId}`, {
-                              state: {
-                                organizationId: selectedOrg?.id,
-                                organizationName: selectedOrg?.name
-                              }
-                            })}
-                            sx={{
-                              p: 2,
-                              mb: 2,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                borderColor: 'primary.main',
-                                bgcolor: 'action.hover',
-                                transform: 'translateY(-2px)',
-                                boxShadow: 2,
-                              },
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar
-                                  src={member.profilePicture || undefined}
-                                  sx={{
-                                    width: 48,
-                                    height: 48,
-                                    bgcolor: 'primary.main',
-                                  }}
-                                >
-                                  {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                    {member.userName}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {member.userEmail}
-                                  </Typography>
+                        {paginatedMembers.map((member) => {
+                          const isNlwf = member.status === 'nlwf';
+                          return (
+                            <Paper
+                              key={member.id}
+                              onClick={() => navigate(`/admin/users/${member.userId}`, {
+                                state: {
+                                  organizationId: selectedOrg?.id,
+                                  organizationName: selectedOrg?.name
+                                }
+                              })}
+                              sx={{
+                                p: 2,
+                                mb: 2,
+                                border: '1px solid',
+                                borderColor: isNlwf ? 'action.disabled' : 'divider',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                bgcolor: isNlwf ? 'action.disabledBackground' : 'background.paper',
+                                opacity: isNlwf ? 0.75 : 1,
+                                '&:hover': {
+                                  borderColor: 'primary.main',
+                                  bgcolor: isNlwf ? 'action.hover' : 'action.hover',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: 2,
+                                  opacity: 1,
+                                },
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Avatar
+                                    src={member.profilePicture || undefined}
+                                    sx={{
+                                      width: 48,
+                                      height: 48,
+                                      bgcolor: isNlwf ? 'grey.500' : 'primary.main',
+                                      filter: isNlwf ? 'grayscale(100%)' : 'none',
+                                    }}
+                                  >
+                                    {member.userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                  </Avatar>
+                                  <Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography 
+                                        variant="body1" 
+                                        sx={{ 
+                                          fontWeight: 600,
+                                          color: isNlwf ? 'text.secondary' : 'text.primary',
+                                        }}
+                                      >
+                                        {member.userName}
+                                      </Typography>
+                                      {member.status === 'invited' && (
+                                        <Chip
+                                          label="Invited"
+                                          size="small"
+                                          color="info"
+                                          variant="filled"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                      {member.status === 'nlwf' && (
+                                        <Chip
+                                          label="NLWF"
+                                          size="small"
+                                          color="warning"
+                                          variant="filled"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {member.userEmail}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <Chip
+                                    label={member.roleType || 'No role'}
+                                    size="small"
+                                    color={getRoleColor(member.roleType)}
+                                    variant="outlined"
+                                    sx={{
+                                      opacity: isNlwf ? 0.6 : 1,
+                                    }}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleOpenUserMenu(e, member)}
+                                    sx={{ ml: 1 }}
+                                  >
+                                    <MoreVert />
+                                  </IconButton>
                                 </Box>
                               </Box>
-                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                {member.status === 'invited' && (
-                                  <Chip
-                                    label="Invited"
-                                    size="small"
-                                    color="warning"
-                                    variant="outlined"
-                                  />
-                                )}
-                                <Chip
-                                  label={member.roleType || 'No role'}
-                                  size="small"
-                                  color={getRoleColor(member.roleType)}
-                                  variant="outlined"
-                                />
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => handleOpenUserMenu(e, member)}
-                                  sx={{ ml: 1 }}
-                                >
-                                  <MoreVert />
-                                </IconButton>
-                              </Box>
-                            </Box>
-                          </Paper>
-                        ))}
+                            </Paper>
+                          );
+                        })}
                       </Box>
                       
                       {/* Members Pagination */}
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 3, gap: 1 }}>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Showing {paginatedMembers.length} of {sortedMembers.length} users
-                          {memberSearchQuery && ` (filtered from ${members.length})`}
+                          {(statusCounts.total || 0) > sortedMembers.length && 
+                            ` (${(statusCounts.total || 0) - sortedMembers.length} hidden by filter)`}
+                          {memberSearchQuery && ` (filtered)`}
                         </Typography>
                         {hasMoreMembers && (
                           <Button 
@@ -1162,6 +1457,8 @@ const OrganizationManagementPage: React.FC = () => {
                           </Button>
                         )}
                       </Box>
+                        </>
+                      )}
                     </>
                   )}
                 </Box>
@@ -1191,6 +1488,7 @@ const OrganizationManagementPage: React.FC = () => {
                             setIsEditingProfile(false);
                             setEditOrgData(selectedOrg);
                           }}
+                          disabled={savingProfile}
                         >
                           Cancel
                         </Button>
@@ -1198,8 +1496,10 @@ const OrganizationManagementPage: React.FC = () => {
                           size="small"
                           variant="contained"
                           onClick={handleSaveProfileChanges}
+                          disabled={savingProfile}
+                          startIcon={savingProfile ? <CircularProgress size={16} color="inherit" /> : null}
                         >
-                          Save Changes
+                          {savingProfile ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </Stack>
                     )}
@@ -1367,55 +1667,88 @@ const OrganizationManagementPage: React.FC = () => {
           setNewOrgName('');
           setNewOrgSlug('');
           setSlugError(null);
+          setClientAdminEmail('');
+          setClientAdminEmailError(null);
         }} 
         maxWidth="sm" 
         fullWidth
       >
-        <DialogTitle>Create New Organization</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Organization Name"
-            value={newOrgName}
-            onChange={(e) => handleOrgNameChange(e.target.value)}
-            sx={{ mt: 2, mb: 2 }}
-            placeholder="e.g., Acme Corporation"
-          />
-          <TextField
-            fullWidth
-            label="Slug (URL-friendly identifier)"
-            value={newOrgSlug}
-            onChange={(e) => handleSlugChange(e.target.value)}
-            error={!!slugError}
-            helperText={slugError || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
-            placeholder="e.g., acme-corporation"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              setShowCreateOrgDialog(false);
-              setNewOrgName('');
-              setNewOrgSlug('');
-              setSlugError(null);
-            }}
-            disabled={createOrgLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleCreateOrganization}
-            disabled={!newOrgName || !newOrgSlug || !!slugError || createOrgLoading}
-            startIcon={createOrgLoading ? <CircularProgress size={20} color="inherit" /> : null}
-            sx={{
-              bgcolor: '#4CAF50',
-              '&:hover': { bgcolor: '#45a049' },
-            }}
-          >
-            {createOrgLoading ? 'Creating...' : 'Create'}
-          </Button>
-        </DialogActions>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const isFormValid = newOrgName && newOrgSlug && !slugError && !createOrgLoading && !(clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail));
+          if (isFormValid) {
+            handleCreateOrganization();
+          }
+        }}>
+          <DialogTitle>Create New Organization</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Organization Name"
+              value={newOrgName}
+              onChange={(e) => handleOrgNameChange(e.target.value)}
+              sx={{ mt: 2, mb: 2 }}
+              placeholder="e.g., Acme Corporation"
+            />
+            <TextField
+              fullWidth
+              label="Slug (URL-friendly identifier)"
+              value={newOrgSlug}
+              onChange={(e) => handleSlugChange(e.target.value)}
+              error={!!slugError}
+              helperText={slugError || slugInfo || "Auto-generated from name. Only lowercase letters, numbers, and hyphens."}
+              placeholder="e.g., acme-corporation"
+              sx={{ 
+                mb: 2,
+                '& .MuiFormHelperText-root': slugInfo && !slugError ? {
+                  color: '#1976d2',
+                  fontWeight: 500,
+                } : {},
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Client Admin Email (optional)"
+              value={clientAdminEmail}
+              onChange={(e) => {
+                setClientAdminEmail(e.target.value);
+                setClientAdminEmailError(null);
+              }}
+              error={!!clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
+              helperText={clientAdminEmailError || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail) ? 'Please enter a valid email' : 'An invitation email will be sent to this address')}
+              placeholder="admin@company.com"
+              type="email"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              type="button"
+              onClick={() => {
+                setShowCreateOrgDialog(false);
+                setNewOrgName('');
+                setNewOrgSlug('');
+                setSlugError(null);
+                setClientAdminEmail('');
+                setClientAdminEmailError(null);
+              }}
+              disabled={createOrgLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={!newOrgName || !newOrgSlug || !!slugError || createOrgLoading || (clientAdminEmail.length > 0 && !validateEmail(clientAdminEmail))}
+              startIcon={createOrgLoading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{
+                bgcolor: '#4CAF50',
+                '&:hover': { bgcolor: '#45a049' },
+              }}
+            >
+              {createOrgLoading ? 'Creating...' : 'Create'}
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
 
       {/* Organization Invitation Modal */}
@@ -1527,6 +1860,17 @@ const OrganizationManagementPage: React.FC = () => {
       >
         <Alert severity="success" onClose={() => setSuccess(null)} sx={{ width: '100%' }}>
           {success}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!warning}
+        autoHideDuration={6000}
+        onClose={() => setWarning(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert severity="warning" onClose={() => setWarning(null)} sx={{ width: '100%' }}>
+          {warning}
         </Alert>
       </Snackbar>
     </Box>

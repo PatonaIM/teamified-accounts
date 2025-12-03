@@ -22,6 +22,10 @@ import {
   Warning,
   ContentCopy,
   OpenInNew,
+  TouchApp,
+  Analytics,
+  Settings,
+  Dashboard,
 } from '@mui/icons-material';
 
 interface UserInfo {
@@ -34,6 +38,13 @@ interface UserInfo {
 
 type IntentType = 'both' | 'client' | 'candidate';
 
+interface FeatureUsageResult {
+  action: string;
+  feature: string;
+  success: boolean;
+  timestamp: string;
+}
+
 export default function IntegratedTestSuite() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +52,8 @@ export default function IntegratedTestSuite() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [selectedIntent, setSelectedIntent] = useState<IntentType>('both');
+  const [featureLoading, setFeatureLoading] = useState<string | null>(null);
+  const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>([]);
   const callbackProcessedRef = useRef(false);
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
@@ -224,6 +237,56 @@ export default function IntegratedTestSuite() {
     window.history.replaceState({}, document.title, '/test');
   };
 
+  const recordFeatureUsage = async (action: string, feature: string, description: string) => {
+    if (!accessToken) return;
+
+    setFeatureLoading(action);
+    try {
+      const response = await fetch(`${apiUrl}/api/v1/sso/user-activity`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'x-client-id': DEVELOPER_SANDBOX_CLIENT_ID,
+        },
+        body: JSON.stringify({
+          action,
+          feature,
+          description,
+          metadata: {
+            source: 'test-page',
+            timestamp: new Date().toISOString(),
+          },
+        }),
+      });
+
+      const success = response.ok;
+      const result: FeatureUsageResult = {
+        action,
+        feature,
+        success,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+
+      setFeatureResults(prev => [result, ...prev].slice(0, 5));
+
+      if (!success) {
+        const errorData = await response.json();
+        console.error('Feature usage recording failed:', errorData);
+      }
+    } catch (err) {
+      console.error('Failed to record feature usage:', err);
+      setFeatureResults(prev => [{
+        action,
+        feature,
+        success: false,
+        timestamp: new Date().toLocaleTimeString(),
+      }, ...prev].slice(0, 5));
+    } finally {
+      setFeatureLoading(null);
+    }
+  };
+
   return (
     <Box sx={{ p: 4, maxWidth: 900, mx: 'auto' }}>
       <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'primary.main' }}>
@@ -403,6 +466,93 @@ export default function IntegratedTestSuite() {
               }}>
                 {accessToken}
               </Box>
+            </Paper>
+          )}
+
+          {accessToken && (
+            <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <TouchApp color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Feature Usage Test
+                </Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Click the buttons below to record feature usage. These activities will appear in the Connected Applications section of the User Activity tab.
+              </Typography>
+              
+              <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 3 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Dashboard />}
+                  onClick={() => recordFeatureUsage('view_dashboard', 'Dashboard', 'Viewed the main dashboard')}
+                  disabled={featureLoading === 'view_dashboard'}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {featureLoading === 'view_dashboard' ? 'Recording...' : 'View Dashboard'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Analytics />}
+                  onClick={() => recordFeatureUsage('run_report', 'Analytics', 'Generated analytics report')}
+                  disabled={featureLoading === 'run_report'}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {featureLoading === 'run_report' ? 'Recording...' : 'Run Report'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Settings />}
+                  onClick={() => recordFeatureUsage('update_settings', 'Settings', 'Updated application settings')}
+                  disabled={featureLoading === 'update_settings'}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {featureLoading === 'update_settings' ? 'Recording...' : 'Update Settings'}
+                </Button>
+              </Stack>
+
+              {featureResults.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Recent Activity Records:
+                  </Typography>
+                  <Stack spacing={1}>
+                    {featureResults.map((result, index) => (
+                      <Box 
+                        key={index}
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          p: 1.5,
+                          borderRadius: 1,
+                          bgcolor: result.success ? 'success.main' : 'error.main',
+                          opacity: 0.9,
+                        }}
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <CheckCircle sx={{ fontSize: 16, color: 'white' }} />
+                          <Typography variant="body2" sx={{ color: 'white', fontWeight: 500 }}>
+                            {result.action.replace(/_/g, ' ')}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                            ({result.feature})
+                          </Typography>
+                        </Stack>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                          {result.timestamp}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  Activities are recorded using the <code style={{ fontSize: '0.85em' }}>POST /api/v1/sso/user-activity</code> endpoint with your SSO access token and the <code style={{ fontSize: '0.85em' }}>x-client-id</code> header.
+                </Typography>
+              </Alert>
             </Paper>
           )}
 

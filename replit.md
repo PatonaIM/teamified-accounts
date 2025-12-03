@@ -27,10 +27,20 @@ Core features include:
 - **Session Persistence & Deep Linking**: Ensures users remain logged in and are redirected to their last visited page after refresh or re-access.
 - **API Key Management**: Supports programmatic access via configurable API keys with audit logging.
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
+- **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
+
+### Documentation Architecture
+
+The documentation system uses a sidebar navigation layout:
+- **Location**: `frontend/src/pages/docs/` for pages, `frontend/src/components/docs/` for layout components
+- **Navigation Config**: `navConfig.ts` drives the sidebar structure for all documentation sections
+- **Layout**: `DocsLayout.tsx` provides the shell with sidebar + content area using React Router Outlet
+- **Sidebar**: `DocsSidebar.tsx` handles navigation with collapsible sections and active state highlighting
+- **Pages**: Individual pages organized under `product/`, `developer/`, and `release-notes/` subdirectories
 
 ### System Design Choices
 
-The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field for user profiles, normalized employment/salary histories, and a `UserRole` entity for scope-based permissions. Security is enforced with Argon2 for password hashing, NestJS Throttler for rate limiting, and Redis-backed session storage. CORS restrictions are disabled for OAuth 2.0 integrations, and a dual-token strategy (Bearer + httpOnly cookie) secures SSO flows. Session management includes a 48-hour inactivity timeout and a 30-day absolute expiry. The platform is designed for production deployment on Replit Reserved VMs, serving both static frontend and backend API from a single process.
+The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field for user profiles, normalized employment/salary histories, and a `UserRole` entity for scope-based permissions. Security is enforced with Argon2 for password hashing, NestJS Throttler for rate limiting, and Redis-backed session storage. CORS restrictions are disabled for OAuth 2.0 integrations, and a dual-token strategy (Bearer + httpOnly cookie) secures SSO flows. Session management includes a 72-hour inactivity timeout and a 30-day absolute expiry. The platform is designed for production deployment on Replit Reserved VMs, serving both static frontend and backend API from a single process.
 
 ## External Dependencies
 
