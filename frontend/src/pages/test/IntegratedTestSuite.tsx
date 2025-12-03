@@ -55,14 +55,71 @@ export default function IntegratedTestSuite() {
   const [featureLoading, setFeatureLoading] = useState<string | null>(null);
   const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>([]);
   const callbackProcessedRef = useRef(false);
+  const sessionCheckRef = useRef(false);
 
   const DEVELOPER_SANDBOX_CLIENT_ID = 'test-client';
+  const SESSION_STORAGE_KEY = 'sso_test_session';
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const redirectUri = typeof window !== 'undefined' ? window.location.origin + '/test' : '';
 
+  const saveSession = (token: string, user: UserInfo) => {
+    try {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ token, user, timestamp: Date.now() }));
+    } catch (err) {
+      console.error('Failed to save session:', err);
+    }
+  };
+
+  const clearStoredSession = () => {
+    try {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (err) {
+      console.error('Failed to clear session:', err);
+    }
+  };
+
+  const restoreSession = async () => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (!stored) return false;
+
+      const { token, user, timestamp } = JSON.parse(stored);
+      
+      const SESSION_MAX_AGE = 60 * 60 * 1000;
+      if (Date.now() - timestamp > SESSION_MAX_AGE) {
+        clearStoredSession();
+        return false;
+      }
+
+      const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        clearStoredSession();
+        return false;
+      }
+
+      const freshUser = await userResponse.json();
+      setAccessToken(token);
+      setUserInfo(freshUser);
+      saveSession(token, freshUser);
+      return true;
+    } catch (err) {
+      console.error('Session restoration failed:', err);
+      clearStoredSession();
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (callbackProcessedRef.current) return;
+    if (sessionCheckRef.current) return;
+    sessionCheckRef.current = true;
 
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
@@ -73,9 +130,16 @@ export default function IntegratedTestSuite() {
       callbackProcessedRef.current = true;
       setError(`Authentication failed: ${errorParam}`);
       window.history.replaceState({}, document.title, '/test');
+      setSessionRestored(true);
     } else if (code) {
       callbackProcessedRef.current = true;
       handleCallback(code, state);
+    } else {
+      setLoading(true);
+      restoreSession().finally(() => {
+        setLoading(false);
+        setSessionRestored(true);
+      });
     }
   }, []);
 
@@ -183,13 +247,17 @@ export default function IntegratedTestSuite() {
 
       const user = await userResponse.json();
       setUserInfo(user);
+      
+      saveSession(token, user);
 
       sessionStorage.removeItem('pkce_code_verifier');
       sessionStorage.removeItem('pkce_state');
 
       window.history.replaceState({}, document.title, '/test');
+      setSessionRestored(true);
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
+      setSessionRestored(true);
     } finally {
       setLoading(false);
     }
@@ -211,29 +279,27 @@ export default function IntegratedTestSuite() {
 
   const handleClearSession = async () => {
     try {
-      // Call SSO clear-session endpoint to clear authentication cookie
       await fetch(`${apiUrl}/api/v1/sso/clear-session`, {
         method: 'POST',
-        credentials: 'include', // Include cookies
+        credentials: 'include',
       });
     } catch (err) {
       console.error('Clear session failed:', err);
     }
     
-    // Clear SSO test session data
     setUserInfo(null);
     setAccessToken(null);
     setError(null);
     setLoading(false);
     
-    // Clear PKCE session storage
+    clearStoredSession();
+    
     sessionStorage.removeItem('pkce_code_verifier');
     sessionStorage.removeItem('pkce_state');
     
-    // Reset callback flag
     callbackProcessedRef.current = false;
+    sessionCheckRef.current = false;
     
-    // Clean up URL parameters without reload
     window.history.replaceState({}, document.title, '/test');
   };
 
@@ -302,7 +368,13 @@ export default function IntegratedTestSuite() {
         </Alert>
       )}
 
-      {!userInfo ? (
+      {loading && !sessionRestored && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">Checking for existing session...</Typography>
+        </Alert>
+      )}
+
+      {!userInfo && sessionRestored ? (
         <>
           <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
             <Typography variant="body2">
@@ -381,7 +453,9 @@ export default function IntegratedTestSuite() {
             </Alert>
           </Paper>
         </>
-      ) : (
+      ) : null}
+
+      {userInfo && (
         <Stack spacing={3}>
           <Alert severity="success" icon={<CheckCircle />}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
