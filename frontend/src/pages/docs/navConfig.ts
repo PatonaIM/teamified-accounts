@@ -32,6 +32,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'User Management API', path: '/docs/developer/user-management' },
       { title: 'Organization API', path: '/docs/developer/organization-api' },
       { title: 'Profile Pictures API', path: '/docs/developer/profile-pictures' },
+      { title: 'User Activity API', path: '/docs/developer/user-activity' },
       { title: 'Password Reset API', path: '/docs/developer/password-reset-api' },
       { title: 'Deep Linking Guide', path: '/docs/deep-linking-guide' },
       { title: 'Multi-Organization', path: '/docs/multi-organization' },
@@ -43,6 +44,7 @@ export const docsNavConfig: NavSection[] = [
     icon: 'NewReleases',
     items: [
       { title: 'All Releases', path: '/docs/release-notes' },
+      { title: 'v1.0.1 - Dec 3, 2025', path: '/docs/release-notes/2025-12-03' },
       { title: 'v1.0.0 - Dec 2, 2025', path: '/docs/release-notes/2025-12-02' },
     ],
   },

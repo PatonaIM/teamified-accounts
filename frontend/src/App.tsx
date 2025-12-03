@@ -34,6 +34,8 @@ import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationInte
 import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
 import ReleaseNotesIndexPage from './pages/docs/release-notes/ReleaseNotesIndexPage';
 import ReleaseNote_2025_12_02 from './pages/docs/ReleaseNote_2025_12_02';
+import ReleaseNote_2025_12_03 from './pages/docs/ReleaseNote_2025_12_03';
+import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -219,6 +221,7 @@ function App() {
                   <Route path="developer/user-management" element={<UserManagementApiPage />} />
                   <Route path="developer/organization-api" element={<OrganizationApiPage />} />
                   <Route path="developer/profile-pictures" element={<ProfilePicturesApiPage />} />
+                  <Route path="developer/user-activity" element={<UserActivityApiPage />} />
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
                   <Route path="sso-integration" element={<SsoIntegrationPage />} />
@@ -226,6 +229,7 @@ function App() {
                   <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />
                   <Route path="release-notes/2025-12-02" element={<ReleaseNote_2025_12_02 />} />
                 </Route>
                 

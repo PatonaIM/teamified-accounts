@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.1',
+    date: 'December 3, 2025',
+    title: 'User Activity Tracking',
+    summary: 'Comprehensive user activity tracking capabilities enabling connected applications to send usage data to Teamified Accounts for centralized analytics and monitoring.',
+    path: '/docs/release-notes/2025-12-03',
+    isLatest: true,
+  },
+  {
     version: '1.0.0',
     date: 'December 2, 2025',
     title: 'Teamified Accounts - Patch Notes',
     summary: 'Profile pictures support, organization creation improvements, and bug fixes for My Profile, Organization Management, and Candidate Management.',
     path: '/docs/release-notes/2025-12-02',
-    isLatest: true,
   },
 ];
 
