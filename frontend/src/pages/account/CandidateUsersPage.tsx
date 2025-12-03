@@ -42,6 +42,7 @@ export default function CandidateUsersPage() {
   const [candidates, setCandidates] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [totalCandidates, setTotalCandidates] = useState(0);
 
@@ -162,9 +163,14 @@ export default function CandidateUsersPage() {
           <TextField
             fullWidth
             size="small"
-            placeholder="Search candidates by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search candidates by name or email... (press Enter)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setSearchQuery(searchInput);
+              }
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
