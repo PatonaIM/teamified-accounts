@@ -15,8 +15,9 @@ import {
   IconButton,
   InputAdornment,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
-import { Add, Delete, ContentCopy } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Edit, Check } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -37,6 +38,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [createdClient, setCreatedClient] = useState<OAuthClient | null>(null);
   const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
   const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
+  const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
+  const [editingUriValue, setEditingUriValue] = useState('');
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -280,28 +283,95 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                 OAuth callback URLs where users will be redirected after authentication
               </Typography>
               
-              <Stack spacing={2}>
+              <Stack spacing={1}>
                 {redirectUris.map((uri, index) => (
-                  <TextField
+                  <Box
                     key={index}
-                    value={uri}
-                    onChange={(e) => handleRedirectUriChange(index, e.target.value)}
-                    placeholder="https://app.teamified.com/auth/callback"
-                    fullWidth
-                    InputProps={{
-                      endAdornment: redirectUris.length > 1 && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleRemoveRedirectUri(index)}
-                            color="error"
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      p: 1.5,
+                      bgcolor: 'action.hover',
+                      borderRadius: 1,
                     }}
-                  />
+                  >
+                    {editingUriIndex === index ? (
+                      <TextField
+                        value={editingUriValue}
+                        onChange={(e) => setEditingUriValue(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        placeholder="https://app.teamified.com/auth/callback"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleRedirectUriChange(index, editingUriValue);
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }
+                        }}
+                        sx={{
+                          flex: 1,
+                          '& .MuiInputBase-input': {
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                          },
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          wordBreak: 'break-all',
+                          color: uri ? 'text.primary' : 'text.disabled',
+                        }}
+                      >
+                        {uri || 'Empty URI - click edit to add'}
+                      </Typography>
+                    )}
+                    {editingUriIndex === index ? (
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            handleRedirectUriChange(index, editingUriValue);
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }}
+                          color="success"
+                        >
+                          <Check fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditingUriIndex(index);
+                            setEditingUriValue(uri);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {redirectUris.length > 1 && (
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveRedirectUri(index)}
+                          color="error"
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
                 ))}
               </Stack>
             </Box>

@@ -39,6 +39,7 @@ import {
   Edit,
   ArrowBack,
   ContentCopy,
+  Check,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -67,6 +68,8 @@ const OAuthConfigurationPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
   const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
+  const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
+  const [editingUriValue, setEditingUriValue] = useState('');
 
   // Form state
   const [formData, setFormData] = useState<CreateOAuthClientDto>({
@@ -561,26 +564,77 @@ const OAuthConfigurationPage: React.FC = () => {
                       borderRadius: 1,
                     }}
                   >
-                    <TextField
-                      value={uri}
-                      onChange={(e) => {
-                        const newUris = [...formData.redirect_uris];
-                        newUris[index] = e.target.value;
-                        setFormData({ ...formData, redirect_uris: newUris });
-                      }}
-                      size="small"
-                      fullWidth
-                      sx={{ 
-                        flex: 1,
-                        '& .MuiInputBase-input': { 
-                          fontFamily: 'monospace', 
-                          fontSize: '0.75rem' 
-                        }
-                      }}
-                    />
-                    <IconButton size="small" onClick={() => handleRemoveRedirectUri(index)}>
-                      <Delete fontSize="small" />
-                    </IconButton>
+                    {editingUriIndex === index ? (
+                      <TextField
+                        value={editingUriValue}
+                        onChange={(e) => setEditingUriValue(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const newUris = [...formData.redirect_uris];
+                            newUris[index] = editingUriValue;
+                            setFormData({ ...formData, redirect_uris: newUris });
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }
+                        }}
+                        sx={{ 
+                          flex: 1,
+                          '& .MuiInputBase-input': { 
+                            fontFamily: 'monospace', 
+                            fontSize: '0.75rem' 
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        {uri}
+                      </Typography>
+                    )}
+                    {editingUriIndex === index ? (
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const newUris = [...formData.redirect_uris];
+                            newUris[index] = editingUriValue;
+                            setFormData({ ...formData, redirect_uris: newUris });
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }}
+                          color="success"
+                        >
+                          <Check fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditingUriIndex(index);
+                            setEditingUriValue(uri);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Delete">
+                      <IconButton size="small" onClick={() => handleRemoveRedirectUri(index)} color="error">
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Stack>
                 ))}
               </Stack>
