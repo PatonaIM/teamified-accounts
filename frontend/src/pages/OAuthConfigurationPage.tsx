@@ -269,12 +269,21 @@ const OAuthConfigurationPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Stack direction="row" alignItems="center" sx={{ mb: 3 }}>
-        <IconButton onClick={() => navigate('/admin/tools')} sx={{ mr: 2 }}>
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate('/admin/tools')}
+          sx={{ 
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': { 
+              bgcolor: 'rgba(161, 106, 232, 0.08)' 
+            }
+          }}
+        >
           <ArrowBack />
         </IconButton>
-        <Typography variant="h4" sx={{ fontWeight: 600, flex: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, flex: 1 }}>
           OAuth Configuration
         </Typography>
         <Button
@@ -290,7 +299,7 @@ const OAuthConfigurationPage: React.FC = () => {
         >
           Register New Client
         </Button>
-      </Stack>
+      </Box>
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Stack direction="row" spacing={2} alignItems="center">
