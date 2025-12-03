@@ -27,6 +27,8 @@ import OAuthPage from './pages/docs/developer/OAuthPage';
 import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
 import PasswordResetApiPage from './pages/docs/developer/PasswordResetApiPage';
 import TestAccountsPage from './pages/docs/developer/TestAccountsPage';
+import ProfilePicturesApiPage from './pages/docs/developer/ProfilePicturesApiPage';
+import OrganizationApiPage from './pages/docs/developer/OrganizationApiPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
 import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
@@ -215,6 +217,8 @@ function App() {
                   <Route path="developer/quickstart" element={<QuickstartPage />} />
                   <Route path="developer/oauth" element={<OAuthPage />} />
                   <Route path="developer/user-management" element={<UserManagementApiPage />} />
+                  <Route path="developer/organization-api" element={<OrganizationApiPage />} />
+                  <Route path="developer/profile-pictures" element={<ProfilePicturesApiPage />} />
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
                   <Route path="sso-integration" element={<SsoIntegrationPage />} />

@@ -30,6 +30,8 @@ export const docsNavConfig: NavSection[] = [
       { title: 'OAuth 2.0 Configuration', path: '/docs/developer/oauth' },
       { title: 'SSO Integration', path: '/docs/sso-integration' },
       { title: 'User Management API', path: '/docs/developer/user-management' },
+      { title: 'Organization API', path: '/docs/developer/organization-api' },
+      { title: 'Profile Pictures API', path: '/docs/developer/profile-pictures' },
       { title: 'Password Reset API', path: '/docs/developer/password-reset-api' },
       { title: 'Deep Linking Guide', path: '/docs/deep-linking-guide' },
       { title: 'Multi-Organization', path: '/docs/multi-organization' },
