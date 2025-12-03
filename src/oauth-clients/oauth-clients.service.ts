@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { OAuthClient } from './entities/oauth-client.entity';
 import { CreateOAuthClientDto } from './dto/create-oauth-client.dto';
 import { UpdateOAuthClientDto } from './dto/update-oauth-client.dto';
@@ -47,30 +47,31 @@ export class OAuthClientsService {
   }
 
   /**
-   * Find all OAuth clients
+   * Find all OAuth clients (excluding soft-deleted)
    */
   async findAll(): Promise<OAuthClient[]> {
     return this.oauthClientsRepository.find({
+      where: { deleted_at: IsNull() },
       order: { created_at: 'DESC' },
     });
   }
 
   /**
-   * Find active OAuth clients only
+   * Find active OAuth clients only (excluding soft-deleted)
    */
   async findActive(): Promise<OAuthClient[]> {
     return this.oauthClientsRepository.find({
-      where: { is_active: true },
+      where: { is_active: true, deleted_at: IsNull() },
       order: { created_at: 'DESC' },
     });
   }
 
   /**
-   * Find one OAuth client by ID
+   * Find one OAuth client by ID (excluding soft-deleted)
    */
   async findOne(id: string): Promise<OAuthClient> {
     const client = await this.oauthClientsRepository.findOne({
-      where: { id },
+      where: { id, deleted_at: IsNull() },
     });
 
     if (!client) {
@@ -81,11 +82,11 @@ export class OAuthClientsService {
   }
 
   /**
-   * Find OAuth client by client_id
+   * Find OAuth client by client_id (excluding soft-deleted)
    */
   async findByClientId(clientId: string): Promise<OAuthClient | null> {
     return this.oauthClientsRepository.findOne({
-      where: { client_id: clientId },
+      where: { client_id: clientId, deleted_at: IsNull() },
     });
   }
 
@@ -142,11 +143,13 @@ export class OAuthClientsService {
   }
 
   /**
-   * Delete an OAuth client
+   * Soft delete an OAuth client
    */
   async remove(id: string): Promise<void> {
     const client = await this.findOne(id);
-    await this.oauthClientsRepository.remove(client);
+    client.deleted_at = new Date();
+    client.is_active = false;
+    await this.oauthClientsRepository.save(client);
   }
 
   /**

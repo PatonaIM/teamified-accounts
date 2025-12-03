@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 
 export type IntentType = 'client' | 'candidate' | 'both';
@@ -50,6 +51,9 @@ export class OAuthClient {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @DeleteDateColumn({ nullable: true })
+  deleted_at: Date | null;
 
   @Column({ type: 'uuid', nullable: true })
   created_by: string;
