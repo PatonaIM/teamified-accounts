@@ -53,7 +53,11 @@ const AccountLayout: React.FC = () => {
   };
 
   const handleAppsClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAppsAnchorEl(event.currentTarget);
+    if (appsDropdownOpen) {
+      setAppsAnchorEl(null);
+    } else {
+      setAppsAnchorEl(event.currentTarget);
+    }
   };
 
   const handleAppsClose = () => {
