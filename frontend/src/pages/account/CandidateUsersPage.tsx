@@ -163,7 +163,7 @@ export default function CandidateUsersPage() {
           <TextField
             fullWidth
             size="small"
-            placeholder="Search candidates by name or email... (press Enter)"
+            placeholder="Search candidates by name or email..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => {
