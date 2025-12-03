@@ -32,14 +32,6 @@ export default function ReleaseNote_2025_12_02() {
 
   return (
     <Box sx={{ p: 4, maxWidth: 1000, mx: 'auto' }}>
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => navigate('/docs')}
-        sx={{ mb: 3 }}
-      >
-        Back to Documentation
-      </Button>
-
       <Paper sx={{ p: 4 }}>
         <Stack spacing={4}>
           <Box>
