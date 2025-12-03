@@ -41,6 +41,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
   const [editingUriValue, setEditingUriValue] = useState('');
   const [originalRedirectUris, setOriginalRedirectUris] = useState<string[]>([]);
+  const [newUriInput, setNewUriInput] = useState('');
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -61,9 +62,10 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setDescription('');
     setEnvironment('development');
     setDefaultIntent('both');
-    setRedirectUris(['']);
+    setRedirectUris([]);
     setCreatedClient(null);
     setOriginalRedirectUris([]);
+    setNewUriInput('');
   };
 
   const isUriModified = (uri: string, index: number): boolean => {
@@ -79,7 +81,10 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   };
 
   const handleAddRedirectUri = () => {
-    setRedirectUris([...redirectUris, '']);
+    if (newUriInput.trim()) {
+      setRedirectUris([...redirectUris, newUriInput.trim()]);
+      setNewUriInput('');
+    }
   };
 
   const handleRemoveRedirectUri = (index: number) => {
@@ -284,16 +289,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             </TextField>
 
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2">Redirect URIs</Typography>
-                <Button
-                  size="small"
-                  startIcon={<Add />}
-                  onClick={handleAddRedirectUri}
-                >
-                  Add URI
-                </Button>
-              </Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Redirect URIs</Typography>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
                 OAuth callback URLs where users will be redirected after authentication
               </Typography>
@@ -409,19 +405,42 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         </IconButton>
                       </Tooltip>
                     )}
-                    {redirectUris.length > 1 && (
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRemoveRedirectUri(index)}
-                          color="error"
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                    <Tooltip title="Delete">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveRedirectUri(index)}
+                        color="error"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 ))}
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <TextField
+                  placeholder="https://app.teamified.com/auth/callback"
+                  value={newUriInput}
+                  onChange={(e) => setNewUriInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddRedirectUri}
+                  disabled={!newUriInput.trim()}
+                  startIcon={<Add />}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Add
+                </Button>
               </Stack>
             </Box>
           </Box>

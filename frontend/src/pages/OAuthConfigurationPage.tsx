@@ -550,23 +550,6 @@ const OAuthConfigurationPage: React.FC = () => {
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 Redirect URIs
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <TextField
-                  placeholder="https://app.example.com/auth/callback"
-                  value={redirectUriInput}
-                  onChange={(e) => setRedirectUriInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
-                  size="small"
-                  fullWidth
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleAddRedirectUri}
-                  disabled={!redirectUriInput.trim()}
-                >
-                  Add
-                </Button>
-              </Stack>
               <Stack spacing={1}>
                 {formData.redirect_uris.map((uri, index) => (
                   <Stack
@@ -687,6 +670,31 @@ const OAuthConfigurationPage: React.FC = () => {
                     </Tooltip>
                   </Stack>
                 ))}
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <TextField
+                  placeholder="https://app.example.com/auth/callback"
+                  value={redirectUriInput}
+                  onChange={(e) => setRedirectUriInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.75rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddRedirectUri}
+                  disabled={!redirectUriInput.trim()}
+                  startIcon={<Add />}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Add
+                </Button>
               </Stack>
             </Box>
 
