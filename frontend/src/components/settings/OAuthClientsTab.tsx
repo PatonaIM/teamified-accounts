@@ -114,7 +114,6 @@ const OAuthClientsTab: React.FC = () => {
     
     try {
       await oauthClientsService.toggleActive(client.id);
-      showSnackbar(`OAuth client ${previousState ? 'deactivated' : 'activated'}`, 'success');
     } catch (error) {
       setClients(prev => prev.map(c => 
         c.id === client.id ? { ...c, is_active: previousState } : c

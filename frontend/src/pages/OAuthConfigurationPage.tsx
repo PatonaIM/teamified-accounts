@@ -227,7 +227,6 @@ const OAuthConfigurationPage: React.FC = () => {
     
     try {
       await oauthClientsService.toggleActive(client.id);
-      setSuccess(`OAuth client ${previousState ? 'deactivated' : 'activated'} successfully!`);
     } catch (err: any) {
       setClients(prev => prev.map(c => 
         c.id === client.id ? { ...c, is_active: previousState } : c
