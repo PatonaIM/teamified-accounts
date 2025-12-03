@@ -312,32 +312,19 @@ const OAuthConfigurationPage: React.FC = () => {
         >
           <ArrowBack />
         </IconButton>
-        <Typography variant="h4" sx={{ fontWeight: 700, flex: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           OAuth Configuration
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDrawer()}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            bgcolor: '#4caf50',
-            '&:hover': { bgcolor: '#43a047' },
-          }}
-        >
-          Register New Client
-        </Button>
       </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
+      <Paper elevation={0} sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
           <TextField
+            fullWidth
+            size="small"
             placeholder="Search by name, description, or client ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            size="small"
-            sx={{ flex: 1 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -359,7 +346,20 @@ const OAuthConfigurationPage: React.FC = () => {
               <MenuItem value="production">Production</MenuItem>
             </Select>
           </FormControl>
-        </Stack>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDrawer()}
+            sx={{
+              bgcolor: '#4CAF50',
+              '&:hover': { bgcolor: '#45a049' },
+              whiteSpace: 'nowrap',
+              px: 3,
+            }}
+          >
+            Register New Client
+          </Button>
+        </Box>
       </Paper>
 
       {error && (
