@@ -120,7 +120,7 @@ const AccountLayout: React.FC = () => {
           <List>
             <ListItem disablePadding>
               <ListItemButton
-                selected={location.pathname === '/account/profile'}
+                selected={!appsDropdownOpen && location.pathname === '/account/profile'}
                 onClick={() => navigate('/account/profile')}
                 sx={{
                   mx: 2,
@@ -148,7 +148,7 @@ const AccountLayout: React.FC = () => {
               >
                 <ListItemIcon
                   sx={{
-                    color: location.pathname === '/account/profile' ? 'inherit' : 'text.secondary',
+                    color: (!appsDropdownOpen && location.pathname === '/account/profile') ? 'inherit' : 'text.secondary',
                     minWidth: 40,
                   }}
                 >
@@ -201,7 +201,7 @@ const AccountLayout: React.FC = () => {
             {isSuperAdmin && (
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={location.pathname.startsWith('/admin')}
+                  selected={!appsDropdownOpen && location.pathname.startsWith('/admin')}
                   onClick={() => navigate('/admin/tools')}
                   sx={{
                     mx: 2,
@@ -229,7 +229,7 @@ const AccountLayout: React.FC = () => {
                 >
                   <ListItemIcon
                     sx={{
-                      color: location.pathname.startsWith('/admin') ? 'inherit' : 'text.secondary',
+                      color: (!appsDropdownOpen && location.pathname.startsWith('/admin')) ? 'inherit' : 'text.secondary',
                       minWidth: 40,
                     }}
                   >
