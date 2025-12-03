@@ -68,7 +68,7 @@ function generateOAuthUrl(config: AppConfig): string {
     scope: 'openid profile email',
   });
   
-  return `${baseUrl}/api/sso/authorize?${params.toString()}`;
+  return `${baseUrl}/api/v1/sso/authorize?${params.toString()}`;
 }
 
 interface AppsDropdownProps {
