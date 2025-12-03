@@ -1303,14 +1303,32 @@ Welcome to the ${organization.name} team!
     const queryParts = query.trim().split(/\s+/);
     const isFullNameSearch = queryParts.length >= 2;
     
-    // Search users (only client users)
+    // Search users (client users and orphan users without roles)
+    // Exclude internal users (super_admin, internal_*, candidate)
     let userQueryBuilder = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.userRoles', 'userRoles')
       .leftJoinAndSelect('user.organizationMembers', 'membership')
       .leftJoinAndSelect('membership.organization', 'organization')
       .where('user.deletedAt IS NULL')
-      .andWhere('userRoles.roleType LIKE :clientRole', { clientRole: 'client_%' });
+      .andWhere(
+        // Include users with client roles OR users with no roles (orphans)
+        // Exclude internal users
+        `(
+          userRoles.roleType LIKE :clientRole 
+          OR NOT EXISTS (
+            SELECT 1 FROM user_roles ur 
+            WHERE ur.user_id = user.id 
+            AND (ur.role_type LIKE :internalRole OR ur.role_type = :superAdmin OR ur.role_type = :candidate)
+          )
+        )`,
+        { 
+          clientRole: 'client_%', 
+          internalRole: 'internal_%',
+          superAdmin: 'super_admin',
+          candidate: 'candidate'
+        }
+      );
     
     // Build user search conditions
     if (isFullNameSearch) {
@@ -1341,12 +1359,13 @@ Welcome to the ${organization.name} team!
     const userResults: UserSearchResult[] = users.map(user => {
       const clientRole = user.userRoles?.find(r => r.roleType.startsWith('client_'));
       const membership = user.organizationMembers?.[0];
+      const hasNoRoles = !user.userRoles || user.userRoles.length === 0;
       
       return {
         id: user.id,
         email: user.email,
         name: `${user.firstName} ${user.lastName}`,
-        roleType: clientRole?.roleType || 'client_employee',
+        roleType: clientRole?.roleType || (hasNoRoles ? 'unassigned' : 'client_employee'),
         organization: membership?.organization ? {
           id: membership.organization.id,
           name: membership.organization.name,
