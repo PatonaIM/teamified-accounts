@@ -1,0 +1,91 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Typography,
+  Paper,
+  Stack,
+  Card,
+  CardContent,
+  CardActionArea,
+  Chip,
+} from '@mui/material';
+import { NewReleases, ArrowForward } from '@mui/icons-material';
+
+interface ReleaseNote {
+  version: string;
+  date: string;
+  title: string;
+  summary: string;
+  path: string;
+  isLatest?: boolean;
+}
+
+const releaseNotes: ReleaseNote[] = [
+  {
+    version: '1.0.0',
+    date: 'December 2, 2025',
+    title: 'Teamified Accounts - Patch Notes',
+    summary: 'Profile pictures support, organization creation improvements, and bug fixes for My Profile, Organization Management, and Candidate Management.',
+    path: '/docs/release-notes/2025-12-02',
+    isLatest: true,
+  },
+];
+
+export default function ReleaseNotesIndexPage() {
+  const navigate = useNavigate();
+
+  return (
+    <Box>
+      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <NewReleases color="primary" />
+        Release Notes
+      </Typography>
+
+      <Typography variant="body1" paragraph color="text.secondary">
+        Stay up to date with the latest features, improvements, and bug fixes in Teamified Accounts.
+      </Typography>
+
+      <Stack spacing={2}>
+        {releaseNotes.map((release) => (
+          <Card key={release.path} variant="outlined">
+            <CardActionArea onClick={() => navigate(release.path)}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {release.title}
+                      </Typography>
+                      {release.isLatest && (
+                        <Chip label="Latest" color="success" size="small" />
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <Chip label={`v${release.version}`} size="small" variant="outlined" />
+                      <Typography variant="body2" color="text.secondary">
+                        {release.date}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {release.summary}
+                    </Typography>
+                  </Box>
+                  <ArrowForward color="action" sx={{ ml: 2 }} />
+                </Box>
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        ))}
+      </Stack>
+
+      {releaseNotes.length === 0 && (
+        <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'background.default' }}>
+          <Typography variant="body1" color="text.secondary">
+            No release notes available yet.
+          </Typography>
+        </Paper>
+      )}
+    </Box>
+  );
+}
