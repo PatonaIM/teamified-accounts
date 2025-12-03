@@ -10,8 +10,6 @@ import {
   Typography,
   Divider,
   useTheme as useMuiTheme,
-  IconButton,
-  Tooltip,
 } from '@mui/material';
 import {
   Business,
@@ -20,8 +18,6 @@ import {
   ExpandLess,
   ExpandMore,
   MenuBook,
-  LightMode,
-  DarkMode,
 } from '@mui/icons-material';
 import { docsNavConfig } from '../../pages/docs/navConfig';
 import type { NavSection } from '../../pages/docs/navConfig';
@@ -165,23 +161,27 @@ export default function DocsSidebar() {
 
       <Divider />
 
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Tooltip title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-          <IconButton
-            onClick={handleToggleTheme}
-            sx={{
-              bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
-              '&:hover': {
-                bgcolor: isDarkMode ? 'action.selected' : 'grey.200',
-              },
+      <Box sx={{ p: 2 }}>
+        <ListItemButton
+          onClick={handleToggleTheme}
+          sx={{
+            mx: 1,
+            borderRadius: '12px',
+            py: 1.5,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              bgcolor: 'rgba(161, 106, 232, 0.08)',
+              transform: 'translateX(4px)',
+            },
+          }}
+        >
+          <ListItemText 
+            primary={isDarkMode ? '🌙 Dark Mode' : '☀️ Light Mode'}
+            primaryTypographyProps={{
+              fontWeight: 500,
             }}
-          >
-            {isDarkMode ? <LightMode sx={{ color: 'warning.main' }} /> : <DarkMode sx={{ color: 'grey.700' }} />}
-          </IconButton>
-        </Tooltip>
-        <Typography variant="body2" color="text.secondary">
-          {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-        </Typography>
+          />
+        </ListItemButton>
       </Box>
     </Box>
   );
