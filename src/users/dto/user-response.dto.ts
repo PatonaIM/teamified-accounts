@@ -77,11 +77,11 @@ export class UserResponseDto {
 
   @ApiProperty({
     description: 'User status',
-    enum: ['active', 'inactive', 'archived', 'invited'],
+    enum: ['active', 'inactive', 'archived', 'invited', 'suspended'],
     example: 'active'
   })
   @Expose()
-  status: 'active' | 'inactive' | 'archived' | 'invited';
+  status: 'active' | 'inactive' | 'archived' | 'invited' | 'suspended';
 
   @ApiProperty({
     description: 'Whether user account is active',

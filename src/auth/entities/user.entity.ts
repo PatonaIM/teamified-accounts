@@ -14,7 +14,7 @@ import {
 
 @Entity('users')
 @Index(['email'])
-@Check(`"status" IN ('active', 'inactive', 'archived', 'invited')`)
+@Check(`"status" IN ('active', 'inactive', 'archived', 'invited', 'suspended')`)
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -46,7 +46,7 @@ export class User {
     default: 'invited',
     type: 'varchar'
   })
-  status: 'active' | 'inactive' | 'archived' | 'invited';
+  status: 'active' | 'inactive' | 'archived' | 'invited' | 'suspended';
 
   @Column({ name: 'is_active', default: false })
   isActive: boolean;

@@ -71,6 +71,7 @@ import {
   ExpandMore,
   Apps,
   FilterList,
+  Block,
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
@@ -123,7 +124,7 @@ interface UserActivity {
   }>;
 }
 
-type TabType = 'basic' | 'organizations' | 'billing' | 'activity' | 'reset-password' | 'delete';
+type TabType = 'basic' | 'organizations' | 'billing' | 'activity' | 'reset-password' | 'suspend' | 'delete';
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -140,6 +141,11 @@ export default function UserDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Suspend user modal state
+  const [showSuspendDialog, setShowSuspendDialog] = useState(false);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspending, setSuspending] = useState(false);
 
   // Reset password modal state
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
@@ -320,6 +326,68 @@ export default function UserDetailPage() {
   const handleCancelDelete = () => {
     setShowDeleteDialog(false);
     setDeleteConfirmEmail('');
+  };
+
+  const handleOpenSuspendDialog = () => {
+    setShowSuspendDialog(true);
+    setSuspendReason('');
+  };
+
+  const handleCancelSuspend = () => {
+    setShowSuspendDialog(false);
+    setSuspendReason('');
+  };
+
+  const handleConfirmSuspend = async () => {
+    if (!userId || !user) return;
+
+    setSuspending(true);
+    try {
+      await userService.updateUser(userId, { 
+        status: 'suspended',
+        profileData: {
+          ...user.profileData,
+          suspendedAt: new Date().toISOString(),
+          suspendReason: suspendReason.trim() || undefined,
+        }
+      });
+      setSnackbar({ open: true, message: 'User has been suspended successfully', severity: 'success' });
+      setShowSuspendDialog(false);
+      setSuspendReason('');
+      fetchUserDetails();
+    } catch (err: any) {
+      setSnackbar({ 
+        open: true, 
+        message: err.response?.data?.message || err.message || 'Failed to suspend user', 
+        severity: 'error' 
+      });
+    } finally {
+      setSuspending(false);
+    }
+  };
+
+  const handleReactivateUser = async () => {
+    if (!userId || !user) return;
+
+    try {
+      await userService.updateUser(userId, { 
+        status: 'active',
+        profileData: {
+          ...user.profileData,
+          suspendedAt: undefined,
+          suspendReason: undefined,
+          reactivatedAt: new Date().toISOString(),
+        }
+      });
+      setSnackbar({ open: true, message: 'User has been reactivated successfully', severity: 'success' });
+      fetchUserDetails();
+    } catch (err: any) {
+      setSnackbar({ 
+        open: true, 
+        message: err.response?.data?.message || err.message || 'Failed to reactivate user', 
+        severity: 'error' 
+      });
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -526,6 +594,7 @@ export default function UserDetailPage() {
     { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
     { id: 'activity', label: 'User Activity', icon: <History /> },
     { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
+    { id: 'suspend', label: user.status === 'suspended' ? 'Reactivate User' : 'Suspend User', icon: <Block /> },
     { id: 'delete', label: 'Delete User', icon: <Delete /> },
   ];
 
@@ -1220,10 +1289,16 @@ export default function UserDetailPage() {
             {tabs.map((tab) => (
               <ListItemButton
                 key={tab.id}
-                selected={activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'}
+                selected={activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'suspend' && tab.id !== 'delete'}
                 onClick={() => {
                   if (tab.id === 'reset-password') {
                     handleOpenResetPasswordModal();
+                  } else if (tab.id === 'suspend') {
+                    if (user.status === 'suspended') {
+                      handleReactivateUser();
+                    } else {
+                      handleOpenSuspendDialog();
+                    }
                   } else if (tab.id === 'delete') {
                     handleOpenDeleteDialog();
                   } else {
@@ -1233,16 +1308,20 @@ export default function UserDetailPage() {
                 sx={{
                   py: 1.5,
                   px: 2,
-                  borderLeft: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete' ? 3 : 0,
+                  borderLeft: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'suspend' && tab.id !== 'delete' ? 3 : 0,
                   borderColor: 'primary.main',
-                  bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'
+                  bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'suspend' && tab.id !== 'delete'
                     ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
                     : 'transparent',
                   '&:hover': {
-                    bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete'
+                    bgcolor: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'suspend' && tab.id !== 'delete'
                       ? (isDarkMode ? 'rgba(124, 58, 237, 0.15)' : 'rgba(124, 58, 237, 0.08)') 
                       : 'action.hover',
                   },
+                  ...(tab.id === 'suspend' && user.status !== 'suspended' && {
+                    color: 'warning.main',
+                    '& .MuiListItemIcon-root': { color: 'warning.main' },
+                  }),
                   ...(tab.id === 'delete' && {
                     color: 'error.main',
                     '& .MuiListItemIcon-root': { color: 'error.main' },
@@ -1255,7 +1334,7 @@ export default function UserDetailPage() {
                 <ListItemText 
                   primary={tab.label}
                   primaryTypographyProps={{
-                    fontWeight: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'delete' ? 600 : 400,
+                    fontWeight: activeTab === tab.id && tab.id !== 'reset-password' && tab.id !== 'suspend' && tab.id !== 'delete' ? 600 : 400,
                   }}
                 />
               </ListItemButton>
@@ -1388,6 +1467,54 @@ export default function UserDetailPage() {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseResetPasswordModal} sx={{ textTransform: 'none' }}>
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Suspend User Dialog */}
+      <Dialog
+        open={showSuspendDialog}
+        onClose={handleCancelSuspend}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'warning.main' }}>
+          <Block color="warning" />
+          Suspend User Account
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Suspending this user will prevent them from logging in and accessing any applications.
+          </Alert>
+          
+          <DialogContentText sx={{ mb: 2 }}>
+            You are about to suspend <strong>{userFullName}</strong>'s account.
+          </DialogContentText>
+          
+          <TextField
+            fullWidth
+            label="Reason for suspension (optional)"
+            value={suspendReason}
+            onChange={(e) => setSuspendReason(e.target.value)}
+            placeholder="Enter the reason for suspending this user..."
+            multiline
+            rows={3}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelSuspend} disabled={suspending} sx={{ textTransform: 'none' }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmSuspend}
+            color="warning"
+            variant="contained"
+            disabled={suspending}
+            startIcon={suspending ? <CircularProgress size={16} /> : <Block />}
+            sx={{ textTransform: 'none' }}
+          >
+            {suspending ? 'Suspending...' : 'Suspend User'}
           </Button>
         </DialogActions>
       </Dialog>

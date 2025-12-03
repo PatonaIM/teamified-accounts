@@ -20,7 +20,7 @@ export interface User {
   profileData?: any;
   profilePictureUrl?: string | null;
   clientId?: string;
-  status: 'active' | 'inactive' | 'archived' | 'invited';
+  status: 'active' | 'inactive' | 'archived' | 'invited' | 'suspended';
   isActive: boolean;
   emailVerified: boolean;
   lastLoginAt?: string;
@@ -52,7 +52,7 @@ export interface UpdateUserRequest {
   address?: any;
   profileData?: any;
   clientId?: string;
-  status?: 'active' | 'inactive' | 'archived' | 'invited';
+  status?: 'active' | 'inactive' | 'archived' | 'invited' | 'suspended';
 }
 
 export interface UserQueryParams {
@@ -78,7 +78,7 @@ export interface UserListResponse {
 
 export interface BulkStatusUpdateRequest {
   userIds: string[];
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived' | 'suspended';
 }
 
 export interface BulkRoleAssignmentRequest {
@@ -159,7 +159,7 @@ class UserService {
   }
 
   // User status management
-  async updateUserStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {
+  async updateUserStatus(id: string, status: 'active' | 'inactive' | 'archived' | 'suspended'): Promise<User> {
     const response = await axios.patch(`${this.baseURL}/v1/users/${id}/status`, { status }, {
       headers: this.getAuthHeaders(),
     });
