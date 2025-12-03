@@ -35,7 +35,12 @@ export default function ReleaseNote_v102() {
             <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
               <NewReleases color="primary" sx={{ fontSize: 40 }} />
               <Box>
-                <Chip label="v1.0.2" color="primary" sx={{ fontWeight: 600 }} />
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label="v1.0.2" color="primary" sx={{ fontWeight: 600 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    December 4, 2025
+                  </Typography>
+                </Stack>
                 <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
                   Release Notes
                 </Typography>
