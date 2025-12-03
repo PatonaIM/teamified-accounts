@@ -1309,6 +1309,14 @@ const OrganizationManagementPage: React.FC = () => {
                           variant={effectiveFilters.has('nlwf') ? 'filled' : 'outlined'}
                           sx={{ cursor: 'pointer' }}
                         />
+                        <Chip
+                          label={`Suspended (${statusCounts['suspended'] || 0})`}
+                          size="small"
+                          onClick={() => toggleStatusFilter('suspended')}
+                          color={effectiveFilters.has('suspended') ? 'error' : 'default'}
+                          variant={effectiveFilters.has('suspended') ? 'filled' : 'outlined'}
+                          sx={{ cursor: 'pointer' }}
+                        />
                       </Box>
 
                       {/* No Users Message - only show if truly no members in organization */}
