@@ -219,16 +219,21 @@ const OAuthConfigurationPage: React.FC = () => {
   };
 
   const handleToggleActive = async (client: OAuthClient) => {
-    setTogglingClient(client.id);
+    const previousState = client.is_active;
+    
+    setClients(prev => prev.map(c => 
+      c.id === client.id ? { ...c, is_active: !c.is_active } : c
+    ));
+    
     try {
       await oauthClientsService.toggleActive(client.id);
-      setSuccess(`OAuth client ${client.is_active ? 'deactivated' : 'activated'} successfully!`);
-      await fetchClients();
+      setSuccess(`OAuth client ${previousState ? 'deactivated' : 'activated'} successfully!`);
     } catch (err: any) {
+      setClients(prev => prev.map(c => 
+        c.id === client.id ? { ...c, is_active: previousState } : c
+      ));
       const errorMessage = err.response?.data?.message || err.message || 'Failed to toggle OAuth client status';
       setError(errorMessage);
-    } finally {
-      setTogglingClient(null);
     }
   };
 

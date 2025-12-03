@@ -106,15 +106,20 @@ const OAuthClientsTab: React.FC = () => {
   };
 
   const handleToggleActive = async (client: OAuthClient) => {
-    setTogglingClient(client.id);
+    const previousState = client.is_active;
+    
+    setClients(prev => prev.map(c => 
+      c.id === client.id ? { ...c, is_active: !c.is_active } : c
+    ));
+    
     try {
       await oauthClientsService.toggleActive(client.id);
-      showSnackbar(`OAuth client ${client.is_active ? 'deactivated' : 'activated'}`, 'success');
-      loadClients();
+      showSnackbar(`OAuth client ${previousState ? 'deactivated' : 'activated'}`, 'success');
     } catch (error) {
+      setClients(prev => prev.map(c => 
+        c.id === client.id ? { ...c, is_active: previousState } : c
+      ));
       showSnackbar('Failed to toggle client status', 'error');
-    } finally {
-      setTogglingClient(null);
     }
   };
 
