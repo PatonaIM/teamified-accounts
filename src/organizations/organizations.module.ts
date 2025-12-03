@@ -4,6 +4,7 @@ import { Organization } from './entities/organization.entity';
 import { OrganizationMember } from './entities/organization-member.entity';
 import { User } from '../auth/entities/user.entity';
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { Invitation } from '../invitations/entities/invitation.entity';
 import { OrganizationsService } from './organizations.service';
 import { OrganizationsController } from './organizations.controller';
 import { AuditModule } from '../audit/audit.module';
@@ -31,7 +32,7 @@ import { BlobStorageModule } from '../blob-storage/blob-storage.module';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Organization, OrganizationMember, User, UserRole]),
+    TypeOrmModule.forFeature([Organization, OrganizationMember, User, UserRole, Invitation]),
     AuditModule,
     AuthModule,
     EmailModule,

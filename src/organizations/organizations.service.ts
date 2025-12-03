@@ -5,6 +5,7 @@ import { Organization } from './entities/organization.entity';
 import { OrganizationMember } from './entities/organization-member.entity';
 import { User } from '../auth/entities/user.entity';
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { Invitation, InvitationStatus } from '../invitations/entities/invitation.entity';
 import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../email/services/email.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
@@ -31,6 +32,8 @@ export class OrganizationsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserRole)
     private readonly userRoleRepository: Repository<UserRole>,
+    @InjectRepository(Invitation)
+    private readonly invitationRepository: Repository<Invitation>,
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
     private readonly objectStorageService: ObjectStorageService,
@@ -533,6 +536,29 @@ export class OrganizationsService {
       throw new NotFoundException(`Organization with ID ${id} not found`);
     }
 
+    // Get all members before deletion for audit purposes
+    const members = await this.memberRepository.find({
+      where: { organizationId: id },
+    });
+    const memberUserIds = members.map(m => m.userId);
+    const memberCount = members.length;
+
+    // 1. Delete all organization members (disassociate users from organization)
+    await this.memberRepository.delete({ organizationId: id });
+    this.logger.log(`Removed ${memberCount} members from organization ${organization.name}`);
+
+    // 2. Delete all user roles scoped to this organization
+    const deletedRolesResult = await this.userRoleRepository.delete({ scopeEntityId: id });
+    this.logger.log(`Removed ${deletedRolesResult.affected || 0} organization-scoped roles for organization ${organization.name}`);
+
+    // 3. Cancel all pending invitations for this organization
+    const cancelledInvitationsResult = await this.invitationRepository.update(
+      { organizationId: id, status: InvitationStatus.PENDING },
+      { status: InvitationStatus.CANCELLED }
+    );
+    this.logger.log(`Cancelled ${cancelledInvitationsResult.affected || 0} pending invitations for organization ${organization.name}`);
+
+    // 4. Soft delete the organization
     await this.organizationRepository.softDelete(id);
 
     this.logger.log(`Organization deleted: ${organization.name} (${id}) by user ${currentUser.id}`);
@@ -548,6 +574,10 @@ export class OrganizationsService {
         name: organization.name,
         slug: organization.slug,
         deletedAt: new Date().toISOString(),
+        disassociatedUsers: memberUserIds,
+        disassociatedUserCount: memberCount,
+        cancelledInvitations: cancelledInvitationsResult.affected || 0,
+        removedRoles: deletedRolesResult.affected || 0,
       },
       ip,
       userAgent,
