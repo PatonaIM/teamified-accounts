@@ -74,8 +74,6 @@ const OAuthConfigurationPage: React.FC = () => {
     name: '',
     description: '',
     redirect_uris: [],
-    app_url: '',
-    owner: '',
     environment: undefined,
   });
   const [redirectUriInput, setRedirectUriInput] = useState('');
@@ -95,7 +93,10 @@ const OAuthConfigurationPage: React.FC = () => {
 
     try {
       const data = await oauthClientsService.getAll();
-      setClients(data);
+      const sortedData = data.sort((a, b) => 
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      );
+      setClients(sortedData);
     } catch (err: any) {
       setError(err.message || 'Failed to load OAuth clients');
     } finally {
@@ -119,8 +120,6 @@ const OAuthConfigurationPage: React.FC = () => {
         name: client.name,
         description: client.description || '',
         redirect_uris: client.redirect_uris,
-        app_url: client.metadata?.app_url || '',
-        owner: client.metadata?.owner || '',
         environment: client.metadata?.environment,
       });
     } else {
@@ -129,8 +128,6 @@ const OAuthConfigurationPage: React.FC = () => {
         name: '',
         description: '',
         redirect_uris: [],
-        app_url: '',
-        owner: '',
         environment: undefined,
       });
     }
@@ -145,8 +142,6 @@ const OAuthConfigurationPage: React.FC = () => {
       name: '',
       description: '',
       redirect_uris: [],
-      app_url: '',
-      owner: '',
       environment: undefined,
     });
     setRedirectUriInput('');
@@ -494,22 +489,6 @@ const OAuthConfigurationPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               multiline
               rows={3}
-              fullWidth
-            />
-
-            <TextField
-              label="Application URL"
-              value={formData.app_url}
-              onChange={(e) => setFormData({ ...formData, app_url: e.target.value })}
-              placeholder="https://app.example.com"
-              fullWidth
-            />
-
-            <TextField
-              label="Owner/Team"
-              value={formData.owner}
-              onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-              placeholder="Engineering Team"
               fullWidth
             />
 

@@ -57,7 +57,10 @@ const OAuthClientsTab: React.FC = () => {
     try {
       setLoading(true);
       const data = await oauthClientsService.getAll();
-      setClients(data);
+      const sortedData = data.sort((a, b) => 
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      );
+      setClients(sortedData);
     } catch (error) {
       showSnackbar('Failed to load OAuth clients', 'error');
     } finally {

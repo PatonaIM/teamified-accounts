@@ -29,8 +29,6 @@ interface Props {
 const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [appUrl, setAppUrl] = useState('');
-  const [owner, setOwner] = useState('');
   const [environment, setEnvironment] = useState<'development' | 'staging' | 'production'>('development');
   const [defaultIntent, setDefaultIntent] = useState<'client' | 'candidate' | 'both'>('both');
   const [redirectUris, setRedirectUris] = useState<string[]>(['']);
@@ -42,8 +40,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     if (client) {
       setName(client.name);
       setDescription(client.description || '');
-      setAppUrl(client.metadata?.app_url || '');
-      setOwner(client.metadata?.owner || '');
       setEnvironment(client.metadata?.environment || 'development');
       setDefaultIntent(client.default_intent || 'both');
       setRedirectUris(client.redirect_uris.length > 0 ? client.redirect_uris : ['']);
@@ -55,8 +51,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const resetForm = () => {
     setName('');
     setDescription('');
-    setAppUrl('');
-    setOwner('');
     setEnvironment('development');
     setDefaultIntent('both');
     setRedirectUris(['']);
@@ -90,8 +84,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       description: description || undefined,
       redirect_uris: filteredUris,
       default_intent: defaultIntent,
-      app_url: appUrl || undefined,
-      owner: owner || undefined,
       environment,
     };
 
@@ -231,22 +223,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
               multiline
               rows={2}
               placeholder="Brief description of the application"
-            />
-
-            <TextField
-              label="Application URL"
-              value={appUrl}
-              onChange={(e) => setAppUrl(e.target.value)}
-              fullWidth
-              placeholder="https://app.teamified.com"
-            />
-
-            <TextField
-              label="Owner/Team"
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              fullWidth
-              placeholder="Engineering Team"
             />
 
             <TextField
