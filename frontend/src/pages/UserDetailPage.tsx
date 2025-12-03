@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
   Typography,
@@ -132,6 +133,15 @@ export default function UserDetailPage() {
   const location = useLocation();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  const { user: currentUser } = useAuth();
+
+  // Check if current user can suspend/reactivate users (only internal users and super admins)
+  const canSuspendUsers = useMemo(() => {
+    if (!currentUser?.roles) return false;
+    return currentUser.roles.some(role => 
+      role === 'super_admin' || role.startsWith('internal_')
+    );
+  }, [currentUser?.roles]);
 
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
@@ -592,7 +602,7 @@ export default function UserDetailPage() {
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
   const isCandidate = roles.some(r => r.role === 'candidate');
 
-  const tabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
+  const allTabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
     { id: 'basic', label: 'Basic Information', icon: <Person /> },
     { id: 'organizations', label: 'Organizations', icon: <Business /> },
     { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
@@ -601,6 +611,14 @@ export default function UserDetailPage() {
     { id: 'suspend', label: user.status === 'suspended' ? 'Reactivate User' : 'Suspend User', icon: <Block /> },
     { id: 'delete', label: 'Delete User', icon: <Delete /> },
   ];
+
+  // Filter tabs based on permissions - hide suspend option for client users
+  const tabs = allTabs.filter(tab => {
+    if (tab.id === 'suspend' && !canSuspendUsers) {
+      return false;
+    }
+    return true;
+  });
 
   const renderTabContent = () => {
     switch (activeTab) {
