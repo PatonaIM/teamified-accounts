@@ -489,12 +489,14 @@ export default function UserDetailPage() {
     }
   };
 
-  const getStatusColor = (status: string): 'success' | 'default' | 'info' | 'warning' => {
+  const getStatusColor = (status: string): 'success' | 'default' | 'info' | 'warning' | 'error' => {
     switch (status) {
       case 'active':
         return 'success';
       case 'invited':
         return 'info';
+      case 'suspended':
+        return 'error';
       case 'nlwf':
       case 'inactive':
         return 'warning';
@@ -509,6 +511,8 @@ export default function UserDetailPage() {
         return 'ACTIVE';
       case 'invited':
         return 'INVITED';
+      case 'suspended':
+        return 'SUSPENDED';
       case 'nlwf':
       case 'inactive':
         return 'NLWF';
