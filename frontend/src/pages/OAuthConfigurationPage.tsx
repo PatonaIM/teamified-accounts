@@ -62,6 +62,7 @@ const OAuthConfigurationPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [togglingClient, setTogglingClient] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -193,6 +194,7 @@ const OAuthConfigurationPage: React.FC = () => {
   const handleDeleteClick = (event: React.MouseEvent, client: OAuthClient) => {
     event.stopPropagation();
     setClientToDelete(client);
+    setDeleteConfirmInput('');
     setShowDeleteDialog(true);
   };
 
@@ -205,13 +207,13 @@ const OAuthConfigurationPage: React.FC = () => {
       setSuccess(`OAuth client "${clientToDelete.name}" deleted successfully!`);
       setShowDeleteDialog(false);
       setClientToDelete(null);
+      setDeleteConfirmInput('');
       await fetchClients();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to delete OAuth client';
       setError(errorMessage);
     } finally {
       setDeleting(false);
-      setShowDeleteDialog(false);
       setClientToDelete(null);
     }
   };
@@ -574,18 +576,56 @@ const OAuthConfigurationPage: React.FC = () => {
       </Drawer>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
+      <Dialog 
+        open={showDeleteDialog} 
+        onClose={() => {
+          if (!deleting) {
+            setShowDeleteDialog(false);
+            setDeleteConfirmInput('');
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Delete OAuth Client</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete the OAuth client "{clientToDelete?.name}"?
-            This action cannot be undone and will invalidate all existing tokens for this client.
+            This will revoke access for this application.
           </DialogContentText>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Type <strong>{clientToDelete?.name}</strong> to confirm deletion:
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={clientToDelete?.name}
+              disabled={deleting}
+              autoFocus
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" disabled={deleting}>
-            {deleting ? 'Deleting...' : 'Delete'}
+          <Button 
+            onClick={() => {
+              setShowDeleteDialog(false);
+              setDeleteConfirmInput('');
+            }}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            color="error"
+            variant="contained" 
+            disabled={deleting || deleteConfirmInput !== clientToDelete?.name}
+            sx={{ minWidth: 80 }}
+          >
+            {deleting ? <CircularProgress size={20} color="inherit" /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

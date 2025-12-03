@@ -49,6 +49,7 @@ const OAuthClientsTab: React.FC = () => {
   const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [togglingClient, setTogglingClient] = useState<string | null>(null);
   const { showSnackbar } = useSnackbar();
@@ -91,14 +92,16 @@ const OAuthClientsTab: React.FC = () => {
     if (!clientToDelete) return;
 
     try {
+      setDeleting(true);
       await oauthClientsService.delete(clientToDelete.id);
       showSnackbar('OAuth client deleted successfully', 'success');
       loadClients();
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
     } catch (error) {
       showSnackbar('Failed to delete OAuth client', 'error');
     } finally {
-      setDeleteDialogOpen(false);
-      setClientToDelete(null);
+      setDeleting(false);
     }
   };
 
@@ -366,7 +369,9 @@ const OAuthClientsTab: React.FC = () => {
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleDeleteConfirm}
         title="Delete OAuth Client"
-        message={`Are you sure you want to delete "${clientToDelete?.name}"? This action cannot be undone and will immediately revoke access for this application.`}
+        message={`Are you sure you want to delete "${clientToDelete?.name}"? This will revoke access for this application.`}
+        confirmationName={clientToDelete?.name}
+        loading={deleting}
       />
 
       {/* Integration Instructions Dialog */}
