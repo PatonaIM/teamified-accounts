@@ -256,9 +256,11 @@ const OAuthClientsTab: React.FC = () => {
               clients.map((client) => (
                 <TableRow
                   key={client.id}
+                  onClick={() => handleEditClient(client)}
                   sx={{
                     '&:hover': { bgcolor: 'action.hover' },
                     opacity: client.is_active ? 1 : 0.6,
+                    cursor: 'pointer',
                   }}
                 >
                   <TableCell>
@@ -296,7 +298,7 @@ const OAuthClientsTab: React.FC = () => {
                       <Tooltip title="Copy Client ID">
                         <IconButton
                           size="small"
-                          onClick={() => copyToClipboard(client.client_id, 'Client ID')}
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(client.client_id, 'Client ID'); }}
                         >
                           <ContentCopy fontSize="small" />
                         </IconButton>
@@ -307,7 +309,8 @@ const OAuthClientsTab: React.FC = () => {
                     <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
                       <Switch
                         checked={client.is_active}
-                        onChange={() => handleToggleActive(client)}
+                        onChange={(e) => { e.stopPropagation(); handleToggleActive(client); }}
+                        onClick={(e) => e.stopPropagation()}
                         disabled={togglingClient === client.id}
                         size="small"
                         sx={{
@@ -337,7 +340,7 @@ const OAuthClientsTab: React.FC = () => {
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
-                          onClick={() => handleEditClient(client)}
+                          onClick={(e) => { e.stopPropagation(); handleEditClient(client); }}
                         >
                           <Edit fontSize="small" />
                         </IconButton>
@@ -345,7 +348,7 @@ const OAuthClientsTab: React.FC = () => {
                       <Tooltip title="Delete">
                         <IconButton
                           size="small"
-                          onClick={() => handleDeleteClick(client)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(client); }}
                           color="error"
                         >
                           <Delete fontSize="small" />

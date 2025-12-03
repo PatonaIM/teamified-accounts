@@ -370,7 +370,12 @@ const OAuthConfigurationPage: React.FC = () => {
               </TableRow>
             ) : (
               paginatedClients.map((client) => (
-                <TableRow key={client.id} hover>
+                <TableRow 
+                  key={client.id} 
+                  hover
+                  onClick={() => handleOpenDrawer(client)}
+                  sx={{ cursor: 'pointer' }}
+                >
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {client.name}
@@ -407,7 +412,8 @@ const OAuthConfigurationPage: React.FC = () => {
                     <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
                       <Switch
                         checked={client.is_active}
-                        onChange={() => handleToggleActive(client)}
+                        onChange={(e) => { e.stopPropagation(); handleToggleActive(client); }}
+                        onClick={(e) => e.stopPropagation()}
                         disabled={togglingClient === client.id}
                         size="small"
                         sx={{
@@ -440,7 +446,7 @@ const OAuthConfigurationPage: React.FC = () => {
                   <TableCell>
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => handleOpenDrawer(client)}>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenDrawer(client); }}>
                           <Edit fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -473,7 +479,7 @@ const OAuthConfigurationPage: React.FC = () => {
 
       {/* Create/Edit Drawer */}
       <Drawer anchor="right" open={drawerOpen} onClose={handleCloseDrawer}>
-        <Box sx={{ width: 500, p: 3 }}>
+        <Box sx={{ width: 650, p: 3 }}>
           <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
             {editingClient ? 'Edit OAuth Client' : 'Register New OAuth Client'}
           </Typography>
@@ -544,9 +550,23 @@ const OAuthConfigurationPage: React.FC = () => {
                       borderRadius: 1,
                     }}
                   >
-                    <Typography variant="body2" sx={{ flex: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {uri}
-                    </Typography>
+                    <TextField
+                      value={uri}
+                      onChange={(e) => {
+                        const newUris = [...formData.redirect_uris];
+                        newUris[index] = e.target.value;
+                        setFormData({ ...formData, redirect_uris: newUris });
+                      }}
+                      size="small"
+                      fullWidth
+                      sx={{ 
+                        flex: 1,
+                        '& .MuiInputBase-input': { 
+                          fontFamily: 'monospace', 
+                          fontSize: '0.75rem' 
+                        }
+                      }}
+                    />
                     <IconButton size="small" onClick={() => handleRemoveRedirectUri(index)}>
                       <Delete fontSize="small" />
                     </IconButton>
