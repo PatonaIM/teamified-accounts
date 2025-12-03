@@ -885,7 +885,7 @@ const OrganizationManagementPage: React.FC = () => {
                   <Paper
                     key={user.id}
                     onClick={() => {
-                      navigate(`/users/${user.id}`);
+                      navigate(`/admin/users/${user.id}`);
                       clearGlobalSearch();
                     }}
                     sx={{
