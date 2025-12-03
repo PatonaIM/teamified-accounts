@@ -111,12 +111,12 @@ export default function CandidateUsersPage() {
     switch (status) {
       case 'active':
         return 'success';
-      case 'inactive':
-        return 'warning';
-      case 'archived':
+      case 'invited':
+        return 'default';
+      case 'suspended':
         return 'error';
       default:
-        return 'default';
+        return 'warning';
     }
   };
 
@@ -187,9 +187,9 @@ export default function CandidateUsersPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <MenuItem value="all">All</MenuItem>
+              <MenuItem value="invited">Invited</MenuItem>
               <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
-              <MenuItem value="archived">Archived</MenuItem>
+              <MenuItem value="suspended">Suspended</MenuItem>
             </Select>
           </FormControl>
           <Button
