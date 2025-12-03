@@ -10,6 +10,7 @@ import {
   Box,
   Typography,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 
 interface Props {
@@ -76,6 +77,11 @@ const DeleteConfirmDialog: React.FC<Props> = ({
                 },
               }}
             />
+            {inputValue === confirmationName && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                You are about to delete this OAuth client. This action cannot be undone.
+              </Alert>
+            )}
           </Box>
         )}
       </DialogContent>

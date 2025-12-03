@@ -619,6 +619,11 @@ const OAuthConfigurationPage: React.FC = () => {
               disabled={deleting}
               autoFocus
             />
+            {deleteConfirmInput === clientToDelete?.name && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                You are about to delete this OAuth client. This action cannot be undone.
+              </Alert>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
