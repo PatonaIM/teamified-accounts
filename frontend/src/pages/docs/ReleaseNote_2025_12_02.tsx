@@ -24,8 +24,9 @@ import {
   Person,
   AdminPanelSettings,
   Group,
+  OpenInNew,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function ReleaseNote_2025_12_02() {
   const navigate = useNavigate();
@@ -93,6 +94,16 @@ export default function ReleaseNote_2025_12_02() {
                 </ListItem>
               </List>
             </Paper>
+            <Button
+              component={Link}
+              to="/docs/developer/profile-pictures"
+              variant="text"
+              size="small"
+              endIcon={<OpenInNew fontSize="small" />}
+              sx={{ mt: 2 }}
+            >
+              View Profile Pictures API Guide
+            </Button>
           </Box>
 
           <Divider />
@@ -113,6 +124,16 @@ export default function ReleaseNote_2025_12_02() {
                 send an admin invitation in a single API call.
               </Typography>
             </Paper>
+            <Button
+              component={Link}
+              to="/docs/developer/organization-api"
+              variant="text"
+              size="small"
+              endIcon={<OpenInNew fontSize="small" />}
+              sx={{ mt: 2 }}
+            >
+              View Organization API Guide
+            </Button>
           </Box>
 
           <Divider />
