@@ -44,7 +44,7 @@ export const docsNavConfig: NavSection[] = [
     icon: 'NewReleases',
     items: [
       { title: 'All Releases', path: '/docs/release-notes' },
-      { title: 'v1.0.3 - Dec 3, 2025', path: '/docs/release-notes/2025-12-03-v103' },
+      { title: 'v1.0.2', path: '/docs/release-notes/v1.0.2' },
       { title: 'v1.0.1 - Dec 3, 2025', path: '/docs/release-notes/2025-12-03' },
       { title: 'v1.0.0 - Dec 2, 2025', path: '/docs/release-notes/2025-12-02' },
     ],

@@ -23,11 +23,11 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
-    version: '1.0.3',
-    date: 'December 3, 2025',
-    title: 'OAuth Configuration Management',
-    summary: 'Comprehensive OAuth Configuration management interface with inline editing for redirect URIs, visual change tracking, seamless status toggles, and safe deletion with soft delete functionality.',
-    path: '/docs/release-notes/2025-12-03-v103',
+    version: '1.0.2',
+    date: '',
+    title: 'Admin Tools & OAuth Configuration',
+    summary: 'OAuth Configuration management interface with inline editing for redirect URIs, visual change tracking, seamless status toggles, and safe deletion with soft delete functionality.',
+    path: '/docs/release-notes/v1.0.2',
     isLatest: true,
   },
   {
