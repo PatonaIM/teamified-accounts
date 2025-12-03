@@ -24,9 +24,9 @@ interface ReleaseNote {
 const releaseNotes: ReleaseNote[] = [
   {
     version: '1.0.2',
-    date: '',
-    title: 'Admin Tools & OAuth Configuration',
-    summary: 'OAuth Configuration management interface with inline editing for redirect URIs, visual change tracking, seamless status toggles, and safe deletion with soft delete functionality.',
+    date: 'December 3, 2025',
+    title: 'Admin Tools, OAuth Configuration & Organization Management',
+    summary: 'OAuth Configuration management with inline URI editing, improved organization deletion with user disassociation, enhanced global search for orphan users, and reorganized User Activity sections.',
     path: '/docs/release-notes/v1.0.2',
     isLatest: true,
   },

@@ -21,6 +21,9 @@ import {
   Edit,
   Security,
   Visibility,
+  Business,
+  Search,
+  Reorder,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -271,6 +274,172 @@ export default function ReleaseNote_v102() {
                 <Typography variant="body2">
                   <strong>Note:</strong> All changes to redirect URIs are saved locally until you click 
                   "Update Client". This allows you to review all modifications before committing them to the database.
+                </Typography>
+              </Alert>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
+              2. Organization Management Improvements
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Enhanced organization deletion handling and improved global search functionality 
+              for better user management.
+            </Typography>
+
+            <Box sx={{ ml: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <Business color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Improved Organization Deletion
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                Organization deletion now properly handles user disassociation, ensuring clean data management 
+                when organizations are removed from the system.
+              </Typography>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="User Disassociation"
+                      secondary="All organization members are automatically disassociated when an organization is deleted (users are not deleted, only unlinked)"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Organization-Scoped Role Cleanup"
+                      secondary="User roles scoped to the deleted organization are automatically removed"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Invitation Cancellation"
+                      secondary="All pending invitations for the organization are cancelled"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Comprehensive Audit Logging"
+                      secondary="Detailed audit records capture disassociated user IDs, member counts, cancelled invitations, and removed roles"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <Search color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Enhanced Global Search
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                The global search in Organization Management now includes orphan users (users without any assigned roles), 
+                making it easier to find and manage all users in the system.
+              </Typography>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Orphan User Search"
+                      secondary="Users without organization membership or roles now appear in search results"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Unassigned Role Label"
+                      secondary="Orphan users are displayed with an 'unassigned' role indicator for easy identification"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Internal User Exclusion"
+                      secondary="Search continues to exclude internal users (super_admin, internal_hr, etc.) and candidates"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <Reorder color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  User Activity Section Reorganization
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                The User Activity tab in user profiles has been reorganized for improved usability and logical flow.
+              </Typography>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                  New Section Order:
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="1. Connected Applications"
+                      secondary="View SSO-connected applications with login counts and feature usage"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="2. General Activity"
+                      secondary="Recent actions and administrative activities"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="3. Login History"
+                      secondary="Detailed login timestamps, devices, and IP addresses"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Alert severity="info">
+                <Typography variant="body2">
+                  <strong>Note:</strong> These improvements enhance the admin experience when managing organizations 
+                  and users. Organization deletion is now safer and more transparent, with full audit trails for 
+                  compliance purposes.
                 </Typography>
               </Alert>
             </Box>
