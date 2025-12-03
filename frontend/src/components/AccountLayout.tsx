@@ -14,7 +14,6 @@ import {
   Divider,
 } from '@mui/material';
 import {
-  Apps,
   Person,
   AdminPanelSettings,
   Logout,
@@ -22,6 +21,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/authService';
 import { useTheme } from '../contexts/ThemeContext';
+import AppsDropdown from './AppsDropdown';
 
 const DRAWER_WIDTH = 260;
 
@@ -53,11 +53,6 @@ const AccountLayout: React.FC = () => {
       label: 'My Profile',
       path: '/account/profile',
       icon: <Person />,
-    },
-    {
-      label: 'My Apps',
-      path: '/account/apps',
-      icon: <Apps />,
     },
     {
       label: 'Admin Tools',
@@ -113,6 +108,8 @@ const AccountLayout: React.FC = () => {
           >
             Accounts
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <AppsDropdown />
         </Toolbar>
       </AppBar>
 

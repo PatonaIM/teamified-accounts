@@ -12,7 +12,8 @@ export type AppKey =
   | 'hris'
   | 'ats'
   | 'finance'
-  | 'data_dashboard';
+  | 'data_dashboard'
+  | 'alexia_ai';
 
 export interface AppAccessConfig {
   canAccess: boolean;
@@ -33,6 +34,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     ats: { canAccess: true, scope: 'all_orgs', description: 'Full access to all organizations' },
     finance: { canAccess: true, scope: 'all_orgs', description: 'Full access to all organizations' },
     data_dashboard: { canAccess: true, scope: 'all_orgs', description: 'Full access to all organizations' },
+    alexia_ai: { canAccess: true, scope: 'all_orgs', description: 'AI assistant access across all organizations' },
   },
 
   internal_hr: {
@@ -42,6 +44,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     ats: { canAccess: false },
     finance: { canAccess: false },
     data_dashboard: { canAccess: true, scope: 'view_only', description: 'View all data across organizations' },
+    alexia_ai: { canAccess: true, scope: 'all_orgs', description: 'AI assistant for HR operations' },
   },
 
   internal_recruiter: {
@@ -51,6 +54,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     ats: { canAccess: true, scope: 'all_orgs', description: 'Recruiting across all organizations' },
     finance: { canAccess: false },
     data_dashboard: { canAccess: true, scope: 'view_only', description: 'View all data across organizations' },
+    alexia_ai: { canAccess: true, scope: 'all_orgs', description: 'AI assistant for recruitment' },
   },
 
   internal_account_manager: {
@@ -60,6 +64,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     ats: { canAccess: false },
     finance: { canAccess: false },
     data_dashboard: { canAccess: true, scope: 'view_only', description: 'View all data across organizations' },
+    alexia_ai: { canAccess: true, scope: 'all_orgs', description: 'AI assistant for account management' },
   },
 
   internal_finance: {
@@ -69,6 +74,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     ats: { canAccess: false },
     finance: { canAccess: true, scope: 'all_orgs', description: 'Financial operations across all organizations' },
     data_dashboard: { canAccess: true, scope: 'view_only', description: 'View all data across organizations' },
+    alexia_ai: { canAccess: true, scope: 'all_orgs', description: 'AI assistant for finance operations' },
   },
 
   internal_marketing: {
@@ -78,6 +84,7 @@ export const ROLE_APP_ACCESS_MATRIX: Record<string, Partial<Record<AppKey, AppAc
     ats: { canAccess: false },
     finance: { canAccess: false },
     data_dashboard: { canAccess: true, scope: 'view_only', description: 'View all data for marketing insights' },
+    alexia_ai: { canAccess: true, scope: 'all_orgs', description: 'AI assistant for marketing insights' },
   },
 
   // ===== Client Roles (Organization-Scoped) =====
@@ -169,10 +176,11 @@ export function getDefaultAppsForRole(roleType: string): AppKey[] {
  * This should be configured based on actual OAuth client registrations
  */
 export const OAUTH_CLIENT_TO_APP_MAP: Record<string, AppKey> = {
-  // These will be populated based on actual OAuth client IDs
-  // Example:
-  // 'candidate-portal-client-id': 'candidate_portal',
-  // 'team-connect-client-id': 'team_connect',
+  'client_f994431f3a8cbacba41b47b2e20dd7ea': 'candidate_portal', // Jobseeker Portal
+  'client_5fe07c29f5d8f5e5455a0c31370d8ab4': 'ats', // ATS Portal
+  'client_cb45a65b7e54c6fa16a99fd61c719991': 'hris', // HRIS Portal
+  'client_266b2fd552de8dd40c0414285e1b597f': 'team_connect', // Team Connect
+  'client_7d22211597ed843e72660a34d3712735': 'alexia_ai', // Alexia AI
 };
 
 /**
