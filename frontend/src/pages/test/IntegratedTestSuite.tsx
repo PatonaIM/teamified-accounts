@@ -56,6 +56,7 @@ export default function IntegratedTestSuite() {
   const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>(
     [],
   );
+  const [sessionRestored, setSessionRestored] = useState(false);
   const callbackProcessedRef = useRef(false);
   const sessionCheckRef = useRef(false);
 
@@ -102,60 +103,6 @@ export default function IntegratedTestSuite() {
       const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!userResponse.ok) {
-        clearStoredSession();
-        return false;
-      }
-
-      const freshUser = await userResponse.json();
-      setAccessToken(token);
-      setUserInfo(freshUser);
-      saveSession(token, freshUser);
-      return true;
-    } catch (err) {
-      console.error('Session restoration failed:', err);
-      clearStoredSession();
-      return false;
-    }
-  };
-
-  const saveSession = (token: string, user: UserInfo) => {
-    try {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ token, user, timestamp: Date.now() }));
-    } catch (err) {
-      console.error('Failed to save session:', err);
-    }
-  };
-
-  const clearStoredSession = () => {
-    try {
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (err) {
-      console.error('Failed to clear session:', err);
-    }
-  };
-
-  const restoreSession = async () => {
-    if (typeof window === 'undefined') return false;
-    
-    try {
-      const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (!stored) return false;
-
-      const { token, user, timestamp } = JSON.parse(stored);
-      
-      const SESSION_MAX_AGE = 60 * 60 * 1000;
-      if (Date.now() - timestamp > SESSION_MAX_AGE) {
-        clearStoredSession();
-        return false;
-      }
-
-      const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
         },
       });
 
