@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.3',
+    date: 'December 3, 2025',
+    title: 'OAuth Configuration Management',
+    summary: 'Comprehensive OAuth Configuration management interface with inline editing for redirect URIs, visual change tracking, seamless status toggles, and safe deletion with soft delete functionality.',
+    path: '/docs/release-notes/2025-12-03-v103',
+    isLatest: true,
+  },
+  {
     version: '1.0.1',
     date: 'December 3, 2025',
     title: 'User Activity Tracking',
     summary: 'Comprehensive user activity tracking capabilities enabling connected applications to send usage data to Teamified Accounts for centralized analytics and monitoring.',
     path: '/docs/release-notes/2025-12-03',
-    isLatest: true,
   },
   {
     version: '1.0.0',
