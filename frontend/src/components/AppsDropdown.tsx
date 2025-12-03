@@ -12,8 +12,7 @@ interface AppConfig {
   name: string;
   emoji: string;
   description: string;
-  clientId: string;
-  redirectUri: string;
+  baseUrl: string;
 }
 
 const APP_CONFIG: Record<string, AppConfig> = {
@@ -21,53 +20,33 @@ const APP_CONFIG: Record<string, AppConfig> = {
     name: 'Jobseeker Portal',
     emoji: '🔍',
     description: 'Search and apply for job opportunities',
-    clientId: 'client_f994431f3a8cbacba41b47b2e20dd7ea',
-    redirectUri: 'https://teamified-jobseeker.replit.app/api/auth/callback/teamified-sso',
+    baseUrl: 'https://teamified-jobseeker.replit.app',
   },
   ats: {
     name: 'ATS Portal',
     emoji: '📋',
     description: 'Manage job postings and track applicants',
-    clientId: 'client_5fe07c29f5d8f5e5455a0c31370d8ab4',
-    redirectUri: 'https://teamified-ats.replit.app/auth/callback',
+    baseUrl: 'https://teamified-ats.replit.app',
   },
   hris: {
     name: 'HRIS Portal',
     emoji: '👥',
     description: 'HR information system for employee management',
-    clientId: 'client_cb45a65b7e54c6fa16a99fd61c719991',
-    redirectUri: 'https://teamified-hris.replit.app/auth/callback',
+    baseUrl: 'https://teamified-hris.replit.app',
   },
   team_connect: {
     name: 'Team Connect',
     emoji: '💬',
     description: 'Connect with your team and collaborate',
-    clientId: 'client_266b2fd552de8dd40c0414285e1b597f',
-    redirectUri: 'https://convo-scribe-simonjones10.replit.app/auth/callback',
+    baseUrl: 'https://convo-scribe-simonjones10.replit.app',
   },
   alexia_ai: {
     name: 'Alexia AI',
     emoji: '🤖',
     description: 'AI-powered assistant for productivity',
-    clientId: 'client_7d22211597ed843e72660a34d3712735',
-    redirectUri: 'https://alexiaai.replit.app/api/auth/callback/teamified',
+    baseUrl: 'https://alexiaai.replit.app',
   },
 };
-
-function generateOAuthUrl(config: AppConfig): string {
-  const baseUrl = window.location.origin;
-  const state = crypto.randomUUID();
-  
-  sessionStorage.setItem(`oauth_state_${config.clientId}`, state);
-  
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    redirect_uri: config.redirectUri,
-    state: state,
-  });
-  
-  return `${baseUrl}/api/v1/sso/authorize?${params.toString()}`;
-}
 
 interface AppsDropdownProps {
   anchorEl: HTMLElement | null;
@@ -110,8 +89,7 @@ export default function AppsDropdown({ anchorEl, open, onClose }: AppsDropdownPr
     }));
 
   const handleAppClick = (config: AppConfig) => {
-    const oauthUrl = generateOAuthUrl(config);
-    window.open(oauthUrl, '_blank');
+    window.open(config.baseUrl, '_blank');
     onClose();
   };
 
