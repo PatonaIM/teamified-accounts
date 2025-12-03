@@ -24,10 +24,10 @@ interface ReleaseNote {
 const releaseNotes: ReleaseNote[] = [
   {
     version: '1.0.2',
-    date: 'December 3, 2025',
-    title: 'Admin Tools, OAuth Configuration & Organization Management',
-    summary: 'OAuth Configuration management with inline URI editing, improved organization deletion with user disassociation, enhanced global search for orphan users, and reorganized User Activity sections.',
-    path: '/docs/release-notes/v1.0.2',
+    date: 'December 4, 2025',
+    title: 'My Apps Launcher & Admin Tools Enhancements',
+    summary: 'New My Apps dropdown for quick access to connected applications, OAuth Configuration management, improved organization deletion, and Candidate Users redesign with suspension functionality.',
+    path: '/docs/release-notes/2025-12-04',
     isLatest: true,
   },
   {

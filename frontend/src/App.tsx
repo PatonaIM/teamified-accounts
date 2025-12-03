@@ -230,7 +230,7 @@ function App() {
                   <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
-                  <Route path="release-notes/v1.0.2" element={<ReleaseNote_v102 />} />
+                  <Route path="release-notes/2025-12-04" element={<ReleaseNote_v102 />} />
                   <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />
                   <Route path="release-notes/2025-12-02" element={<ReleaseNote_2025_12_02 />} />
                 </Route>
