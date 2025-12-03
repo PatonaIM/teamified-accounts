@@ -24,6 +24,10 @@ import {
   Business,
   Search,
   Reorder,
+  People,
+  Block,
+  TableChart,
+  VpnKey,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -440,6 +444,168 @@ export default function ReleaseNote_v102() {
                   <strong>Note:</strong> These improvements enhance the admin experience when managing organizations 
                   and users. Organization deletion is now safer and more transparent, with full audit trails for 
                   compliance purposes.
+                </Typography>
+              </Alert>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
+              3. Candidate Users Management
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Redesigned Candidate Users page with table-based layout and comprehensive user suspension 
+              functionality with role-based access control.
+            </Typography>
+
+            <Box sx={{ ml: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <TableChart color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Redesigned Table Layout
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                The Candidate Users page has been completely redesigned with a clean, table-based layout 
+                similar to the OAuth Configuration page for consistency across admin tools.
+              </Typography>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Table Columns"
+                      secondary="Candidate (with avatar), Email, Status, Created, and Last Login columns for comprehensive overview"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Optimized Search"
+                      secondary="Search triggers only on Enter key press for better performance"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Status Filtering"
+                      secondary="Filter candidates by status: All, Invited, Active, or Suspended"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <Block color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  User Suspension Feature
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                Comprehensive user suspension functionality with proper status management, 
+                allowing administrators to temporarily restrict user access.
+              </Typography>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Suspend User Tab"
+                      secondary="New 'Suspend User' section in user detail page with suspend/reactivate functionality"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Suspension Reason"
+                      secondary="Optional reason field when suspending a user for audit purposes"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Status Indicator"
+                      secondary="Suspended status displays with red badge throughout the application"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Reactivation Support"
+                      secondary="Suspended users can be reactivated back to 'active' status"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <VpnKey color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Role-Based Access Control
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                Suspension functionality is restricted based on user roles for proper access control.
+              </Typography>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Internal Users Only"
+                      secondary="Only super_admin and internal_* roles (internal_admin, internal_hr, etc.) can suspend users"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Hidden for Client Users"
+                      secondary="Client users (client_admin, client_employee, etc.) do not see the suspend option"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Dynamic Tab Display"
+                      secondary="Suspend/Reactivate tab is dynamically shown or hidden based on current user's role"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Alert severity="info">
+                <Typography variant="body2">
+                  <strong>Note:</strong> Candidate users can have three statuses: Invited, Active, or Suspended. 
+                  The 'Suspended' filter is also available in the Organization Users tab for filtering suspended members.
                 </Typography>
               </Alert>
             </Box>
