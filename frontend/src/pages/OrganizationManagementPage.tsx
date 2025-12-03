@@ -1384,7 +1384,7 @@ const OrganizationManagementPage: React.FC = () => {
                                   <Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <Typography 
-                                        variant="body1" 
+                                        variant="body2" 
                                         sx={{ 
                                           fontWeight: 600,
                                           color: isNlwf ? 'text.secondary' : 'text.primary',
@@ -1411,7 +1411,7 @@ const OrganizationManagementPage: React.FC = () => {
                                         />
                                       )}
                                     </Box>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary">
                                       {member.userEmail}
                                     </Typography>
                                   </Box>
