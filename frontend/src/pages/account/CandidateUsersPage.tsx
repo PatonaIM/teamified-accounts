@@ -264,7 +264,7 @@ export default function CandidateUsersPage() {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar
-                        src={candidate.profileData?.profilePicture || undefined}
+                        src={candidate.profilePictureUrl || candidate.profileData?.profilePicture || undefined}
                         sx={{
                           width: 40,
                           height: 40,
