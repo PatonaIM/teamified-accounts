@@ -28,6 +28,7 @@ Core features include:
 - **API Key Management**: Supports programmatic access via configurable API keys with audit logging.
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
+- **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.
 
 ### Documentation Architecture
 
