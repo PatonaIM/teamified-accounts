@@ -65,6 +65,8 @@ const OAuthConfigurationPage: React.FC = () => {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [togglingClient, setTogglingClient] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
+  const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<CreateOAuthClientDto>({
@@ -155,10 +157,19 @@ const OAuthConfigurationPage: React.FC = () => {
   };
 
   const handleRemoveRedirectUri = (index: number) => {
-    setFormData({
-      ...formData,
-      redirect_uris: formData.redirect_uris.filter((_, i) => i !== index),
-    });
+    setUriToDeleteIndex(index);
+    setShowUriDeleteDialog(true);
+  };
+
+  const handleConfirmUriDelete = () => {
+    if (uriToDeleteIndex !== null) {
+      setFormData({
+        ...formData,
+        redirect_uris: formData.redirect_uris.filter((_, i) => i !== uriToDeleteIndex),
+      });
+    }
+    setShowUriDeleteDialog(false);
+    setUriToDeleteIndex(null);
   };
 
   const handleSubmit = async () => {
@@ -664,6 +675,51 @@ const OAuthConfigurationPage: React.FC = () => {
             sx={{ minWidth: 80 }}
           >
             {deleting ? <CircularProgress size={20} color="inherit" /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* URI Delete Confirmation Dialog */}
+      <Dialog
+        open={showUriDeleteDialog}
+        onClose={() => {
+          setShowUriDeleteDialog(false);
+          setUriToDeleteIndex(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Remove Redirect URI</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to remove this redirect URI?
+          </DialogContentText>
+          {uriToDeleteIndex !== null && formData.redirect_uris[uriToDeleteIndex] && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                {formData.redirect_uris[uriToDeleteIndex]}
+              </Typography>
+            </Box>
+          )}
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            This URI will be removed from the active list. The change will take effect when you save the client.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setShowUriDeleteDialog(false);
+              setUriToDeleteIndex(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmUriDelete}
+            color="error"
+            variant="contained"
+          >
+            Remove URI
           </Button>
         </DialogActions>
       </Dialog>

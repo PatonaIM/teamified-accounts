@@ -29,6 +29,9 @@ export class OAuthClient {
   @Column({ type: 'simple-array' })
   redirect_uris: string[];
 
+  @Column({ type: 'simple-array', nullable: true })
+  deleted_redirect_uris: string[];
+
   @Column({ default: true })
   is_active: boolean;
 

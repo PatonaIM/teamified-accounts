@@ -35,6 +35,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [redirectUris, setRedirectUris] = useState<string[]>(['']);
   const [loading, setLoading] = useState(false);
   const [createdClient, setCreatedClient] = useState<OAuthClient | null>(null);
+  const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
+  const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -63,7 +65,16 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   };
 
   const handleRemoveRedirectUri = (index: number) => {
-    setRedirectUris(redirectUris.filter((_, i) => i !== index));
+    setUriToDeleteIndex(index);
+    setShowUriDeleteDialog(true);
+  };
+
+  const handleConfirmUriDelete = () => {
+    if (uriToDeleteIndex !== null) {
+      setRedirectUris(redirectUris.filter((_, i) => i !== uriToDeleteIndex));
+    }
+    setShowUriDeleteDialog(false);
+    setUriToDeleteIndex(null);
   };
 
   const handleRedirectUriChange = (index: number, value: string) => {
@@ -121,6 +132,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   };
 
   return (
+    <>
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         {createdClient ? 'Application Credentials' : client ? 'Edit Application' : 'Add Application'}
@@ -320,7 +332,54 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
           </Button>
         )}
       </DialogActions>
+
     </Dialog>
+
+    {/* URI Delete Confirmation Dialog */}
+    <Dialog
+      open={showUriDeleteDialog}
+      onClose={() => {
+        setShowUriDeleteDialog(false);
+        setUriToDeleteIndex(null);
+      }}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Remove Redirect URI</DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Are you sure you want to remove this redirect URI?
+        </Typography>
+        {uriToDeleteIndex !== null && redirectUris[uriToDeleteIndex] && (
+          <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+              {redirectUris[uriToDeleteIndex]}
+            </Typography>
+          </Box>
+        )}
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          This URI will be removed from the active list. The change will take effect when you save the client.
+        </Alert>
+      </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={() => {
+            setShowUriDeleteDialog(false);
+            setUriToDeleteIndex(null);
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleConfirmUriDelete}
+          color="error"
+          variant="contained"
+        >
+          Remove URI
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 };
 
