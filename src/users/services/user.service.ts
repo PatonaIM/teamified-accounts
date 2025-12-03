@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, Like, FindManyOptions, DataSource } from 'typeorm';
+import { Repository, Like, FindManyOptions, DataSource, IsNull } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -32,9 +32,9 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    // Check if user with email already exists
+    // Check if user with email already exists (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email }
+      where: { email: createUserDto.email, deletedAt: IsNull() }
     });
 
     if (existingUser) {
@@ -128,10 +128,10 @@ export class UserService {
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
-    // Check for email conflicts if email is being updated
+    // Check for email conflicts if email is being updated (ignore soft-deleted users)
     if (updateUserDto.email && updateUserDto.email !== user.email) {
       const existingUser = await this.userRepository.findOne({
-        where: { email: updateUserDto.email }
+        where: { email: updateUserDto.email, deletedAt: IsNull() }
       });
 
       if (existingUser) {
@@ -203,7 +203,53 @@ export class UserService {
     return savedUser;
   }
 
-  async remove(id: string, deletedBy?: string, actorRole: string = 'admin'): Promise<void> {
+  async updateProfilePictureUrl(
+    userId: string,
+    profilePictureUrl: string,
+    auditContext?: {
+      actorUserId?: string;
+      actorRole?: string;
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<User> {
+    const user = await this.findOne(userId);
+    const previousUrl = user.profilePictureUrl;
+
+    // Update the profilePictureUrl column
+    user.profilePictureUrl = profilePictureUrl;
+    
+    // Also update the profilePicture field in the JSONB profileData column
+    // This ensures consistency since some parts of the app read from profileData
+    user.profileData = {
+      ...user.profileData,
+      profilePicture: profilePictureUrl,
+    };
+    
+    const savedUser = await this.userRepository.save(user);
+
+    try {
+      await this.auditService.log({
+        actorUserId: auditContext?.actorUserId || userId,
+        actorRole: auditContext?.actorRole || user.userRoles?.[0]?.roleType || 'user',
+        action: 'profile_picture_update',
+        entityType: 'user',
+        entityId: userId,
+        changes: {
+          previousUrl,
+          newUrl: profilePictureUrl,
+        },
+        ip: auditContext?.ip,
+        userAgent: auditContext?.userAgent,
+      });
+    } catch (auditError) {
+      this.logger.error('Failed to create audit log for profile picture update:', auditError);
+    }
+
+    return savedUser;
+  }
+
+  async remove(id: string, deletedBy?: string, actorRole: string = 'admin', reason?: string): Promise<void> {
     const user = await this.findOne(id);
     
     // Capture user data snapshot before deletion
@@ -211,6 +257,9 @@ export class UserService {
     const userStatus = user.status;
     const deletedAt = new Date();
     let cancelledCount = 0;
+
+    // Generate unique placeholder email to free up the original email for reuse
+    const anonymizedEmail = `deleted+${user.id}@teamified-archive.local`;
 
     // Wrap database operations in a transaction
     await this.dataSource.transaction(async (manager) => {
@@ -238,8 +287,7 @@ export class UserService {
 
       cancelledCount = (cancelByUserId.affected || 0) + (cancelByEmail.affected || 0);
 
-      // Create audit log BEFORE deletion (user record will be gone)
-      // Use transaction manager's repository to ensure audit log participates in transaction
+      // Create audit log for the soft delete
       const auditRepo = manager.getRepository(AuditLog);
       const auditLog = auditRepo.create({
         actorUserId: deletedBy || null,
@@ -252,27 +300,45 @@ export class UserService {
           status: userStatus,
           cancelledInvitations: cancelledCount,
           deletedAt: deletedAt.toISOString(),
-          hardDelete: true,
+          softDelete: true,
+          reason: reason || 'Admin deletion',
         },
         ip: null,
         userAgent: null,
       });
       await auditRepo.save(auditLog);
 
-      // Hard delete the user (cascades will handle related entities)
-      await userRepo.remove(user);
+      // Soft delete: Archive user data and anonymize email to allow re-registration
+      await userRepo.update(user.id, {
+        deletedAt: deletedAt,
+        deletedEmail: userEmail,
+        deletedBy: deletedBy || null,
+        deletedReason: reason || 'Admin deletion',
+        email: anonymizedEmail,
+        supabaseUserId: null,
+        status: 'archived',
+        isActive: false,
+        passwordHash: null,
+        passwordResetToken: null,
+        passwordResetTokenExpiry: null,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      });
     });
 
     // After successful commit, attempt Supabase deletion
     // This is done asynchronously to not block the response
-    this.supabaseService.deleteSupabaseUser(user.id)
-      .then(() => {
-        this.logger.log(`User ${userEmail} hard deleted from database and Supabase (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
-      })
-      .catch((error) => {
-        this.logger.error(`User ${userEmail} was deleted from database but Supabase deletion failed:`, error);
-        // User is already deleted from DB, log the error but don't fail
-      });
+    if (user.supabaseUserId) {
+      this.supabaseService.deleteSupabaseUser(user.supabaseUserId)
+        .then(() => {
+          this.logger.log(`User ${userEmail} soft deleted and email anonymized. Supabase account removed. (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+        })
+        .catch((error) => {
+          this.logger.error(`User ${userEmail} was soft deleted but Supabase deletion failed:`, error);
+        });
+    } else {
+      this.logger.log(`User ${userEmail} soft deleted and email anonymized (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+    }
   }
 
   async updateStatus(id: string, status: 'active' | 'inactive' | 'archived'): Promise<User> {
@@ -384,9 +450,13 @@ export class UserService {
     };
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string, includeDeleted: boolean = false): Promise<User | null> {
+    const whereClause: any = { email };
+    if (!includeDeleted) {
+      whereClause.deletedAt = IsNull();
+    }
     return await this.userRepository.findOne({
-      where: { email }
+      where: whereClause
     });
   }
 
@@ -430,5 +500,344 @@ export class UserService {
     );
     
     return hasClientRole ? 'client' : 'candidate';
+  }
+
+  async updatePrimaryEmail(
+    userId: string,
+    newEmail: string,
+    secondaryEmail: string | null,
+    auditContext?: {
+      ip?: string;
+      userAgent?: string;
+    },
+  ): Promise<{ user: User; verificationToken: string }> {
+    const user = await this.findOne(userId);
+    const previousEmail = user.email;
+
+    if (newEmail === previousEmail) {
+      throw new BadRequestException('New email is the same as the current email');
+    }
+
+    const existingUser = await this.userRepository.findOne({
+      where: { email: newEmail, deletedAt: IsNull() }
+    });
+
+    if (existingUser) {
+      throw new ConflictException('This email address is already in use by another account');
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    const { v4: uuidv4 } = await import('uuid');
+    const verificationToken = uuidv4();
+
+    user.email = newEmail;
+    user.emailVerified = false;
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
+    user.profileData = {
+      ...user.profileData,
+      secondaryEmail: secondaryEmail || undefined,
+    };
+
+    const savedUser = await this.userRepository.save(user);
+
+    try {
+      await this.auditService.log({
+        actorUserId: userId,
+        actorRole: user.userRoles?.[0]?.roleType || 'user',
+        action: 'email_changed',
+        entityType: 'user',
+        entityId: userId,
+        changes: {
+          previousEmail,
+          newEmail,
+          emailVerificationRequired: true,
+        },
+        ip: auditContext?.ip,
+        userAgent: auditContext?.userAgent,
+      });
+    } catch (auditError) {
+      this.logger.error('Failed to create audit log for email change:', auditError);
+    }
+
+    this.logger.log(`User ${userId} changed email from ${previousEmail} to ${newEmail}. Verification required.`);
+
+    return { user: savedUser, verificationToken };
+  }
+
+  async generateEmailVerificationToken(userId: string): Promise<string> {
+    const user = await this.findOne(userId);
+    
+    const { v4: uuidv4 } = await import('uuid');
+    const verificationToken = uuidv4();
+    
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
+    await this.userRepository.save(user);
+    
+    this.logger.log(`Generated new email verification token for user ${userId}`);
+    
+    return verificationToken;
+  }
+
+  private getTimeRangeDate(timeRange?: string): Date | null {
+    if (!timeRange) return null;
+    
+    const now = new Date();
+    switch (timeRange) {
+      case '1h': return new Date(now.getTime() - 1 * 60 * 60 * 1000);
+      case '3h': return new Date(now.getTime() - 3 * 60 * 60 * 1000);
+      case '6h': return new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      case '12h': return new Date(now.getTime() - 12 * 60 * 60 * 1000);
+      case '24h': return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      case '3d': return new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+      case '7d': return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case '30d': return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      default: return null;
+    }
+  }
+
+  async getUserActivity(userId: string, timeRange?: string): Promise<{
+    loginHistory: Array<{
+      timestamp: string;
+      ip: string;
+      userAgent: string;
+      deviceType: string;
+    }>;
+    lastAppsUsed: Array<{
+      appName: string;
+      clientId: string;
+      lastUsed: string;
+      firstUsed?: string;
+      loginCount?: number;
+    }>;
+    recentActions: Array<{
+      action: string;
+      entityType: string;
+      timestamp: string;
+      targetUserEmail?: string;
+    }>;
+    connectedApps: Array<{
+      oauthClientId: string;
+      appName: string;
+      firstLoginAt: string;
+      lastLoginAt: string;
+      loginCount: number;
+      activities: Array<{
+        id: string;
+        action: string;
+        feature?: string;
+        description?: string;
+        createdAt: string;
+      }>;
+      topFeatures: Array<{
+        feature: string;
+        count: number;
+      }>;
+    }>;
+  }> {
+    // Verify user exists
+    await this.findOne(userId);
+    
+    const timeRangeDate = this.getTimeRangeDate(timeRange);
+
+    // Get login history from sessions
+    let sessionQuery = `SELECT created_at, device_metadata, last_activity_at 
+       FROM sessions 
+       WHERE user_id = $1`;
+    const sessionParams: any[] = [userId];
+    
+    if (timeRangeDate) {
+      sessionQuery += ` AND created_at >= $2`;
+      sessionParams.push(timeRangeDate);
+    }
+    sessionQuery += ` ORDER BY created_at DESC LIMIT 20`;
+    
+    const sessions = await this.dataSource.query(sessionQuery, sessionParams);
+
+    const loginHistory = sessions.map((session: any) => ({
+      timestamp: session.created_at?.toISOString() || new Date().toISOString(),
+      ip: session.device_metadata?.ip || 'Unknown',
+      userAgent: session.device_metadata?.userAgent || 'Unknown',
+      deviceType: this.getDeviceType(session.device_metadata?.userAgent || ''),
+    }));
+
+    // Get connected apps from user_oauth_logins (tracks actual OAuth logins)
+    const oauthLogins = await this.dataSource.query(
+      `SELECT uol.oauth_client_id, uol.last_login_at, uol.first_login_at, uol.login_count, oc.name as app_name
+       FROM user_oauth_logins uol
+       LEFT JOIN oauth_clients oc ON uol.oauth_client_id = oc.id
+       WHERE uol.user_id = $1
+       ORDER BY uol.last_login_at DESC
+       LIMIT 10`,
+      [userId]
+    );
+
+    const lastAppsUsed = oauthLogins.map((app: any) => ({
+      appName: app.app_name || 'Unknown App',
+      clientId: app.oauth_client_id,
+      lastUsed: app.last_login_at?.toISOString() || new Date().toISOString(),
+      firstUsed: app.first_login_at?.toISOString() || null,
+      loginCount: app.login_count || 1,
+    }));
+
+    // Get recent actions from audit logs (excluding login-related events since we have login history)
+    const loginRelatedActions = [
+      'login_success', 
+      'login_failed', 
+      'logout', 
+      'session_created', 
+      'session_expired',
+      'session_invalidated',
+      'token_refresh',
+      'token_refreshed'
+    ];
+    
+    let auditQuery = `SELECT action, entity_type, at, changes
+       FROM audit_logs
+       WHERE actor_user_id = $1
+         AND action NOT IN (${loginRelatedActions.map((_, i) => `$${i + 2}`).join(', ')})`;
+    const auditParams: any[] = [userId, ...loginRelatedActions];
+    
+    if (timeRangeDate) {
+      auditQuery += ` AND at >= $${auditParams.length + 1}`;
+      auditParams.push(timeRangeDate);
+    }
+    auditQuery += ` ORDER BY at DESC LIMIT 20`;
+    
+    const auditLogs = await this.dataSource.query(auditQuery, auditParams);
+
+    const recentActions = auditLogs.map((log: any) => {
+      const result: any = {
+        action: log.action,
+        entityType: log.entity_type,
+        timestamp: log.at?.toISOString() || new Date().toISOString(),
+      };
+      
+      // For admin password actions, include target user email
+      if (log.action === 'admin_password_set' || log.action === 'admin_password_reset_sent') {
+        const changes = typeof log.changes === 'string' ? JSON.parse(log.changes) : log.changes;
+        if (changes?.targetUserEmail) {
+          result.targetUserEmail = changes.targetUserEmail;
+        }
+      }
+      
+      return result;
+    });
+
+    // Get connected apps with grouped activity
+    const connectedApps = await this.getConnectedAppsWithActivity(userId, timeRangeDate);
+
+    return {
+      loginHistory,
+      lastAppsUsed,
+      recentActions,
+      connectedApps,
+    };
+  }
+
+  private async getConnectedAppsWithActivity(userId: string, timeRangeDate?: Date | null): Promise<Array<{
+    oauthClientId: string;
+    appName: string;
+    firstLoginAt: string;
+    lastLoginAt: string;
+    loginCount: number;
+    activities: Array<{
+      id: string;
+      action: string;
+      feature?: string;
+      description?: string;
+      createdAt: string;
+    }>;
+    topFeatures: Array<{
+      feature: string;
+      count: number;
+    }>;
+  }>> {
+    // Get all OAuth apps the user has logged into
+    const oauthLogins = await this.dataSource.query(
+      `SELECT uol.oauth_client_id, uol.last_login_at, uol.first_login_at, uol.login_count, 
+              oc.name as app_name, oc.client_id
+       FROM user_oauth_logins uol
+       LEFT JOIN oauth_clients oc ON uol.oauth_client_id = oc.id
+       WHERE uol.user_id = $1
+       ORDER BY uol.last_login_at DESC`,
+      [userId]
+    );
+
+    if (oauthLogins.length === 0) {
+      return [];
+    }
+
+    // Get recent activities for each app
+    const connectedApps = await Promise.all(
+      oauthLogins.map(async (login: any) => {
+        // Build activities query with optional time filter
+        let activitiesQuery = `SELECT id, action, feature, description, created_at
+           FROM user_app_activity
+           WHERE user_id = $1 AND oauth_client_id = $2`;
+        const activitiesParams: any[] = [userId, login.oauth_client_id];
+        
+        if (timeRangeDate) {
+          activitiesQuery += ` AND created_at >= $3`;
+          activitiesParams.push(timeRangeDate);
+        }
+        activitiesQuery += ` ORDER BY created_at DESC LIMIT 50`;
+        
+        const activities = await this.dataSource.query(activitiesQuery, activitiesParams);
+
+        // Build top features query with optional time filter
+        let topFeaturesQuery = `SELECT feature, COUNT(*) as count
+           FROM user_app_activity
+           WHERE user_id = $1 AND oauth_client_id = $2 AND feature IS NOT NULL`;
+        const topFeaturesParams: any[] = [userId, login.oauth_client_id];
+        
+        if (timeRangeDate) {
+          topFeaturesQuery += ` AND created_at >= $3`;
+          topFeaturesParams.push(timeRangeDate);
+        }
+        topFeaturesQuery += ` GROUP BY feature ORDER BY count DESC LIMIT 10`;
+        
+        const topFeatures = await this.dataSource.query(topFeaturesQuery, topFeaturesParams);
+
+        return {
+          oauthClientId: login.oauth_client_id,
+          appName: login.app_name || 'Unknown App',
+          firstLoginAt: login.first_login_at?.toISOString() || new Date().toISOString(),
+          lastLoginAt: login.last_login_at?.toISOString() || new Date().toISOString(),
+          loginCount: parseInt(login.login_count) || 1,
+          activities: activities.map((a: any) => ({
+            id: a.id,
+            action: a.action,
+            feature: a.feature || undefined,
+            description: a.description || undefined,
+            createdAt: a.created_at?.toISOString() || new Date().toISOString(),
+          })),
+          topFeatures: topFeatures.map((f: any) => ({
+            feature: f.feature,
+            count: parseInt(f.count) || 0,
+          })),
+        };
+      })
+    );
+
+    return connectedApps;
+  }
+
+  private getDeviceType(userAgent: string): string {
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return 'Mobile';
+    }
+    if (ua.includes('tablet') || ua.includes('ipad')) {
+      return 'Tablet';
+    }
+    return 'Desktop';
   }
 }

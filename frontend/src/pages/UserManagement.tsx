@@ -437,9 +437,21 @@ const UserManagement: React.FC = () => {
             setShowProfileModal(false);
             setProfileUser(null);
           }}
-          onProfileUpdated={() => {
-            // Refresh the user list
-            loadUsers();
+          onProfileUpdated={(updatedProfile) => {
+            if (profileModalMode === 'create') {
+              loadUsers();
+            } else if (updatedProfile && profileUser) {
+              setUsers(prevUsers => prevUsers.map(u => 
+                u.id === profileUser.id 
+                  ? { 
+                      ...u, 
+                      firstName: updatedProfile.firstName || u.firstName,
+                      lastName: updatedProfile.lastName || u.lastName,
+                      status: updatedProfile.status || u.status,
+                    }
+                  : u
+              ));
+            }
           }}
         />
 

@@ -215,11 +215,8 @@ const LoginPageMUI: React.FC = () => {
         navigate(returnUrl);
       }
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        setErrors({ general: 'Invalid email or password. Please try again.' });
-      } else {
-        setErrors({ general: 'Login failed. Please try again.' });
-      }
+      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+      setErrors({ general: errorMessage });
       setIsLoading(false);
     }
   };
@@ -453,6 +450,13 @@ const LoginPageMUI: React.FC = () => {
               >
                 {formData.email}
               </Typography>
+
+              {/* Error Alert */}
+              {errors.general && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+                  {errors.general}
+                </Alert>
+              )}
 
               <TextField
                 fullWidth

@@ -13,7 +13,8 @@ export type RoleType =
   | 'internal_account_manager'
   | 'internal_recruiter'
   | 'internal_marketing'
-  | 'internal_member';
+  | 'internal_member'
+  | 'candidate';
 
 export type RoleScope =
   | 'all'

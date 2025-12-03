@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
+import { CssBaseline, Box } from '@mui/material';
 import type { ThemeMode } from '../theme/themeConfig';
 import { createAppTheme } from '../theme/themeConfig';
 import { themesApi } from '../api/themes';
@@ -271,6 +271,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentPath, setCurrentPath] = useState(
     typeof window !== 'undefined' ? window.location.pathname : '/'
   );
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const previousThemeRef = useRef<ThemeMode | 'custom'>(currentTheme);
 
   // Check if we're on a public route that requires light mode
   const isPublicRoute = isPublicLightModeRoute(currentPath);
@@ -418,6 +420,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return;
     }
     
+    // Trigger fade transition
+    if (previousThemeRef.current !== theme) {
+      setIsTransitioning(true);
+      previousThemeRef.current = theme;
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 300);
+    }
+    
     setCurrentTheme(theme);
     if (typeof window !== 'undefined') {
       try {
@@ -436,6 +447,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Only save theme preferences if user is authenticated
     if (!isAuthenticated) {
       return;
+    }
+    
+    // Trigger fade transition
+    if (previousThemeRef.current !== 'custom') {
+      setIsTransitioning(true);
+      previousThemeRef.current = 'custom';
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 300);
     }
     
     setCustomTheme(theme);
@@ -494,7 +514,17 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     >
       <MuiThemeProvider theme={theme}>
         <CssBaseline />
-        {children}
+        <Box
+          sx={{
+            transition: 'background-color 0.15s ease-in-out, color 0.15s ease-in-out',
+            opacity: isTransitioning ? 0.85 : 1,
+            '& *': {
+              transition: 'background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out',
+            },
+          }}
+        >
+          {children}
+        </Box>
       </MuiThemeProvider>
     </ThemeContext.Provider>
   );

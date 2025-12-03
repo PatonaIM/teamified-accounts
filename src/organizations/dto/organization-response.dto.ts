@@ -42,6 +42,13 @@ export class OrganizationResponseDto {
   logoUrl: string | null;
 
   @ApiProperty({ 
+    description: 'Organization website URL',
+    example: 'https://example.com',
+    nullable: true
+  })
+  website: string | null;
+
+  @ApiProperty({ 
     description: 'Organization settings (JSON)',
     example: { theme: 'light', notifications: true }
   })
@@ -83,4 +90,11 @@ export class OrganizationResponseDto {
     required: false
   })
   memberCount?: number;
+
+  @ApiProperty({ 
+    description: 'Indicates if the organization was restored from a soft-deleted state',
+    example: false,
+    required: false
+  })
+  wasRestored?: boolean;
 }

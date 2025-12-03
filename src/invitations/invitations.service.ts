@@ -609,6 +609,80 @@ export class InvitationsService {
       throw new BadRequestException('Organization not found');
     }
 
+    // Check if user already exists with this email
+    let user = await this.userRepository.findOne({
+      where: { email: email.toLowerCase() },
+    });
+
+    // Check if user is already a member of this organization
+    if (user) {
+      const existingMembership = await this.memberRepository.findOne({
+        where: { 
+          organizationId, 
+          userId: user.id,
+        },
+      });
+      
+      if (existingMembership && existingMembership.status !== 'invited') {
+        throw new BadRequestException('User is already a member of this organization');
+      }
+    }
+
+    // Create user account with 'invited' status if they don't exist
+    if (!user) {
+      user = this.userRepository.create({
+        email: email.toLowerCase(),
+        firstName: firstName || 'Invited',
+        lastName: lastName || 'User',
+        passwordHash: null, // No password until they accept the invitation
+        status: 'invited',
+        isActive: false,
+        emailVerified: false,
+      });
+      user = await this.userRepository.save(user);
+      this.logger.log(`Created invited user account for ${email}: ${user.id}`);
+    }
+
+    // Create organization membership with 'invited' status if it doesn't exist
+    let membership = await this.memberRepository.findOne({
+      where: { 
+        organizationId, 
+        userId: user.id,
+      },
+    });
+
+    if (!membership) {
+      membership = this.memberRepository.create({
+        organizationId,
+        userId: user.id,
+        status: 'invited',
+        invitedBy: currentUser.id,
+      });
+      await this.memberRepository.save(membership);
+      this.logger.log(`Created invited membership for user ${user.id} in org ${organizationId}`);
+    }
+
+    // Create UserRole for the invited user
+    const existingRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: user.id,
+        roleType,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      },
+    });
+
+    if (!existingRole) {
+      const userRole = this.userRoleRepository.create({
+        userId: user.id,
+        roleType,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      });
+      await this.userRoleRepository.save(userRole);
+      this.logger.log(`Created role ${roleType} for invited user ${user.id}`);
+    }
+
     let inviteCode: string;
     let attempts = 0;
     const maxAttempts = 5;
@@ -637,6 +711,8 @@ export class InvitationsService {
       organizationId,
       inviteCode,
       invitedBy: currentUser.id,
+      invitedUserId: user.id,
+      email: email.toLowerCase(),
       roleType,
       maxUses: 1,
       currentUses: 0,
@@ -648,7 +724,7 @@ export class InvitationsService {
 
     const inviteLink = `${baseUrl}/invitations/accept/${inviteCode}`;
     
-    await this.emailService.sendOrganizationInvitationEmail(
+    const emailSent = await this.emailService.sendOrganizationInvitationEmail(
       email,
       firstName,
       lastName,
@@ -657,6 +733,13 @@ export class InvitationsService {
       roleType,
       expiresAt,
     );
+
+    if (!emailSent) {
+      this.logger.error(`Failed to send invitation email to ${email}`);
+      throw new BadRequestException(
+        'Invitation created but email could not be sent. Please check the email address or try again later. The invitation link has been generated and can be shared manually.'
+      );
+    }
 
     await this.auditService.log({
       actorUserId: currentUser.id,
@@ -673,6 +756,7 @@ export class InvitationsService {
         inviteCode,
         expiresAt,
         invitationType: 'email',
+        invitedUserId: user.id,
       },
       ip,
       userAgent,
@@ -862,8 +946,8 @@ export class InvitationsService {
       where: { email: email.toLowerCase() },
     });
 
-    // 5. If user exists and is active: throw ConflictException
-    if (user && user.isActive) {
+    // 5. If user exists and is active (not invited status): throw ConflictException
+    if (user && user.isActive && user.status !== 'invited') {
       throw new ConflictException('User already has an account');
     }
 
@@ -878,16 +962,18 @@ export class InvitationsService {
         firstName,
         lastName,
         passwordHash: hashedPassword,
+        status: 'active',
         isActive: true,
         emailVerified: false,
         emailVerificationToken: uuidv4(),
         emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
     } else {
-      // Reactivate inactive user
+      // Activate invited or inactive user
       user.passwordHash = hashedPassword;
       user.firstName = firstName;
       user.lastName = lastName;
+      user.status = 'active';
       user.isActive = true;
       user.emailVerified = false;
       user.emailVerificationToken = uuidv4();
@@ -896,26 +982,49 @@ export class InvitationsService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // 8. Create organization membership
-    const membership = this.memberRepository.create({
-      organizationId: invitation.organizationId,
-      userId: savedUser.id,
-      status: 'active',
-      invitedBy: invitation.invitedBy,
+    // 8. Check for existing membership (may exist with 'invited' status) or create new one
+    let membership = await this.memberRepository.findOne({
+      where: {
+        organizationId: invitation.organizationId,
+        userId: savedUser.id,
+      },
     });
 
-    await this.memberRepository.save(membership);
+    if (membership) {
+      // Update existing membership to active
+      membership.status = 'active';
+      await this.memberRepository.save(membership);
+    } else {
+      // Create new membership
+      membership = this.memberRepository.create({
+        organizationId: invitation.organizationId,
+        userId: savedUser.id,
+        status: 'active',
+        invitedBy: invitation.invitedBy,
+      });
+      await this.memberRepository.save(membership);
+    }
 
-    // 9. Create user role
-    const userRole = this.userRoleRepository.create({
-      userId: savedUser.id,
-      roleType: invitation.roleType,
-      scope: 'organization',
-      scopeEntityId: invitation.organizationId,
-      grantedBy: invitation.invitedBy,
+    // 9. Check for existing user role or create new one
+    let userRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: savedUser.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+      },
     });
 
-    await this.userRoleRepository.save(userRole);
+    if (!userRole) {
+      userRole = this.userRoleRepository.create({
+        userId: savedUser.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+        grantedBy: invitation.invitedBy,
+      });
+      await this.userRoleRepository.save(userRole);
+    }
 
     // 10. Call acceptInvitation to increment usage counter
     await this.acceptInvitation(inviteCode, savedUser.id);

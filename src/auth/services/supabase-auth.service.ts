@@ -9,7 +9,7 @@ import {
 import { SupabaseService } from './supabase.service';
 import { JwtTokenService } from './jwt.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UserRole } from '../../user-roles/entities/user-role.entity';
 import { OAuthClientsService } from '../../oauth-clients/oauth-clients.service';
@@ -148,9 +148,9 @@ export class SupabaseAuthService {
       return user;
     }
 
-    // Try to find by email (existing Portal user)
+    // Try to find by email (existing Portal user, ignore soft-deleted users)
     user = await this.usersRepository.findOne({
-      where: { email },
+      where: { email, deletedAt: IsNull() },
       relations: ['userRoles'],
     });
 
@@ -197,9 +197,9 @@ export class SupabaseAuthService {
       // Handle race condition: another request may have created this user
       // between our check and save operation
       if (error.code === '23505') { // PostgreSQL unique violation error code
-        // User was created by concurrent request, fetch and return it
+        // User was created by concurrent request, fetch and return it (ignore soft-deleted)
         const existingUser = await this.usersRepository.findOne({
-          where: { email },
+          where: { email, deletedAt: IsNull() },
           relations: ['userRoles'],
         });
         

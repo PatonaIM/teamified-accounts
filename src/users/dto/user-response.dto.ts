@@ -52,11 +52,19 @@ export class UserResponseDto {
   profileData?: any | null;
 
   @ApiPropertyOptional({
-    description: 'Profile picture path',
+    description: 'Profile picture URL (Azure Blob Storage)',
+    example: 'https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts/users/user-id/profile_123456789.jpg'
+  })
+  @Expose()
+  @Transform(({ obj }) => obj.profilePictureUrl || obj.profileData?.profilePicture || null)
+  profilePictureUrl?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Profile picture path (legacy, use profilePictureUrl instead)',
     example: '/objects/profile-pictures/user-id/picture.jpg'
   })
   @Expose()
-  @Transform(({ obj }) => obj.profileData?.profilePicture || null)
+  @Transform(({ obj }) => obj.profilePictureUrl || obj.profileData?.profilePicture || null)
   profilePicture?: string | null;
 
   @ApiPropertyOptional({
@@ -147,13 +155,23 @@ export class UserResponseDto {
   })
   @Expose()
   @Transform(({ obj }) => {
-    // Extract organization memberships
+    // Extract organization memberships and match with roles
     if (obj.organizationMembers && Array.isArray(obj.organizationMembers)) {
+      // Build a map of organization-scoped roles from userRoles
+      const orgRolesMap: Record<string, string> = {};
+      if (obj.userRoles && Array.isArray(obj.userRoles)) {
+        obj.userRoles.forEach((ur: any) => {
+          if (ur.scope === 'organization' && ur.scopeEntityId) {
+            orgRolesMap[ur.scopeEntityId] = ur.roleType;
+          }
+        });
+      }
+      
       return obj.organizationMembers.map((om: any) => ({
         organizationId: om.organizationId,
         organizationName: om.organization?.name || 'Unknown',
         organizationSlug: om.organization?.slug || '',
-        roleType: om.roleType || '',
+        roleType: orgRolesMap[om.organizationId] || 'member',
         joinedAt: om.createdAt?.toISOString() || null,
       })).filter((org: any) => org.organizationId);
     }

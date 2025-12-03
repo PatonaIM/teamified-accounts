@@ -82,6 +82,18 @@ export class User {
   @Column({ name: 'theme_preference', length: 20, nullable: true, default: 'light' })
   themePreference: 'light' | 'dark' | null;
 
+  @Column({ name: 'profile_picture_url', type: 'text', nullable: true })
+  profilePictureUrl: string | null;
+
+  @Column({ name: 'must_change_password', default: false })
+  mustChangePassword: boolean;
+
+  @Column({ name: 'password_changed_by_admin_at', type: 'timestamptz', nullable: true })
+  passwordChangedByAdminAt: Date | null;
+
+  @Column({ name: 'password_changed_by_admin_id', type: 'uuid', nullable: true })
+  passwordChangedByAdminId: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
@@ -90,6 +102,15 @@ export class User {
 
   @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt: Date | null;
+
+  @Column({ name: 'deleted_email', nullable: true })
+  deletedEmail: string | null;
+
+  @Column({ name: 'deleted_by', type: 'uuid', nullable: true })
+  deletedBy: string | null;
+
+  @Column({ name: 'deleted_reason', nullable: true })
+  deletedReason: string | null;
 
   // Relations
   @OneToMany('UserRole', 'user')

@@ -11,6 +11,8 @@ import { ApiKey } from '../api-keys/entities/api-key.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { UserAppPermission } from '../user-app-permissions/entities/user-app-permission.entity';
+import { UserOAuthLogin } from '../sso/entities/user-oauth-login.entity';
+import { UserAppActivity } from '../sso/entities/user-app-activity.entity';
 
 export const databaseConfig = (configService: ConfigService): TypeOrmModuleOptions => {
   const postgresUrl = configService.get('POSTGRES_URL') || configService.get('DATABASE_URL');
@@ -39,6 +41,8 @@ export const databaseConfig = (configService: ConfigService): TypeOrmModuleOptio
     Organization,
     OrganizationMember,
     UserAppPermission,
+    UserOAuthLogin,
+    UserAppActivity,
   ],
   synchronize: false, // Use SQL scripts instead of migrations
   logging: configService.get('NODE_ENV') === 'development',

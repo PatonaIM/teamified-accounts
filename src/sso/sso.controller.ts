@@ -10,6 +10,8 @@ import {
   UseGuards,
   HttpStatus,
   HttpCode,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
@@ -17,6 +19,7 @@ import { Throttle } from '@nestjs/throttler';
 import { SsoService } from './sso.service';
 import { AuthorizeDto } from './dto/authorize.dto';
 import { TokenExchangeDto } from './dto/token.dto';
+import { RecordActivityDto } from './dto/user-activity.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 @Controller('v1/sso')
@@ -186,5 +189,74 @@ export class SsoController {
     });
     
     return res.json({ message: 'Session cleared successfully' });
+  }
+
+  /**
+   * Record User Activity
+   * POST /api/v1/sso/user-activity
+   * 
+   * OAuth clients use this endpoint to record user activity within their application.
+   * This allows tracking which features users access in connected apps.
+   * 
+   * Authentication: Bearer token (JWT from SSO login) OR client_id + client_secret
+   * Body: { action, feature?, description?, metadata? }
+   */
+  @Post('user-activity')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 100, ttl: 60000 } }) // 100 requests per minute
+  async recordUserActivity(
+    @Body() activityDto: RecordActivityDto,
+    @Headers('authorization') authHeader: string,
+    @Headers('x-client-id') clientIdHeader: string,
+    @Headers('x-client-secret') clientSecretHeader: string,
+  ) {
+    let userId: string;
+    let oauthClientId: string;
+
+    // Method 1: Bearer token (JWT from SSO login) + client_id header
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const payload = this.jwtService.verify(token);
+        userId = payload.sub;
+        
+        // Require client_id header when using Bearer token
+        if (!clientIdHeader) {
+          throw new UnauthorizedException('x-client-id header required with Bearer token');
+        }
+        
+        // Verify client exists and is active
+        const client = await this.ssoService.getOAuthClientByClientId(clientIdHeader);
+        if (!client || !client.is_active) {
+          throw new UnauthorizedException('Invalid or inactive client_id');
+        }
+        oauthClientId = client.id;
+      } catch (error) {
+        if (error instanceof UnauthorizedException) {
+          throw error;
+        }
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+    }
+    // Method 2: client_id + client_secret headers (for backend-to-backend calls)
+    else if (clientIdHeader && clientSecretHeader) {
+      // Use the existing validateClient method for proper credential validation
+      const client = await this.ssoService.validateClientCredentials(clientIdHeader, clientSecretHeader);
+      if (!client) {
+        throw new UnauthorizedException('Invalid client credentials');
+      }
+      
+      // For backend calls, userId must be in the body metadata
+      if (!activityDto.metadata?.userId) {
+        throw new UnauthorizedException('userId required in metadata for backend calls');
+      }
+      userId = activityDto.metadata.userId;
+      oauthClientId = client.id;
+    }
+    else {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    return this.ssoService.recordUserActivity(userId, oauthClientId, activityDto);
   }
 }

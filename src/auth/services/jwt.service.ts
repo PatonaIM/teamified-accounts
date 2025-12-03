@@ -11,6 +11,7 @@ export interface JwtPayload {
   roles: string[];
   clientId?: string;
   clientName?: string;
+  mustChangePassword?: boolean;
   iat: number;
   exp: number;
   jti: string;
@@ -38,6 +39,7 @@ export class JwtTokenService {
       email: user.email,
       roles: userRoles.length > 0 ? userRoles : ['client_employee'], // Use actual roles or default to client_employee
       ...(clientName && { clientName }), // Include clientName for multi-organization apps
+      ...(user.mustChangePassword && { mustChangePassword: true }), // Include forced password change flag
       jti: crypto.randomUUID(),
     };
 

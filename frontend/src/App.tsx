@@ -6,6 +6,7 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import LoginPageMUI from './pages/LoginPageMUI';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
 import SignupPathSelectionPage from './pages/SignupPathSelectionPage';
@@ -15,10 +16,22 @@ import InvitationPreviewPage from './pages/InvitationPreviewPage';
 import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
 import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
 import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
-import DocsPage from './pages/DocsPage';
+import DocsLayout from './components/docs/DocsLayout';
+import OverviewPage from './pages/docs/product/OverviewPage';
+import SsoProductPage from './pages/docs/product/SsoPage';
+import RolesPage from './pages/docs/product/RolesPage';
+import PasswordResetPage from './pages/docs/product/PasswordResetPage';
+import UseCasesPage from './pages/docs/product/UseCasesPage';
+import QuickstartPage from './pages/docs/developer/QuickstartPage';
+import OAuthPage from './pages/docs/developer/OAuthPage';
+import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
+import PasswordResetApiPage from './pages/docs/developer/PasswordResetApiPage';
+import TestAccountsPage from './pages/docs/developer/TestAccountsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
 import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
+import ReleaseNotesIndexPage from './pages/docs/release-notes/ReleaseNotesIndexPage';
+import ReleaseNote_2025_12_02 from './pages/docs/ReleaseNote_2025_12_02';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -34,6 +47,7 @@ import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
 import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
+import CandidateUsersPage from './pages/account/CandidateUsersPage';
 import './App.css';
 
 function App() {
@@ -59,6 +73,14 @@ function App() {
                 <Route 
                   path="/reset-password" 
                   element={<ResetPasswordPage />} 
+                />
+                <Route 
+                  path="/force-change-password" 
+                  element={
+                    <ProtectedRoute>
+                      <ForceChangePasswordPage />
+                    </ProtectedRoute>
+                  } 
                 />
                 <Route 
                   path="/verify-email" 
@@ -138,6 +160,14 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="tools/candidate-users" 
+                    element={
+                      <SuperAdminRoute>
+                        <CandidateUsersPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
                     path="audit-logs" 
                     element={
                       <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
@@ -171,22 +201,30 @@ function App() {
                   />
                 </Route>
                 <Route path="/test" element={<IntegratedTestSuite />} />
-                <Route 
-                  path="/docs" 
-                  element={<DocsPage />} 
-                />
-                <Route 
-                  path="/docs/sso-integration" 
-                  element={<SsoIntegrationPage />} 
-                />
-                <Route 
-                  path="/docs/multi-organization" 
-                  element={<MultiOrganizationIntegrationPage />} 
-                />
-                <Route 
-                  path="/docs/deep-linking-guide" 
-                  element={<DeepLinkingGuidePage />} 
-                />
+                
+                {/* Documentation with sidebar layout */}
+                <Route path="/docs" element={<DocsLayout />}>
+                  <Route index element={<Navigate to="/docs/product/overview" replace />} />
+                  {/* Product Guide */}
+                  <Route path="product/overview" element={<OverviewPage />} />
+                  <Route path="product/sso" element={<SsoProductPage />} />
+                  <Route path="product/roles" element={<RolesPage />} />
+                  <Route path="product/password-reset" element={<PasswordResetPage />} />
+                  <Route path="product/use-cases" element={<UseCasesPage />} />
+                  {/* Developer Guide */}
+                  <Route path="developer/quickstart" element={<QuickstartPage />} />
+                  <Route path="developer/oauth" element={<OAuthPage />} />
+                  <Route path="developer/user-management" element={<UserManagementApiPage />} />
+                  <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
+                  <Route path="developer/test-accounts" element={<TestAccountsPage />} />
+                  <Route path="sso-integration" element={<SsoIntegrationPage />} />
+                  <Route path="multi-organization" element={<MultiOrganizationIntegrationPage />} />
+                  <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
+                  {/* Release Notes */}
+                  <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/2025-12-02" element={<ReleaseNote_2025_12_02 />} />
+                </Route>
+                
                 <Route path="/" element={<SessionAwareRedirect />} />
                 <Route path="*" element={<SessionAwareRedirect />} />
               </Routes>

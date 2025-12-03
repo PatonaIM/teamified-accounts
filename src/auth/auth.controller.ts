@@ -4,6 +4,7 @@ import {
   Get,
   Put,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   Request,
@@ -17,6 +18,7 @@ import {
   ApiResponse, 
   ApiBearerAuth, 
   ApiBody,
+  ApiQuery,
   ApiSecurity,
   ApiHeader,
   ApiConsumes,
@@ -42,6 +44,9 @@ import {
 import { ClientAdminSignupDto, ClientAdminSignupResponseDto } from './dto/client-admin-signup.dto';
 import { CandidateSignupDto, CandidateSignupResponseDto } from './dto/candidate-signup.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { MustChangePasswordGuard, SkipPasswordChangeCheck } from '../common/guards/must-change-password.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { ErrorResponseDto, ValidationErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
 import { ApiResponseDto, CreatedResponseDto, UpdatedResponseDto } from '../common/dto/api-response.dto';
 
@@ -556,6 +561,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @ApiOperation({
     summary: 'Get current user profile',
     description: `
@@ -601,6 +607,7 @@ export class AuthController {
 
   @Get('me/completion-status')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @ApiOperation({
     summary: 'Get profile completion status',
     description: `
@@ -646,6 +653,7 @@ export class AuthController {
 
   @Get('me/profile')
   @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
   @ApiOperation({
     summary: 'Get user profile data',
     description: `
@@ -741,7 +749,19 @@ export class AuthController {
   }
 
   @Post('admin/send-password-reset')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    'super_admin',
+    'internal_hr',
+    'internal_finance',
+    'internal_account_manager',
+    'internal_recruiter',
+    'internal_marketing',
+    'client_admin',
+    'client_hr',
+    'client_finance',
+    'client_recruiter'
+  )
   @Throttle({ default: { limit: 10, ttl: 300000 } })
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -750,6 +770,11 @@ export class AuthController {
     description: `
       Admin endpoint to send a password reset email on behalf of a user.
       This endpoint requires authentication and logs which admin initiated the reset.
+      
+      ## Authorized Roles:
+      - super_admin
+      - All internal roles except internal_member
+      - All client roles except client_employee
       
       ## Process Flow:
       1. Admin provides user ID
@@ -776,10 +801,123 @@ export class AuthController {
   ): Promise<{ message: string }> {
     return this.authService.adminSendPasswordReset(
       body.userId,
-      req.user.id,
+      req.user.sub,
       req.ip,
       req.get('user-agent'),
     );
+  }
+
+  @Post('admin/set-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'internal_account_manager', 'internal_hr')
+  @Throttle({ default: { limit: 10, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Admin: Set password directly for a user',
+    description: `
+      Admin endpoint to directly set a user's password without requiring a reset token.
+      This endpoint requires authentication and logs which admin initiated the password change.
+      
+      ## Authorized Roles:
+      - super_admin
+      - internal_account_manager
+      - internal_hr
+      
+      **Note:** This is a restricted operation. The admin must securely communicate the 
+      new password to the user. The user will be required to change it on first login.
+      
+      ## Process Flow:
+      1. Admin provides user ID and new password
+      2. System validates admin permissions
+      3. Password is validated against security policy
+      4. Password is updated and all user sessions are invalidated
+      5. User's mustChangePassword flag is set to true
+      6. Action is logged with admin as the actor
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password set successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Password does not meet requirements',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async adminSetPassword(
+    @Body() body: { userId: string; password: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    return this.authService.adminSetPassword(
+      body.userId,
+      body.password,
+      req.user.sub,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Get('validate-reset-token')
+  @Throttle({ default: { limit: 20, ttl: 300000 } })
+  @ApiOperation({
+    summary: 'Validate password reset token and get user info',
+    description: `
+      Validates a password reset token and returns the associated user's basic information.
+      This endpoint is used by the reset password page to show the user's name and profile picture
+      before they enter their new password, confirming which account is being reset.
+      
+      ## Response:
+      - valid: boolean indicating if the token is valid and not expired
+      - user: object containing firstName, lastName, email, and profilePictureUrl (if valid)
+      - expiresAt: token expiration timestamp (if valid)
+    `,
+  })
+  @ApiQuery({
+    name: 'token',
+    required: true,
+    description: 'The password reset token from the email link',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token validation result with user info if valid',
+    schema: {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean' },
+        user: {
+          type: 'object',
+          properties: {
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            email: { type: 'string' },
+            profilePictureUrl: { type: 'string', nullable: true },
+          },
+        },
+        expiresAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  async validateResetToken(
+    @Query('token') token: string,
+  ): Promise<{
+    valid: boolean;
+    user?: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      profilePictureUrl: string | null;
+    };
+    expiresAt?: Date;
+  }> {
+    return this.authService.validateResetToken(token);
   }
 
   @Post('reset-password')
@@ -799,7 +937,7 @@ export class AuthController {
       
       ## Security Features:
       - Rate limited to 5 attempts per 5 minutes
-      - Token expires after 1 hour
+      - Token expires after 24 hours
       - Password must meet security requirements
       - All existing sessions are invalidated after reset
       - All attempts are logged for security monitoring
@@ -985,6 +1123,73 @@ export class AuthController {
   ): Promise<CandidateSignupResponseDto> {
     return this.authService.candidateSignup(
       signupDto,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Post('force-change-password')
+  @UseGuards(JwtAuthGuard)
+  @SkipPasswordChangeCheck()
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Force change password after admin reset',
+    description: `
+      Change password when user is required to do so after admin password reset.
+      
+      ## Process Flow:
+      1. Verify user is logged in and has mustChangePassword flag set
+      2. Validate new password meets security requirements
+      3. Update password and clear the mustChangePassword flag
+      4. Issue new tokens with mustChangePassword=false
+      5. User can now access the application normally
+      
+      ## Security Features:
+      - Rate limited to 5 attempts per 5 minutes
+      - Requires valid JWT token
+      - Password must meet complexity requirements
+      - All password changes are logged for audit
+      - New tokens issued after successful password change
+      
+      ## Use Cases:
+      - Users whose password was reset by admin
+      - First login after admin-initiated password reset
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/reset-password.dto').ForceChangePasswordDto,
+    description: 'New password and confirmation',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully. New tokens returned.',
+    type: () => require('./dto/reset-password.dto').ForceChangePasswordResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid input, passwords do not match, or password change not required',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    type: AuthErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async forceChangePassword(
+    @Body() forceChangePasswordDto: { newPassword: string; confirmPassword: string },
+    @Request() req: any,
+  ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
+    return this.authService.forceChangePassword(
+      req.user.sub,
+      forceChangePasswordDto.newPassword,
+      forceChangePasswordDto.confirmPassword,
       req.ip,
       req.get('user-agent'),
     );

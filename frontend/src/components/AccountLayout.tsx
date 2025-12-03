@@ -136,7 +136,9 @@ const AccountLayout: React.FC = () => {
         <Box sx={{ overflow: 'auto', mt: 2, flexGrow: 1 }}>
           <List>
             {filteredNavItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = item.path.startsWith('/admin')
+                ? location.pathname.startsWith('/admin')
+                : location.pathname === item.path;
               return (
                 <ListItem key={item.path} disablePadding>
                   <ListItemButton
