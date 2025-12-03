@@ -63,9 +63,7 @@ function generateOAuthUrl(config: AppConfig): string {
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
-    response_type: 'code',
     state: state,
-    scope: 'openid profile email',
   });
   
   return `${baseUrl}/api/v1/sso/authorize?${params.toString()}`;
