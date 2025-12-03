@@ -20,6 +20,7 @@ import DocsPage from './pages/DocsPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
 import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
+import ReleaseNote_2025_12_02 from './pages/docs/ReleaseNote_2025_12_02';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -204,6 +205,10 @@ function App() {
                 <Route 
                   path="/docs/deep-linking-guide" 
                   element={<DeepLinkingGuidePage />} 
+                />
+                <Route 
+                  path="/docs/release-notes/2025-12-02" 
+                  element={<ReleaseNote_2025_12_02 />} 
                 />
                 <Route path="/" element={<SessionAwareRedirect />} />
                 <Route path="*" element={<SessionAwareRedirect />} />

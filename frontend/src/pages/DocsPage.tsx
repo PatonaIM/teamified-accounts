@@ -30,7 +30,11 @@ import {
   VpnKey,
   IntegrationInstructions,
   Api,
+  NewReleases,
+  CalendarMonth,
+  ArrowForward,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -55,9 +59,20 @@ function TabPanel(props: TabPanelProps) {
 
 export default function DocsPage() {
   const [tabValue, setTabValue] = useState(0);
+  const navigate = useNavigate();
 
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const swaggerUrl = `${apiUrl}/api/docs`;
+
+  const releaseNotes = [
+    {
+      version: '1.0.0',
+      date: 'December 2, 2025',
+      title: 'Teamified Accounts - Patch Notes',
+      summary: 'Profile pictures support, organization creation improvements, and bug fixes for My Profile, Organization Management, and Candidate Management.',
+      path: '/docs/release-notes/2025-12-02',
+    },
+  ];
 
   return (
     <Box sx={{ p: 4, maxWidth: 1400, mx: 'auto' }}>
@@ -72,6 +87,7 @@ export default function DocsPage() {
         <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tab icon={<Business />} iconPosition="start" label="Product Guide" />
           <Tab icon={<Code />} iconPosition="start" label="Developer Guide" />
+          <Tab icon={<NewReleases />} iconPosition="start" label="Release Notes" />
         </Tabs>
 
         {/* PRODUCT GUIDE */}
@@ -1606,6 +1622,82 @@ Example Error Response (400 Bad Request):
                 </Paper>
               </Stack>
             </Box>
+          </Stack>
+        </TabPanel>
+
+        {/* RELEASE NOTES */}
+        <TabPanel value={tabValue} index={2}>
+          <Stack spacing={4} sx={{ px: 3 }}>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <NewReleases color="primary" />
+                Release Notes
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Stay updated with the latest features, improvements, and bug fixes for Teamified Accounts. 
+                Each release note provides detailed information about changes made to the platform.
+              </Typography>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                All Releases
+              </Typography>
+              
+              <Stack spacing={2}>
+                {releaseNotes.map((release, index) => (
+                  <Paper 
+                    key={index}
+                    sx={{ 
+                      p: 3, 
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        transform: 'translateX(4px)',
+                      },
+                    }}
+                    onClick={() => navigate(release.path)}
+                  >
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Stack spacing={1} sx={{ flex: 1 }}>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                          <Chip 
+                            label={`v${release.version}`} 
+                            color="primary" 
+                            size="small" 
+                            sx={{ fontWeight: 600 }}
+                          />
+                          <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <CalendarMonth fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                              {release.date}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {release.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {release.summary}
+                        </Typography>
+                      </Stack>
+                      <ArrowForward color="action" sx={{ ml: 2, mt: 0.5 }} />
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Box>
+
+            {releaseNotes.length === 0 && (
+              <Alert severity="info">
+                <Typography variant="body2">
+                  No release notes available yet. Check back soon for updates!
+                </Typography>
+              </Alert>
+            )}
           </Stack>
         </TabPanel>
       </Paper>
