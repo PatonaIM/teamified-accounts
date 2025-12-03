@@ -357,7 +357,7 @@ const OAuthConfigurationPage: React.FC = () => {
               px: 3,
             }}
           >
-            Register New Client
+            New Client
           </Button>
         </Box>
       </Paper>
