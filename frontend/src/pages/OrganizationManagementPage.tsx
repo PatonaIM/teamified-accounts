@@ -1017,11 +1017,12 @@ const OrganizationManagementPage: React.FC = () => {
                     </Avatar>
                     <ListItemText
                       primary={
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {org.name}
                         </Typography>
                       }
                       secondary={`${org.memberCount || 0} users`}
+                      secondaryTypographyProps={{ variant: 'caption' }}
                     />
                     {(org.memberCount === 0 || org.memberCount === undefined) ? (
                       <Chip

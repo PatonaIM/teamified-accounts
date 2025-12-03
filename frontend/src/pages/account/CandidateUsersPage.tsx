@@ -658,8 +658,9 @@ export default function CandidateUsersPage() {
                     <ListItemText
                       primary={`${candidate.firstName} ${candidate.lastName}`}
                       secondary={candidate.email}
-                      primaryTypographyProps={{ fontWeight: 600 }}
+                      primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                       secondaryTypographyProps={{
+                        variant: 'caption',
                         sx: {
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
