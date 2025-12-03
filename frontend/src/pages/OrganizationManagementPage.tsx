@@ -1176,11 +1176,11 @@ const OrganizationManagementPage: React.FC = () => {
                     <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
                       {selectedOrg.name}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Chip label={selectedOrg.slug} size="small" />
-                      <Chip label={`${selectedOrg.memberCount || 0} users`} size="small" variant="outlined" />
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Chip label={selectedOrg.slug} size="small" sx={{ height: 24 }} />
+                      <Chip label={`${selectedOrg.memberCount || 0} users`} size="small" variant="outlined" sx={{ height: 24 }} />
                       {selectedOrg.subscriptionTier && (
-                        <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                           {selectedOrg.subscriptionTier?.toLowerCase() === 'enterprise' && (
                             <Box
                               sx={{
@@ -1189,6 +1189,7 @@ const OrganizationManagementPage: React.FC = () => {
                                 right: -4,
                                 fontSize: '12px',
                                 animation: 'sparkle 1.5s ease-in-out infinite',
+                                zIndex: 1,
                                 '@keyframes sparkle': {
                                   '0%, 100%': { opacity: 0, transform: 'scale(0.5)' },
                                   '50%': { opacity: 1, transform: 'scale(1)' },
@@ -1203,6 +1204,7 @@ const OrganizationManagementPage: React.FC = () => {
                             size="small" 
                             color={selectedOrg.subscriptionTier?.toLowerCase() === 'professional' ? undefined : getSubscriptionColor(selectedOrg.subscriptionTier)}
                             sx={{
+                              height: 24,
                               fontWeight: 600,
                               textTransform: 'capitalize',
                               ...(selectedOrg.subscriptionTier?.toLowerCase() === 'professional' && {
