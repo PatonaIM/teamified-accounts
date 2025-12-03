@@ -783,7 +783,7 @@ export default function IntegratedTestSuite() {
         autoHideDuration={2000}
         onClose={() => setCopySuccess(false)}
         message="Token copied to clipboard!"
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       />
     </Box>
   );

@@ -295,7 +295,7 @@ export const ProfileTabsManager: React.FC<ProfileTabsManagerProps> = ({
           open={!!saveStatus}
           autoHideDuration={3000}
           onClose={() => setSaveStatus(null)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
           <Alert
             onClose={() => setSaveStatus(null)}

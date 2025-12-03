@@ -835,7 +835,7 @@ const OAuthConfigurationPage: React.FC = () => {
         open={!!success}
         autoHideDuration={3000}
         onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert severity="success" onClose={() => setSuccess(null)}>
           {success}
