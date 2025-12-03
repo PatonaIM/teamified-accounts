@@ -771,53 +771,6 @@ export default function UserDetailPage() {
             <Stack spacing={4}>
               <Paper variant="outlined" sx={{ p: 3 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                  <Login fontSize="small" color="primary" />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Login History
-                  </Typography>
-                </Stack>
-                
-                {activity?.loginHistory && activity.loginHistory.length > 0 ? (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Device</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>IP Address</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {activity.loginHistory.slice(0, 10).map((login, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
-                            </TableCell>
-                            <TableCell>
-                              <Stack direction="row" alignItems="center" spacing={1}>
-                                <Devices fontSize="small" color="action" />
-                                <Typography variant="body2">{getDeviceIcon(login.userAgent)}</Typography>
-                              </Stack>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                {login.ip}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No login history available in this time range. Last login: {formatLastLogin(user.lastLoginAt)}
-                  </Typography>
-                )}
-              </Paper>
-
-              <Paper variant="outlined" sx={{ p: 3 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                   <Apps fontSize="small" color="primary" />
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                     Connected Applications
@@ -1067,6 +1020,53 @@ export default function UserDetailPage() {
                   </Stack>
                 </Paper>
               )}
+
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <Login fontSize="small" color="primary" />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Login History
+                  </Typography>
+                </Stack>
+                
+                {activity?.loginHistory && activity.loginHistory.length > 0 ? (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Device</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>IP Address</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {activity.loginHistory.slice(0, 10).map((login, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
+                            </TableCell>
+                            <TableCell>
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Devices fontSize="small" color="action" />
+                                <Typography variant="body2">{getDeviceIcon(login.userAgent)}</Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                {login.ip}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No login history available in this time range. Last login: {formatLastLogin(user.lastLoginAt)}
+                  </Typography>
+                )}
+              </Paper>
             </Stack>
           </Box>
         );
