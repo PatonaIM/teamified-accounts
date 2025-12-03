@@ -19,7 +19,8 @@ import {
   ExpandMore,
   MenuBook,
 } from '@mui/icons-material';
-import { docsNavConfig, NavSection } from '../../pages/docs/navConfig';
+import { docsNavConfig } from '../../pages/docs/navConfig';
+import type { NavSection } from '../../pages/docs/navConfig';
 
 const iconMap: Record<string, React.ReactNode> = {
   Business: <Business />,
