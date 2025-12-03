@@ -28,7 +28,9 @@ import {
   Block,
   TableChart,
   VpnKey,
+  Apps,
 } from '@mui/icons-material';
+import myAppsScreenshot from '@assets/image_1764774888284.png';
 import { useNavigate } from 'react-router-dom';
 
 export default function ReleaseNote_v102() {
@@ -606,6 +608,142 @@ export default function ReleaseNote_v102() {
                 <Typography variant="body2">
                   <strong>Note:</strong> Candidate users can have three statuses: Invited, Active, or Suspended. 
                   The 'Suspended' filter is also available in the Organization Users tab for filtering suspended members.
+                </Typography>
+              </Alert>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
+              4. My Apps Dropdown
+            </Typography>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              A new Google Workspace-style app launcher in the sidebar that provides quick access to all 
+              connected applications with seamless single sign-on authentication.
+            </Typography>
+
+            <Box sx={{ ml: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                <Apps color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  App Launcher Interface
+                </Typography>
+              </Stack>
+              <Typography variant="body1" paragraph>
+                Click "My Apps" in the sidebar to reveal a dropdown grid showing all applications you have access to, 
+                based on your assigned roles.
+              </Typography>
+              
+              <Box sx={{ my: 3, textAlign: 'center' }}>
+                <Box
+                  component="img"
+                  src={myAppsScreenshot}
+                  alt="My Apps Dropdown showing available applications"
+                  sx={{
+                    maxWidth: '100%',
+                    borderRadius: 2,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  My Apps dropdown with role-based application access
+                </Typography>
+              </Box>
+              
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Grid Layout"
+                      secondary="Applications displayed in a clean 3-column grid with icons and labels"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Role-Based Access"
+                      secondary="Only shows applications you have permission to access based on your roles"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Seamless SSO"
+                      secondary="Click any app to open it in a new tab with automatic single sign-on authentication"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Toggle Behavior"
+                      secondary="Click 'My Apps' to open the dropdown, click again to close it"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Exclusive Selection"
+                      secondary="When the dropdown is open, only 'My Apps' is highlighted in the sidebar"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Available Applications:
+              </Typography>
+              <Paper sx={{ p: 2, bgcolor: 'background.default', mb: 3 }}>
+                <List dense>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Alexia AI"
+                      secondary="AI-powered assistant for productivity (internal roles only)"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Team Connect"
+                      secondary="Connect with your team and collaborate"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="HRIS Portal"
+                      secondary="HR information system for employee management"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="Jobseeker Portal"
+                      secondary="Search and apply for job opportunities"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemText 
+                      primary="ATS Portal"
+                      secondary="Manage job postings and track applicants"
+                    />
+                  </ListItem>
+                </List>
+              </Paper>
+
+              <Alert severity="info">
+                <Typography variant="body2">
+                  <strong>Note:</strong> Applications are automatically filtered based on your user roles. 
+                  You will only see apps that you have been granted access to by your organization.
                 </Typography>
               </Alert>
             </Box>
