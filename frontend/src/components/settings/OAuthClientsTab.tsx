@@ -26,14 +26,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Switch,
 } from '@mui/material';
 import {
   Add,
   Edit,
   Delete,
   Refresh,
-  ToggleOn,
-  ToggleOff,
   ContentCopy,
   Info,
   Code,
@@ -51,6 +50,7 @@ const OAuthClientsTab: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [togglingClient, setTogglingClient] = useState<string | null>(null);
   const { showSnackbar } = useSnackbar();
 
   const loadClients = async () => {
@@ -103,26 +103,15 @@ const OAuthClientsTab: React.FC = () => {
   };
 
   const handleToggleActive = async (client: OAuthClient) => {
+    setTogglingClient(client.id);
     try {
       await oauthClientsService.toggleActive(client.id);
       showSnackbar(`OAuth client ${client.is_active ? 'deactivated' : 'activated'}`, 'success');
       loadClients();
     } catch (error) {
       showSnackbar('Failed to toggle client status', 'error');
-    }
-  };
-
-  const handleRegenerateSecret = async (client: OAuthClient) => {
-    if (!confirm(`Regenerate secret for "${client.name}"? This will invalidate the current secret and apps using it will stop working until updated.`)) {
-      return;
-    }
-
-    try {
-      const updated = await oauthClientsService.regenerateSecret(client.id);
-      showSnackbar('Secret regenerated successfully. Copy it now!', 'warning');
-      setClients(clients.map(c => c.id === updated.id ? updated : c));
-    } catch (error) {
-      showSnackbar('Failed to regenerate secret', 'error');
+    } finally {
+      setTogglingClient(null);
     }
   };
 
@@ -304,11 +293,28 @@ const OAuthClientsTab: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={client.is_active ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={client.is_active ? 'success' : 'default'}
-                    />
+                    <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
+                      <Switch
+                        checked={client.is_active}
+                        onChange={() => handleToggleActive(client)}
+                        disabled={togglingClient === client.id}
+                        size="small"
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase': {
+                            color: '#9e9e9e',
+                          },
+                          '& .MuiSwitch-track': {
+                            backgroundColor: '#bdbdbd',
+                          },
+                        }}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
@@ -317,30 +323,12 @@ const OAuthClientsTab: React.FC = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Tooltip title={client.is_active ? 'Deactivate' : 'Activate'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleActive(client)}
-                          color={client.is_active ? 'success' : 'default'}
-                        >
-                          {client.is_active ? <ToggleOn /> : <ToggleOff />}
-                        </IconButton>
-                      </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
                           onClick={() => handleEditClient(client)}
                         >
                           <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Regenerate Secret">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRegenerateSecret(client)}
-                          color="warning"
-                        >
-                          <Refresh fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">

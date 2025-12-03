@@ -30,6 +30,7 @@ import {
   MenuItem,
   Alert,
   Snackbar,
+  Switch,
 } from '@mui/material';
 import {
   Search,
@@ -37,11 +38,7 @@ import {
   Delete,
   Edit,
   ArrowBack,
-  Refresh,
-  PowerSettingsNew,
   ContentCopy,
-  Visibility,
-  VisibilityOff,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -58,16 +55,14 @@ const OAuthConfigurationPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [environmentFilter, setEnvironmentFilter] = useState<'all' | 'development' | 'staging' | 'production'>('all');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [showSecretDialog, setShowSecretDialog] = useState(false);
-  const [newSecret, setNewSecret] = useState<string>('');
-  const [showSecret, setShowSecret] = useState(false);
+  const [togglingClient, setTogglingClient] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<CreateOAuthClientDto>({
@@ -85,7 +80,7 @@ const OAuthConfigurationPage: React.FC = () => {
   // Reset pagination when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, environmentFilter]);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -218,6 +213,7 @@ const OAuthConfigurationPage: React.FC = () => {
   };
 
   const handleToggleActive = async (client: OAuthClient) => {
+    setTogglingClient(client.id);
     try {
       await oauthClientsService.toggleActive(client.id);
       setSuccess(`OAuth client ${client.is_active ? 'deactivated' : 'activated'} successfully!`);
@@ -225,18 +221,8 @@ const OAuthConfigurationPage: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to toggle OAuth client status';
       setError(errorMessage);
-    }
-  };
-
-  const handleRegenerateSecret = async (client: OAuthClient) => {
-    try {
-      const updated = await oauthClientsService.regenerateSecret(client.id);
-      setNewSecret(updated.client_secret);
-      setShowSecretDialog(true);
-      await fetchClients();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to regenerate client secret';
-      setError(errorMessage);
+    } finally {
+      setTogglingClient(null);
     }
   };
 
@@ -251,11 +237,10 @@ const OAuthConfigurationPage: React.FC = () => {
       client.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       client.client_id.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && client.is_active) ||
-      (statusFilter === 'inactive' && !client.is_active);
+    const matchesEnvironment = environmentFilter === 'all' || 
+      client.metadata?.environment === environmentFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesEnvironment;
   });
 
   const paginatedClients = filteredClients.slice(
@@ -313,15 +298,16 @@ const OAuthConfigurationPage: React.FC = () => {
             }}
           />
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
+            <InputLabel>Environment</InputLabel>
             <Select
-              value={statusFilter}
-              label="Status"
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              value={environmentFilter}
+              label="Environment"
+              onChange={(e) => setEnvironmentFilter(e.target.value as any)}
             >
               <MenuItem value="all">All</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
+              <MenuItem value="development">Development</MenuItem>
+              <MenuItem value="staging">Staging</MenuItem>
+              <MenuItem value="production">Production</MenuItem>
             </Select>
           </FormControl>
         </Stack>
@@ -357,7 +343,7 @@ const OAuthConfigurationPage: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                   <Typography color="text.secondary">
-                    {searchQuery || statusFilter !== 'all'
+                    {searchQuery || environmentFilter !== 'all'
                       ? 'No OAuth clients found matching your filters'
                       : 'No OAuth clients registered yet'}
                   </Typography>
@@ -399,11 +385,28 @@ const OAuthConfigurationPage: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={client.is_active ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={client.is_active ? 'success' : 'default'}
-                    />
+                    <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
+                      <Switch
+                        checked={client.is_active}
+                        onChange={() => handleToggleActive(client)}
+                        disabled={togglingClient === client.id}
+                        size="small"
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase': {
+                            color: '#9e9e9e',
+                          },
+                          '& .MuiSwitch-track': {
+                            backgroundColor: '#bdbdbd',
+                          },
+                        }}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
@@ -420,24 +423,6 @@ const OAuthConfigurationPage: React.FC = () => {
                       <Tooltip title="Edit">
                         <IconButton size="small" onClick={() => handleOpenDrawer(client)}>
                           <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={client.is_active ? 'Deactivate' : 'Activate'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleActive(client)}
-                          color={client.is_active ? 'warning' : 'success'}
-                        >
-                          <PowerSettingsNew fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Regenerate Secret">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRegenerateSecret(client)}
-                          color="info"
-                        >
-                          <Refresh fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
@@ -593,51 +578,6 @@ const OAuthConfigurationPage: React.FC = () => {
           <Button onClick={handleConfirmDelete} color="error" disabled={deleting}>
             {deleting ? 'Deleting...' : 'Delete'}
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Secret Display Dialog */}
-      <Dialog open={showSecretDialog} onClose={() => setShowSecretDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>New Client Secret Generated</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Save this secret now! You won't be able to see it again.
-          </Alert>
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Client Secret
-              </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                <TextField
-                  value={newSecret}
-                  type={showSecret ? 'text' : 'password'}
-                  fullWidth
-                  InputProps={{
-                    readOnly: true,
-                    sx: { fontFamily: 'monospace', fontSize: '0.875rem' },
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowSecret(!showSecret)}
-                          edge="end"
-                          size="small"
-                        >
-                          {showSecret ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <IconButton onClick={() => handleCopyToClipboard(newSecret)}>
-                  <ContentCopy />
-                </IconButton>
-              </Stack>
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowSecretDialog(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 
