@@ -377,20 +377,19 @@ const OAuthConfigurationPage: React.FC = () => {
               <TableCell sx={{ fontWeight: 600 }}>Environment</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Redirect URIs</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : paginatedClients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                   <Typography color="text.secondary">
                     {searchQuery || environmentFilter !== 'all'
                       ? 'No OAuth clients found matching your filters'
@@ -466,11 +465,6 @@ const OAuthConfigurationPage: React.FC = () => {
                   <TableCell>
                     <Typography variant="body2">
                       {client.redirect_uris.length} URI{client.redirect_uris.length !== 1 ? 's' : ''}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {formatDistanceToNow(new Date(client.created_at), { addSuffix: true })}
                     </Typography>
                   </TableCell>
                   <TableCell>
