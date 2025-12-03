@@ -70,6 +70,7 @@ const OAuthConfigurationPage: React.FC = () => {
   const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
   const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
   const [editingUriValue, setEditingUriValue] = useState('');
+  const [originalRedirectUris, setOriginalRedirectUris] = useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = useState<CreateOAuthClientDto>({
@@ -124,6 +125,7 @@ const OAuthConfigurationPage: React.FC = () => {
         redirect_uris: client.redirect_uris,
         environment: client.metadata?.environment,
       });
+      setOriginalRedirectUris([...client.redirect_uris]);
     } else {
       setEditingClient(null);
       setFormData({
@@ -132,6 +134,7 @@ const OAuthConfigurationPage: React.FC = () => {
         redirect_uris: [],
         environment: undefined,
       });
+      setOriginalRedirectUris([]);
     }
     setRedirectUriInput('');
     setDrawerOpen(true);
@@ -147,6 +150,19 @@ const OAuthConfigurationPage: React.FC = () => {
       environment: undefined,
     });
     setRedirectUriInput('');
+    setOriginalRedirectUris([]);
+  };
+
+  const isUriModified = (uri: string, index: number): boolean => {
+    if (!editingClient) return false;
+    const originalUri = originalRedirectUris[index];
+    if (originalUri === undefined) return true;
+    return uri !== originalUri;
+  };
+
+  const isNewUri = (index: number): boolean => {
+    if (!editingClient) return false;
+    return index >= originalRedirectUris.length;
   };
 
   const handleAddRedirectUri = () => {
@@ -560,8 +576,17 @@ const OAuthConfigurationPage: React.FC = () => {
                     alignItems="center"
                     sx={{
                       p: 1,
-                      bgcolor: 'action.hover',
+                      bgcolor: isNewUri(index) 
+                        ? 'rgba(76, 175, 80, 0.08)' 
+                        : isUriModified(uri, index) 
+                          ? 'rgba(255, 152, 0, 0.08)' 
+                          : 'action.hover',
                       borderRadius: 1,
+                      border: isNewUri(index) 
+                        ? '1px solid rgba(76, 175, 80, 0.3)' 
+                        : isUriModified(uri, index) 
+                          ? '1px solid rgba(255, 152, 0, 0.3)' 
+                          : '1px solid transparent',
                     }}
                   >
                     {editingUriIndex === index ? (
@@ -600,6 +625,31 @@ const OAuthConfigurationPage: React.FC = () => {
                       >
                         {uri}
                       </Typography>
+                    )}
+                    {isNewUri(index) && editingUriIndex !== index && (
+                      <Chip 
+                        label="New" 
+                        size="small" 
+                        color="success"
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.65rem',
+                          '& .MuiChip-label': { px: 1 }
+                        }} 
+                      />
+                    )}
+                    {isUriModified(uri, index) && !isNewUri(index) && editingUriIndex !== index && (
+                      <Chip 
+                        label="Edited" 
+                        size="small" 
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.65rem',
+                          bgcolor: '#ff9800',
+                          color: 'white',
+                          '& .MuiChip-label': { px: 1 }
+                        }} 
+                      />
                     )}
                     {editingUriIndex === index ? (
                       <Tooltip title="Save">
