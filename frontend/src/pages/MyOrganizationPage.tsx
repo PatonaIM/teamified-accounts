@@ -788,7 +788,7 @@ const MyOrganizationPage: React.FC = () => {
             </TabPanel>
 
             <TabPanel value={activeTab} index={1}>
-              <Box sx={{ px: 3, maxWidth: 600 }}>
+              <Box sx={{ px: 3 }}>
                 {canEditProfile && !isEditingProfile && (
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                     <Button
@@ -801,45 +801,49 @@ const MyOrganizationPage: React.FC = () => {
                 )}
                 
                 <Stack spacing={3}>
-                  <TextField
-                    label="Organization Name"
-                    value={editOrgData?.name || ''}
-                    onChange={(e) => setEditOrgData(prev => prev ? { ...prev, name: e.target.value } : null)}
-                    disabled={!isEditingProfile}
-                    fullWidth
-                  />
-                  <TextField
-                    label="Slug"
-                    value={editOrgData?.slug || ''}
-                    onChange={(e) => setEditOrgData(prev => prev ? { ...prev, slug: e.target.value } : null)}
-                    disabled={!isEditingProfile}
-                    fullWidth
-                    helperText="URL-friendly identifier (lowercase, hyphens only)"
-                  />
-                  <FormControl fullWidth disabled={!isEditingProfile}>
-                    <InputLabel>Industry</InputLabel>
-                    <Select
-                      value={editOrgData?.industry || ''}
-                      label="Industry"
-                      onChange={(e) => setEditOrgData(prev => prev ? { ...prev, industry: e.target.value } : null)}
-                    >
-                      {INDUSTRIES.map((industry) => (
-                        <MenuItem key={industry} value={industry}>{industry}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl fullWidth disabled={!isEditingProfile}>
-                    <InputLabel>Company Size</InputLabel>
-                    <Select
-                      value={editOrgData?.companySize || ''}
-                      label="Company Size"
-                      onChange={(e) => setEditOrgData(prev => prev ? { ...prev, companySize: e.target.value } : null)}
-                    >
-                      {COMPANY_SIZES.map((size) => (
-                        <MenuItem key={size} value={size}>{size}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                    <TextField
+                      label="Organization Name"
+                      value={editOrgData?.name || ''}
+                      onChange={(e) => setEditOrgData(prev => prev ? { ...prev, name: e.target.value } : null)}
+                      disabled={!isEditingProfile}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Slug"
+                      value={editOrgData?.slug || ''}
+                      onChange={(e) => setEditOrgData(prev => prev ? { ...prev, slug: e.target.value } : null)}
+                      disabled={!isEditingProfile}
+                      fullWidth
+                      helperText="URL-friendly identifier (lowercase, hyphens only)"
+                    />
+                  </Box>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                    <FormControl fullWidth disabled={!isEditingProfile}>
+                      <InputLabel>Industry</InputLabel>
+                      <Select
+                        value={editOrgData?.industry || ''}
+                        label="Industry"
+                        onChange={(e) => setEditOrgData(prev => prev ? { ...prev, industry: e.target.value } : null)}
+                      >
+                        {INDUSTRIES.map((industry) => (
+                          <MenuItem key={industry} value={industry}>{industry}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl fullWidth disabled={!isEditingProfile}>
+                      <InputLabel>Company Size</InputLabel>
+                      <Select
+                        value={editOrgData?.companySize || ''}
+                        label="Company Size"
+                        onChange={(e) => setEditOrgData(prev => prev ? { ...prev, companySize: e.target.value } : null)}
+                      >
+                        {COMPANY_SIZES.map((size) => (
+                          <MenuItem key={size} value={size}>{size}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
                   <TextField
                     label="Website"
                     value={editOrgData?.website || ''}
