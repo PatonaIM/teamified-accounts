@@ -91,7 +91,8 @@ function OrganizationRedirect() {
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
-        height: '100vh',
+        height: '100%',
+        minHeight: '200px',
         backgroundColor: 'inherit'
       }}>
         <div style={{ 
@@ -182,24 +183,18 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
-                {/* Redirect /organization to first organization */}
+                {/* Organization routes - all wrapped in AccountLayout for smooth navigation */}
                 <Route 
                   path="/organization" 
-                  element={
-                    <ProtectedRoute>
-                      <OrganizationRedirect />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/organization/:slug" 
                   element={
                     <ProtectedRoute>
                       <AccountLayout />
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={
+                  {/* Redirect /organization to first organization */}
+                  <Route index element={<OrganizationRedirect />} />
+                  <Route path=":slug" element={
                     <RoleBasedRoute allowedRoles={['super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager']}>
                       <MyOrganizationPage />
                     </RoleBasedRoute>
