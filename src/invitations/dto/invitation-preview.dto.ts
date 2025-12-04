@@ -52,4 +52,28 @@ export class InvitationPreviewDto {
     description: 'Created date'
   })
   createdAt: Date;
+
+  @ApiProperty({ 
+    description: 'Email address of the invited user',
+    nullable: true
+  })
+  invitedEmail?: string;
+
+  @ApiProperty({ 
+    description: 'Whether the invited user has already completed signup (has password and name set)',
+    default: false
+  })
+  hasCompletedSignup: boolean;
+
+  @ApiProperty({ 
+    description: 'First name of the invited user (if they have completed signup)',
+    nullable: true
+  })
+  invitedUserFirstName?: string;
+
+  @ApiProperty({ 
+    description: 'Last name of the invited user (if they have completed signup)',
+    nullable: true
+  })
+  invitedUserLastName?: string;
 }

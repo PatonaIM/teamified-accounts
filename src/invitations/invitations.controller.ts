@@ -207,6 +207,84 @@ export class InvitationsController {
     return this.invitationsService.preview(code);
   }
 
+  @Post('accept-authenticated')
+  @UseGuards(JwtAuthGuard, CurrentUserGuard)
+  @ApiBearerAuth()
+  @ApiSecurity('JWT-auth')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ 
+    summary: 'Accept invitation as authenticated user',
+    description: `
+      Endpoint for existing users who are already logged in to accept an organization invitation.
+      No password or personal details required - the invitation is simply linked to their existing account.
+      
+      ## Process Flow:
+      1. Validates the invitation code and checks expiration
+      2. Verifies the logged-in user's email matches the invitation
+      3. Creates organization membership
+      4. Assigns appropriate role to the user
+      5. Creates audit logs
+      
+      ## Security:
+      - Requires valid JWT authentication
+      - User's email must match the invited email
+    `
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['inviteCode'],
+      properties: {
+        inviteCode: {
+          type: 'string',
+          description: 'Unique invitation code from the invitation link',
+          example: 'abc123xyz456'
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Invitation accepted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Successfully joined organization' },
+        organizationId: { type: 'string', format: 'uuid' },
+        organizationName: { type: 'string' },
+        role: { type: 'string' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad Request - Email mismatch or invitation invalid',
+    type: ValidationErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - Invalid or missing JWT token',
+    type: AuthErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Invitation not found',
+    type: BusinessErrorResponseDto
+  })
+  async acceptInvitationAuthenticated(
+    @Body() body: { inviteCode: string },
+    @CurrentUser() user: User,
+    @Request() req: any,
+  ): Promise<{ message: string; organizationId: string; organizationName: string; role: string }> {
+    return this.invitationsService.acceptInvitationAuthenticated(
+      body.inviteCode,
+      user,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
   @Get('internal/:code')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({

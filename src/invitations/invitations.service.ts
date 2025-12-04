@@ -913,6 +913,132 @@ export class InvitationsService {
   }
 
   /**
+   * Accept invitation as an authenticated user
+   * For existing users who are already logged in - no password required
+   */
+  async acceptInvitationAuthenticated(
+    inviteCode: string,
+    user: User,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; organizationId: string; organizationName: string; role: string }> {
+    this.logger.log(`[acceptInvitationAuthenticated] Starting for user ${user.email}`);
+
+    // 1. Find and validate invitation
+    const invitation = await this.invitationRepository.findOne({
+      where: { inviteCode },
+      relations: ['organization', 'invitedUser'],
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // 2. Check invitation validity
+    if (invitation.expiresAt < new Date()) {
+      throw new BadRequestException('Invitation has expired');
+    }
+
+    if (invitation.status !== InvitationStatus.PENDING) {
+      throw new BadRequestException(`Invitation has already been ${invitation.status}`);
+    }
+
+    if (invitation.maxUses && invitation.currentUses >= invitation.maxUses) {
+      throw new BadRequestException('Invitation has reached maximum uses');
+    }
+
+    // 3. Verify user's email matches the invitation
+    const invitedEmail = invitation.email || invitation.invitedUser?.email;
+    if (invitedEmail && user.email.toLowerCase() !== invitedEmail.toLowerCase()) {
+      throw new BadRequestException(
+        `This invitation was sent to ${invitedEmail}. Please log in with that email address.`
+      );
+    }
+
+    // 4. Check if user is already a member of this organization
+    const existingMembership = await this.memberRepository.findOne({
+      where: { 
+        userId: user.id, 
+        organizationId: invitation.organizationId 
+      },
+    });
+
+    if (existingMembership) {
+      if (existingMembership.status === 'active') {
+        throw new BadRequestException('You are already a member of this organization');
+      }
+      // Reactivate inactive membership
+      existingMembership.status = 'active';
+      await this.memberRepository.save(existingMembership);
+    } else {
+      // Create new membership
+      const membership = this.memberRepository.create({
+        userId: user.id,
+        organizationId: invitation.organizationId,
+        status: 'active',
+        joinedAt: new Date(),
+      });
+      await this.memberRepository.save(membership);
+    }
+
+    // 5. Assign role if not already assigned
+    const existingRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: user.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+      },
+    });
+
+    if (!existingRole) {
+      const userRole = this.userRoleRepository.create({
+        userId: user.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+        grantedBy: invitation.invitedBy,
+      });
+      await this.userRoleRepository.save(userRole);
+    }
+
+    // 6. Update invitation usage (directly, to avoid redundant database load)
+    invitation.currentUses += 1;
+    if (invitation.maxUses && invitation.currentUses >= invitation.maxUses) {
+      invitation.status = InvitationStatus.ACCEPTED;
+    }
+    await this.invitationRepository.save(invitation);
+
+    // 7. Log the acceptance
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: invitation.roleType,
+      action: 'invitation.accepted_authenticated',
+      entityType: 'invitation',
+      entityId: invitation.id,
+      changes: {
+        organizationId: invitation.organizationId,
+        organizationName: invitation.organization.name,
+        roleType: invitation.roleType,
+        currentUses: invitation.currentUses,
+        maxUses: invitation.maxUses,
+        status: invitation.status,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`[acceptInvitationAuthenticated] User ${user.email} joined ${invitation.organization.name} (uses: ${invitation.currentUses}/${invitation.maxUses || 'unlimited'})`);
+
+    return {
+      message: 'Successfully joined organization',
+      organizationId: invitation.organizationId,
+      organizationName: invitation.organization.name,
+      role: invitation.roleType,
+    };
+  }
+
+  /**
    * Accept organization invitation - Public endpoint for new users
    * Handles complete signup + organization membership flow
    */
@@ -1555,7 +1681,7 @@ This is an automated message from Teamified.
   async preview(code: string): Promise<InvitationPreviewDto> {
     const invitation = await this.invitationRepository.findOne({
       where: { inviteCode: code },
-      relations: ['organization', 'inviter'],
+      relations: ['organization', 'inviter', 'invitedUser'],
     });
 
     if (!invitation) {
@@ -1591,6 +1717,13 @@ This is an automated message from Teamified.
         break;
     }
 
+    // Check if the invited user has completed signup
+    // A user has completed signup if they have a password set AND have first/last name filled in
+    const invitedUser = invitation.invitedUser;
+    const hasCompletedSignup = invitedUser 
+      ? !!(invitedUser.passwordHash && invitedUser.firstName && invitedUser.lastName)
+      : false;
+
     return {
       organizationName: invitation.organization.name,
       organizationSlug: invitation.organization.slug,
@@ -1602,6 +1735,10 @@ This is an automated message from Teamified.
       isValid,
       validityMessage,
       createdAt: invitation.createdAt,
+      invitedEmail: invitation.email || invitedUser?.email,
+      hasCompletedSignup,
+      invitedUserFirstName: hasCompletedSignup ? invitedUser?.firstName : undefined,
+      invitedUserLastName: hasCompletedSignup ? invitedUser?.lastName : undefined,
     };
   }
 

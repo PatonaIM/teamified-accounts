@@ -13,11 +13,13 @@ import {
   Stepper,
   Step,
   StepLabel,
+  Divider,
 } from '@mui/material';
-import { Visibility, VisibilityOff, CheckCircle, Business } from '@mui/icons-material';
+import { Visibility, VisibilityOff, CheckCircle, Business, Login as LoginIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { login } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
 
 interface InvitationDetails {
   organizationName: string;
@@ -26,6 +28,10 @@ interface InvitationDetails {
   inviterName: string;
   isValid: boolean;
   validityMessage: string;
+  invitedEmail?: string;
+  hasCompletedSignup: boolean;
+  invitedUserFirstName?: string;
+  invitedUserLastName?: string;
 }
 
 interface AcceptInvitationData {
@@ -40,7 +46,7 @@ interface AcceptInvitationData {
 const OrganizationInvitationAcceptPage: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { user, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
 
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [formData, setFormData] = useState<AcceptInvitationData>({
@@ -87,6 +93,10 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
 
         if (!data.isValid) {
           setError(data.validityMessage);
+        }
+
+        if (data.invitedEmail) {
+          setFormData(prev => ({ ...prev, email: data.invitedEmail }));
         }
       } catch (err) {
         console.error('Error fetching invitation:', err);
@@ -141,7 +151,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleNewUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -170,7 +180,6 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
 
       setSuccess(true);
 
-      // Auto-login after accepting invitation
       try {
         await login({
           email: formData.email,
@@ -180,13 +189,11 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
         
         await refreshUser();
 
-        // Navigate to account page after successful login
         setTimeout(() => {
           navigate('/account', { replace: true });
         }, 2000);
       } catch (loginError) {
         console.error('Auto-login failed:', loginError);
-        // Still show success, but redirect to login
         setTimeout(() => {
           navigate(`/login?email=${encodeURIComponent(formData.email)}`, { replace: true });
         }, 2000);
@@ -194,6 +201,29 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
     } catch (err) {
       console.error('Error accepting invitation:', err);
       setError('Network error. Please check your connection and try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleAuthenticatedAccept = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await api.post('/v1/invitations/accept-authenticated', {
+        inviteCode: code,
+      });
+
+      setSuccess(true);
+      await refreshUser();
+
+      setTimeout(() => {
+        navigate('/account/organization', { replace: true });
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error accepting invitation:', err);
+      const message = err.response?.data?.message || 'Failed to accept invitation';
+      setError(message);
       setIsLoading(false);
     }
   };
@@ -209,7 +239,16 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
     }
   };
 
-  if (isLoadingInvitation) {
+  const handleLoginRedirect = () => {
+    const returnUrl = `/invitations/accept/${code}`;
+    navigate(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+  };
+
+  const formatRoleName = (role: string) => {
+    return role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
+  if (isLoadingInvitation || authLoading) {
     return (
       <Container maxWidth="sm" sx={{ mt: 8 }}>
         <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
@@ -254,10 +293,143 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
     );
   }
 
+  const isExistingUser = invitation?.hasCompletedSignup;
+  const isLoggedIn = isAuthenticated && user;
+  const emailMatches = isLoggedIn && invitation?.invitedEmail && 
+    user.email.toLowerCase() === invitation.invitedEmail.toLowerCase();
+
+  if (isExistingUser && isLoggedIn) {
+    if (!emailMatches && invitation?.invitedEmail) {
+      return (
+        <Container maxWidth="sm" sx={{ mt: 8 }}>
+          <Paper elevation={3} sx={{ p: 4 }}>
+            <Box textAlign="center" mb={3}>
+              <Business color="primary" sx={{ fontSize: 60, mb: 1 }} />
+              <Typography variant="h4" gutterBottom>
+                Join {invitation?.organizationName}
+              </Typography>
+            </Box>
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              This invitation was sent to <strong>{invitation.invitedEmail}</strong>, but you're logged in as <strong>{user.email}</strong>.
+              Please log in with the correct account to accept this invitation.
+            </Alert>
+            <Button 
+              variant="contained" 
+              fullWidth 
+              onClick={() => {
+                navigate('/login?returnUrl=' + encodeURIComponent(`/invitations/accept/${code}`));
+              }}
+            >
+              Switch Account
+            </Button>
+          </Paper>
+        </Container>
+      );
+    }
+
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Box textAlign="center" mb={4}>
+            <Business color="primary" sx={{ fontSize: 60, mb: 1 }} />
+            <Typography variant="h4" gutterBottom>
+              Join {invitation?.organizationName}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {invitation?.inviterName} has invited you to join as{' '}
+              <strong>{formatRoleName(invitation?.roleType || '')}</strong>
+            </Typography>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1, mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Logged in as:
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {user.firstName} {user.lastName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {user.email}
+            </Typography>
+          </Box>
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            onClick={handleAuthenticatedAccept}
+            disabled={isLoading || !invitation?.isValid}
+            sx={{ mb: 2 }}
+          >
+            {isLoading ? <CircularProgress size={24} /> : 'Accept Invitation'}
+          </Button>
+
+          {!invitation?.isValid && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              {invitation?.validityMessage}
+            </Alert>
+          )}
+        </Paper>
+      </Container>
+    );
+  }
+
+  if (isExistingUser && !isLoggedIn) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Box textAlign="center" mb={4}>
+            <Business color="primary" sx={{ fontSize: 60, mb: 1 }} />
+            <Typography variant="h4" gutterBottom>
+              Join {invitation?.organizationName}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {invitation?.inviterName} has invited you to join as{' '}
+              <strong>{formatRoleName(invitation?.roleType || '')}</strong>
+            </Typography>
+          </Box>
+
+          <Alert severity="info" sx={{ mb: 3 }} icon={<LoginIcon />}>
+            <Typography variant="body2">
+              Welcome back, <strong>{invitation?.invitedUserFirstName} {invitation?.invitedUserLastName}</strong>!
+              Please log in to accept this invitation.
+            </Typography>
+          </Alert>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            startIcon={<LoginIcon />}
+            onClick={handleLoginRedirect}
+            sx={{ mb: 2 }}
+          >
+            Log In to Accept
+          </Button>
+
+          <Typography variant="body2" color="text.secondary" textAlign="center">
+            After logging in, you'll be redirected back to accept this invitation.
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
-        {/* Header */}
         <Box textAlign="center" mb={4}>
           <Business color="primary" sx={{ fontSize: 60, mb: 1 }} />
           <Typography variant="h4" gutterBottom>
@@ -265,11 +437,10 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {invitation?.inviterName} has invited you to join as{' '}
-            <strong>{invitation?.roleType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</strong>
+            <strong>{formatRoleName(invitation?.roleType || '')}</strong>
           </Typography>
         </Box>
 
-        {/* Progress Stepper */}
         <Stepper activeStep={0} sx={{ mb: 4 }}>
           <Step>
             <StepLabel>Create Account</StepLabel>
@@ -279,15 +450,13 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
           </Step>
         </Stepper>
 
-        {/* Error Alert - Show for both invalid invitations AND submission errors */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
 
-        {/* Form */}
-        <Box component="form" onSubmit={handleSubmit}>
+        <Box component="form" onSubmit={handleNewUserSubmit}>
           <TextField
             fullWidth
             label="Email Address"
@@ -297,7 +466,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
             onChange={(e) => handleInputChange('email', e.target.value)}
             error={!!validationErrors.email}
             helperText={validationErrors.email}
-            disabled={isLoading}
+            disabled={isLoading || !!invitation?.invitedEmail}
             margin="normal"
             required
           />
@@ -397,7 +566,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
 
           <Typography variant="body2" color="text.secondary" textAlign="center">
             Already have an account?{' '}
-            <Button size="small" onClick={() => navigate('/login')}>
+            <Button size="small" onClick={handleLoginRedirect}>
               Login
             </Button>
           </Typography>
