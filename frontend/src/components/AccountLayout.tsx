@@ -35,7 +35,6 @@ const AccountLayout: React.FC = () => {
   const { currentTheme, setTheme } = useTheme();
   
   const [appsAnchorEl, setAppsAnchorEl] = useState<HTMLElement | null>(null);
-  const [organizationCount, setOrganizationCount] = useState<number>(0);
   const [firstOrgSlug, setFirstOrgSlug] = useState<string | null>(null);
   const appsDropdownOpen = Boolean(appsAnchorEl);
 
@@ -50,23 +49,19 @@ const AccountLayout: React.FC = () => {
   );
 
   useEffect(() => {
-    const fetchOrganizationCount = async () => {
+    const fetchFirstOrgSlug = async () => {
       if (!isClientUser) return;
       try {
         const orgs = await OrganizationsService.getMyOrganizations();
-        setOrganizationCount(orgs.length);
         if (orgs.length > 0) {
           setFirstOrgSlug(orgs[0].slug);
         }
       } catch (error) {
-        console.error('Failed to fetch organizations count:', error);
-        setOrganizationCount(0);
+        console.error('Failed to fetch organizations:', error);
       }
     };
-    fetchOrganizationCount();
+    fetchFirstOrgSlug();
   }, [isClientUser]);
-
-  const organizationNavLabel = organizationCount >= 2 ? 'My Organizations' : 'My Organization';
 
   const handleThemeToggle = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
@@ -262,7 +257,7 @@ const AccountLayout: React.FC = () => {
                   >
                     <Business />
                   </ListItemIcon>
-                  <ListItemText primary={organizationNavLabel} />
+                  <ListItemText primary="My Organization" />
                 </ListItemButton>
               </ListItem>
             )}
