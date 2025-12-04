@@ -68,7 +68,7 @@ export default function ReleaseNote_v102() {
                 src={myAppsScreenshot}
                 alt="My Apps Dropdown"
                 sx={{
-                  maxWidth: '280px',
+                  maxWidth: '450px',
                   borderRadius: 2,
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                 }}
