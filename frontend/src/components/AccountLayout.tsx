@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Box,
@@ -24,6 +24,7 @@ import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/authService';
 import { useTheme } from '../contexts/ThemeContext';
 import AppsDropdown from './AppsDropdown';
+import OrganizationsService from '../services/organizationsService';
 
 const DRAWER_WIDTH = 260;
 
@@ -34,6 +35,7 @@ const AccountLayout: React.FC = () => {
   const { currentTheme, setTheme } = useTheme();
   
   const [appsAnchorEl, setAppsAnchorEl] = useState<HTMLElement | null>(null);
+  const [organizationCount, setOrganizationCount] = useState<number>(0);
   const appsDropdownOpen = Boolean(appsAnchorEl);
 
   const isDarkMode = currentTheme === 'dark';
@@ -45,6 +47,22 @@ const AccountLayout: React.FC = () => {
   const isClientUser = user?.roles?.some((role: string) =>
     role.toLowerCase().startsWith('client_')
   );
+
+  useEffect(() => {
+    const fetchOrganizationCount = async () => {
+      if (!isClientUser) return;
+      try {
+        const orgs = await OrganizationsService.getMyOrganizations();
+        setOrganizationCount(orgs.length);
+      } catch (error) {
+        console.error('Failed to fetch organizations count:', error);
+        setOrganizationCount(0);
+      }
+    };
+    fetchOrganizationCount();
+  }, [isClientUser]);
+
+  const organizationNavLabel = organizationCount >= 2 ? 'My Organizations' : 'My Organization';
 
   const handleThemeToggle = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
@@ -240,7 +258,7 @@ const AccountLayout: React.FC = () => {
                   >
                     <Business />
                   </ListItemIcon>
-                  <ListItemText primary="My Organization" />
+                  <ListItemText primary={organizationNavLabel} />
                 </ListItemButton>
               </ListItem>
             )}
