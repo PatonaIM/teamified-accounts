@@ -150,6 +150,62 @@ export class OrganizationsService {
     }
   }
 
+  /**
+   * Check if a user can access another user's details
+   * Client users can only access users within their shared organizations
+   * Internal users can access any user
+   */
+  async canUserAccessUser(currentUserId: string, targetUserId: string): Promise<boolean> {
+    const currentUser = await this.userRepository.findOne({
+      where: { id: currentUserId },
+      relations: ['userRoles', 'organizationMembers'],
+    });
+    
+    if (!currentUser) {
+      return false;
+    }
+    
+    const roles = this.getAllRoles(currentUser);
+    
+    const internalRoles = [
+      'super_admin',
+      'admin',
+      'internal_hr',
+      'hr',
+      'internal_recruiter',
+      'internal_account_manager',
+      'internal_finance',
+      'internal_marketing',
+      'internal_staff',
+      'timesheet_approver',
+    ];
+    
+    const hasInternalRole = roles.some(r => internalRoles.includes(r));
+    
+    if (hasInternalRole) {
+      return true;
+    }
+    
+    const activeMemberships = currentUser.organizationMembers?.filter(
+      om => om.status === 'active'
+    ) || [];
+    
+    const currentUserOrgIds = activeMemberships.map(om => om.organizationId);
+    
+    if (currentUserOrgIds.length === 0) {
+      return false;
+    }
+    
+    const sharedMembership = await this.memberRepository
+      .createQueryBuilder('member')
+      .where('member.userId = :targetUserId', { targetUserId })
+      .andWhere('member.status = :status', { status: 'active' })
+      .andWhere('member.organizationId IN (:...orgIds)', { orgIds: currentUserOrgIds })
+      .getOne();
+    
+    return !!sharedMembership;
+  }
+
   async create(
     createDto: CreateOrganizationDto,
     currentUser: User,

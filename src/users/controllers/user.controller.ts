@@ -16,6 +16,7 @@ import {
   UploadedFile,
   BadRequestException,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -38,6 +39,7 @@ import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
 import { AzureBlobStorageService } from '../../blob-storage/azure-blob-storage.service';
 import { EmailService } from '../../email/services/email.service';
+import { OrganizationsService } from '../../organizations/organizations.service';
 import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
@@ -52,6 +54,7 @@ export class UserController {
     private readonly azureBlobStorageService: AzureBlobStorageService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    private readonly organizationsService: OrganizationsService,
   ) {}
 
   @Post()
@@ -173,8 +176,17 @@ export class UserController {
 
   @Get(`:id(${UUID_PARAM_PATTERN})`)
   @UseGuards(RolesGuard)
-  @Roles('admin', 'timesheet_approver')
-  @ApiOperation({ summary: 'Get user by ID' })
+  @Roles('admin', 'timesheet_approver', 'internal_hr', 'internal_account_manager', 'internal_staff', 'client_admin', 'client_hr')
+  @ApiOperation({ 
+    summary: 'Get user by ID',
+    description: `
+      Retrieve detailed user information by ID.
+      
+      ## Authorization:
+      - super_admin, admin, internal_*: Can view any user
+      - client_admin, client_hr: Can only view users within their organization(s)
+    `
+  })
   @ApiResponse({
     status: 200,
     description: 'User retrieved successfully',
@@ -185,10 +197,52 @@ export class UserController {
     description: 'Invalid UUID format',
   })
   @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Client users can only view users within their organization',
+  })
+  @ApiResponse({
     status: 404,
     description: 'User not found',
   })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: User,
+  ): Promise<{ user: UserResponseDto }> {
+    const currentUserRoles = currentUser.userRoles?.map(r => r.roleType) || [];
+    
+    const internalRoles = [
+      'super_admin',
+      'admin',
+      'internal_hr',
+      'internal_account_manager',
+      'internal_recruiter',
+      'internal_finance',
+      'internal_marketing',
+      'internal_staff',
+      'timesheet_approver',
+    ];
+    
+    const hasInternalRole = currentUserRoles.some(r => 
+      internalRoles.includes(r.toLowerCase())
+    );
+    
+    if (!hasInternalRole) {
+      const isClientUser = currentUserRoles.some(r => 
+        r.toLowerCase().startsWith('client_')
+      );
+      
+      if (isClientUser) {
+        const canAccess = await this.organizationsService.canUserAccessUser(
+          currentUser.id,
+          id
+        );
+        
+        if (!canAccess) {
+          throw new ForbiddenException('You can only view users within your organization');
+        }
+      }
+    }
+    
     const user = await this.userService.findOne(id);
     const userDto = plainToInstance(UserResponseDto, user, { excludeExtraneousValues: true });
     return { user: userDto };
