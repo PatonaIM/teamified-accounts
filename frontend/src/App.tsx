@@ -135,7 +135,7 @@ function App() {
                   <Route path="apps" element={<MyAppsPage />} />
                   <Route path="profile" element={<MyProfilePage />} />
                   <Route path="organization" element={
-                    <RoleBasedRoute allowedRoles={['client_admin']}>
+                    <RoleBasedRoute allowedRoles={['client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager']}>
                       <MyOrganizationPage />
                     </RoleBasedRoute>
                   } />

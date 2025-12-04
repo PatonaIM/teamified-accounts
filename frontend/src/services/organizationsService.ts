@@ -160,6 +160,16 @@ class OrganizationsService {
     return response.data;
   }
 
+  async getMyOrganizations(): Promise<Organization[]> {
+    const response = await api.get(`${API_BASE_URL}/my-organizations`);
+    return response.data;
+  }
+
+  async getOrphanCount(organizationId: string): Promise<{ totalMembers: number; willBecomeOrphans: number }> {
+    const response = await api.get(`${API_BASE_URL}/${organizationId}/orphan-count`);
+    return response.data;
+  }
+
   async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
     const response = await api.get(`${API_BASE_URL}/check-slug/${encodeURIComponent(slug)}`);
     return response.data;

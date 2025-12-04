@@ -138,6 +138,86 @@ export class OrganizationsController {
     return this.organizationsService.getMyOrganization(user);
   }
 
+  @Get('my-organizations')
+  @Roles('client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee')
+  @ApiOperation({ 
+    summary: 'Get all my organizations',
+    description: `
+      Retrieve all organizations that the current user belongs to.
+      
+      ## Authorization:
+      - All client roles can access their own organizations
+      
+      ## Response:
+      - List of organization details for all user's organizations
+      - Empty array if user has no organizations
+    `
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Organizations retrieved successfully',
+    type: [OrganizationResponseDto]
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - Invalid or missing JWT token',
+    type: AuthErrorResponseDto
+  })
+  async getMyOrganizations(
+    @CurrentUser() user: User,
+  ): Promise<OrganizationResponseDto[]> {
+    return this.organizationsService.getMyOrganizations(user);
+  }
+
+  @Get(':id/orphan-count')
+  @Roles('client_admin')
+  @ApiOperation({ 
+    summary: 'Get orphan member count for organization deletion',
+    description: `
+      Get the count of members who will become orphaned if this organization is deleted.
+      
+      ## Authorization:
+      - client_admin: Can check orphan count for their own organization
+      
+      ## Response:
+      - Total member count
+      - Count of members who will become orphans (only belong to this organization)
+    `
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Organization ID',
+    example: 'uuid-here',
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Orphan count retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        totalMembers: { type: 'number', example: 10 },
+        willBecomeOrphans: { type: 'number', example: 8 }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - Invalid or missing JWT token',
+    type: AuthErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Forbidden - Insufficient permissions',
+    type: AuthErrorResponseDto
+  })
+  async getOrphanCount(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<{ totalMembers: number; willBecomeOrphans: number }> {
+    this.organizationsService['validateOrgAccess'](id, user);
+    return this.organizationsService.getOrphanMemberCount(id);
+  }
+
   @Get('check-slug/:slug')
   @ApiOperation({ 
     summary: 'Check if organization slug is available',

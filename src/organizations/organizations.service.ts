@@ -388,6 +388,54 @@ export class OrganizationsService {
     return this.findOne(organizationId, currentUser);
   }
 
+  async getMyOrganizations(currentUser: User): Promise<OrganizationResponseDto[]> {
+    const policy = this.buildOrgAccessPolicy(currentUser);
+    
+    if (policy.noAccess || policy.allowedOrgIds.length === 0) {
+      return [];
+    }
+    
+    const organizations: OrganizationResponseDto[] = [];
+    
+    for (const orgId of policy.allowedOrgIds) {
+      try {
+        const org = await this.findOne(orgId, currentUser);
+        organizations.push(org);
+      } catch (error) {
+        this.logger.warn(`Could not fetch organization ${orgId} for user ${currentUser.id}`);
+      }
+    }
+    
+    return organizations;
+  }
+
+  async getOrphanMemberCount(organizationId: string): Promise<{ totalMembers: number; willBecomeOrphans: number }> {
+    const members = await this.memberRepository.find({
+      where: { organizationId, status: 'active' },
+      relations: ['user'],
+    });
+    
+    let orphanCount = 0;
+    
+    for (const member of members) {
+      const otherMemberships = await this.memberRepository.count({
+        where: {
+          userId: member.userId,
+          status: 'active',
+        },
+      });
+      
+      if (otherMemberships <= 1) {
+        orphanCount++;
+      }
+    }
+    
+    return {
+      totalMembers: members.length,
+      willBecomeOrphans: orphanCount,
+    };
+  }
+
   async findBySlug(slug: string): Promise<OrganizationResponseDto> {
     const organization = await this.organizationRepository.findOne({
       where: { slug },
