@@ -477,55 +477,57 @@ const MyOrganizationPage: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      {organizations.length > 1 && (
-        <Box sx={{ mb: 3 }}>
-          <Button
-            onClick={(e) => setOrgSwitcherAnchor(e.currentTarget)}
-            endIcon={<KeyboardArrowDown />}
-            sx={{
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              color: 'text.secondary',
-              '&:hover': { bgcolor: 'action.hover' },
-            }}
-          >
-            Switch Organization ({organizations.length} available)
-          </Button>
-          <Menu
-            anchorEl={orgSwitcherAnchor}
-            open={Boolean(orgSwitcherAnchor)}
-            onClose={() => setOrgSwitcherAnchor(null)}
-          >
-            {organizations.map((org) => (
-              <MenuItem
-                key={org.id}
-                onClick={() => handleOrgSwitch(org)}
-                selected={org.id === selectedOrg?.id}
-                sx={{ minWidth: 250 }}
-              >
-                <Avatar
-                  src={org.logoUrl || undefined}
-                  sx={{ width: 32, height: 32, mr: 2, bgcolor: 'primary.main' }}
-                >
-                  <Business sx={{ fontSize: 16 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {org.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {org.memberCount || 0} users
-                  </Typography>
-                </Box>
-              </MenuItem>
-            ))}
-          </Menu>
-        </Box>
-      )}
-
       {selectedOrg && (
         <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-          <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider', position: 'relative' }}>
+            {organizations.length > 1 && (
+              <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+                <Button
+                  onClick={(e) => setOrgSwitcherAnchor(e.currentTarget)}
+                  endIcon={<KeyboardArrowDown />}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.875rem',
+                    borderColor: 'divider',
+                    color: 'text.secondary',
+                    '&:hover': { bgcolor: 'action.hover', borderColor: 'divider' },
+                  }}
+                >
+                  Switch Organization ({organizations.length} available)
+                </Button>
+                <Menu
+                  anchorEl={orgSwitcherAnchor}
+                  open={Boolean(orgSwitcherAnchor)}
+                  onClose={() => setOrgSwitcherAnchor(null)}
+                >
+                  {organizations.map((org) => (
+                    <MenuItem
+                      key={org.id}
+                      onClick={() => handleOrgSwitch(org)}
+                      selected={org.id === selectedOrg?.id}
+                      sx={{ minWidth: 250 }}
+                    >
+                      <Avatar
+                        src={org.logoUrl || undefined}
+                        sx={{ width: 32, height: 32, mr: 2, bgcolor: 'primary.main' }}
+                      >
+                        <Business sx={{ fontSize: 16 }} />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {org.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {org.memberCount || 0} users
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </Box>
+            )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box sx={{ position: 'relative', display: 'inline-block' }}>
                 <Avatar
