@@ -155,6 +155,11 @@ class OrganizationsService {
     return response.data;
   }
 
+  async getBySlug(slug: string): Promise<Organization> {
+    const response = await api.get(`${API_BASE_URL}/by-slug/${encodeURIComponent(slug)}`);
+    return response.data;
+  }
+
   async getMyOrganization(): Promise<Organization> {
     const response = await api.get(`${API_BASE_URL}/me`);
     return response.data;

@@ -36,6 +36,7 @@ const AccountLayout: React.FC = () => {
   
   const [appsAnchorEl, setAppsAnchorEl] = useState<HTMLElement | null>(null);
   const [organizationCount, setOrganizationCount] = useState<number>(0);
+  const [firstOrgSlug, setFirstOrgSlug] = useState<string | null>(null);
   const appsDropdownOpen = Boolean(appsAnchorEl);
 
   const isDarkMode = currentTheme === 'dark';
@@ -54,6 +55,9 @@ const AccountLayout: React.FC = () => {
       try {
         const orgs = await OrganizationsService.getMyOrganizations();
         setOrganizationCount(orgs.length);
+        if (orgs.length > 0) {
+          setFirstOrgSlug(orgs[0].slug);
+        }
       } catch (error) {
         console.error('Failed to fetch organizations count:', error);
         setOrganizationCount(0);
@@ -221,11 +225,11 @@ const AccountLayout: React.FC = () => {
               </ListItemButton>
             </ListItem>
 
-            {isClientUser && (
+            {isClientUser && firstOrgSlug && (
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={!appsDropdownOpen && location.pathname.startsWith('/account/organization')}
-                  onClick={() => navigate('/account/organization')}
+                  selected={!appsDropdownOpen && location.pathname.startsWith('/organization/')}
+                  onClick={() => navigate(`/organization/${firstOrgSlug}`)}
                   sx={{
                     mx: 2,
                     my: 0.5,
@@ -252,7 +256,7 @@ const AccountLayout: React.FC = () => {
                 >
                   <ListItemIcon
                     sx={{
-                      color: (!appsDropdownOpen && location.pathname.startsWith('/account/organization')) ? 'inherit' : 'text.secondary',
+                      color: (!appsDropdownOpen && location.pathname.startsWith('/organization/')) ? 'inherit' : 'text.secondary',
                       minWidth: 40,
                     }}
                   >

@@ -38,7 +38,7 @@ import {
   KeyboardArrowDown,
   Construction,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import organizationsService, { type Organization, type OrganizationMember } from '../services/organizationsService';
 import userService from '../services/userService';
@@ -90,6 +90,7 @@ function TabPanel(props: TabPanelProps) {
 
 const MyOrganizationPage: React.FC = () => {
   const navigate = useNavigate();
+  const { slug: urlSlug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -152,7 +153,7 @@ const MyOrganizationPage: React.FC = () => {
 
   useEffect(() => {
     loadOrganizations();
-  }, []);
+  }, [urlSlug]);
 
   useEffect(() => {
     if (selectedOrg) {
@@ -173,16 +174,27 @@ const MyOrganizationPage: React.FC = () => {
   const loadOrganizations = async () => {
     setLoading(true);
     try {
-      const orgs = await organizationsService.getMyOrganizations();
-      setOrganizations(orgs);
-      if (orgs.length > 0) {
-        const savedOrgId = localStorage.getItem('selectedOrganizationId');
-        const savedOrg = savedOrgId ? orgs.find(o => o.id === savedOrgId) : null;
-        setSelectedOrg(savedOrg || orgs[0]);
+      if (urlSlug) {
+        const org = await organizationsService.getBySlug(urlSlug);
+        setSelectedOrg(org);
+        const orgs = await organizationsService.getMyOrganizations();
+        setOrganizations(orgs);
+      } else {
+        const orgs = await organizationsService.getMyOrganizations();
+        setOrganizations(orgs);
+        if (orgs.length > 0) {
+          navigate(`/organization/${orgs[0].slug}`, { replace: true });
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load organizations:', err);
-      setError('Failed to load organizations');
+      if (err?.response?.status === 403) {
+        setError('You do not have access to this organization');
+      } else if (err?.response?.status === 404) {
+        setError('Organization not found');
+      } else {
+        setError('Failed to load organization');
+      }
     } finally {
       setLoading(false);
     }
@@ -212,9 +224,8 @@ const MyOrganizationPage: React.FC = () => {
   };
 
   const handleOrgSwitch = (org: Organization) => {
-    setSelectedOrg(org);
-    localStorage.setItem('selectedOrganizationId', org.id);
     setOrgSwitcherAnchor(null);
+    navigate(`/organization/${org.slug}`);
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

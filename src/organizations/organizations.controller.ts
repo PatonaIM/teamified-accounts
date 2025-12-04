@@ -353,6 +353,47 @@ export class OrganizationsController {
     return this.organizationsService.globalSearch(query, user);
   }
 
+  @Get('by-slug/:slug')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee')
+  @ApiOperation({ 
+    summary: 'Get organization by slug',
+    description: `
+      Retrieve detailed information about a specific organization using its URL-friendly slug.
+      
+      ## Authorization:
+      - super_admin: Access any organization
+      - internal_*: Access any organization
+      - client_*: Access only organizations they are a member of
+    `
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'Organization URL-friendly slug',
+    type: 'string',
+    example: 'acme-corp'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Organization retrieved successfully',
+    type: OrganizationResponseDto
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Forbidden - Not a member of this organization',
+    type: AuthErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Organization not found',
+    type: BusinessErrorResponseDto
+  })
+  async findBySlug(
+    @Param('slug') slug: string,
+    @CurrentUser() user: User,
+  ): Promise<OrganizationResponseDto> {
+    return this.organizationsService.findBySlugWithAccess(slug, user);
+  }
+
   @Get(':id')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @ApiOperation({ 

@@ -124,6 +124,20 @@ function App() {
                   } 
                 />
                 <Route 
+                  path="/organization/:slug" 
+                  element={
+                    <ProtectedRoute>
+                      <AccountLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={
+                    <RoleBasedRoute allowedRoles={['super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager']}>
+                      <MyOrganizationPage />
+                    </RoleBasedRoute>
+                  } />
+                </Route>
+                <Route 
                   path="/account" 
                   element={
                     <ProtectedRoute>
@@ -134,11 +148,6 @@ function App() {
                   <Route index element={<Navigate to="/account/profile" replace />} />
                   <Route path="apps" element={<MyAppsPage />} />
                   <Route path="profile" element={<MyProfilePage />} />
-                  <Route path="organization" element={
-                    <RoleBasedRoute allowedRoles={['client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager']}>
-                      <MyOrganizationPage />
-                    </RoleBasedRoute>
-                  } />
                 </Route>
                 <Route 
                   path="/admin" 

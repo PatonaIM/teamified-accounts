@@ -190,7 +190,8 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
         await refreshUser();
 
         setTimeout(() => {
-          navigate('/account', { replace: true });
+          const orgSlug = invitation?.organizationSlug;
+          navigate(orgSlug ? `/organization/${orgSlug}` : '/account/profile', { replace: true });
         }, 2000);
       } catch (loginError) {
         console.error('Auto-login failed:', loginError);
@@ -218,7 +219,8 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
       await refreshUser();
 
       setTimeout(() => {
-        navigate('/account/organization', { replace: true });
+        const orgSlug = invitation?.organizationSlug;
+        navigate(orgSlug ? `/organization/${orgSlug}` : '/account/profile', { replace: true });
       }, 2000);
     } catch (err: any) {
       console.error('Error accepting invitation:', err);

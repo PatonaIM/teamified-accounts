@@ -466,6 +466,35 @@ export class OrganizationsService {
     return this.mapToResponseDto(organization);
   }
 
+  async findBySlugWithAccess(slug: string, currentUser: User): Promise<OrganizationResponseDto> {
+    const organization = await this.organizationRepository.findOne({
+      where: { slug, deletedAt: null } as any,
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with slug '${slug}' not found`);
+    }
+
+    this.validateOrgAccess(organization.id, currentUser);
+
+    const result = await this.organizationRepository
+      .createQueryBuilder('org')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .where('org.id = :id', { id: organization.id })
+      .andWhere('org.deletedAt IS NULL')
+      .addSelect('COUNT(memberUser.id)', 'membercount')
+      .groupBy('org.id')
+      .getRawAndEntities();
+
+    const memberCount = parseInt(result.raw[0]?.membercount, 10) || 0;
+
+    return {
+      ...this.mapToResponseDto(organization),
+      memberCount,
+    };
+  }
+
   async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
     if (!slug || slug.length < 2 || slug.length > 100) {
       throw new BadRequestException('Slug must be between 2 and 100 characters');
