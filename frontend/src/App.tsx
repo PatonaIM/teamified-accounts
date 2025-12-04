@@ -62,6 +62,57 @@ function UserDetailRedirect() {
   return <Navigate to={`/users/${userId}`} state={location.state} replace />;
 }
 
+// Redirect component for /organization to first organization
+function OrganizationRedirect() {
+  const [loading, setLoading] = React.useState(true);
+  const [orgSlug, setOrgSlug] = React.useState<string | null>(null);
+  
+  React.useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const { default: OrganizationsService } = await import('./services/organizationsService');
+        const orgs = await OrganizationsService.getMyOrganizations();
+        if (orgs.length > 0) {
+          setOrgSlug(orgs[0].slug);
+        }
+      } catch (error) {
+        console.error('Failed to fetch organizations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrg();
+  }, []);
+  
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        backgroundColor: 'inherit'
+      }}>
+        <div style={{ 
+          width: 40, 
+          height: 40, 
+          border: '3px solid #e0e0e0', 
+          borderTop: '3px solid #A16AE8', 
+          borderRadius: '50%', 
+          animation: 'spin 1s linear infinite' 
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+  
+  if (orgSlug) {
+    return <Navigate to={`/organization/${orgSlug}`} replace />;
+  }
+  
+  return <Navigate to="/account/profile" replace />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -127,6 +178,15 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <InternalTeamInvitationManagementPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                {/* Redirect /organization to first organization */}
+                <Route 
+                  path="/organization" 
+                  element={
+                    <ProtectedRoute>
+                      <OrganizationRedirect />
                     </ProtectedRoute>
                   } 
                 />

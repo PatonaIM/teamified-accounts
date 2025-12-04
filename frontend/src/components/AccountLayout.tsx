@@ -24,7 +24,6 @@ import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/authService';
 import { useTheme } from '../contexts/ThemeContext';
 import AppsDropdown from './AppsDropdown';
-import OrganizationsService from '../services/organizationsService';
 
 const DRAWER_WIDTH = 260;
 
@@ -35,7 +34,6 @@ const AccountLayout: React.FC = () => {
   const { currentTheme, setTheme } = useTheme();
   
   const [appsAnchorEl, setAppsAnchorEl] = useState<HTMLElement | null>(null);
-  const [firstOrgSlug, setFirstOrgSlug] = useState<string | null>(null);
   const appsDropdownOpen = Boolean(appsAnchorEl);
 
   const isDarkMode = currentTheme === 'dark';
@@ -47,21 +45,6 @@ const AccountLayout: React.FC = () => {
   const isClientUser = user?.roles?.some((role: string) =>
     role.toLowerCase().startsWith('client_')
   );
-
-  useEffect(() => {
-    const fetchFirstOrgSlug = async () => {
-      if (!isClientUser) return;
-      try {
-        const orgs = await OrganizationsService.getMyOrganizations();
-        if (orgs.length > 0) {
-          setFirstOrgSlug(orgs[0].slug);
-        }
-      } catch (error) {
-        console.error('Failed to fetch organizations:', error);
-      }
-    };
-    fetchFirstOrgSlug();
-  }, [isClientUser]);
 
   const handleThemeToggle = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
@@ -220,11 +203,11 @@ const AccountLayout: React.FC = () => {
               </ListItemButton>
             </ListItem>
 
-            {isClientUser && firstOrgSlug && (
+            {isClientUser && (
               <ListItem disablePadding>
                 <ListItemButton
                   selected={!appsDropdownOpen && location.pathname.startsWith('/organization/')}
-                  onClick={() => navigate(`/organization/${firstOrgSlug}`)}
+                  onClick={() => navigate('/organization')}
                   sx={{
                     mx: 2,
                     my: 0.5,
