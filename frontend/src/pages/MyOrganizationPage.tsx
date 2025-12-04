@@ -43,6 +43,8 @@ import { useAuth } from '../hooks/useAuth';
 import organizationsService, { type Organization, type OrganizationMember } from '../services/organizationsService';
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
+import UserDetailDialog from '../components/organizations/UserDetailDialog';
+import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
 import { getRoleColor, getRolePriority } from '../constants/roleMetadata';
 
 const COMPANY_SIZES = [
@@ -131,25 +133,28 @@ const MyOrganizationPage: React.FC = () => {
 
   const [orgSwitcherAnchor, setOrgSwitcherAnchor] = useState<null | HTMLElement>(null);
 
-  const getUserRole = (): string => {
-    const roles = user?.roles || [];
-    const clientRoles = roles.filter((r: string) => r.startsWith('client_'));
-    if (clientRoles.includes('client_admin')) return 'client_admin';
-    if (clientRoles.includes('client_hr')) return 'client_hr';
-    if (clientRoles.includes('client_finance')) return 'client_finance';
-    if (clientRoles.includes('client_recruiter')) return 'client_recruiter';
-    if (clientRoles.includes('client_employee')) return 'client_employee';
-    return clientRoles[0] || 'client_employee';
-  };
+  const [showUserDetail, setShowUserDetail] = useState(false);
+  const [detailMember, setDetailMember] = useState<OrganizationMember | null>(null);
 
-  const userRole = getUserRole();
+  const permissions = useOrganizationPermissions({
+    userRoles: user?.roles || [],
+    isOwnOrganization: true,
+  });
+
+  const {
+    canInviteUsers,
+    canRemoveUsers,
+    canChangeRoles,
+    canMarkNLWF,
+    canSendPasswordReset,
+    canSuspendUser,
+    canViewUserDetails,
+    canViewSensitiveInfo,
+  } = permissions;
   
-  const canInviteUsers = ['client_admin', 'client_hr'].includes(userRole);
-  const canRemoveUsers = ['client_admin', 'client_hr'].includes(userRole);
-  const canChangeRoles = userRole === 'client_admin';
-  const canEditProfile = userRole === 'client_admin';
-  const canViewBilling = ['client_admin', 'client_finance'].includes(userRole);
-  const canDeleteOrg = userRole === 'client_admin';
+  const canEditProfile = permissions.canEditOrgProfile;
+  const canViewBilling = permissions.canViewBilling;
+  const canDeleteOrg = permissions.canDeleteOrg;
 
   useEffect(() => {
     loadOrganizations();
@@ -319,7 +324,7 @@ const MyOrganizationPage: React.FC = () => {
   };
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>, member: OrganizationMember) => {
-    if (!canRemoveUsers && !canChangeRoles) return;
+    if (!canRemoveUsers && !canChangeRoles && !canMarkNLWF) return;
     event.stopPropagation();
     setUserMenuAnchor(event.currentTarget);
     setSelectedMember(member);
@@ -327,6 +332,12 @@ const MyOrganizationPage: React.FC = () => {
 
   const handleCloseUserMenu = () => {
     setUserMenuAnchor(null);
+  };
+
+  const handleUserRowClick = (member: OrganizationMember) => {
+    if (!canViewUserDetails) return;
+    setDetailMember(member);
+    setShowUserDetail(true);
   };
 
   const handleRemoveFromOrg = async () => {
@@ -347,7 +358,7 @@ const MyOrganizationPage: React.FC = () => {
   };
 
   const handleMarkNLWF = async () => {
-    if (!selectedMember || !canRemoveUsers) return;
+    if (!selectedMember || !canMarkNLWF) return;
     
     setActionLoading(true);
     try {
@@ -361,6 +372,58 @@ const MyOrganizationPage: React.FC = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    if (!selectedOrg || !canChangeRoles) {
+      throw new Error('Permission denied');
+    }
+    await organizationsService.updateMemberRole(selectedOrg.id, userId, { roleType: newRole });
+    loadMembers();
+  };
+
+  const handleRemoveUserFromDialog = async (userId: string) => {
+    if (!selectedOrg || !canRemoveUsers) {
+      throw new Error('Permission denied');
+    }
+    await organizationsService.removeMember(selectedOrg.id, userId);
+    setSuccess('User removed from organization successfully!');
+    loadMembers();
+  };
+
+  const handleMarkNLWFFromDialog = async (userId: string) => {
+    if (!canMarkNLWF) {
+      throw new Error('Permission denied');
+    }
+    await userService.updateUserStatus(userId, 'inactive');
+    setSuccess('User marked as NLWF successfully!');
+    loadMembers();
+  };
+
+  const handleSendPasswordReset = async (userId: string) => {
+    if (!canSendPasswordReset) {
+      throw new Error('Permission denied');
+    }
+    await userService.sendPasswordReset(userId);
+    setSuccess('Password reset email sent successfully!');
+  };
+
+  const handleSuspendUser = async (userId: string) => {
+    if (!canSuspendUser) {
+      throw new Error('Permission denied');
+    }
+    await userService.updateUserStatus(userId, 'suspended');
+    setSuccess('User suspended successfully!');
+    loadMembers();
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    if (!canSuspendUser) {
+      throw new Error('Permission denied');
+    }
+    await userService.updateUserStatus(userId, 'active');
+    setSuccess('User activated successfully!');
+    loadMembers();
   };
 
   const statusCounts = members.reduce((acc, member) => {
@@ -733,54 +796,103 @@ const MyOrganizationPage: React.FC = () => {
                     ) : (
                       <>
                         <Stack spacing={1}>
-                          {paginatedMembers.map((member) => (
-                            <Paper
-                              key={member.id}
-                              sx={{
-                                p: 2,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                borderRadius: 2,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                '&:hover': { borderColor: 'primary.main' },
-                              }}
-                            >
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar
-                                  src={member.profilePicture || undefined}
-                                  sx={{ width: 48, height: 48 }}
-                                >
-                                  {member.userName?.charAt(0) || 'U'}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                    {member.userName}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {member.userEmail}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Chip
-                                  label={member.roleType?.replace('client_', '').replace('internal_', '')}
-                                  size="small"
-                                  color={getRoleColor(member.roleType)}
-                                  sx={{ textTransform: 'capitalize' }}
-                                />
-                                {(canRemoveUsers || canChangeRoles) && member.userId !== user?.id && (
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => handleOpenUserMenu(e, member)}
+                          {paginatedMembers.map((member) => {
+                            const isNlwf = member.status === 'nlwf';
+                            return (
+                              <Paper
+                                key={member.id}
+                                onClick={() => handleUserRowClick(member)}
+                                sx={{
+                                  p: 2,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  borderRadius: 2,
+                                  border: '1px solid',
+                                  borderColor: isNlwf ? 'action.disabled' : 'divider',
+                                  cursor: canViewUserDetails ? 'pointer' : 'default',
+                                  bgcolor: isNlwf ? 'action.disabledBackground' : 'background.paper',
+                                  opacity: isNlwf ? 0.75 : 1,
+                                  transition: 'all 0.2s',
+                                  '&:hover': canViewUserDetails ? { 
+                                    borderColor: 'primary.main',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 2,
+                                    opacity: 1,
+                                  } : {},
+                                }}
+                              >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Avatar
+                                    src={member.profilePicture || undefined}
+                                    sx={{ 
+                                      width: 48, 
+                                      height: 48,
+                                      filter: isNlwf ? 'grayscale(100%)' : 'none',
+                                    }}
                                   >
-                                    <MoreVert />
-                                  </IconButton>
-                                )}
-                              </Box>
-                            </Paper>
-                          ))}
+                                    {member.userName?.charAt(0) || 'U'}
+                                  </Avatar>
+                                  <Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography 
+                                        variant="body1" 
+                                        sx={{ 
+                                          fontWeight: 600,
+                                          color: isNlwf ? 'text.secondary' : 'text.primary',
+                                        }}
+                                      >
+                                        {member.userName}
+                                      </Typography>
+                                      {member.status === 'invited' && (
+                                        <Chip
+                                          label="Invited"
+                                          size="small"
+                                          color="info"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                      {member.status === 'nlwf' && (
+                                        <Chip
+                                          label="NLWF"
+                                          size="small"
+                                          color="warning"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                      {member.status === 'suspended' && (
+                                        <Chip
+                                          label="Suspended"
+                                          size="small"
+                                          color="error"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                    </Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {member.userEmail}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Chip
+                                    label={member.roleType?.replace('client_', '').replace('internal_', '')}
+                                    size="small"
+                                    color={getRoleColor(member.roleType)}
+                                    sx={{ textTransform: 'capitalize', opacity: isNlwf ? 0.6 : 1 }}
+                                  />
+                                  {(canRemoveUsers || canChangeRoles || canMarkNLWF) && member.userId !== user?.id && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => handleOpenUserMenu(e, member)}
+                                    >
+                                      <MoreVert />
+                                    </IconButton>
+                                  )}
+                                </Box>
+                              </Paper>
+                            );
+                          })}
                         </Stack>
 
                         {hasMoreMembers && (
@@ -979,7 +1091,7 @@ const MyOrganizationPage: React.FC = () => {
             Remove from Organization
           </MenuItem>
         )}
-        {canRemoveUsers && (
+        {canMarkNLWF && selectedMember?.status !== 'nlwf' && (
           <MenuItem onClick={() => { setShowNLWFConfirm(true); handleCloseUserMenu(); }}>
             <PersonOff sx={{ mr: 1, fontSize: 20 }} />
             Mark as NLWF
@@ -1027,6 +1139,24 @@ const MyOrganizationPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <UserDetailDialog
+        open={showUserDetail}
+        onClose={() => {
+          setShowUserDetail(false);
+          setDetailMember(null);
+        }}
+        member={detailMember}
+        permissions={permissions}
+        organizationName={selectedOrg?.name}
+        currentUserId={user?.id}
+        onRoleChange={canChangeRoles ? handleRoleChange : undefined}
+        onRemoveUser={canRemoveUsers ? handleRemoveUserFromDialog : undefined}
+        onMarkNLWF={canMarkNLWF ? handleMarkNLWFFromDialog : undefined}
+        onSendPasswordReset={canSendPasswordReset ? handleSendPasswordReset : undefined}
+        onSuspendUser={canSuspendUser ? handleSuspendUser : undefined}
+        onActivateUser={canSuspendUser ? handleActivateUser : undefined}
+      />
     </Box>
   );
 };

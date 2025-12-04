@@ -224,6 +224,10 @@ class UserService {
     );
     return response.data;
   }
+
+  async sendPasswordReset(userId: string): Promise<{ message: string }> {
+    return this.adminSendPasswordResetEmail(userId);
+  }
 }
 
 export default new UserService();
