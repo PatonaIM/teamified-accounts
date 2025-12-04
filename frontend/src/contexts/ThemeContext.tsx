@@ -26,7 +26,6 @@ const CUSTOM_THEME_STORAGE_KEY = 'teamified_custom_theme_auth';
 // Public routes that should always use light mode
 const PUBLIC_LIGHT_MODE_ROUTES = [
   '/login',
-  '/docs',
   '/test',
   '/signup-select',
   '/signup-candidate',
@@ -37,8 +36,15 @@ const PUBLIC_LIGHT_MODE_ROUTES = [
   '/invitations',
 ];
 
+// Routes that allow theme toggle even for unauthenticated users
+const THEME_TOGGLE_ALLOWED_ROUTES = ['/docs'];
+
 const isPublicLightModeRoute = (pathname: string): boolean => {
   return PUBLIC_LIGHT_MODE_ROUTES.some(route => pathname.startsWith(route));
+};
+
+const isThemeToggleAllowedRoute = (pathname: string): boolean => {
+  return THEME_TOGGLE_ALLOWED_ROUTES.some(route => pathname.startsWith(route));
 };
 
 const getStoredTheme = (): ThemeMode | 'custom' => {
@@ -414,9 +420,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [isAuthenticated, isPublicRoute]);
 
+  const isThemeToggleAllowed = isThemeToggleAllowedRoute(currentPath);
+
   const setTheme = (theme: ThemeMode) => {
-    // Only save theme preferences if user is authenticated
-    if (!isAuthenticated) {
+    // Allow theme changes for authenticated users OR for theme-toggle-allowed routes (like docs)
+    if (!isAuthenticated && !isThemeToggleAllowed) {
       return;
     }
     
@@ -438,9 +446,12 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
     
-    themePreferenceService.saveThemePreference(theme as ThemeMode).catch(error => {
-      console.error('Failed to save theme preference to backend:', error);
-    });
+    // Only save to backend if authenticated
+    if (isAuthenticated) {
+      themePreferenceService.saveThemePreference(theme as ThemeMode).catch(error => {
+        console.error('Failed to save theme preference to backend:', error);
+      });
+    }
   };
 
   const loadCustomTheme = (theme: UserTheme) => {
@@ -489,10 +500,12 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
-  // Force light mode for public routes
+  // Force light mode for public routes (except theme-toggle-allowed routes like docs)
   let effectiveTheme: ThemeMode | 'custom' = currentTheme;
-  if (isPublicRoute || !isAuthenticated) {
+  if (isPublicRoute && !isThemeToggleAllowed) {
     effectiveTheme = 'teamified'; // Always use light mode for public routes
+  } else if (!isAuthenticated && !isThemeToggleAllowed) {
+    effectiveTheme = 'teamified'; // Use light mode for unauthenticated users on non-docs routes
   }
 
   let theme = createAppTheme(effectiveTheme === 'custom' ? 'teamified' : effectiveTheme);

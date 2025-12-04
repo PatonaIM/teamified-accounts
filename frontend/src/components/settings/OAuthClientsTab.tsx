@@ -26,14 +26,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Switch,
 } from '@mui/material';
 import {
   Add,
   Edit,
   Delete,
   Refresh,
-  ToggleOn,
-  ToggleOff,
   ContentCopy,
   Info,
   Code,
@@ -50,14 +49,19 @@ const OAuthClientsTab: React.FC = () => {
   const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [togglingClient, setTogglingClient] = useState<string | null>(null);
   const { showSnackbar } = useSnackbar();
 
   const loadClients = async () => {
     try {
       setLoading(true);
       const data = await oauthClientsService.getAll();
-      setClients(data);
+      const sortedData = data.sort((a, b) => 
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      );
+      setClients(sortedData);
     } catch (error) {
       showSnackbar('Failed to load OAuth clients', 'error');
     } finally {
@@ -88,38 +92,33 @@ const OAuthClientsTab: React.FC = () => {
     if (!clientToDelete) return;
 
     try {
+      setDeleting(true);
       await oauthClientsService.delete(clientToDelete.id);
       showSnackbar('OAuth client deleted successfully', 'success');
       loadClients();
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
     } catch (error) {
       showSnackbar('Failed to delete OAuth client', 'error');
     } finally {
-      setDeleteDialogOpen(false);
-      setClientToDelete(null);
+      setDeleting(false);
     }
   };
 
   const handleToggleActive = async (client: OAuthClient) => {
+    const previousState = client.is_active;
+    
+    setClients(prev => prev.map(c => 
+      c.id === client.id ? { ...c, is_active: !c.is_active } : c
+    ));
+    
     try {
       await oauthClientsService.toggleActive(client.id);
-      showSnackbar(`OAuth client ${client.is_active ? 'deactivated' : 'activated'}`, 'success');
-      loadClients();
     } catch (error) {
+      setClients(prev => prev.map(c => 
+        c.id === client.id ? { ...c, is_active: previousState } : c
+      ));
       showSnackbar('Failed to toggle client status', 'error');
-    }
-  };
-
-  const handleRegenerateSecret = async (client: OAuthClient) => {
-    if (!confirm(`Regenerate secret for "${client.name}"? This will invalidate the current secret and apps using it will stop working until updated.`)) {
-      return;
-    }
-
-    try {
-      const updated = await oauthClientsService.regenerateSecret(client.id);
-      showSnackbar('Secret regenerated successfully. Copy it now!', 'warning');
-      setClients(clients.map(c => c.id === updated.id ? updated : c));
-    } catch (error) {
-      showSnackbar('Failed to regenerate secret', 'error');
     }
   };
 
@@ -215,6 +214,10 @@ const OAuthClientsTab: React.FC = () => {
             variant="contained"
             startIcon={<Add />}
             onClick={handleAddClient}
+            sx={{
+              bgcolor: '#4caf50',
+              '&:hover': { bgcolor: '#43a047' },
+            }}
           >
             Add Application
           </Button>
@@ -253,9 +256,11 @@ const OAuthClientsTab: React.FC = () => {
               clients.map((client) => (
                 <TableRow
                   key={client.id}
+                  onClick={() => handleEditClient(client)}
                   sx={{
                     '&:hover': { bgcolor: 'action.hover' },
                     opacity: client.is_active ? 1 : 0.6,
+                    cursor: 'pointer',
                   }}
                 >
                   <TableCell>
@@ -293,7 +298,7 @@ const OAuthClientsTab: React.FC = () => {
                       <Tooltip title="Copy Client ID">
                         <IconButton
                           size="small"
-                          onClick={() => copyToClipboard(client.client_id, 'Client ID')}
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(client.client_id, 'Client ID'); }}
                         >
                           <ContentCopy fontSize="small" />
                         </IconButton>
@@ -301,11 +306,29 @@ const OAuthClientsTab: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={client.is_active ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={client.is_active ? 'success' : 'default'}
-                    />
+                    <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
+                      <Switch
+                        checked={client.is_active}
+                        onChange={(e) => { e.stopPropagation(); handleToggleActive(client); }}
+                        onClick={(e) => e.stopPropagation()}
+                        disabled={togglingClient === client.id}
+                        size="small"
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase': {
+                            color: '#9e9e9e',
+                          },
+                          '& .MuiSwitch-track': {
+                            backgroundColor: '#bdbdbd',
+                          },
+                        }}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
@@ -314,36 +337,18 @@ const OAuthClientsTab: React.FC = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Tooltip title={client.is_active ? 'Deactivate' : 'Activate'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleActive(client)}
-                          color={client.is_active ? 'success' : 'default'}
-                        >
-                          {client.is_active ? <ToggleOn /> : <ToggleOff />}
-                        </IconButton>
-                      </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
-                          onClick={() => handleEditClient(client)}
+                          onClick={(e) => { e.stopPropagation(); handleEditClient(client); }}
                         >
                           <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Regenerate Secret">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRegenerateSecret(client)}
-                          color="warning"
-                        >
-                          <Refresh fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton
                           size="small"
-                          onClick={() => handleDeleteClick(client)}
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(client); }}
                           color="error"
                         >
                           <Delete fontSize="small" />
@@ -371,7 +376,9 @@ const OAuthClientsTab: React.FC = () => {
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleDeleteConfirm}
         title="Delete OAuth Client"
-        message={`Are you sure you want to delete "${clientToDelete?.name}"? This action cannot be undone and will immediately revoke access for this application.`}
+        message={`Are you sure you want to delete "${clientToDelete?.name}"? This will revoke access for this application.`}
+        confirmationName={clientToDelete?.name}
+        loading={deleting}
       />
 
       {/* Integration Instructions Dialog */}

@@ -14,8 +14,10 @@ import {
   Stack,
   IconButton,
   InputAdornment,
+  CircularProgress,
+  Tooltip,
 } from '@mui/material';
-import { Add, Delete, ContentCopy } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Edit, Check } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -29,24 +31,27 @@ interface Props {
 const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [appUrl, setAppUrl] = useState('');
-  const [owner, setOwner] = useState('');
   const [environment, setEnvironment] = useState<'development' | 'staging' | 'production'>('development');
   const [defaultIntent, setDefaultIntent] = useState<'client' | 'candidate' | 'both'>('both');
   const [redirectUris, setRedirectUris] = useState<string[]>(['']);
   const [loading, setLoading] = useState(false);
   const [createdClient, setCreatedClient] = useState<OAuthClient | null>(null);
+  const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
+  const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
+  const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
+  const [editingUriValue, setEditingUriValue] = useState('');
+  const [originalRedirectUris, setOriginalRedirectUris] = useState<string[]>([]);
+  const [newUriInput, setNewUriInput] = useState('');
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     if (client) {
       setName(client.name);
       setDescription(client.description || '');
-      setAppUrl(client.metadata?.app_url || '');
-      setOwner(client.metadata?.owner || '');
       setEnvironment(client.metadata?.environment || 'development');
       setDefaultIntent(client.default_intent || 'both');
       setRedirectUris(client.redirect_uris.length > 0 ? client.redirect_uris : ['']);
+      setOriginalRedirectUris([...client.redirect_uris]);
     } else {
       resetForm();
     }
@@ -55,20 +60,44 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const resetForm = () => {
     setName('');
     setDescription('');
-    setAppUrl('');
-    setOwner('');
     setEnvironment('development');
     setDefaultIntent('both');
-    setRedirectUris(['']);
+    setRedirectUris([]);
     setCreatedClient(null);
+    setOriginalRedirectUris([]);
+    setNewUriInput('');
+  };
+
+  const isUriModified = (uri: string, index: number): boolean => {
+    if (!client) return false;
+    const originalUri = originalRedirectUris[index];
+    if (originalUri === undefined) return true;
+    return uri !== originalUri;
+  };
+
+  const isNewUri = (index: number): boolean => {
+    if (!client) return false;
+    return index >= originalRedirectUris.length;
   };
 
   const handleAddRedirectUri = () => {
-    setRedirectUris([...redirectUris, '']);
+    if (newUriInput.trim()) {
+      setRedirectUris([...redirectUris, newUriInput.trim()]);
+      setNewUriInput('');
+    }
   };
 
   const handleRemoveRedirectUri = (index: number) => {
-    setRedirectUris(redirectUris.filter((_, i) => i !== index));
+    setUriToDeleteIndex(index);
+    setShowUriDeleteDialog(true);
+  };
+
+  const handleConfirmUriDelete = () => {
+    if (uriToDeleteIndex !== null) {
+      setRedirectUris(redirectUris.filter((_, i) => i !== uriToDeleteIndex));
+    }
+    setShowUriDeleteDialog(false);
+    setUriToDeleteIndex(null);
   };
 
   const handleRedirectUriChange = (index: number, value: string) => {
@@ -90,8 +119,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       description: description || undefined,
       redirect_uris: filteredUris,
       default_intent: defaultIntent,
-      app_url: appUrl || undefined,
-      owner: owner || undefined,
       environment,
     };
 
@@ -128,6 +155,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   };
 
   return (
+    <>
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         {createdClient ? 'Application Credentials' : client ? 'Edit Application' : 'Add Application'}
@@ -234,22 +262,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             />
 
             <TextField
-              label="Application URL"
-              value={appUrl}
-              onChange={(e) => setAppUrl(e.target.value)}
-              fullWidth
-              placeholder="https://app.teamified.com"
-            />
-
-            <TextField
-              label="Owner/Team"
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              fullWidth
-              placeholder="Engineering Team"
-            />
-
-            <TextField
               select
               label="Environment"
               value={environment}
@@ -277,43 +289,158 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             </TextField>
 
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2">Redirect URIs</Typography>
-                <Button
-                  size="small"
-                  startIcon={<Add />}
-                  onClick={handleAddRedirectUri}
-                >
-                  Add URI
-                </Button>
-              </Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Redirect URIs</Typography>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
                 OAuth callback URLs where users will be redirected after authentication
               </Typography>
               
-              <Stack spacing={2}>
+              <Stack spacing={1}>
                 {redirectUris.map((uri, index) => (
-                  <TextField
+                  <Box
                     key={index}
-                    value={uri}
-                    onChange={(e) => handleRedirectUriChange(index, e.target.value)}
-                    placeholder="https://app.teamified.com/auth/callback"
-                    fullWidth
-                    InputProps={{
-                      endAdornment: redirectUris.length > 1 && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleRemoveRedirectUri(index)}
-                            color="error"
-                          >
-                            <Delete fontSize="small" />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      p: 1.5,
+                      bgcolor: isNewUri(index) 
+                        ? 'rgba(76, 175, 80, 0.08)' 
+                        : isUriModified(uri, index) 
+                          ? 'rgba(255, 152, 0, 0.08)' 
+                          : 'action.hover',
+                      borderRadius: 1,
+                      border: isNewUri(index) 
+                        ? '1px solid rgba(76, 175, 80, 0.3)' 
+                        : isUriModified(uri, index) 
+                          ? '1px solid rgba(255, 152, 0, 0.3)' 
+                          : '1px solid transparent',
                     }}
-                  />
+                  >
+                    {editingUriIndex === index ? (
+                      <TextField
+                        value={editingUriValue}
+                        onChange={(e) => setEditingUriValue(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        placeholder="https://app.teamified.com/auth/callback"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleRedirectUriChange(index, editingUriValue);
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }
+                        }}
+                        sx={{
+                          flex: 1,
+                          '& .MuiInputBase-input': {
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                          },
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          wordBreak: 'break-all',
+                          color: uri ? 'text.primary' : 'text.disabled',
+                        }}
+                      >
+                        {uri || 'Empty URI - click edit to add'}
+                      </Typography>
+                    )}
+                    {isNewUri(index) && editingUriIndex !== index && (
+                      <Chip 
+                        label="New" 
+                        size="small" 
+                        color="success"
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.65rem',
+                          '& .MuiChip-label': { px: 1 }
+                        }} 
+                      />
+                    )}
+                    {isUriModified(uri, index) && !isNewUri(index) && editingUriIndex !== index && (
+                      <Chip 
+                        label="Edited" 
+                        size="small" 
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.65rem',
+                          bgcolor: '#ff9800',
+                          color: 'white',
+                          '& .MuiChip-label': { px: 1 }
+                        }} 
+                      />
+                    )}
+                    {editingUriIndex === index ? (
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            handleRedirectUriChange(index, editingUriValue);
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }}
+                          color="success"
+                        >
+                          <Check fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditingUriIndex(index);
+                            setEditingUriValue(uri);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Delete">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveRedirectUri(index)}
+                        color="error"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 ))}
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <TextField
+                  placeholder="https://app.teamified.com/auth/callback"
+                  value={newUriInput}
+                  onChange={(e) => setNewUriInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddRedirectUri}
+                  disabled={!newUriInput.trim()}
+                  startIcon={<Add />}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Add
+                </Button>
               </Stack>
             </Box>
           </Box>
@@ -321,7 +448,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       </DialogContent>
       
       <DialogActions>
-        <Button onClick={handleClose}>
+        <Button onClick={handleClose} disabled={loading}>
           {createdClient ? 'Close' : 'Cancel'}
         </Button>
         {!createdClient && (
@@ -329,12 +456,68 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             variant="contained"
             onClick={handleSubmit}
             disabled={loading || !name}
+            sx={{
+              bgcolor: '#4caf50',
+              '&:hover': { bgcolor: '#43a047' },
+              minWidth: 100,
+            }}
           >
-            {client ? 'Update' : 'Create'}
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              client ? 'Update' : 'Create'
+            )}
           </Button>
         )}
       </DialogActions>
+
     </Dialog>
+
+    {/* URI Delete Confirmation Dialog */}
+    <Dialog
+      open={showUriDeleteDialog}
+      onClose={() => {
+        setShowUriDeleteDialog(false);
+        setUriToDeleteIndex(null);
+      }}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Remove Redirect URI</DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Are you sure you want to remove this redirect URI?
+        </Typography>
+        {uriToDeleteIndex !== null && redirectUris[uriToDeleteIndex] && (
+          <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+              {redirectUris[uriToDeleteIndex]}
+            </Typography>
+          </Box>
+        )}
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          This URI will be removed from the active list. The change will take effect when you save the client.
+        </Alert>
+      </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={() => {
+            setShowUriDeleteDialog(false);
+            setUriToDeleteIndex(null);
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleConfirmUriDelete}
+          color="error"
+          variant="contained"
+        >
+          Remove URI
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 };
 

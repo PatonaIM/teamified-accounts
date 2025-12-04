@@ -14,11 +14,11 @@ export class BulkStatusUpdateDto {
 
   @ApiProperty({
     description: 'New status to apply to all users',
-    enum: ['active', 'inactive', 'archived'],
+    enum: ['active', 'inactive', 'archived', 'suspended'],
     example: 'active'
   })
-  @IsEnum(['active', 'inactive', 'archived'], {
-    message: 'Status must be one of: active, inactive, archived'
+  @IsEnum(['active', 'inactive', 'archived', 'suspended'], {
+    message: 'Status must be one of: active, inactive, archived, suspended'
   })
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived' | 'suspended';
 }

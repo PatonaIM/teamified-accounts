@@ -56,6 +56,7 @@ export default function IntegratedTestSuite() {
   const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>(
     [],
   );
+  const [sessionRestored, setSessionRestored] = useState(false);
   const callbackProcessedRef = useRef(false);
   const sessionCheckRef = useRef(false);
 
@@ -255,6 +256,8 @@ export default function IntegratedTestSuite() {
 
       const user = await userResponse.json();
       setUserInfo(user);
+      
+      saveSession(token, user);
 
       saveSession(token, user);
 
@@ -272,8 +275,7 @@ export default function IntegratedTestSuite() {
   };
 
   const handleCopyToken = async () => {
-    if (!accessToken) return;
-    try {
+    if (!accessToken) return; try {
       await navigator.clipboard.writeText(accessToken);
       setCopySuccess(true);
     } catch (err) {
@@ -781,7 +783,7 @@ export default function IntegratedTestSuite() {
         autoHideDuration={2000}
         onClose={() => setCopySuccess(false)}
         message="Token copied to clipboard!"
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       />
     </Box>
   );

@@ -30,6 +30,7 @@ import {
   MenuItem,
   Alert,
   Snackbar,
+  Switch,
 } from '@mui/material';
 import {
   Search,
@@ -37,11 +38,8 @@ import {
   Delete,
   Edit,
   ArrowBack,
-  Refresh,
-  PowerSettingsNew,
   ContentCopy,
-  Visibility,
-  VisibilityOff,
+  Check,
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -58,24 +56,27 @@ const OAuthConfigurationPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [environmentFilter, setEnvironmentFilter] = useState<'all' | 'development' | 'staging' | 'production'>('all');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [showSecretDialog, setShowSecretDialog] = useState(false);
-  const [newSecret, setNewSecret] = useState<string>('');
-  const [showSecret, setShowSecret] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [togglingClient, setTogglingClient] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
+  const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
+  const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
+  const [editingUriValue, setEditingUriValue] = useState('');
+  const [originalRedirectUris, setOriginalRedirectUris] = useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = useState<CreateOAuthClientDto>({
     name: '',
     description: '',
     redirect_uris: [],
-    app_url: '',
-    owner: '',
     environment: undefined,
   });
   const [redirectUriInput, setRedirectUriInput] = useState('');
@@ -87,7 +88,7 @@ const OAuthConfigurationPage: React.FC = () => {
   // Reset pagination when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, environmentFilter]);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -95,7 +96,10 @@ const OAuthConfigurationPage: React.FC = () => {
 
     try {
       const data = await oauthClientsService.getAll();
-      setClients(data);
+      const sortedData = data.sort((a, b) => 
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      );
+      setClients(sortedData);
     } catch (err: any) {
       setError(err.message || 'Failed to load OAuth clients');
     } finally {
@@ -119,20 +123,18 @@ const OAuthConfigurationPage: React.FC = () => {
         name: client.name,
         description: client.description || '',
         redirect_uris: client.redirect_uris,
-        app_url: client.metadata?.app_url || '',
-        owner: client.metadata?.owner || '',
         environment: client.metadata?.environment,
       });
+      setOriginalRedirectUris([...client.redirect_uris]);
     } else {
       setEditingClient(null);
       setFormData({
         name: '',
         description: '',
         redirect_uris: [],
-        app_url: '',
-        owner: '',
         environment: undefined,
       });
+      setOriginalRedirectUris([]);
     }
     setRedirectUriInput('');
     setDrawerOpen(true);
@@ -145,11 +147,22 @@ const OAuthConfigurationPage: React.FC = () => {
       name: '',
       description: '',
       redirect_uris: [],
-      app_url: '',
-      owner: '',
       environment: undefined,
     });
     setRedirectUriInput('');
+    setOriginalRedirectUris([]);
+  };
+
+  const isUriModified = (uri: string, index: number): boolean => {
+    if (!editingClient) return false;
+    const originalUri = originalRedirectUris[index];
+    if (originalUri === undefined) return true;
+    return uri !== originalUri;
+  };
+
+  const isNewUri = (index: number): boolean => {
+    if (!editingClient) return false;
+    return index >= originalRedirectUris.length;
   };
 
   const handleAddRedirectUri = () => {
@@ -163,10 +176,19 @@ const OAuthConfigurationPage: React.FC = () => {
   };
 
   const handleRemoveRedirectUri = (index: number) => {
-    setFormData({
-      ...formData,
-      redirect_uris: formData.redirect_uris.filter((_, i) => i !== index),
-    });
+    setUriToDeleteIndex(index);
+    setShowUriDeleteDialog(true);
+  };
+
+  const handleConfirmUriDelete = () => {
+    if (uriToDeleteIndex !== null) {
+      setFormData({
+        ...formData,
+        redirect_uris: formData.redirect_uris.filter((_, i) => i !== uriToDeleteIndex),
+      });
+    }
+    setShowUriDeleteDialog(false);
+    setUriToDeleteIndex(null);
   };
 
   const handleSubmit = async () => {
@@ -180,6 +202,7 @@ const OAuthConfigurationPage: React.FC = () => {
       return;
     }
 
+    setSubmitting(true);
     try {
       if (editingClient) {
         await oauthClientsService.update(editingClient.id, formData);
@@ -193,12 +216,15 @@ const OAuthConfigurationPage: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to save OAuth client';
       setError(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDeleteClick = (event: React.MouseEvent, client: OAuthClient) => {
     event.stopPropagation();
     setClientToDelete(client);
+    setDeleteConfirmInput('');
     setShowDeleteDialog(true);
   };
 
@@ -211,36 +237,31 @@ const OAuthConfigurationPage: React.FC = () => {
       setSuccess(`OAuth client "${clientToDelete.name}" deleted successfully!`);
       setShowDeleteDialog(false);
       setClientToDelete(null);
+      setDeleteConfirmInput('');
       await fetchClients();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to delete OAuth client';
       setError(errorMessage);
     } finally {
       setDeleting(false);
-      setShowDeleteDialog(false);
       setClientToDelete(null);
     }
   };
 
   const handleToggleActive = async (client: OAuthClient) => {
+    const previousState = client.is_active;
+    
+    setClients(prev => prev.map(c => 
+      c.id === client.id ? { ...c, is_active: !c.is_active } : c
+    ));
+    
     try {
       await oauthClientsService.toggleActive(client.id);
-      setSuccess(`OAuth client ${client.is_active ? 'deactivated' : 'activated'} successfully!`);
-      await fetchClients();
     } catch (err: any) {
+      setClients(prev => prev.map(c => 
+        c.id === client.id ? { ...c, is_active: previousState } : c
+      ));
       const errorMessage = err.response?.data?.message || err.message || 'Failed to toggle OAuth client status';
-      setError(errorMessage);
-    }
-  };
-
-  const handleRegenerateSecret = async (client: OAuthClient) => {
-    try {
-      const updated = await oauthClientsService.regenerateSecret(client.id);
-      setNewSecret(updated.client_secret);
-      setShowSecretDialog(true);
-      await fetchClients();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to regenerate client secret';
       setError(errorMessage);
     }
   };
@@ -256,11 +277,10 @@ const OAuthConfigurationPage: React.FC = () => {
       client.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       client.client_id.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && client.is_active) ||
-      (statusFilter === 'inactive' && !client.is_active);
+    const matchesEnvironment = environmentFilter === 'all' || 
+      client.metadata?.environment === environmentFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesEnvironment;
   });
 
   const paginatedClients = filteredClients.slice(
@@ -278,37 +298,33 @@ const OAuthConfigurationPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Stack direction="row" alignItems="center" sx={{ mb: 3 }}>
-        <IconButton onClick={() => navigate('/admin/tools')} sx={{ mr: 2 }}>
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4" sx={{ fontWeight: 600, flex: 1 }}>
-          OAuth Configuration
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpenDrawer()}
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            bgcolor: '#A16AE8',
-            '&:hover': { bgcolor: '#8f5cd9' },
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate('/admin/tools')}
+          sx={{ 
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': { 
+              bgcolor: 'rgba(161, 106, 232, 0.08)' 
+            }
           }}
         >
-          Register New Client
-        </Button>
-      </Stack>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          OAuth Configuration
+        </Typography>
+      </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
+      <Paper elevation={0} sx={{ mb: 3, p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
           <TextField
+            fullWidth
+            size="small"
             placeholder="Search by name, description, or client ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            size="small"
-            sx={{ flex: 1 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -318,18 +334,32 @@ const OAuthConfigurationPage: React.FC = () => {
             }}
           />
           <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
+            <InputLabel>Environment</InputLabel>
             <Select
-              value={statusFilter}
-              label="Status"
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              value={environmentFilter}
+              label="Environment"
+              onChange={(e) => setEnvironmentFilter(e.target.value as any)}
             >
               <MenuItem value="all">All</MenuItem>
-              <MenuItem value="active">Active</MenuItem>
-              <MenuItem value="inactive">Inactive</MenuItem>
+              <MenuItem value="development">Development</MenuItem>
+              <MenuItem value="staging">Staging</MenuItem>
+              <MenuItem value="production">Production</MenuItem>
             </Select>
           </FormControl>
-        </Stack>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenDrawer()}
+            sx={{
+              bgcolor: '#4CAF50',
+              '&:hover': { bgcolor: '#45a049' },
+              whiteSpace: 'nowrap',
+              px: 3,
+            }}
+          >
+            New Client
+          </Button>
+        </Box>
       </Paper>
 
       {error && (
@@ -347,22 +377,21 @@ const OAuthConfigurationPage: React.FC = () => {
               <TableCell sx={{ fontWeight: 600 }}>Environment</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Redirect URIs</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : paginatedClients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                   <Typography color="text.secondary">
-                    {searchQuery || statusFilter !== 'all'
+                    {searchQuery || environmentFilter !== 'all'
                       ? 'No OAuth clients found matching your filters'
                       : 'No OAuth clients registered yet'}
                   </Typography>
@@ -370,7 +399,12 @@ const OAuthConfigurationPage: React.FC = () => {
               </TableRow>
             ) : (
               paginatedClients.map((client) => (
-                <TableRow key={client.id} hover>
+                <TableRow 
+                  key={client.id} 
+                  hover
+                  onClick={() => handleOpenDrawer(client)}
+                  sx={{ cursor: 'pointer' }}
+                >
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {client.name}
@@ -404,11 +438,29 @@ const OAuthConfigurationPage: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={client.is_active ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={client.is_active ? 'success' : 'default'}
-                    />
+                    <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
+                      <Switch
+                        checked={client.is_active}
+                        onChange={(e) => { e.stopPropagation(); handleToggleActive(client); }}
+                        onClick={(e) => e.stopPropagation()}
+                        disabled={togglingClient === client.id}
+                        size="small"
+                        sx={{
+                          '& .MuiSwitch-switchBase.Mui-checked': {
+                            color: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                            backgroundColor: '#4caf50',
+                          },
+                          '& .MuiSwitch-switchBase': {
+                            color: '#9e9e9e',
+                          },
+                          '& .MuiSwitch-track': {
+                            backgroundColor: '#bdbdbd',
+                          },
+                        }}
+                      />
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
@@ -416,33 +468,10 @@ const OAuthConfigurationPage: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      {formatDistanceToNow(new Date(client.created_at), { addSuffix: true })}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => handleOpenDrawer(client)}>
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenDrawer(client); }}>
                           <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={client.is_active ? 'Deactivate' : 'Activate'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleActive(client)}
-                          color={client.is_active ? 'warning' : 'success'}
-                        >
-                          <PowerSettingsNew fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Regenerate Secret">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRegenerateSecret(client)}
-                          color="info"
-                        >
-                          <Refresh fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
@@ -474,7 +503,7 @@ const OAuthConfigurationPage: React.FC = () => {
 
       {/* Create/Edit Drawer */}
       <Drawer anchor="right" open={drawerOpen} onClose={handleCloseDrawer}>
-        <Box sx={{ width: 500, p: 3 }}>
+        <Box sx={{ width: 650, p: 3 }}>
           <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
             {editingClient ? 'Edit OAuth Client' : 'Register New OAuth Client'}
           </Typography>
@@ -497,22 +526,6 @@ const OAuthConfigurationPage: React.FC = () => {
               fullWidth
             />
 
-            <TextField
-              label="Application URL"
-              value={formData.app_url}
-              onChange={(e) => setFormData({ ...formData, app_url: e.target.value })}
-              placeholder="https://app.example.com"
-              fullWidth
-            />
-
-            <TextField
-              label="Owner/Team"
-              value={formData.owner}
-              onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-              placeholder="Engineering Team"
-              fullWidth
-            />
-
             <FormControl fullWidth>
               <InputLabel>Environment</InputLabel>
               <Select
@@ -531,23 +544,6 @@ const OAuthConfigurationPage: React.FC = () => {
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 Redirect URIs
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <TextField
-                  placeholder="https://app.example.com/auth/callback"
-                  value={redirectUriInput}
-                  onChange={(e) => setRedirectUriInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
-                  size="small"
-                  fullWidth
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleAddRedirectUri}
-                  disabled={!redirectUriInput.trim()}
-                >
-                  Add
-                </Button>
-              </Stack>
               <Stack spacing={1}>
                 {formData.redirect_uris.map((uri, index) => (
                   <Stack
@@ -557,18 +553,142 @@ const OAuthConfigurationPage: React.FC = () => {
                     alignItems="center"
                     sx={{
                       p: 1,
-                      bgcolor: 'action.hover',
+                      bgcolor: isNewUri(index) 
+                        ? 'rgba(76, 175, 80, 0.08)' 
+                        : isUriModified(uri, index) 
+                          ? 'rgba(255, 152, 0, 0.08)' 
+                          : 'action.hover',
                       borderRadius: 1,
+                      border: isNewUri(index) 
+                        ? '1px solid rgba(76, 175, 80, 0.3)' 
+                        : isUriModified(uri, index) 
+                          ? '1px solid rgba(255, 152, 0, 0.3)' 
+                          : '1px solid transparent',
                     }}
                   >
-                    <Typography variant="body2" sx={{ flex: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {uri}
-                    </Typography>
-                    <IconButton size="small" onClick={() => handleRemoveRedirectUri(index)}>
-                      <Delete fontSize="small" />
-                    </IconButton>
+                    {editingUriIndex === index ? (
+                      <TextField
+                        value={editingUriValue}
+                        onChange={(e) => setEditingUriValue(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            const newUris = [...formData.redirect_uris];
+                            newUris[index] = editingUriValue;
+                            setFormData({ ...formData, redirect_uris: newUris });
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }
+                        }}
+                        sx={{ 
+                          flex: 1,
+                          '& .MuiInputBase-input': { 
+                            fontFamily: 'monospace', 
+                            fontSize: '0.75rem' 
+                          }
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        {uri}
+                      </Typography>
+                    )}
+                    {isNewUri(index) && editingUriIndex !== index && (
+                      <Chip 
+                        label="New" 
+                        size="small" 
+                        color="success"
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.65rem',
+                          '& .MuiChip-label': { px: 1 }
+                        }} 
+                      />
+                    )}
+                    {isUriModified(uri, index) && !isNewUri(index) && editingUriIndex !== index && (
+                      <Chip 
+                        label="Edited" 
+                        size="small" 
+                        sx={{ 
+                          height: 20, 
+                          fontSize: '0.65rem',
+                          bgcolor: '#ff9800',
+                          color: 'white',
+                          '& .MuiChip-label': { px: 1 }
+                        }} 
+                      />
+                    )}
+                    {editingUriIndex === index ? (
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const newUris = [...formData.redirect_uris];
+                            newUris[index] = editingUriValue;
+                            setFormData({ ...formData, redirect_uris: newUris });
+                            setEditingUriIndex(null);
+                            setEditingUriValue('');
+                          }}
+                          color="success"
+                        >
+                          <Check fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditingUriIndex(index);
+                            setEditingUriValue(uri);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Delete">
+                      <IconButton size="small" onClick={() => handleRemoveRedirectUri(index)} color="error">
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Stack>
                 ))}
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <TextField
+                  placeholder="https://app.example.com/auth/callback"
+                  value={redirectUriInput}
+                  onChange={(e) => setRedirectUriInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.75rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddRedirectUri}
+                  disabled={!redirectUriInput.trim()}
+                  startIcon={<Add />}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Add
+                </Button>
               </Stack>
             </Box>
 
@@ -576,20 +696,25 @@ const OAuthConfigurationPage: React.FC = () => {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={!formData.name || formData.redirect_uris.length === 0}
+                disabled={!formData.name || formData.redirect_uris.length === 0 || submitting}
                 fullWidth
                 sx={{
                   textTransform: 'none',
                   fontWeight: 600,
-                  bgcolor: '#A16AE8',
-                  '&:hover': { bgcolor: '#8f5cd9' },
+                  bgcolor: '#4caf50',
+                  '&:hover': { bgcolor: '#43a047' },
                 }}
               >
-                {editingClient ? 'Update Client' : 'Create Client'}
+                {submitting ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  editingClient ? 'Update Client' : 'Create Client'
+                )}
               </Button>
               <Button
                 variant="outlined"
                 onClick={handleCloseDrawer}
+                disabled={submitting}
                 fullWidth
                 sx={{ textTransform: 'none', fontWeight: 600 }}
               >
@@ -601,64 +726,107 @@ const OAuthConfigurationPage: React.FC = () => {
       </Drawer>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
+      <Dialog 
+        open={showDeleteDialog} 
+        onClose={() => {
+          if (!deleting) {
+            setShowDeleteDialog(false);
+            setDeleteConfirmInput('');
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Delete OAuth Client</DialogTitle>
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete the OAuth client "{clientToDelete?.name}"?
-            This action cannot be undone and will invalidate all existing tokens for this client.
+            This will revoke access for this application.
           </DialogContentText>
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Type <strong>{clientToDelete?.name}</strong> to confirm deletion:
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={clientToDelete?.name}
+              disabled={deleting}
+              autoFocus
+            />
+            {deleteConfirmInput === clientToDelete?.name && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                You are about to delete this OAuth client. This action cannot be undone.
+              </Alert>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" disabled={deleting}>
-            {deleting ? 'Deleting...' : 'Delete'}
+          <Button 
+            onClick={() => {
+              setShowDeleteDialog(false);
+              setDeleteConfirmInput('');
+            }}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            color="error"
+            variant="contained" 
+            disabled={deleting || deleteConfirmInput !== clientToDelete?.name}
+            sx={{ minWidth: 80 }}
+          >
+            {deleting ? <CircularProgress size={20} color="inherit" /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Secret Display Dialog */}
-      <Dialog open={showSecretDialog} onClose={() => setShowSecretDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>New Client Secret Generated</DialogTitle>
+      {/* URI Delete Confirmation Dialog */}
+      <Dialog
+        open={showUriDeleteDialog}
+        onClose={() => {
+          setShowUriDeleteDialog(false);
+          setUriToDeleteIndex(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Remove Redirect URI</DialogTitle>
         <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Save this secret now! You won't be able to see it again.
-          </Alert>
-          <Stack spacing={2}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Client Secret
+          <DialogContentText>
+            Are you sure you want to remove this redirect URI?
+          </DialogContentText>
+          {uriToDeleteIndex !== null && formData.redirect_uris[uriToDeleteIndex] && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                {formData.redirect_uris[uriToDeleteIndex]}
               </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                <TextField
-                  value={newSecret}
-                  type={showSecret ? 'text' : 'password'}
-                  fullWidth
-                  InputProps={{
-                    readOnly: true,
-                    sx: { fontFamily: 'monospace', fontSize: '0.875rem' },
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowSecret(!showSecret)}
-                          edge="end"
-                          size="small"
-                        >
-                          {showSecret ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <IconButton onClick={() => handleCopyToClipboard(newSecret)}>
-                  <ContentCopy />
-                </IconButton>
-              </Stack>
             </Box>
-          </Stack>
+          )}
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            This URI will be removed from the active list. The change will take effect when you save the client.
+          </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowSecretDialog(false)}>Close</Button>
+          <Button 
+            onClick={() => {
+              setShowUriDeleteDialog(false);
+              setUriToDeleteIndex(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmUriDelete}
+            color="error"
+            variant="contained"
+          >
+            Remove URI
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -667,7 +835,7 @@ const OAuthConfigurationPage: React.FC = () => {
         open={!!success}
         autoHideDuration={3000}
         onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert severity="success" onClose={() => setSuccess(null)}>
           {success}

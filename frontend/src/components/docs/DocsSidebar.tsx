@@ -9,7 +9,7 @@ import {
   Collapse,
   Typography,
   Divider,
-  useTheme,
+  useTheme as useMuiTheme,
 } from '@mui/material';
 import {
   Business,
@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material';
 import { docsNavConfig } from '../../pages/docs/navConfig';
 import type { NavSection } from '../../pages/docs/navConfig';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const iconMap: Record<string, React.ReactNode> = {
   Business: <Business />,
@@ -31,8 +32,13 @@ const iconMap: Record<string, React.ReactNode> = {
 export default function DocsSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
+  const muiTheme = useMuiTheme();
+  const { currentTheme, setTheme } = useTheme();
+  const isDarkMode = muiTheme.palette.mode === 'dark';
+
+  const handleToggleTheme = () => {
+    setTheme(isDarkMode ? 'teamified' : 'dark');
+  };
 
   const getInitialExpandedState = () => {
     const expanded: Record<string, boolean> = {};
@@ -70,7 +76,8 @@ export default function DocsSidebar() {
         borderRight: 1,
         borderColor: 'divider',
         height: '100%',
-        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
         bgcolor: isDarkMode ? 'background.paper' : 'grey.50',
       }}
     >
@@ -83,72 +90,99 @@ export default function DocsSidebar() {
 
       <Divider />
 
-      <List component="nav" sx={{ px: 1, py: 1 }}>
-        {docsNavConfig.map((section) => (
-          <React.Fragment key={section.title}>
-            <ListItemButton
-              onClick={() => toggleSection(section.title)}
-              sx={{
-                borderRadius: 1,
-                mb: 0.5,
-                bgcolor: isSectionActive(section)
-                  ? isDarkMode
-                    ? 'action.selected'
-                    : 'primary.50'
-                  : 'transparent',
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                {iconMap[section.icon] || <MenuBook />}
-              </ListItemIcon>
-              <ListItemText
-                primary={section.title}
-                primaryTypographyProps={{
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <List component="nav" sx={{ px: 1, py: 1 }}>
+          {docsNavConfig.map((section) => (
+            <React.Fragment key={section.title}>
+              <ListItemButton
+                onClick={() => toggleSection(section.title)}
+                sx={{
+                  borderRadius: 1,
+                  mb: 0.5,
+                  bgcolor: isSectionActive(section)
+                    ? isDarkMode
+                      ? 'action.selected'
+                      : 'primary.50'
+                    : 'transparent',
                 }}
-              />
-              {expandedSections[section.title] ? <ExpandLess /> : <ExpandMore />}
-            </ListItemButton>
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  {iconMap[section.icon] || <MenuBook />}
+                </ListItemIcon>
+                <ListItemText
+                  primary={section.title}
+                  primaryTypographyProps={{
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                  }}
+                />
+                {expandedSections[section.title] ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
 
-            <Collapse in={expandedSections[section.title]} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                {section.items.map((item) => (
-                  <ListItemButton
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    sx={{
-                      pl: 5,
-                      py: 0.75,
-                      borderRadius: 1,
-                      mb: 0.25,
-                      bgcolor: isItemActive(item.path)
-                        ? 'primary.main'
-                        : 'transparent',
-                      color: isItemActive(item.path)
-                        ? 'primary.contrastText'
-                        : 'text.primary',
-                      '&:hover': {
+              <Collapse in={expandedSections[section.title]} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {section.items.map((item) => (
+                    <ListItemButton
+                      key={item.path}
+                      onClick={() => navigate(item.path)}
+                      sx={{
+                        pl: 5,
+                        py: 0.75,
+                        borderRadius: 1,
+                        mb: 0.25,
                         bgcolor: isItemActive(item.path)
-                          ? 'primary.dark'
-                          : 'action.hover',
-                      },
-                    }}
-                  >
-                    <ListItemText
-                      primary={item.title}
-                      primaryTypographyProps={{
-                        fontSize: '0.8125rem',
-                        fontWeight: isItemActive(item.path) ? 600 : 400,
+                          ? 'primary.main'
+                          : 'transparent',
+                        color: isItemActive(item.path)
+                          ? 'primary.contrastText'
+                          : 'text.primary',
+                        '&:hover': {
+                          bgcolor: isItemActive(item.path)
+                            ? 'primary.dark'
+                            : 'action.hover',
+                        },
                       }}
-                    />
-                  </ListItemButton>
-                ))}
-              </List>
-            </Collapse>
-          </React.Fragment>
-        ))}
-      </List>
+                    >
+                      <ListItemText
+                        primary={item.title}
+                        primaryTypographyProps={{
+                          fontSize: '0.8125rem',
+                          fontWeight: isItemActive(item.path) ? 600 : 400,
+                        }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+            </React.Fragment>
+          ))}
+        </List>
+      </Box>
+
+      <Divider />
+
+      <Box sx={{ p: 2 }}>
+        <ListItemButton
+          onClick={handleToggleTheme}
+          sx={{
+            mx: 1,
+            borderRadius: '12px',
+            py: 1.5,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              bgcolor: 'rgba(161, 106, 232, 0.08)',
+              transform: 'translateX(4px)',
+            },
+          }}
+        >
+          <ListItemText 
+            primary={isDarkMode ? '🌙 Dark Mode' : '☀️ Light Mode'}
+            primaryTypographyProps={{
+              fontWeight: 500,
+            }}
+          />
+        </ListItemButton>
+      </Box>
     </Box>
   );
 }

@@ -885,7 +885,7 @@ const OrganizationManagementPage: React.FC = () => {
                   <Paper
                     key={user.id}
                     onClick={() => {
-                      navigate(`/users/${user.id}`);
+                      navigate(`/admin/users/${user.id}`);
                       clearGlobalSearch();
                     }}
                     sx={{
@@ -1017,11 +1017,12 @@ const OrganizationManagementPage: React.FC = () => {
                     </Avatar>
                     <ListItemText
                       primary={
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {org.name}
                         </Typography>
                       }
                       secondary={`${org.memberCount || 0} users`}
+                      secondaryTypographyProps={{ variant: 'caption' }}
                     />
                     {(org.memberCount === 0 || org.memberCount === undefined) ? (
                       <Chip
@@ -1175,11 +1176,11 @@ const OrganizationManagementPage: React.FC = () => {
                     <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
                       {selectedOrg.name}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Chip label={selectedOrg.slug} size="small" />
-                      <Chip label={`${selectedOrg.memberCount || 0} users`} size="small" variant="outlined" />
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Chip label={selectedOrg.slug} size="small" sx={{ height: 24 }} />
+                      <Chip label={`${selectedOrg.memberCount || 0} users`} size="small" variant="outlined" sx={{ height: 24 }} />
                       {selectedOrg.subscriptionTier && (
-                        <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                           {selectedOrg.subscriptionTier?.toLowerCase() === 'enterprise' && (
                             <Box
                               sx={{
@@ -1188,6 +1189,7 @@ const OrganizationManagementPage: React.FC = () => {
                                 right: -4,
                                 fontSize: '12px',
                                 animation: 'sparkle 1.5s ease-in-out infinite',
+                                zIndex: 1,
                                 '@keyframes sparkle': {
                                   '0%, 100%': { opacity: 0, transform: 'scale(0.5)' },
                                   '50%': { opacity: 1, transform: 'scale(1)' },
@@ -1202,6 +1204,7 @@ const OrganizationManagementPage: React.FC = () => {
                             size="small" 
                             color={selectedOrg.subscriptionTier?.toLowerCase() === 'professional' ? undefined : getSubscriptionColor(selectedOrg.subscriptionTier)}
                             sx={{
+                              height: 24,
                               fontWeight: 600,
                               textTransform: 'capitalize',
                               ...(selectedOrg.subscriptionTier?.toLowerCase() === 'professional' && {
@@ -1308,6 +1311,14 @@ const OrganizationManagementPage: React.FC = () => {
                           variant={effectiveFilters.has('nlwf') ? 'filled' : 'outlined'}
                           sx={{ cursor: 'pointer' }}
                         />
+                        <Chip
+                          label={`Suspended (${statusCounts['suspended'] || 0})`}
+                          size="small"
+                          onClick={() => toggleStatusFilter('suspended')}
+                          color={effectiveFilters.has('suspended') ? 'error' : 'default'}
+                          variant={effectiveFilters.has('suspended') ? 'filled' : 'outlined'}
+                          sx={{ cursor: 'pointer' }}
+                        />
                       </Box>
 
                       {/* No Users Message - only show if truly no members in organization */}
@@ -1383,7 +1394,7 @@ const OrganizationManagementPage: React.FC = () => {
                                   <Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <Typography 
-                                        variant="body1" 
+                                        variant="body2" 
                                         sx={{ 
                                           fontWeight: 600,
                                           color: isNlwf ? 'text.secondary' : 'text.primary',
@@ -1410,7 +1421,7 @@ const OrganizationManagementPage: React.FC = () => {
                                         />
                                       )}
                                     </Box>
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary">
                                       {member.userEmail}
                                     </Typography>
                                   </Box>
@@ -1468,7 +1479,7 @@ const OrganizationManagementPage: React.FC = () => {
               <TabPanel value={activeTab} index={1}>
                 <Box sx={{ px: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       Company Profile
                     </Typography>
                     {!isEditingProfile ? (
@@ -1581,7 +1592,7 @@ const OrganizationManagementPage: React.FC = () => {
               {selectedOrg?.subscriptionTier !== 'internal' && (
                 <TabPanel value={activeTab} index={2}>
                   <Box sx={{ px: 3, py: 6, textAlign: 'center' }}>
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }} gutterBottom>
                       Billing Details
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -1652,7 +1663,7 @@ const OrganizationManagementPage: React.FC = () => {
             }}
           >
             <Business sx={{ fontSize: 80, color: 'text.disabled' }} />
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.secondary' }}>
               Select an organization to view details
             </Typography>
           </Paper>

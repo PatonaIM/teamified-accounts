@@ -6,14 +6,14 @@ import { CreateUserDto } from './create-user.dto';
 export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ApiPropertyOptional({
     description: 'User status',
-    enum: ['active', 'inactive', 'archived'],
+    enum: ['active', 'inactive', 'archived', 'suspended'],
     example: 'active'
   })
   @IsOptional()
-  @IsEnum(['active', 'inactive', 'archived'], {
-    message: 'Status must be one of: active, inactive, archived'
+  @IsEnum(['active', 'inactive', 'archived', 'suspended'], {
+    message: 'Status must be one of: active, inactive, archived, suspended'
   })
-  status?: 'active' | 'inactive' | 'archived';
+  status?: 'active' | 'inactive' | 'archived' | 'suspended';
 
   @ApiPropertyOptional({
     description: 'User theme preference',

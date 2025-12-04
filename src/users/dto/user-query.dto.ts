@@ -37,12 +37,12 @@ export class UserQueryDto {
 
   @ApiPropertyOptional({
     description: 'Filter by user status',
-    enum: ['active', 'inactive', 'archived', 'invited'],
+    enum: ['active', 'inactive', 'archived', 'invited', 'suspended'],
     example: 'active'
   })
   @IsOptional()
-  @IsEnum(['active', 'inactive', 'archived', 'invited'])
-  status?: 'active' | 'inactive' | 'archived' | 'invited';
+  @IsEnum(['active', 'inactive', 'archived', 'invited', 'suspended'])
+  status?: 'active' | 'inactive' | 'archived' | 'invited' | 'suspended';
 
   @ApiPropertyOptional({
     description: 'Filter by role type',

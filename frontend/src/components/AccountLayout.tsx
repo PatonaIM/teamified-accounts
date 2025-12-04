@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Box,
@@ -22,21 +22,18 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/authService';
 import { useTheme } from '../contexts/ThemeContext';
+import AppsDropdown from './AppsDropdown';
 
 const DRAWER_WIDTH = 260;
-
-interface NavItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-  requiresSuperAdmin?: boolean;
-}
 
 const AccountLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { currentTheme, setTheme } = useTheme();
+  
+  const [appsAnchorEl, setAppsAnchorEl] = useState<HTMLElement | null>(null);
+  const appsDropdownOpen = Boolean(appsAnchorEl);
 
   const isDarkMode = currentTheme === 'dark';
 
@@ -48,34 +45,20 @@ const AccountLayout: React.FC = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
   };
 
-  const navItems: NavItem[] = [
-    {
-      label: 'My Profile',
-      path: '/account/profile',
-      icon: <Person />,
-    },
-    {
-      label: 'My Apps',
-      path: '/account/apps',
-      icon: <Apps />,
-    },
-    {
-      label: 'Admin Tools',
-      path: '/admin/tools',
-      icon: <AdminPanelSettings />,
-      requiresSuperAdmin: true,
-    },
-  ];
+  const handleAppsClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (appsDropdownOpen) {
+      setAppsAnchorEl(null);
+    } else {
+      setAppsAnchorEl(event.currentTarget);
+    }
+  };
 
-  const filteredNavItems = navItems.filter(
-    (item) => !item.requiresSuperAdmin || isSuperAdmin
-  );
+  const handleAppsClose = () => {
+    setAppsAnchorEl(null);
+  };
 
   const handleLogout = () => {
-    // Clear tokens directly
     localStorage.clear();
-    
-    // Redirect immediately
     window.location.href = '/login';
   };
 
@@ -135,52 +118,127 @@ const AccountLayout: React.FC = () => {
         <Toolbar />
         <Box sx={{ overflow: 'auto', mt: 2, flexGrow: 1 }}>
           <List>
-            {filteredNavItems.map((item) => {
-              const isActive = item.path.startsWith('/admin')
-                ? location.pathname.startsWith('/admin')
-                : location.pathname === item.path;
-              return (
-                <ListItem key={item.path} disablePadding>
-                  <ListItemButton
-                    selected={isActive}
-                    onClick={() => navigate(item.path)}
-                    sx={{
-                      mx: 2,
-                      my: 0.5,
-                      borderRadius: '12px',
-                      py: 1.5,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&.Mui-selected': {
-                        background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                        color: '#FFFFFF',
-                        boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                          transform: 'translateX(4px)',
-                        },
-                        '& .MuiListItemIcon-root': {
-                          color: '#FFFFFF',
-                        },
-                      },
-                      '&:not(.Mui-selected):hover': {
-                        bgcolor: 'rgba(161, 106, 232, 0.08)',
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={!appsDropdownOpen && location.pathname === '/account/profile'}
+                onClick={() => navigate('/account/profile')}
+                sx={{
+                  mx: 2,
+                  my: 0.5,
+                  borderRadius: '12px',
+                  py: 1.5,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
+                      transform: 'translateX(4px)',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: '#FFFFFF',
+                    },
+                  },
+                  '&:not(.Mui-selected):hover': {
+                    bgcolor: 'rgba(161, 106, 232, 0.08)',
+                    transform: 'translateX(4px)',
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: (!appsDropdownOpen && location.pathname === '/account/profile') ? 'inherit' : 'text.secondary',
+                    minWidth: 40,
+                  }}
+                >
+                  <Person />
+                </ListItemIcon>
+                <ListItemText primary="My Profile" />
+              </ListItemButton>
+            </ListItem>
+
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={handleAppsClick}
+                selected={appsDropdownOpen}
+                sx={{
+                  mx: 2,
+                  my: 0.5,
+                  borderRadius: '12px',
+                  py: 1.5,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
+                      transform: 'translateX(4px)',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: '#FFFFFF',
+                    },
+                  },
+                  '&:not(.Mui-selected):hover': {
+                    bgcolor: 'rgba(161, 106, 232, 0.08)',
+                    transform: 'translateX(4px)',
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: appsDropdownOpen ? 'inherit' : 'text.secondary',
+                    minWidth: 40,
+                  }}
+                >
+                  <Apps />
+                </ListItemIcon>
+                <ListItemText primary="My Apps" />
+              </ListItemButton>
+            </ListItem>
+
+            {isSuperAdmin && (
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={!appsDropdownOpen && location.pathname.startsWith('/admin')}
+                  onClick={() => navigate('/admin/tools')}
+                  sx={{
+                    mx: 2,
+                    my: 0.5,
+                    borderRadius: '12px',
+                    py: 1.5,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&.Mui-selected': {
+                      background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                      color: '#FFFFFF',
+                      boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
                         transform: 'translateX(4px)',
                       },
+                      '& .MuiListItemIcon-root': {
+                        color: '#FFFFFF',
+                      },
+                    },
+                    '&:not(.Mui-selected):hover': {
+                      bgcolor: 'rgba(161, 106, 232, 0.08)',
+                      transform: 'translateX(4px)',
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: (!appsDropdownOpen && location.pathname.startsWith('/admin')) ? 'inherit' : 'text.secondary',
+                      minWidth: 40,
                     }}
                   >
-                    <ListItemIcon
-                      sx={{
-                        color: isActive ? 'inherit' : 'text.secondary',
-                        minWidth: 40,
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText primary={item.label} />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
+                    <AdminPanelSettings />
+                  </ListItemIcon>
+                  <ListItemText primary="Admin Tools" />
+                </ListItemButton>
+              </ListItem>
+            )}
           </List>
         </Box>
         
@@ -244,6 +302,12 @@ const AccountLayout: React.FC = () => {
           </ListItemButton>
         </Box>
       </Drawer>
+
+      <AppsDropdown
+        anchorEl={appsAnchorEl}
+        open={appsDropdownOpen}
+        onClose={handleAppsClose}
+      />
 
       <Box
         component="main"

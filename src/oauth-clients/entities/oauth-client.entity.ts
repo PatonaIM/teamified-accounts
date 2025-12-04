@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 
 export type IntentType = 'client' | 'candidate' | 'both';
@@ -28,6 +29,9 @@ export class OAuthClient {
   @Column({ type: 'simple-array' })
   redirect_uris: string[];
 
+  @Column({ type: 'simple-array', nullable: true })
+  deleted_redirect_uris: string[];
+
   @Column({ default: true })
   is_active: boolean;
 
@@ -50,6 +54,9 @@ export class OAuthClient {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @DeleteDateColumn({ nullable: true })
+  deleted_at: Date | null;
 
   @Column({ type: 'uuid', nullable: true })
   created_by: string;
