@@ -226,6 +226,56 @@ export default function UserDetailPage() {
     }
   }, [activeTab, userId, activityTimeRange]);
 
+  // Define tabs based on RBAC permissions (must be called before early returns for hooks consistency)
+  const allTabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = useMemo(() => [
+    { id: 'basic', label: 'Basic Information', icon: <Person /> },
+    { id: 'organizations', label: 'Organizations', icon: <Business /> },
+    { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
+    { id: 'activity', label: 'User Activity', icon: <History /> },
+    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
+    { id: 'suspend', label: user?.status === 'suspended' ? 'Reactivate User' : 'Suspend User', icon: <Block /> },
+    { id: 'delete', label: 'Delete User', icon: <Delete /> },
+  ], [user?.status]);
+
+  // Filter tabs based on RBAC permissions
+  const tabs = useMemo(() => allTabs.filter(tab => {
+    switch (tab.id) {
+      case 'basic':
+        return canViewUserDetails;
+      case 'organizations':
+        return permissions.isInternalUser;
+      case 'billing':
+        return permissions.canViewBilling && permissions.isInternalUser;
+      case 'activity':
+        return canViewActivity;
+      case 'reset-password':
+        return canSendPasswordReset;
+      case 'suspend':
+        return canSuspendUser;
+      case 'delete':
+        return canDeleteUser;
+      default:
+        return true;
+    }
+  }), [allTabs, canViewUserDetails, permissions.isInternalUser, permissions.canViewBilling, canViewActivity, canSendPasswordReset, canSuspendUser, canDeleteUser]);
+
+  // Ensure active tab is valid for current permissions
+  const validActiveTab = useMemo(() => {
+    const visibleTabs = tabs.filter(t => !['reset-password', 'suspend', 'delete'].includes(t.id));
+    const currentTabExists = visibleTabs.some(t => t.id === activeTab);
+    if (!currentTabExists && visibleTabs.length > 0) {
+      return visibleTabs[0].id;
+    }
+    return activeTab;
+  }, [tabs, activeTab]);
+
+  // Update activeTab if current selection is not available
+  useEffect(() => {
+    if (validActiveTab !== activeTab && !['reset-password', 'suspend', 'delete'].includes(activeTab)) {
+      setActiveTab(validActiveTab);
+    }
+  }, [validActiveTab, activeTab]);
+
   const fetchUserDetails = async () => {
     if (!userId) return;
 
@@ -666,55 +716,6 @@ export default function UserDetailPage() {
 
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
   const isCandidate = roles.some(r => r.role === 'candidate');
-
-  const allTabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
-    { id: 'basic', label: 'Basic Information', icon: <Person /> },
-    { id: 'organizations', label: 'Organizations', icon: <Business /> },
-    { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
-    { id: 'activity', label: 'User Activity', icon: <History /> },
-    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
-    { id: 'suspend', label: user.status === 'suspended' ? 'Reactivate User' : 'Suspend User', icon: <Block /> },
-    { id: 'delete', label: 'Delete User', icon: <Delete /> },
-  ];
-
-  // Filter tabs based on RBAC permissions
-  const tabs = allTabs.filter(tab => {
-    switch (tab.id) {
-      case 'basic':
-        return canViewUserDetails;
-      case 'organizations':
-        return permissions.isInternalUser;
-      case 'billing':
-        return permissions.canViewBilling && permissions.isInternalUser;
-      case 'activity':
-        return canViewActivity;
-      case 'reset-password':
-        return canSendPasswordReset;
-      case 'suspend':
-        return canSuspendUser;
-      case 'delete':
-        return canDeleteUser;
-      default:
-        return true;
-    }
-  });
-
-  // Ensure active tab is valid for current permissions
-  const validActiveTab = useMemo(() => {
-    const visibleTabs = tabs.filter(t => !['reset-password', 'suspend', 'delete'].includes(t.id));
-    const currentTabExists = visibleTabs.some(t => t.id === activeTab);
-    if (!currentTabExists && visibleTabs.length > 0) {
-      return visibleTabs[0].id;
-    }
-    return activeTab;
-  }, [tabs, activeTab]);
-
-  // Update activeTab if current selection is not available
-  useEffect(() => {
-    if (validActiveTab !== activeTab && !['reset-password', 'suspend', 'delete'].includes(activeTab)) {
-      setActiveTab(validActiveTab);
-    }
-  }, [validActiveTab, activeTab]);
 
   // Contextual back navigation
   const handleBackNavigation = () => {
