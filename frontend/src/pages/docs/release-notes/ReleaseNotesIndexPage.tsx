@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.3',
+    date: 'December 5, 2025',
+    title: 'Performance Optimizations & Client RBAC',
+    summary: 'Theme flash prevention, instant navigation rendering, multi-organization navigation improvements, extended client admin permissions for user management, and React hooks bug fixes.',
+    path: '/docs/release-notes/2025-12-05',
+    isLatest: true,
+  },
+  {
     version: '1.0.2',
     date: 'December 4, 2025',
     title: 'My Apps Launcher & Admin Tools Enhancements',
     summary: 'New My Apps dropdown for quick access to connected applications, OAuth Configuration management, improved organization deletion, and Candidate Users redesign with suspension functionality.',
     path: '/docs/release-notes/2025-12-04',
-    isLatest: true,
   },
   {
     version: '1.0.1',
