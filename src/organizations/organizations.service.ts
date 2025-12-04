@@ -377,7 +377,16 @@ export class OrganizationsService {
   }
 
   async getMyOrganization(currentUser: User): Promise<OrganizationResponseDto> {
-    const policy = this.buildOrgAccessPolicy(currentUser);
+    const enrichedUser = await this.userRepository.findOne({
+      where: { id: currentUser.id },
+      relations: ['organizationMembers', 'organizationMembers.organization', 'userRoles'],
+    });
+    
+    if (!enrichedUser) {
+      throw new NotFoundException('User not found');
+    }
+    
+    const policy = this.buildOrgAccessPolicy(enrichedUser);
     
     if (policy.noAccess || policy.allowedOrgIds.length === 0) {
       throw new NotFoundException('You do not belong to any organization');
@@ -385,11 +394,20 @@ export class OrganizationsService {
     
     const organizationId = policy.allowedOrgIds[0];
     
-    return this.findOne(organizationId, currentUser);
+    return this.findOne(organizationId, enrichedUser);
   }
 
   async getMyOrganizations(currentUser: User): Promise<OrganizationResponseDto[]> {
-    const policy = this.buildOrgAccessPolicy(currentUser);
+    const enrichedUser = await this.userRepository.findOne({
+      where: { id: currentUser.id },
+      relations: ['organizationMembers', 'organizationMembers.organization', 'userRoles'],
+    });
+    
+    if (!enrichedUser) {
+      return [];
+    }
+    
+    const policy = this.buildOrgAccessPolicy(enrichedUser);
     
     if (policy.noAccess || policy.allowedOrgIds.length === 0) {
       return [];
@@ -399,7 +417,7 @@ export class OrganizationsService {
     
     for (const orgId of policy.allowedOrgIds) {
       try {
-        const org = await this.findOne(orgId, currentUser);
+        const org = await this.findOne(orgId, enrichedUser);
         organizations.push(org);
       } catch (error) {
         this.logger.warn(`Could not fetch organization ${orgId} for user ${currentUser.id}`);
