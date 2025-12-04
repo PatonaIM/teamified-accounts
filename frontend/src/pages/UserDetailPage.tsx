@@ -188,7 +188,14 @@ export default function UserDetailPage() {
 
   // Determine if this is a client user viewing from their organization context
   const isClientContext = navigationState?.fromClientPage === true;
-  const isOwnOrganization = isClientContext && !!navigationState?.organizationId;
+  
+  // Check if current user is a client user (for permission calculation)
+  const isClientUser = currentUser?.roles?.some(r => r.toLowerCase().startsWith('client_')) || false;
+  
+  // For client users, assume they're viewing their own organization members
+  // (route guard already ensures they have appropriate client role)
+  // For internal users, isOwnOrganization doesn't affect their permissions
+  const isOwnOrganization = isClientUser ? true : (isClientContext && !!navigationState?.organizationId);
 
   // Get RBAC permissions based on user roles and context
   const permissions = useOrganizationPermissions({

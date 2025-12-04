@@ -208,7 +208,14 @@ function App() {
                   <Route 
                     path="users/:userId" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                      <RoleBasedRoute allowedRoles={[
+                        'super_admin', 
+                        'internal_account_manager', 
+                        'internal_hr',
+                        'internal_staff',
+                        'client_admin', 
+                        'client_hr'
+                      ]}>
                         <UserDetailPage />
                       </RoleBasedRoute>
                     } 
