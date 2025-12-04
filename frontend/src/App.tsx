@@ -222,19 +222,23 @@ function App() {
                   path="/users/:userId" 
                   element={
                     <ProtectedRoute>
-                      <RoleBasedRoute allowedRoles={[
-                        'super_admin', 
-                        'internal_account_manager', 
-                        'internal_hr',
-                        'internal_staff',
-                        'client_admin', 
-                        'client_hr'
-                      ]}>
-                        <UserDetailPage />
-                      </RoleBasedRoute>
+                      <AccountLayout />
                     </ProtectedRoute>
-                  } 
-                />
+                  }
+                >
+                  <Route index element={
+                    <RoleBasedRoute allowedRoles={[
+                      'super_admin', 
+                      'internal_account_manager', 
+                      'internal_hr',
+                      'internal_staff',
+                      'client_admin', 
+                      'client_hr'
+                    ]}>
+                      <UserDetailPage />
+                    </RoleBasedRoute>
+                  } />
+                </Route>
                 <Route 
                   path="/admin" 
                   element={
