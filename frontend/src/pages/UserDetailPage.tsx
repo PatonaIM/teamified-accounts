@@ -78,6 +78,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
 import roleService from '../services/roleService';
 import api from '../services/api';
+import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
 
 interface UserRole {
   id: string;
@@ -135,14 +136,6 @@ export default function UserDetailPage() {
   const isDarkMode = theme.palette.mode === 'dark';
   const { user: currentUser } = useAuth();
 
-  // Check if current user can suspend/reactivate users (only internal users and super admins)
-  const canSuspendUsers = useMemo(() => {
-    if (!currentUser?.roles) return false;
-    return currentUser.roles.some(role => 
-      role === 'super_admin' || role.startsWith('internal_')
-    );
-  }, [currentUser?.roles]);
-
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,7 +182,30 @@ export default function UserDetailPage() {
   const navigationState = location.state as { 
     organizationId?: string; 
     organizationName?: string;
+    organizationSlug?: string;
+    fromClientPage?: boolean;
   } | null;
+
+  // Determine if this is a client user viewing from their organization context
+  const isClientContext = navigationState?.fromClientPage === true;
+  const isOwnOrganization = isClientContext && !!navigationState?.organizationId;
+
+  // Get RBAC permissions based on user roles and context
+  const permissions = useOrganizationPermissions({
+    userRoles: currentUser?.roles || [],
+    isOwnOrganization,
+  });
+
+  const {
+    canViewUserDetails,
+    canChangeRoles,
+    canRemoveUsers,
+    canMarkNLWF,
+    canSendPasswordReset,
+    canSuspendUser,
+    canDeleteUser,
+    canViewActivity,
+  } = permissions;
 
   useEffect(() => {
     if (userId) {
@@ -599,6 +615,38 @@ export default function UserDetailPage() {
     );
   }
 
+  // Authorization guard - redirect if user doesn't have permission to view user details
+  if (!canViewUserDetails) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ mb: 3 }}>
+          <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            Access Denied
+          </Typography>
+        </Stack>
+        <Alert severity="error">
+          You don't have permission to view this user's details.
+        </Alert>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            if (isClientContext && navigationState?.organizationSlug) {
+              navigate(`/organization/${navigationState.organizationSlug}`);
+            } else {
+              navigate(-1);
+            }
+          }}
+          sx={{ mt: 2, textTransform: 'none', fontWeight: 600 }}
+        >
+          Go Back
+        </Button>
+      </Box>
+    );
+  }
+
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
   const isCandidate = roles.some(r => r.role === 'candidate');
 
@@ -612,13 +660,57 @@ export default function UserDetailPage() {
     { id: 'delete', label: 'Delete User', icon: <Delete /> },
   ];
 
-  // Filter tabs based on permissions - hide suspend option for client users
+  // Filter tabs based on RBAC permissions
   const tabs = allTabs.filter(tab => {
-    if (tab.id === 'suspend' && !canSuspendUsers) {
-      return false;
+    switch (tab.id) {
+      case 'basic':
+        return canViewUserDetails;
+      case 'organizations':
+        return permissions.isInternalUser;
+      case 'billing':
+        return permissions.canViewBilling && permissions.isInternalUser;
+      case 'activity':
+        return canViewActivity;
+      case 'reset-password':
+        return canSendPasswordReset;
+      case 'suspend':
+        return canSuspendUser;
+      case 'delete':
+        return canDeleteUser;
+      default:
+        return true;
     }
-    return true;
   });
+
+  // Ensure active tab is valid for current permissions
+  const validActiveTab = useMemo(() => {
+    const visibleTabs = tabs.filter(t => !['reset-password', 'suspend', 'delete'].includes(t.id));
+    const currentTabExists = visibleTabs.some(t => t.id === activeTab);
+    if (!currentTabExists && visibleTabs.length > 0) {
+      return visibleTabs[0].id;
+    }
+    return activeTab;
+  }, [tabs, activeTab]);
+
+  // Update activeTab if current selection is not available
+  useEffect(() => {
+    if (validActiveTab !== activeTab && !['reset-password', 'suspend', 'delete'].includes(activeTab)) {
+      setActiveTab(validActiveTab);
+    }
+  }, [validActiveTab, activeTab]);
+
+  // Contextual back navigation
+  const handleBackNavigation = () => {
+    if (isClientContext && navigationState?.organizationSlug) {
+      navigate(`/organization/${navigationState.organizationSlug}`);
+    } else if (navigationState?.organizationId) {
+      navigate('/admin/organizations', {
+        state: { selectedOrgId: navigationState.organizationId }
+      });
+    } else {
+      navigate(-1);
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -1172,7 +1264,7 @@ export default function UserDetailPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <IconButton 
-          onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+          onClick={handleBackNavigation}
           sx={{ 
             mr: 2,
             color: 'primary.main',
@@ -1192,9 +1284,11 @@ export default function UserDetailPage() {
               cursor: 'pointer',
               '&:hover': { color: 'primary.main' }
             }}
-            onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+            onClick={handleBackNavigation}
           >
-            {isCandidate ? 'Candidate User' : 'Organization Management'}
+            {isClientContext 
+              ? (navigationState?.organizationName || 'My Organization')
+              : (isCandidate ? 'Candidate User' : 'Organization Management')}
           </Typography>
           <ChevronRight sx={{ color: 'text.secondary' }} />
           <Typography variant="h4" sx={{ fontWeight: 700 }}>

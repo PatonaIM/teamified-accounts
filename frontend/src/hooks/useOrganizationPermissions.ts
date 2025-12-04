@@ -9,6 +9,8 @@ export interface OrganizationPermissions {
   canMarkNLWF: boolean;
   canSendPasswordReset: boolean;
   canSuspendUser: boolean;
+  canDeleteUser: boolean;
+  canViewActivity: boolean;
   canEditOrgProfile: boolean;
   canViewBilling: boolean;
   canDeleteOrg: boolean;
@@ -56,6 +58,8 @@ export function useOrganizationPermissions({
         canMarkNLWF: true,
         canSendPasswordReset: true,
         canSuspendUser: true,
+        canDeleteUser: true,
+        canViewActivity: true,
         canEditOrgProfile: true,
         canViewBilling: true,
         canDeleteOrg: true,
@@ -76,6 +80,8 @@ export function useOrganizationPermissions({
         canMarkNLWF: isInternalHR || isSuperAdmin,
         canSendPasswordReset: isInternalHR || isSuperAdmin,
         canSuspendUser: isInternalHR || isSuperAdmin,
+        canDeleteUser: isInternalHR || isSuperAdmin,
+        canViewActivity: true,
         canEditOrgProfile: true,
         canViewBilling: true,
         canDeleteOrg: isSuperAdmin,
@@ -96,6 +102,8 @@ export function useOrganizationPermissions({
         canMarkNLWF: isClientAdmin || isClientHR,
         canSendPasswordReset: isClientAdmin,
         canSuspendUser: isClientAdmin,
+        canDeleteUser: false,
+        canViewActivity: isClientAdmin || isClientHR,
         canEditOrgProfile: isClientAdmin,
         canViewBilling: isClientAdmin || isClientFinance,
         canDeleteOrg: isClientAdmin,
@@ -115,6 +123,8 @@ export function useOrganizationPermissions({
       canMarkNLWF: false,
       canSendPasswordReset: false,
       canSuspendUser: false,
+      canDeleteUser: false,
+      canViewActivity: false,
       canEditOrgProfile: false,
       canViewBilling: false,
       canDeleteOrg: false,

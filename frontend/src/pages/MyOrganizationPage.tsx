@@ -43,7 +43,6 @@ import { useAuth } from '../hooks/useAuth';
 import organizationsService, { type Organization, type OrganizationMember } from '../services/organizationsService';
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
-import UserDetailDialog from '../components/organizations/UserDetailDialog';
 import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
 import { getRoleColor, getRolePriority } from '../constants/roleMetadata';
 
@@ -133,8 +132,6 @@ const MyOrganizationPage: React.FC = () => {
 
   const [orgSwitcherAnchor, setOrgSwitcherAnchor] = useState<null | HTMLElement>(null);
 
-  const [showUserDetail, setShowUserDetail] = useState(false);
-  const [detailMember, setDetailMember] = useState<OrganizationMember | null>(null);
 
   const permissions = useOrganizationPermissions({
     userRoles: user?.roles || [],
@@ -336,8 +333,14 @@ const MyOrganizationPage: React.FC = () => {
 
   const handleUserRowClick = (member: OrganizationMember) => {
     if (!canViewUserDetails) return;
-    setDetailMember(member);
-    setShowUserDetail(true);
+    navigate(`/admin/users/${member.userId}`, {
+      state: {
+        organizationId: selectedOrg?.id,
+        organizationName: selectedOrg?.name,
+        organizationSlug: selectedOrg?.slug,
+        fromClientPage: true,
+      }
+    });
   };
 
   const handleRemoveFromOrg = async () => {
@@ -379,50 +382,6 @@ const MyOrganizationPage: React.FC = () => {
       throw new Error('Permission denied');
     }
     await organizationsService.updateMemberRole(selectedOrg.id, userId, { roleType: newRole });
-    loadMembers();
-  };
-
-  const handleRemoveUserFromDialog = async (userId: string) => {
-    if (!selectedOrg || !canRemoveUsers) {
-      throw new Error('Permission denied');
-    }
-    await organizationsService.removeMember(selectedOrg.id, userId);
-    setSuccess('User removed from organization successfully!');
-    loadMembers();
-  };
-
-  const handleMarkNLWFFromDialog = async (userId: string) => {
-    if (!canMarkNLWF) {
-      throw new Error('Permission denied');
-    }
-    await userService.updateUserStatus(userId, 'inactive');
-    setSuccess('User marked as NLWF successfully!');
-    loadMembers();
-  };
-
-  const handleSendPasswordReset = async (userId: string) => {
-    if (!canSendPasswordReset) {
-      throw new Error('Permission denied');
-    }
-    await userService.sendPasswordReset(userId);
-    setSuccess('Password reset email sent successfully!');
-  };
-
-  const handleSuspendUser = async (userId: string) => {
-    if (!canSuspendUser) {
-      throw new Error('Permission denied');
-    }
-    await userService.updateUserStatus(userId, 'suspended');
-    setSuccess('User suspended successfully!');
-    loadMembers();
-  };
-
-  const handleActivateUser = async (userId: string) => {
-    if (!canSuspendUser) {
-      throw new Error('Permission denied');
-    }
-    await userService.updateUserStatus(userId, 'active');
-    setSuccess('User activated successfully!');
     loadMembers();
   };
 
@@ -1140,23 +1099,6 @@ const MyOrganizationPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <UserDetailDialog
-        open={showUserDetail}
-        onClose={() => {
-          setShowUserDetail(false);
-          setDetailMember(null);
-        }}
-        member={detailMember}
-        permissions={permissions}
-        organizationName={selectedOrg?.name}
-        currentUserId={user?.id}
-        onRoleChange={canChangeRoles ? handleRoleChange : undefined}
-        onRemoveUser={canRemoveUsers ? handleRemoveUserFromDialog : undefined}
-        onMarkNLWF={canMarkNLWF ? handleMarkNLWFFromDialog : undefined}
-        onSendPasswordReset={canSendPasswordReset ? handleSendPasswordReset : undefined}
-        onSuspendUser={canSuspendUser ? handleSuspendUser : undefined}
-        onActivateUser={canSuspendUser ? handleActivateUser : undefined}
-      />
     </Box>
   );
 };
