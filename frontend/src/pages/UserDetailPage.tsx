@@ -613,10 +613,20 @@ export default function UserDetailPage() {
         <Alert severity="error">{error || 'User not found'}</Alert>
         <Button
           variant="outlined"
-          onClick={() => navigate('/admin/users')}
+          onClick={() => {
+            if (isClientContext && navigationState?.organizationSlug) {
+              navigate(`/organization/${navigationState.organizationSlug}`);
+            } else if (navigationState?.organizationId) {
+              navigate('/admin/organizations', {
+                state: { selectedOrgId: navigationState.organizationId }
+              });
+            } else {
+              navigate(-1);
+            }
+          }}
           sx={{ mt: 2, textTransform: 'none', fontWeight: 600 }}
         >
-          Back to Users
+          Go Back
         </Button>
       </Box>
     );

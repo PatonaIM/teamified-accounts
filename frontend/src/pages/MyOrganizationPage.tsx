@@ -333,7 +333,7 @@ const MyOrganizationPage: React.FC = () => {
 
   const handleUserRowClick = (member: OrganizationMember) => {
     if (!canViewUserDetails) return;
-    navigate(`/admin/users/${member.userId}`, {
+    navigate(`/users/${member.userId}`, {
       state: {
         organizationId: selectedOrg?.id,
         organizationName: selectedOrg?.name,

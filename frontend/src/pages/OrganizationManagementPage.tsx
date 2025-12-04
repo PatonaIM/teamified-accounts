@@ -628,7 +628,7 @@ const OrganizationManagementPage: React.FC = () => {
   const handleUserRowClick = (member: OrganizationMember, event: React.MouseEvent) => {
     event.stopPropagation();
     if (!canViewUserDetails) return;
-    navigate(`/admin/users/${member.userId}`, {
+    navigate(`/users/${member.userId}`, {
       state: {
         organizationId: selectedOrg?.id,
         organizationName: selectedOrg?.name,
@@ -925,7 +925,7 @@ const OrganizationManagementPage: React.FC = () => {
                   <Paper
                     key={user.id}
                     onClick={() => {
-                      navigate(`/admin/users/${user.id}`);
+                      navigate(`/users/${user.id}`);
                       clearGlobalSearch();
                     }}
                     sx={{

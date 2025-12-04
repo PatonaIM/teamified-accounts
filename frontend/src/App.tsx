@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
@@ -54,6 +54,13 @@ import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
 import CandidateUsersPage from './pages/account/CandidateUsersPage';
 import './App.css';
+
+// Redirect component for old /admin/users/:userId route to new /users/:userId
+function UserDetailRedirect() {
+  const { userId } = useParams<{ userId: string }>();
+  const location = useLocation();
+  return <Navigate to={`/users/${userId}`} state={location.state} replace />;
+}
 
 function App() {
   return (
@@ -149,6 +156,24 @@ function App() {
                   <Route path="apps" element={<MyAppsPage />} />
                   <Route path="profile" element={<MyProfilePage />} />
                 </Route>
+                {/* User Detail Page - accessible to both internal and client users */}
+                <Route 
+                  path="/users/:userId" 
+                  element={
+                    <ProtectedRoute>
+                      <RoleBasedRoute allowedRoles={[
+                        'super_admin', 
+                        'internal_account_manager', 
+                        'internal_hr',
+                        'internal_staff',
+                        'client_admin', 
+                        'client_hr'
+                      ]}>
+                        <UserDetailPage />
+                      </RoleBasedRoute>
+                    </ProtectedRoute>
+                  } 
+                />
                 <Route 
                   path="/admin" 
                   element={
@@ -205,20 +230,10 @@ function App() {
                       </RoleBasedRoute>
                     } 
                   />
+                  {/* Redirect old admin user detail route to new location */}
                   <Route 
                     path="users/:userId" 
-                    element={
-                      <RoleBasedRoute allowedRoles={[
-                        'super_admin', 
-                        'internal_account_manager', 
-                        'internal_hr',
-                        'internal_staff',
-                        'client_admin', 
-                        'client_hr'
-                      ]}>
-                        <UserDetailPage />
-                      </RoleBasedRoute>
-                    } 
+                    element={<UserDetailRedirect />}
                   />
                 </Route>
                 <Route path="/test" element={<IntegratedTestSuite />} />

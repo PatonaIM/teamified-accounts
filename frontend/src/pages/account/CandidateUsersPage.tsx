@@ -102,7 +102,7 @@ export default function CandidateUsersPage() {
   };
 
   const handleRowClick = (candidate: User) => {
-    navigate(`/admin/users/${candidate.id}`);
+    navigate(`/users/${candidate.id}`);
   };
 
   const getStatusChipColor = (
