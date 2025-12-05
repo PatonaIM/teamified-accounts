@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity';
@@ -18,6 +18,8 @@ import { ConvertCandidateDto, ConvertCandidateResponseDto } from './dto/convert-
 import { RoleType } from '../invitations/dto/create-invitation.dto';
 import { ObjectStorageService } from '../blob-storage/object-storage.service';
 import { GlobalSearchResponseDto, UserSearchResult } from './dto/search-global.dto';
+import { UserEmailsService } from '../user-emails/user-emails.service';
+import { EmailType } from '../user-emails/entities/user-email.entity';
 
 @Injectable()
 export class OrganizationsService {
@@ -37,6 +39,8 @@ export class OrganizationsService {
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
     private readonly objectStorageService: ObjectStorageService,
+    @Inject(forwardRef(() => UserEmailsService))
+    private readonly userEmailsService: UserEmailsService,
   ) {}
 
   /**
@@ -902,6 +906,22 @@ export class OrganizationsService {
 
     this.logger.log(`Member added to organization ${organizationId}: user ${addMemberDto.userId} with role ${addMemberDto.roleType} by user ${currentUser.id}`);
 
+    // If a work email is provided, add it as a linked email for this organization
+    if (addMemberDto.workEmail) {
+      try {
+        await this.userEmailsService.addWorkEmailForOrganization(
+          addMemberDto.userId,
+          addMemberDto.workEmail,
+          organizationId,
+        );
+        this.logger.log(`Work email ${addMemberDto.workEmail} linked to user ${addMemberDto.userId} for organization ${organizationId}`);
+      } catch (error) {
+        // Log the error but don't fail the member addition
+        // The work email might already exist or be invalid
+        this.logger.warn(`Failed to add work email ${addMemberDto.workEmail} for user ${addMemberDto.userId}: ${error.message}`);
+      }
+    }
+
     const roles = this.getAllRoles(currentUser);
     await this.auditService.log({
       actorUserId: currentUser.id,
@@ -913,6 +933,7 @@ export class OrganizationsService {
         organizationId,
         userId: addMemberDto.userId,
         userEmail: user.email,
+        workEmail: addMemberDto.workEmail || null,
         roleType: addMemberDto.roleType,
         invitedBy: currentUser.id,
       },

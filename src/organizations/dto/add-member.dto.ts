@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsEnum, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsUUID, IsEnum, IsOptional, IsEmail } from 'class-validator';
 import { RoleType } from '../../invitations/dto/create-invitation.dto';
 
 export class AddMemberDto {
@@ -29,4 +29,12 @@ export class AddMemberDto {
   @IsOptional()
   @IsEnum(['active', 'inactive', 'suspended'])
   status?: 'active' | 'inactive' | 'suspended';
+
+  @ApiPropertyOptional({
+    description: 'Work email for this organization (optional). If provided, this email will be linked to the user account for this organization.',
+    example: 'john.doe@company.com'
+  })
+  @IsOptional()
+  @IsEmail()
+  workEmail?: string;
 }

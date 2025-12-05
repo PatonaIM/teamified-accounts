@@ -8,11 +8,12 @@ import { Session } from './auth/entities/session.entity';
 import { ApiKey } from './api-keys/entities/api-key.entity';
 import { Organization } from './organizations/entities/organization.entity';
 import { OrganizationMember } from './organizations/entities/organization-member.entity';
+import { UserEmail } from './user-emails/entities/user-email.entity';
 
 // Load environment variables
 config();
 
-const postgresUrl = process.env.POSTGRES_URL;
+const postgresUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 const nodeEnv = process.env.NODE_ENV;
 
 export const AppDataSource = new DataSource({
@@ -34,6 +35,7 @@ export const AppDataSource = new DataSource({
     ApiKey,
     Organization,
     OrganizationMember,
+    UserEmail,
   ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

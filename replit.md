@@ -29,6 +29,12 @@ Core features include:
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
 - **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.
+- **Multi-Identity SSO (Candidate + Employee Model)**: Users can link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Login works with any linked email using a single password. Key features:
+  - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking
+  - Smart identity resolution via `findUserByAnyEmail` helper method in AuthService
+  - Self-service password change endpoint requiring old password verification (no email flow)
+  - Work email provisioning during organization member onboarding
+  - API endpoints at `/api/user-emails` for email CRUD operations
 
 ### Documentation Architecture
 
