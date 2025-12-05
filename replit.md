@@ -35,6 +35,10 @@ Core features include:
   - Self-service password change endpoint requiring old password verification (no email flow)
   - Work email provisioning during organization member onboarding
   - API endpoints at `/api/user-emails` for email CRUD operations
+  - Frontend Account Security page at `/account/security` with:
+    - LinkedEmails component: View/manage all linked emails, set primary, add new emails, remove non-primary emails
+    - ChangePassword component: Self-service password change with old password verification
+  - Security navigation item added to AccountLayout sidebar
 
 ### Documentation Architecture
 

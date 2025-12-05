@@ -16,6 +16,7 @@ import {
 import {
   Apps,
   Person,
+  Security,
   AdminPanelSettings,
   Logout,
   Business,
@@ -160,6 +161,46 @@ const AccountLayout: React.FC = () => {
                   <Person />
                 </ListItemIcon>
                 <ListItemText primary="My Profile" />
+              </ListItemButton>
+            </ListItem>
+
+            <ListItem disablePadding>
+              <ListItemButton
+                selected={!appsDropdownOpen && location.pathname === '/account/security'}
+                onClick={() => navigate('/account/security')}
+                sx={{
+                  mx: 2,
+                  my: 0.5,
+                  borderRadius: '12px',
+                  py: 1.5,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                    color: '#FFFFFF',
+                    boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
+                      transform: 'translateX(4px)',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: '#FFFFFF',
+                    },
+                  },
+                  '&:not(.Mui-selected):hover': {
+                    bgcolor: 'rgba(161, 106, 232, 0.08)',
+                    transform: 'translateX(4px)',
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: (!appsDropdownOpen && location.pathname === '/account/security') ? 'inherit' : 'text.secondary',
+                    minWidth: 40,
+                  }}
+                >
+                  <Security />
+                </ListItemIcon>
+                <ListItemText primary="Security" />
               </ListItemButton>
             </ListItem>
 

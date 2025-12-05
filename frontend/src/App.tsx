@@ -52,6 +52,7 @@ import AccountLayout from './components/AccountLayout';
 import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
 import MyProfilePage from './pages/account/MyProfilePage';
+import AccountSecurityPage from './pages/account/AccountSecurityPage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
 import CandidateUsersPage from './pages/account/CandidateUsersPage';
 import './App.css';
@@ -216,6 +217,7 @@ function App() {
                   <Route index element={<Navigate to="/account/profile" replace />} />
                   <Route path="apps" element={<MyAppsPage />} />
                   <Route path="profile" element={<MyProfilePage />} />
+                  <Route path="security" element={<AccountSecurityPage />} />
                 </Route>
                 {/* User Detail Page - accessible to both internal and client users */}
                 <Route 
