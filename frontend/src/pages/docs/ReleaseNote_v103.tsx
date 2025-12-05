@@ -84,6 +84,20 @@ export default function ReleaseNote_v103() {
                   secondary="Tab displays instantly for client users with smooth redirect handling to first organization"
                 />
               </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Smooth SPA Navigation" 
+                  secondary="All navigation now updates only the content area without full page reloads, maintaining sidebar and header visibility"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Organization Slug Caching" 
+                  secondary="Cached organization slug enables instant redirect on 'My Organization' clicks without loading animations"
+                />
+              </ListItem>
             </List>
           </Box>
 
@@ -221,6 +235,27 @@ export default function ReleaseNote_v103() {
                 <ListItemText 
                   primary="Fixed Hook Dependencies" 
                   secondary="Moved useMemo and useEffect hooks before early returns to comply with React Rules of Hooks"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Fixed User Detail Page Layout" 
+                  secondary="User profile page now renders within the navigation layout with sidebar and header visible"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Fixed My Organization Full Page Reload" 
+                  secondary="Clicking 'My Organization' tab now performs smooth client-side navigation instead of full page reload"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Fixed Double Loading Animation" 
+                  secondary="Eliminated redundant loading spinner when navigating to organization page by using cached redirect"
                 />
               </ListItem>
             </List>
