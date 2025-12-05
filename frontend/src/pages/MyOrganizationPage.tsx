@@ -167,6 +167,11 @@ const MyOrganizationPage: React.FC = () => {
       setMemberStatusFilters(null);
       setActiveTab(0);
       
+      // Cache current org slug for instant navigation on "My Organization" tab click
+      try {
+        localStorage.setItem('lastOrgSlug', selectedOrg.slug);
+      } catch {}
+      
       if (canDeleteOrg) {
         loadOrphanCount();
       }
