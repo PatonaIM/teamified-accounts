@@ -12,6 +12,7 @@ import {
   Stack,
   Divider,
   Button,
+  Alert,
   useTheme as useMuiTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -63,6 +64,7 @@ export default function MyProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [emailsLoadError, setEmailsLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -72,15 +74,22 @@ export default function MyProfilePage() {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const [profileResult, emailsResult] = await Promise.all([
-        profileService.getProfileData(),
-        userEmailsService.getMyEmails().catch(() => []),
-      ]);
+      const profileResult = await profileService.getProfileData();
+      let emailsResult: UserEmail[] = [];
+      let emailsFailed = false;
+      
+      try {
+        emailsResult = await userEmailsService.getMyEmails();
+      } catch (error) {
+        console.error('Failed to load user emails:', error);
+        emailsFailed = true;
+      }
       
       console.log('MyProfilePage: Loaded profile data:', profileResult);
       console.log('MyProfilePage: Loaded user emails:', emailsResult);
       setProfileData(profileResult);
       setUserEmails(emailsResult);
+      setEmailsLoadError(emailsFailed);
       setProfilePicture(profileResult.profileData?.profilePicture || null);
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -261,6 +270,12 @@ export default function MyProfilePage() {
         </Box>
 
         <Stack spacing={4}>
+          {emailsLoadError && (
+            <Alert severity="warning" onClose={() => setEmailsLoadError(false)}>
+              Unable to load linked email addresses. Some email information may be incomplete.
+            </Alert>
+          )}
+
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
