@@ -13,6 +13,7 @@ import {
   Divider,
   Button,
   Alert,
+  Collapse,
   useTheme as useMuiTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -23,13 +24,16 @@ import VerifiedIcon from '@mui/icons-material/Verified';
 import StarIcon from '@mui/icons-material/Star';
 import SecurityIcon from '@mui/icons-material/Security';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { useNavigate } from 'react-router-dom';
+import EditIcon from '@mui/icons-material/Edit';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useAuth } from '../../hooks/useAuth';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { profileService } from '../../services/profileService';
 import { userEmailsService } from '../../services/userEmailsService';
 import type { UserEmail } from '../../services/userEmailsService';
 import api from '../../services/api';
+import { LinkedEmails } from '../../components/account/LinkedEmails';
+import { ChangePassword } from '../../components/account/ChangePassword';
 
 interface Organization {
   organizationId: string;
@@ -54,7 +58,6 @@ interface ProfileData {
 }
 
 export default function MyProfilePage() {
-  const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const { showSnackbar } = useSnackbar();
   const theme = useMuiTheme();
@@ -65,6 +68,7 @@ export default function MyProfilePage() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [emailsLoadError, setEmailsLoadError] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -287,7 +291,7 @@ export default function MyProfilePage() {
               <Tooltip title="Manage Emails">
                 <IconButton 
                   size="small" 
-                  onClick={() => navigate('/account/security')}
+                  onClick={() => setShowAccountSettings(true)}
                   sx={{ color: 'primary.main' }}
                 >
                   <SettingsIcon fontSize="small" />
@@ -359,7 +363,7 @@ export default function MyProfilePage() {
                   <Tooltip title="Manage Emails">
                     <IconButton 
                       size="small" 
-                      onClick={() => navigate('/account/security')}
+                      onClick={() => setShowAccountSettings(true)}
                       sx={{ color: 'primary.main' }}
                     >
                       <SettingsIcon fontSize="small" />
@@ -505,14 +509,22 @@ export default function MyProfilePage() {
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box>
             <Button
-              variant="outlined"
-              startIcon={<SecurityIcon />}
-              onClick={() => navigate('/account/security')}
+              variant="contained"
+              startIcon={showAccountSettings ? <ExpandLessIcon /> : <EditIcon />}
+              onClick={() => setShowAccountSettings(!showAccountSettings)}
+              sx={{ mb: showAccountSettings ? 3 : 0 }}
             >
-              Manage Security Settings
+              {showAccountSettings ? 'Hide Account Settings' : 'Manage Account'}
             </Button>
+            
+            <Collapse in={showAccountSettings}>
+              <Stack spacing={3}>
+                <LinkedEmails />
+                <ChangePassword />
+              </Stack>
+            </Collapse>
           </Box>
         </Stack>
       </Paper>
