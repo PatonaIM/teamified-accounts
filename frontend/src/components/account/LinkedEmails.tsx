@@ -14,10 +14,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Chip,
   Alert,
   CircularProgress,
@@ -47,7 +43,6 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
   const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [emailType, setEmailType] = useState<'personal' | 'work'>('personal');
   const [submitting, setSubmitting] = useState(false);
 
   const loadEmails = useCallback(async () => {
@@ -78,7 +73,7 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
       setError(null);
       const dto: AddEmailDto = {
         email: newEmail.trim(),
-        emailType,
+        emailType: 'personal',
       };
       await userEmailsService.addEmail(dto);
       setSuccess('Email added successfully. Please check your inbox for verification.');
@@ -154,7 +149,7 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
           onClick={() => setDialogOpen(true)}
           size="small"
         >
-          Add Email
+          Add Personal Email
         </Button>
       </Box>
 
@@ -268,31 +263,24 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Email Address</DialogTitle>
+        <DialogTitle>Add Personal Email Address</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="Email Address"
+              label="Personal Email Address"
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               sx={{ mb: 2 }}
               autoFocus
+              placeholder="e.g., yourname@gmail.com"
             />
-            <FormControl fullWidth>
-              <InputLabel>Email Type</InputLabel>
-              <Select
-                value={emailType}
-                label="Email Type"
-                onChange={(e) => setEmailType(e.target.value as 'personal' | 'work')}
-              >
-                <MenuItem value="personal">Personal</MenuItem>
-                <MenuItem value="work">Work</MenuItem>
-              </Select>
-            </FormControl>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
               A verification email will be sent to the new address. You must verify the email before it can be used for login.
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Note: Work emails can only be added through employer invitations during onboarding.
             </Typography>
           </Box>
         </DialogContent>
@@ -303,7 +291,7 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
             variant="contained"
             disabled={!newEmail.trim() || submitting}
           >
-            {submitting ? <CircularProgress size={24} /> : 'Add Email'}
+            {submitting ? <CircularProgress size={24} /> : 'Add Personal Email'}
           </Button>
         </DialogActions>
       </Dialog>
