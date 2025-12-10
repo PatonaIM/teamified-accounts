@@ -590,7 +590,7 @@ This is an automated message from Teamified.
     };
   }
 
-  async getProfileData(userId: string): Promise<{ profileData: any }> {
+  async getProfileData(userId: string): Promise<{ profileData: any; passwordUpdatedAt: Date | null }> {
     const user = await this.userRepository.findOne({
       where: { id: userId, isActive: true },
     });
@@ -619,11 +619,15 @@ This is an automated message from Teamified.
             createdAt: new Date().toISOString(),
             version: '1.0'
           }
-        }
+        },
+        passwordUpdatedAt: user.passwordUpdatedAt || null,
       };
     }
 
-    return { profileData: user.profileData };
+    return { 
+      profileData: user.profileData,
+      passwordUpdatedAt: user.passwordUpdatedAt || null,
+    };
   }
 
   async updateProfileData(userId: string, profileData: any): Promise<{ profileData: any }> {
@@ -826,6 +830,7 @@ This is an automated message from Teamified.
       mustChangePassword: true,
       passwordChangedByAdminAt: new Date(),
       passwordChangedByAdminId: adminUserId,
+      passwordUpdatedAt: new Date(),
     });
 
     // Invalidate all existing sessions for security
@@ -954,6 +959,7 @@ This is an automated message from Teamified.
       passwordHash: hashedPassword,
       passwordResetToken: null,
       passwordResetTokenExpiry: null,
+      passwordUpdatedAt: new Date(),
     });
 
     // Invalidate all existing sessions for security
@@ -1054,10 +1060,11 @@ This is an automated message from Teamified.
     // Hash the new password
     const hashedPassword = await this.passwordService.hashPassword(newPassword);
 
-    // Update user password and clear mustChangePassword flag
+    // Update user password, clear mustChangePassword flag, and track update time
     await this.userRepository.update(user.id, {
       passwordHash: hashedPassword,
       mustChangePassword: false,
+      passwordUpdatedAt: new Date(),
     });
 
     // Log the password change
@@ -1304,6 +1311,7 @@ This is an automated message from Teamified.
       mustChangePassword: false,
       passwordChangedByAdminAt: null,
       passwordChangedByAdminId: null,
+      passwordUpdatedAt: new Date(),
     });
 
     // Reload user to get updated mustChangePassword=false for token generation

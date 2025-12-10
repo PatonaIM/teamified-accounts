@@ -35,7 +35,11 @@ import {
 import userEmailsService from '../../services/userEmailsService';
 import type { UserEmail, AddEmailDto } from '../../services/userEmailsService';
 
-export function LinkedEmails() {
+interface LinkedEmailsProps {
+  onEmailsUpdated?: () => void;
+}
+
+export function LinkedEmails({ onEmailsUpdated }: LinkedEmailsProps) {
   const [emails, setEmails] = useState<UserEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +82,7 @@ export function LinkedEmails() {
       setNewEmail('');
       setDialogOpen(false);
       await loadEmails();
+      onEmailsUpdated?.();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add email';
       setError(errorMessage);
@@ -94,6 +99,7 @@ export function LinkedEmails() {
       await userEmailsService.removeEmail(emailId);
       setSuccess('Email removed successfully');
       await loadEmails();
+      onEmailsUpdated?.();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to remove email';
       setError(errorMessage);
@@ -106,6 +112,7 @@ export function LinkedEmails() {
       await userEmailsService.setPrimaryEmail(emailId);
       setSuccess('Primary email updated successfully');
       await loadEmails();
+      onEmailsUpdated?.();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to set primary email';
       setError(errorMessage);

@@ -17,7 +17,11 @@ import {
 } from '@mui/icons-material';
 import userEmailsService from '../../services/userEmailsService';
 
-export function ChangePassword() {
+interface ChangePasswordProps {
+  onPasswordChanged?: () => void;
+}
+
+export function ChangePassword({ onPasswordChanged }: ChangePasswordProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -81,6 +85,7 @@ export function ChangePassword() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      onPasswordChanged?.();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosError = err as { response?: { data?: { message?: string } } };
