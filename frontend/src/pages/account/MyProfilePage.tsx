@@ -188,9 +188,16 @@ export default function MyProfilePage() {
   };
 
   const formatRoleType = (roleType: string): string => {
+    const acronyms = ['hr', 'it', 'ceo', 'cto', 'cfo', 'coo', 'vp', 'svp', 'evp', 'api', 'sso', 'id'];
     return roleType
       .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map(word => {
+        const lowerWord = word.toLowerCase();
+        if (acronyms.includes(lowerWord)) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
       .join(' ');
   };
 
