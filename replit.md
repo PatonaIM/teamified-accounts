@@ -22,7 +22,7 @@ Core features include:
 - **Hiring Module**: Integrates Job Request, Interview, and Talent Pool functionalities.
 - **Salary History Module**: Provides organization-wide salary tracking with server-side pagination.
 - **Client Management Module**: Enables CRUD operations for customer organizations.
-- **Profile Management**: Offers a user profile page with editable fields and profile picture display.
+- **Profile Management**: Unified profile page at `/account/profile` with view/edit mode toggle (pencil icon). View mode displays read-only account information including linked emails, password last updated timestamp, organizational access, and account status. Edit mode reveals LinkedEmails and ChangePassword components for managing linked emails and self-service password changes. The User entity tracks `passwordUpdatedAt` timestamp for all password change flows.
 - **SSO Integration Test Page**: A `/test` route to demonstrate OAuth 2.0 + PKCE flow.
 - **Session Persistence & Deep Linking**: Ensures users remain logged in and are redirected to their last visited page after refresh or re-access.
 - **API Key Management**: Supports programmatic access via configurable API keys with audit logging.
