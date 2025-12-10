@@ -36,9 +36,11 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = this.jwtService.validateAccessToken(token);
       
-      // Attach JWT payload to request
-      // Note: Controllers should use payload.sub for user ID, not payload.id
-      request.user = payload;
+      // Attach JWT payload to request with userId mapped from sub for convenience
+      request.user = {
+        ...payload,
+        userId: payload.sub, // Map sub to userId for controller convenience
+      };
       
       return true;
     } catch (error) {
