@@ -38,6 +38,12 @@ export default function UserEmailsApiPage() {
         The User Emails API enables the <strong>Candidate + Employee Model</strong> - allowing users to link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Users can log in with any linked email using a single password.
       </Typography>
 
+      <Alert severity="warning" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>Employer-Driven Work Emails:</strong> Work emails are provisioned exclusively through employer invitations during onboarding - users cannot self-add work emails. This ensures proper organizational control and identity verification.
+        </Typography>
+      </Alert>
+
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
           <strong>Interactive API Documentation:</strong>{' '}
@@ -293,7 +299,8 @@ Content-Type: application/json`}
               <li><strong>Single Password:</strong> Users maintain one password that works with any of their linked email addresses</li>
               <li><strong>Smart Identity Resolution:</strong> When a user logs in, the system automatically resolves any linked email to the correct user account</li>
               <li><strong>Email Types:</strong> Personal emails are for individual/candidate use; work emails are linked to organizations</li>
-              <li><strong>Organization Linking:</strong> Work emails can be associated with a specific organization for proper access control</li>
+              <li><strong>Employer-Driven Work Emails:</strong> Work emails are provisioned only via employer invitations, ensuring organizational control</li>
+              <li><strong>Account Linking:</strong> When accepting a work email invitation, users can link to an existing personal account by providing their personal email and verifying with their password</li>
             </ol>
           </Paper>
         </Box>
@@ -324,37 +331,42 @@ type EmailType = "personal" | "work";
           </Paper>
 
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            Step 2: Provision Work Email on Organization Onboarding
+            Step 2: Provision Work Email via Employer Invitation
           </Typography>
           <Typography variant="body1" paragraph>
-            When an employee joins an organization, automatically create a work email linked to that organization. This is typically done during the organization member creation process.
+            Work emails are provisioned through the invitation acceptance flow. When an employer invites someone via work email, the employee can optionally link to an existing personal account during acceptance.
           </Typography>
           <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
             <pre style={{ margin: 0 }}>
-{`// When adding a new employee to an organization
-const addEmployeeToOrg = async (userId: string, orgId: string, workEmail: string) => {
-  // 1. Add the work email to the user's account
-  const response = await fetch('${apiUrl}/api/user-emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': \`Bearer \${accessToken}\`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email: workEmail,
-      emailType: 'work',
-      organizationId: orgId,
-    }),
-  });
+{`// Employer sends invitation to work email
+// POST /api/v1/invitations
+{
+  "email": "john.doe@company.com",  // Work email
+  "organizationId": "org-uuid",
+  "roleType": "employee"
+}
 
-  if (!response.ok) {
-    throw new Error('Failed to provision work email');
-  }
+// Employee accepts invitation - can optionally link existing account
+// POST /api/v1/invitations/accept
+{
+  "inviteCode": "abc123",
+  "email": "john.doe@company.com",
+  "password": "existingPassword123!",  // For linking: use existing password
+  "confirmPassword": "existingPassword123!",
+  "firstName": "John",
+  "lastName": "Doe",
+  "personalEmail": "john.doe@gmail.com"  // Optional: link to existing account
+}
 
-  return response.json();
-};`}
+// Result: Work email is automatically linked to user's account
+// User can now log in with either john.doe@company.com or john.doe@gmail.com`}
             </pre>
           </Paper>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Account Linking:</strong> When the employee provides their personal email during invitation acceptance, the system verifies their existing password to prove account ownership, then links the work email to that account.
+            </Typography>
+          </Alert>
 
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
             Step 3: Determine User Context Based on Login Email

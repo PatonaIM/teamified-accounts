@@ -551,18 +551,6 @@ export default function MyProfilePage() {
                   Work Emails
                 </Typography>
               </Box>
-              {isEditMode && (
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    setNewEmailType('work');
-                    setAddEmailDialogOpen(true);
-                  }}
-                >
-                  Add Work Email
-                </Button>
-              )}
             </Box>
             
             {Object.keys(workEmailsByOrg).length > 0 ? (
@@ -582,9 +570,14 @@ export default function MyProfilePage() {
                 ))}
               </Stack>
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No work emails linked yet
-              </Typography>
+              <Box sx={{ p: 2, borderRadius: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  No work emails linked yet
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  Work emails are added when your employer invites you to join their organization.
+                </Typography>
+              </Box>
             )}
           </Box>
 

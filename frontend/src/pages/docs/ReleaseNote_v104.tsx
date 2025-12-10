@@ -203,19 +203,19 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
-          {/* 4. Organization Member Provisioning */}
+          {/* 4. Employer-Driven Work Email Provisioning */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Lock color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                4. Work Email Provisioning
+                4. Employer-Driven Work Email Provisioning
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Enhanced organization member onboarding with automatic work email linking.
+              Work emails are now provisioned exclusively through employer invitations, ensuring proper organizational control and preventing self-service work email addition.
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              <Link component={RouterLink} to="/docs/developer/user-emails#enforcing-candidate-employee-model" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <Link component={RouterLink} to="/docs/developer/user-emails" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                 See Candidate + Employee Model Implementation <OpenInNew fontSize="small" />
               </Link>
             </Typography>
@@ -224,15 +224,29 @@ export default function ReleaseNote_v104() {
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Automatic Work Email Creation" 
-                  secondary="When adding members to an organization, optionally provision a work email that links to the organization"
+                  primary="Invitation-Based Work Email Linking" 
+                  secondary="Work emails are automatically linked when accepting organization invitations - users cannot self-add work emails"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Organization-Linked Emails" 
-                  secondary="Work emails are associated with their organization for domain validation and access control"
+                  primary="Account Linking During Onboarding" 
+                  secondary="Employees can optionally link work email to existing personal account during invitation acceptance"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Password Verification for Account Linking" 
+                  secondary="When linking accounts, existing password is verified to prove ownership of the personal account"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Organization-Controlled Emails" 
+                  secondary="All work emails are associated with their organization for proper access control and audit trail"
                 />
               </ListItem>
             </List>

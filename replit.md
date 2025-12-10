@@ -33,12 +33,14 @@ Core features include:
   - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking
   - Smart identity resolution via `findUserByAnyEmail` helper method in AuthService
   - Self-service password change endpoint requiring old password verification (no email flow)
-  - Work email provisioning during organization member onboarding
-  - API endpoints at `/api/user-emails` for email CRUD operations
-  - Frontend Account Security page at `/account/security` with:
-    - LinkedEmails component: View/manage all linked emails, set primary, add new emails, remove non-primary emails
+  - **Employer-Driven Work Email Provisioning**: Work emails are added exclusively through employer invitations during onboarding - users cannot self-add work emails. This ensures proper organizational control and identity verification.
+  - **Account Linking During Onboarding**: When accepting a work email invitation, employees can optionally link to an existing personal account by providing their personal email and verifying with their existing password.
+  - API endpoints at `/api/user-emails` for email CRUD operations (personal emails only for self-service)
+  - Frontend Account Profile page at `/account/profile` with:
+    - LinkedEmails component: View all linked emails, add personal emails only, set primary, remove non-primary emails
     - ChangePassword component: Self-service password change with old password verification
-  - Security navigation item added to AccountLayout sidebar
+    - Work emails section is display-only (no self-service add button)
+  - Invitation acceptance page at `/invitations/accept/:code` includes optional account linking flow
 
 ### Documentation Architecture
 

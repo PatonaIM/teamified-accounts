@@ -14,8 +14,11 @@ import {
   Step,
   StepLabel,
   Divider,
+  Collapse,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
-import { Visibility, VisibilityOff, CheckCircle, Business, Login as LoginIcon } from '@mui/icons-material';
+import { Visibility, VisibilityOff, CheckCircle, Business, Login as LoginIcon, LinkOutlined, InfoOutlined } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { login } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
@@ -41,6 +44,7 @@ interface AcceptInvitationData {
   confirmPassword: string;
   firstName: string;
   lastName: string;
+  personalEmail?: string;
 }
 
 const OrganizationInvitationAcceptPage: React.FC = () => {
@@ -60,6 +64,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [wantToLinkAccount, setWantToLinkAccount] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingInvitation, setIsLoadingInvitation] = useState(true);
   const [error, setError] = useState<string>('');
@@ -118,33 +123,55 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
       errors.email = 'Invalid email format';
     }
 
-    if (!formData.firstName.trim()) {
-      errors.firstName = 'First name is required';
-    }
+    // For account linking, name fields are optional (using existing account info)
+    if (!wantToLinkAccount) {
+      if (!formData.firstName.trim()) {
+        errors.firstName = 'First name is required';
+      }
 
-    if (!formData.lastName.trim()) {
-      errors.lastName = 'Last name is required';
-    }
-
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
-    } else {
-      const hasUppercase = /[A-Z]/.test(formData.password);
-      const hasLowercase = /[a-z]/.test(formData.password);
-      const hasNumber = /[0-9]/.test(formData.password);
-      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
-      
-      if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
-        errors.password = 'Password must include uppercase, lowercase, number, and special character';
+      if (!formData.lastName.trim()) {
+        errors.lastName = 'Last name is required';
       }
     }
 
-    if (!formData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+    if (!formData.password) {
+      errors.password = wantToLinkAccount 
+        ? 'Your existing password is required to verify account ownership' 
+        : 'Password is required';
+    } else if (!wantToLinkAccount) {
+      // Only validate password complexity for new accounts
+      if (formData.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters';
+      } else {
+        const hasUppercase = /[A-Z]/.test(formData.password);
+        const hasLowercase = /[a-z]/.test(formData.password);
+        const hasNumber = /[0-9]/.test(formData.password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+        
+        if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+          errors.password = 'Password must include uppercase, lowercase, number, and special character';
+        }
+      }
+    }
+
+    // Confirm password required only for new accounts
+    if (!wantToLinkAccount) {
+      if (!formData.confirmPassword) {
+        errors.confirmPassword = 'Please confirm your password';
+      } else if (formData.password !== formData.confirmPassword) {
+        errors.confirmPassword = 'Passwords do not match';
+      }
+    }
+
+    // Personal email required when linking
+    if (wantToLinkAccount) {
+      if (!formData.personalEmail?.trim()) {
+        errors.personalEmail = 'Personal email is required to link accounts';
+      } else if (!/\S+@\S+\.\S+/.test(formData.personalEmail)) {
+        errors.personalEmail = 'Invalid email format';
+      } else if (formData.personalEmail.toLowerCase() === formData.email.toLowerCase()) {
+        errors.personalEmail = 'Personal email must be different from your work email';
+      }
     }
 
     setValidationErrors(errors);
@@ -282,10 +309,12 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
         <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
           <CheckCircle color="success" sx={{ fontSize: 80, mb: 2 }} />
           <Typography variant="h4" gutterBottom>
-            Welcome!
+            {wantToLinkAccount ? 'Account Linked!' : 'Welcome!'}
           </Typography>
           <Typography variant="body1" color="text.secondary" paragraph>
-            You've successfully joined {invitation?.organizationName}!
+            {wantToLinkAccount 
+              ? `Your work email has been linked and you've joined ${invitation?.organizationName}!`
+              : `You've successfully joined ${invitation?.organizationName}!`}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Redirecting you to your account...
@@ -445,7 +474,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
 
         <Stepper activeStep={0} sx={{ mb: 4 }}>
           <Step>
-            <StepLabel>Create Account</StepLabel>
+            <StepLabel>{wantToLinkAccount ? 'Link Work Email' : 'Create Account'}</StepLabel>
           </Step>
           <Step>
             <StepLabel>Get Started</StepLabel>
@@ -473,45 +502,52 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
             required
           />
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField
-              fullWidth
-              label="First Name"
-              type="text"
-              autoComplete="given-name"
-              value={formData.firstName}
-              onChange={(e) => handleInputChange('firstName', e.target.value)}
-              error={!!validationErrors.firstName}
-              helperText={validationErrors.firstName}
-              disabled={isLoading}
-              margin="normal"
-              required
-            />
+          <Collapse in={!wantToLinkAccount}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="First Name"
+                type="text"
+                autoComplete="given-name"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange('firstName', e.target.value)}
+                error={!!validationErrors.firstName}
+                helperText={validationErrors.firstName}
+                disabled={isLoading}
+                margin="normal"
+                required={!wantToLinkAccount}
+              />
 
-            <TextField
-              fullWidth
-              label="Last Name"
-              type="text"
-              autoComplete="family-name"
-              value={formData.lastName}
-              onChange={(e) => handleInputChange('lastName', e.target.value)}
-              error={!!validationErrors.lastName}
-              helperText={validationErrors.lastName}
-              disabled={isLoading}
-              margin="normal"
-              required
-            />
-          </Box>
+              <TextField
+                fullWidth
+                label="Last Name"
+                type="text"
+                autoComplete="family-name"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+                error={!!validationErrors.lastName}
+                helperText={validationErrors.lastName}
+                disabled={isLoading}
+                margin="normal"
+                required={!wantToLinkAccount}
+              />
+            </Box>
+          </Collapse>
 
           <TextField
             fullWidth
-            label="Password"
+            label={wantToLinkAccount ? 'Your Existing Password' : 'Password'}
             type={showPassword ? 'text' : 'password'}
-            autoComplete="new-password"
+            autoComplete={wantToLinkAccount ? 'current-password' : 'new-password'}
             value={formData.password}
             onChange={(e) => handleInputChange('password', e.target.value)}
             error={!!validationErrors.password}
-            helperText={validationErrors.password || 'Min 8 chars with uppercase, lowercase, number, and special char'}
+            helperText={
+              validationErrors.password || 
+              (wantToLinkAccount 
+                ? 'Enter your current password to verify account ownership' 
+                : 'Min 8 chars with uppercase, lowercase, number, and special char')
+            }
             disabled={isLoading}
             margin="normal"
             required
@@ -529,31 +565,80 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
             }}
           />
 
-          <TextField
-            fullWidth
-            label="Confirm Password"
-            type={showConfirmPassword ? 'text' : 'password'}
-            autoComplete="new-password"
-            value={formData.confirmPassword}
-            onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-            error={!!validationErrors.confirmPassword}
-            helperText={validationErrors.confirmPassword}
-            disabled={isLoading}
-            margin="normal"
-            required
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    edge="end"
-                  >
-                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+          <Collapse in={!wantToLinkAccount}>
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={formData.confirmPassword}
+              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+              error={!!validationErrors.confirmPassword}
+              helperText={validationErrors.confirmPassword}
+              disabled={isLoading}
+              margin="normal"
+              required={!wantToLinkAccount}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Collapse>
+
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={wantToLinkAccount}
+                  onChange={(e) => {
+                    setWantToLinkAccount(e.target.checked);
+                    if (!e.target.checked) {
+                      setFormData(prev => ({ ...prev, personalEmail: '' }));
+                    }
+                  }}
+                  disabled={isLoading}
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LinkOutlined fontSize="small" />
+                  <Typography variant="body2">
+                    I already have an account and want to link this work email
+                  </Typography>
+                </Box>
+              }
+            />
+            
+            <Collapse in={wantToLinkAccount}>
+              <Alert severity="info" icon={<InfoOutlined />} sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2">
+                  Enter your existing account's personal email below. Your work email will be linked to that account, 
+                  allowing you to log in with either email using your existing password.
+                </Typography>
+              </Alert>
+              
+              <TextField
+                fullWidth
+                label="Your Existing Personal Email"
+                type="email"
+                autoComplete="email"
+                value={formData.personalEmail || ''}
+                onChange={(e) => handleInputChange('personalEmail', e.target.value)}
+                error={!!validationErrors.personalEmail}
+                helperText={validationErrors.personalEmail || 'The email you previously signed up with'}
+                disabled={isLoading}
+                placeholder="your.personal@email.com"
+              />
+            </Collapse>
+          </Box>
 
           <Button
             type="submit"
@@ -563,7 +648,13 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
             disabled={isLoading || !invitation?.isValid}
             sx={{ mt: 3, mb: 2 }}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Accept Invitation & Create Account'}
+            {isLoading ? (
+              <CircularProgress size={24} />
+            ) : wantToLinkAccount ? (
+              'Link Work Email & Accept Invitation'
+            ) : (
+              'Accept Invitation & Create Account'
+            )}
           </Button>
 
           <Typography variant="body2" color="text.secondary" textAlign="center">
