@@ -511,7 +511,7 @@ export default function MyProfilePage() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <Avatar
                               src={org.organizationLogoUrl || undefined}
-                              variant="rounded"
+                              variant="circular"
                               sx={{
                                 width: 40,
                                 height: 40,
