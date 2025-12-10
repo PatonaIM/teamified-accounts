@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.4',
+    date: 'December 13, 2025',
+    title: 'Multi-Identity SSO & Account Security',
+    summary: 'Users can now link multiple email addresses (personal and work) to a single account. New Account Security page for managing linked emails and self-service password changes. Smart identity resolution enables login with any linked email using one password.',
+    path: '/docs/release-notes/2025-12-13',
+    isLatest: true,
+  },
+  {
     version: '1.0.3',
     date: 'December 5, 2025',
     title: 'Performance Optimizations & Client RBAC',
     summary: 'Theme flash prevention, instant navigation rendering, multi-organization navigation improvements, extended client admin permissions for user management, and React hooks bug fixes.',
     path: '/docs/release-notes/2025-12-05',
-    isLatest: true,
   },
   {
     version: '1.0.2',

@@ -37,6 +37,7 @@ import ReleaseNote_2025_12_02 from './pages/docs/ReleaseNote_2025_12_02';
 import ReleaseNote_2025_12_03 from './pages/docs/ReleaseNote_2025_12_03';
 import ReleaseNote_v102 from './pages/docs/ReleaseNote_v102';
 import ReleaseNote_v103 from './pages/docs/ReleaseNote_v103';
+import ReleaseNote_v104 from './pages/docs/ReleaseNote_v104';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
@@ -328,6 +329,7 @@ function App() {
                   <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/2025-12-13" element={<ReleaseNote_v104 />} />
                   <Route path="release-notes/2025-12-05" element={<ReleaseNote_v103 />} />
                   <Route path="release-notes/2025-12-04" element={<ReleaseNote_v102 />} />
                   <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />
