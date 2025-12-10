@@ -39,6 +39,7 @@ import ReleaseNote_v102 from './pages/docs/ReleaseNote_v102';
 import ReleaseNote_v103 from './pages/docs/ReleaseNote_v103';
 import ReleaseNote_v104 from './pages/docs/ReleaseNote_v104';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
+import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -322,6 +323,7 @@ function App() {
                   <Route path="developer/organization-api" element={<OrganizationApiPage />} />
                   <Route path="developer/profile-pictures" element={<ProfilePicturesApiPage />} />
                   <Route path="developer/user-activity" element={<UserActivityApiPage />} />
+                  <Route path="developer/user-emails" element={<UserEmailsApiPage />} />
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
                   <Route path="sso-integration" element={<SsoIntegrationPage />} />

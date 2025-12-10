@@ -33,6 +33,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'Organization API', path: '/docs/developer/organization-api' },
       { title: 'Profile Pictures API', path: '/docs/developer/profile-pictures' },
       { title: 'User Activity API', path: '/docs/developer/user-activity' },
+      { title: 'User Emails API', path: '/docs/developer/user-emails' },
       { title: 'Password Reset API', path: '/docs/developer/password-reset-api' },
       { title: 'Deep Linking Guide', path: '/docs/deep-linking-guide' },
       { title: 'Multi-Organization', path: '/docs/multi-organization' },
