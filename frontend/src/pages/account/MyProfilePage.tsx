@@ -36,6 +36,7 @@ interface Organization {
   organizationId: string;
   organizationName: string;
   organizationSlug?: string;
+  organizationLogoUrl?: string | null;
   roleType: string;
   joinedAt?: string;
 }
@@ -507,8 +508,20 @@ export default function MyProfilePage() {
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <BusinessIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar
+                              src={org.organizationLogoUrl || undefined}
+                              variant="rounded"
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                bgcolor: org.organizationLogoUrl ? 'transparent' : (isDarkMode ? 'primary.dark' : 'primary.light'),
+                              }}
+                            >
+                              {!org.organizationLogoUrl && (
+                                <BusinessIcon sx={{ fontSize: 24, color: isDarkMode ? 'white' : 'primary.main' }} />
+                              )}
+                            </Avatar>
                             <Typography variant="body1" sx={{ fontWeight: 500 }}>
                               {org.organizationName}
                             </Typography>

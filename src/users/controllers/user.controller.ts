@@ -131,6 +131,7 @@ export class UserController {
         organizationId: om.organization?.id,
         organizationName: om.organization?.name,
         organizationSlug: om.organization?.slug,
+        organizationLogoUrl: om.organization?.logoUrl || null,
         roleType: orgRole?.roleType || 'member',
         joinedAt: om.createdAt?.toISOString(),
       };
