@@ -11,6 +11,7 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  Link,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -21,8 +22,9 @@ import {
   Lock,
   Storage,
   Code,
+  OpenInNew,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 export default function ReleaseNote_v104() {
   const navigate = useNavigate();
@@ -62,6 +64,11 @@ export default function ReleaseNote_v104() {
               Users can now link multiple email addresses (personal and work emails for different organizations) 
               that all resolve to a single user identity. This enables seamless authentication across different 
               contexts while maintaining a unified account.
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <Link component={RouterLink} to="/docs/developer/user-emails" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                View User Emails API Documentation <OpenInNew fontSize="small" />
+              </Link>
             </Typography>
             
             <List dense>
@@ -149,6 +156,11 @@ export default function ReleaseNote_v104() {
             <Typography variant="body1" color="text.secondary" paragraph>
               New REST API endpoints for programmatic management of linked email addresses.
             </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <Link component={RouterLink} to="/docs/developer/user-emails" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                Full API Reference & Implementation Guide <OpenInNew fontSize="small" />
+              </Link>
+            </Typography>
             
             <List dense>
               <ListItem>
@@ -201,6 +213,11 @@ export default function ReleaseNote_v104() {
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
               Enhanced organization member onboarding with automatic work email linking.
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <Link component={RouterLink} to="/docs/developer/user-emails#enforcing-candidate-employee-model" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                See Candidate + Employee Model Implementation <OpenInNew fontSize="small" />
+              </Link>
             </Typography>
             
             <List dense>
