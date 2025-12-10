@@ -12,6 +12,16 @@ import {
   Stack,
   Divider,
   Alert,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   useTheme as useMuiTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -20,17 +30,19 @@ import WorkIcon from '@mui/icons-material/Work';
 import BusinessIcon from '@mui/icons-material/Business';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import SecurityIcon from '@mui/icons-material/Security';
 import LockIcon from '@mui/icons-material/Lock';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import SendIcon from '@mui/icons-material/Send';
 import { useAuth } from '../../hooks/useAuth';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { profileService } from '../../services/profileService';
 import userEmailsService, { type UserEmail } from '../../services/userEmailsService';
 import api from '../../services/api';
-import { LinkedEmails } from '../../components/account/LinkedEmails';
-import { ChangePassword } from '../../components/account/ChangePassword';
 
 interface Organization {
   organizationId: string;
@@ -70,6 +82,17 @@ export default function MyProfilePage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [passwordUpdatedAt, setPasswordUpdatedAt] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [addEmailDialogOpen, setAddEmailDialogOpen] = useState(false);
+  const [newEmailAddress, setNewEmailAddress] = useState('');
+  const [newEmailType, setNewEmailType] = useState<'personal' | 'work'>('personal');
+  const [submittingEmail, setSubmittingEmail] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -189,14 +212,91 @@ export default function MyProfilePage() {
     }
   };
 
-  const handleEmailsUpdated = () => {
-    loadProfile();
+  const handleAddEmail = async () => {
+    if (!newEmailAddress.trim()) return;
+    
+    try {
+      setSubmittingEmail(true);
+      await userEmailsService.addEmail({
+        email: newEmailAddress.trim(),
+        emailType: newEmailType,
+      });
+      showSnackbar('Email added successfully. Please check your inbox for verification.', 'success');
+      setNewEmailAddress('');
+      setAddEmailDialogOpen(false);
+      await loadProfile();
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to add email', 'error');
+    } finally {
+      setSubmittingEmail(false);
+    }
   };
 
-  const handlePasswordChanged = () => {
-    setPasswordUpdatedAt(new Date().toISOString());
-    setIsEditMode(false);
-    showSnackbar('Password changed successfully', 'success');
+  const handleRemoveEmail = async (emailId: string, email: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${email}?`)) return;
+    
+    try {
+      await userEmailsService.removeEmail(emailId);
+      showSnackbar('Email removed successfully', 'success');
+      await loadProfile();
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to remove email', 'error');
+    }
+  };
+
+  const handleSetPrimary = async (emailId: string) => {
+    try {
+      await userEmailsService.setPrimaryEmail(emailId);
+      showSnackbar('Primary email updated successfully', 'success');
+      await loadProfile();
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to set primary email', 'error');
+    }
+  };
+
+  const handleResendVerification = async (emailId: string) => {
+    try {
+      await userEmailsService.resendVerification(emailId);
+      showSnackbar('Verification email sent successfully', 'success');
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to send verification email', 'error');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All password fields are required');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+    
+    try {
+      setChangingPassword(true);
+      await api.post('/v1/auth/change-password', {
+        oldPassword: currentPassword,
+        newPassword: newPassword,
+      });
+      showSnackbar('Password changed successfully', 'success');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordUpdatedAt(new Date().toISOString());
+    } catch (err: any) {
+      setPasswordError(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   if (isLoading) {
@@ -237,6 +337,68 @@ export default function MyProfilePage() {
   }, {} as Record<string, UserEmail[]>);
 
   const organizations = profileData.organizations || [];
+
+  const renderEmailRow = (email: UserEmail) => (
+    <Box 
+      key={email.id}
+      sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        gap: 1,
+        p: 1.5,
+        borderRadius: 2,
+        bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Typography variant="body1">{email.email}</Typography>
+        {email.isPrimary && (
+          <Chip 
+            icon={<StarIcon sx={{ fontSize: 14 }} />} 
+            label="Primary" 
+            size="small" 
+            color="primary" 
+            variant="outlined"
+            sx={{ height: 24 }}
+          />
+        )}
+        {email.isVerified ? (
+          <Tooltip title="Verified">
+            <VerifiedIcon color="success" sx={{ fontSize: 18 }} />
+          </Tooltip>
+        ) : (
+          <Chip label="Unverified" size="small" color="warning" sx={{ height: 24 }} />
+        )}
+      </Box>
+      
+      {isEditMode && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {!email.isVerified && (
+            <Tooltip title="Resend verification email">
+              <IconButton size="small" onClick={() => handleResendVerification(email.id)}>
+                <SendIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!email.isPrimary && email.isVerified && (
+            <Tooltip title="Set as primary">
+              <IconButton size="small" onClick={() => handleSetPrimary(email.id)}>
+                <StarBorderIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!email.isPrimary && (
+            <Tooltip title="Remove email">
+              <IconButton size="small" color="error" onClick={() => handleRemoveEmail(email.id, email.email)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      )}
+    </Box>
+  );
 
   return (
     <Box sx={{ p: 2 }}>
@@ -330,259 +492,300 @@ export default function MyProfilePage() {
             </Alert>
           )}
 
-          {isEditMode ? (
-            <>
-              <LinkedEmails onEmailsUpdated={handleEmailsUpdated} initialEmails={userEmails} />
-              <Divider />
-              <ChangePassword onPasswordChanged={handlePasswordChanged} />
-            </>
-          ) : (
-            <>
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <EmailIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Personal Email
-                  </Typography>
-                </Box>
-                
-                {personalEmails.length > 0 ? (
-                  <Stack spacing={1}>
-                    {personalEmails.map(email => (
-                      <Box 
-                        key={email.id}
-                        sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 1,
-                          p: 1.5,
-                          borderRadius: 2,
-                          bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                        }}
-                      >
-                        <Typography variant="body1">{email.email}</Typography>
-                        {email.isPrimary && (
-                          <Chip 
-                            icon={<StarIcon sx={{ fontSize: 14 }} />} 
-                            label="Primary" 
-                            size="small" 
-                            color="primary" 
-                            variant="outlined"
-                            sx={{ height: 24 }}
-                          />
-                        )}
-                        {email.isVerified && (
-                          <Tooltip title="Verified">
-                            <VerifiedIcon color="success" sx={{ fontSize: 18 }} />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Box 
-                    sx={{ 
-                      p: 2, 
-                      borderRadius: 2, 
-                      bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                    }}
-                  >
-                    <Typography variant="body1">{profileData.emailAddress}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Primary account email
-                    </Typography>
-                  </Box>
-                )}
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <EmailIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Personal Email
+                </Typography>
               </Box>
-
-              {(workEmails.length > 0 || organizations.length > 0) && (
-                <>
-                  <Divider />
-                  
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                      <WorkIcon color="primary" fontSize="small" />
-                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                        Work Emails
-                      </Typography>
-                    </Box>
-                    
-                    {Object.keys(workEmailsByOrg).length > 0 ? (
-                      <Stack spacing={2}>
-                        {Object.entries(workEmailsByOrg).map(([orgName, emails]) => (
-                          <Box key={orgName}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                {orgName}
-                              </Typography>
-                            </Box>
-                            <Stack spacing={1} sx={{ pl: 3 }}>
-                              {emails.map(email => (
-                                <Box 
-                                  key={email.id}
-                                  sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: 1,
-                                    p: 1.5,
-                                    borderRadius: 2,
-                                    bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                                  }}
-                                >
-                                  <Typography variant="body1">{email.email}</Typography>
-                                  {email.isPrimary && (
-                                    <Chip 
-                                      icon={<StarIcon sx={{ fontSize: 14 }} />} 
-                                      label="Primary" 
-                                      size="small" 
-                                      color="primary" 
-                                      variant="outlined"
-                                      sx={{ height: 24 }}
-                                    />
-                                  )}
-                                  {email.isVerified && (
-                                    <Tooltip title="Verified">
-                                      <VerifiedIcon color="success" sx={{ fontSize: 18 }} />
-                                    </Tooltip>
-                                  )}
-                                </Box>
-                              ))}
-                            </Stack>
-                          </Box>
-                        ))}
-                      </Stack>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        No work emails linked yet
-                      </Typography>
-                    )}
-                  </Box>
-                </>
-              )}
-
-              <Divider />
-
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <LockIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Password
-                  </Typography>
-                </Box>
-                
-                <Box 
-                  sx={{ 
-                    p: 2, 
-                    borderRadius: 2, 
-                    bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+              {isEditMode && (
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setNewEmailType('personal');
+                    setAddEmailDialogOpen(true);
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary">
-                    Last updated: {formatPasswordUpdatedDate(passwordUpdatedAt)}
-                  </Typography>
-                </Box>
+                  Add Email
+                </Button>
+              )}
+            </Box>
+            
+            {personalEmails.length > 0 ? (
+              <Stack spacing={1}>
+                {personalEmails.map(email => renderEmailRow(email))}
+              </Stack>
+            ) : (
+              <Box 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                }}
+              >
+                <Typography variant="body1">{profileData.emailAddress}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Primary account email
+                </Typography>
               </Box>
+            )}
+          </Box>
 
-              <Divider />
+          <Divider />
+          
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <WorkIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Work Emails
+                </Typography>
+              </Box>
+              {isEditMode && (
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setNewEmailType('work');
+                    setAddEmailDialogOpen(true);
+                  }}
+                >
+                  Add Work Email
+                </Button>
+              )}
+            </Box>
+            
+            {Object.keys(workEmailsByOrg).length > 0 ? (
+              <Stack spacing={2}>
+                {Object.entries(workEmailsByOrg).map(([orgName, emails]) => (
+                  <Box key={orgName}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        {orgName}
+                      </Typography>
+                    </Box>
+                    <Stack spacing={1} sx={{ pl: 3 }}>
+                      {emails.map(email => renderEmailRow(email))}
+                    </Stack>
+                  </Box>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No work emails linked yet
+              </Typography>
+            )}
+          </Box>
 
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <SecurityIcon color="primary" fontSize="small" />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Organizational Access
-                  </Typography>
-                </Box>
-                
-                {organizations.length > 0 ? (
-                  <Stack spacing={2}>
-                    {organizations.map(org => (
-                      <Box 
-                        key={org.organizationId}
-                        sx={{ 
-                          p: 2,
-                          borderRadius: 2,
-                          bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                          border: '1px solid',
-                          borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Avatar
-                              src={org.organizationLogoUrl || undefined}
-                              variant="circular"
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                bgcolor: org.organizationLogoUrl ? 'transparent' : (isDarkMode ? 'primary.dark' : 'primary.light'),
-                              }}
-                            >
-                              {!org.organizationLogoUrl && (
-                                <BusinessIcon sx={{ fontSize: 24, color: isDarkMode ? 'white' : 'primary.main' }} />
-                              )}
-                            </Avatar>
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                              {org.organizationName}
-                            </Typography>
-                          </Box>
-                          <Chip 
-                            label={formatRoleType(org.roleType)} 
-                            size="small" 
-                            color="primary"
-                            sx={{ fontWeight: 500 }}
-                          />
-                        </Box>
-                      </Box>
-                    ))}
-                  </Stack>
-                ) : profileData.roles && profileData.roles.length > 0 ? (
+          <Divider />
+
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <LockIcon color="primary" fontSize="small" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Password
+              </Typography>
+            </Box>
+            
+            {isEditMode ? (
+              <Box sx={{ maxWidth: 400 }}>
+                {passwordError && (
+                  <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPasswordError(null)}>
+                    {passwordError}
+                  </Alert>
+                )}
+                <Stack spacing={2}>
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="Current Password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    size="small"
+                  />
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="New Password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    size="small"
+                  />
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="Confirm New Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    size="small"
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleChangePassword}
+                    disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+                    sx={{ alignSelf: 'flex-start' }}
+                  >
+                    {changingPassword ? <CircularProgress size={24} /> : 'Change Password'}
+                  </Button>
+                </Stack>
+              </Box>
+            ) : (
+              <Box 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Last updated: {formatPasswordUpdatedDate(passwordUpdatedAt)}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <SecurityIcon color="primary" fontSize="small" />
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Organizational Access
+              </Typography>
+            </Box>
+            
+            {organizations.length > 0 ? (
+              <Stack spacing={2}>
+                {organizations.map(org => (
                   <Box 
+                    key={org.organizationId}
                     sx={{ 
                       p: 2,
                       borderRadius: 2,
                       bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                      border: '1px solid',
+                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
                     }}
                   >
-                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                      {profileData.roles.map((role, index) => (
-                        <Chip 
-                          key={index}
-                          label={formatRoleType(role)} 
-                          size="small" 
-                          color="primary"
-                          sx={{ fontWeight: 500 }}
-                        />
-                      ))}
-                    </Stack>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          src={org.organizationLogoUrl || undefined}
+                          variant="circular"
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: org.organizationLogoUrl ? 'transparent' : (isDarkMode ? 'primary.dark' : 'primary.light'),
+                          }}
+                        >
+                          {!org.organizationLogoUrl && (
+                            <BusinessIcon sx={{ fontSize: 24, color: isDarkMode ? 'white' : 'primary.main' }} />
+                          )}
+                        </Avatar>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          {org.organizationName}
+                        </Typography>
+                      </Box>
+                      <Chip 
+                        label={formatRoleType(org.roleType)} 
+                        size="small" 
+                        color="primary"
+                        sx={{ fontWeight: 500 }}
+                      />
+                    </Box>
                   </Box>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No organizational roles assigned
-                  </Typography>
-                )}
+                ))}
+              </Stack>
+            ) : profileData.roles && profileData.roles.length > 0 ? (
+              <Box 
+                sx={{ 
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                }}
+              >
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {profileData.roles.map((role, index) => (
+                    <Chip 
+                      key={index}
+                      label={formatRoleType(role)} 
+                      size="small" 
+                      color="primary"
+                      sx={{ fontWeight: 500 }}
+                    />
+                  ))}
+                </Stack>
               </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No organizational roles assigned
+              </Typography>
+            )}
+          </Box>
 
-              <Divider />
+          <Divider />
 
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                  Account Information
-                </Typography>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    User ID
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                    {profileData.id}
-                  </Typography>
-                </Box>
-              </Box>
-            </>
-          )}
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              Account Information
+            </Typography>
+            
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                User ID
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                {profileData.id}
+              </Typography>
+            </Box>
+          </Box>
         </Stack>
       </Paper>
+
+      <Dialog open={addEmailDialogOpen} onClose={() => setAddEmailDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add {newEmailType === 'work' ? 'Work' : 'Personal'} Email Address</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Email Address"
+              type="email"
+              value={newEmailAddress}
+              onChange={(e) => setNewEmailAddress(e.target.value)}
+              sx={{ mb: 2 }}
+              autoFocus
+            />
+            <FormControl fullWidth>
+              <InputLabel>Email Type</InputLabel>
+              <Select
+                value={newEmailType}
+                label="Email Type"
+                onChange={(e) => setNewEmailType(e.target.value as 'personal' | 'work')}
+              >
+                <MenuItem value="personal">Personal</MenuItem>
+                <MenuItem value="work">Work</MenuItem>
+              </Select>
+            </FormControl>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+              A verification email will be sent to the new address. You must verify the email before it can be used for login.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddEmailDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleAddEmail}
+            variant="contained"
+            disabled={!newEmailAddress.trim() || submittingEmail}
+          >
+            {submittingEmail ? <CircularProgress size={24} /> : 'Add Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
