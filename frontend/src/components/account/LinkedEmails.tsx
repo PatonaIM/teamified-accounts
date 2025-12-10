@@ -37,11 +37,12 @@ import type { UserEmail, AddEmailDto } from '../../services/userEmailsService';
 
 interface LinkedEmailsProps {
   onEmailsUpdated?: () => void;
+  initialEmails?: UserEmail[];
 }
 
-export function LinkedEmails({ onEmailsUpdated }: LinkedEmailsProps) {
-  const [emails, setEmails] = useState<UserEmail[]>([]);
-  const [loading, setLoading] = useState(true);
+export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsProps) {
+  const [emails, setEmails] = useState<UserEmail[]>(initialEmails || []);
+  const [loading, setLoading] = useState(!initialEmails);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -64,8 +65,10 @@ export function LinkedEmails({ onEmailsUpdated }: LinkedEmailsProps) {
   }, []);
 
   useEffect(() => {
-    loadEmails();
-  }, [loadEmails]);
+    if (!initialEmails) {
+      loadEmails();
+    }
+  }, [loadEmails, initialEmails]);
 
   const handleAddEmail = async () => {
     if (!newEmail.trim()) return;

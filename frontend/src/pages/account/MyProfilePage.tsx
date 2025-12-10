@@ -332,7 +332,7 @@ export default function MyProfilePage() {
 
           {isEditMode ? (
             <>
-              <LinkedEmails onEmailsUpdated={handleEmailsUpdated} />
+              <LinkedEmails onEmailsUpdated={handleEmailsUpdated} initialEmails={userEmails} />
               <Divider />
               <ChangePassword onPasswordChanged={handlePasswordChanged} />
             </>
