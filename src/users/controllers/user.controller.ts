@@ -120,10 +120,29 @@ export class UserController {
     // Manually add roles property to response (extracted from userRoles)
     const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
 
+    // Transform organizationMembers into organizations array for frontend
+    // Role types are stored in userRoles with scopeEntityId = organizationId
+    const organizations = user.organizationMembers?.map(om => {
+      // Find the role for this organization from userRoles
+      const orgRole = user.userRoles?.find(ur => 
+        ur.scope === 'organization' && ur.scopeEntityId === om.organizationId
+      );
+      return {
+        organizationId: om.organization?.id,
+        organizationName: om.organization?.name,
+        organizationSlug: om.organization?.slug,
+        roleType: orgRole?.roleType || 'member',
+        joinedAt: om.createdAt?.toISOString(),
+      };
+    }).filter(org => org.organizationId) || [];
+
+    console.log('getCurrentUser: Transformed organizations:', organizations);
+
     return {
       user: {
         ...user,
         roles,
+        organizations,
       }
     };
   }
