@@ -22,13 +22,25 @@ Core features include:
 - **Hiring Module**: Integrates Job Request, Interview, and Talent Pool functionalities.
 - **Salary History Module**: Provides organization-wide salary tracking with server-side pagination.
 - **Client Management Module**: Enables CRUD operations for customer organizations.
-- **Profile Management**: Offers a user profile page with editable fields and profile picture display.
+- **Profile Management**: Unified profile page at `/account/profile` with view/edit mode toggle (pencil icon). View mode displays read-only account information including linked emails, password last updated timestamp, organizational access, and account status. Edit mode reveals LinkedEmails and ChangePassword components for managing linked emails and self-service password changes. The User entity tracks `passwordUpdatedAt` timestamp for all password change flows.
 - **SSO Integration Test Page**: A `/test` route to demonstrate OAuth 2.0 + PKCE flow.
 - **Session Persistence & Deep Linking**: Ensures users remain logged in and are redirected to their last visited page after refresh or re-access.
 - **API Key Management**: Supports programmatic access via configurable API keys with audit logging.
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
 - **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.
+- **Multi-Identity SSO (Candidate + Employee Model)**: Users can link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Login works with any linked email using a single password. Key features:
+  - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking
+  - Smart identity resolution via `findUserByAnyEmail` helper method in AuthService
+  - Self-service password change endpoint requiring old password verification (no email flow)
+  - **Employer-Driven Work Email Provisioning**: Work emails are added exclusively through employer invitations during onboarding - users cannot self-add work emails. This ensures proper organizational control and identity verification.
+  - **Account Linking During Onboarding**: When accepting a work email invitation, employees can optionally link to an existing personal account by providing their personal email and verifying with their existing password.
+  - API endpoints at `/api/user-emails` for email CRUD operations (personal emails only for self-service)
+  - Frontend Account Profile page at `/account/profile` with:
+    - LinkedEmails component: View all linked emails, add personal emails only, set primary, remove non-primary emails
+    - ChangePassword component: Self-service password change with old password verification
+    - Work emails section is display-only (no self-service add button)
+  - Invitation acceptance page at `/invitations/accept/:code` includes optional account linking flow
 
 ### Documentation Architecture
 

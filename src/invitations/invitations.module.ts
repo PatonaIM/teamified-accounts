@@ -8,13 +8,14 @@ import { OrganizationMember } from '../organizations/entities/organization-membe
 import { Organization } from '../organizations/entities/organization.entity';
 import { User } from '../auth/entities/user.entity';
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { UserEmail } from '../user-emails/entities/user-email.entity';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Invitation, OrganizationMember, Organization, User, UserRole]),
+    TypeOrmModule.forFeature([Invitation, OrganizationMember, Organization, User, UserRole, UserEmail]),
     AuditModule,
     EmailModule,
     ThrottlerModule,

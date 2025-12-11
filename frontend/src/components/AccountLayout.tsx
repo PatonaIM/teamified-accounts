@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Box,
@@ -18,6 +18,7 @@ import {
   Person,
   AdminPanelSettings,
   Logout,
+  Business,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/authService';
@@ -40,6 +41,16 @@ const AccountLayout: React.FC = () => {
   const isSuperAdmin = user?.roles?.some((role: string) =>
     ['super_admin', 'system_admin'].includes(role.toLowerCase())
   );
+
+  const isClientUser = user?.roles?.some((role: string) =>
+    role.toLowerCase().startsWith('client_')
+  );
+
+  const isInternalUser = user?.roles?.some((role: string) =>
+    ['super_admin', 'internal_hr', 'internal_account_manager'].includes(role.toLowerCase())
+  );
+
+  const hasOrganizationAccess = isClientUser || isInternalUser;
 
   const handleThemeToggle = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
@@ -197,6 +208,48 @@ const AccountLayout: React.FC = () => {
                 <ListItemText primary="My Apps" />
               </ListItemButton>
             </ListItem>
+
+            {hasOrganizationAccess && (
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={!appsDropdownOpen && location.pathname.startsWith('/organization/')}
+                  onClick={() => navigate('/organization')}
+                  sx={{
+                    mx: 2,
+                    my: 0.5,
+                    borderRadius: '12px',
+                    py: 1.5,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&.Mui-selected': {
+                      background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+                      color: '#FFFFFF',
+                      boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
+                        transform: 'translateX(4px)',
+                      },
+                      '& .MuiListItemIcon-root': {
+                        color: '#FFFFFF',
+                      },
+                    },
+                    '&:not(.Mui-selected):hover': {
+                      bgcolor: 'rgba(161, 106, 232, 0.08)',
+                      transform: 'translateX(4px)',
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: (!appsDropdownOpen && location.pathname.startsWith('/organization/')) ? 'inherit' : 'text.secondary',
+                      minWidth: 40,
+                    }}
+                  >
+                    <Business />
+                  </ListItemIcon>
+                  <ListItemText primary={isInternalUser ? "My Organizations" : "My Organization"} />
+                </ListItemButton>
+              </ListItem>
+            )}
 
             {isSuperAdmin && (
               <ListItem disablePadding>

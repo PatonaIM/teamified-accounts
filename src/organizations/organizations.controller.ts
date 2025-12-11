@@ -138,6 +138,86 @@ export class OrganizationsController {
     return this.organizationsService.getMyOrganization(user);
   }
 
+  @Get('my-organizations')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager')
+  @ApiOperation({ 
+    summary: 'Get all my organizations',
+    description: `
+      Retrieve all organizations that the current user belongs to.
+      
+      ## Authorization:
+      - All client and internal roles can access their own organizations
+      
+      ## Response:
+      - List of organization details for all user's organizations
+      - Empty array if user has no organizations
+    `
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Organizations retrieved successfully',
+    type: [OrganizationResponseDto]
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - Invalid or missing JWT token',
+    type: AuthErrorResponseDto
+  })
+  async getMyOrganizations(
+    @CurrentUser() user: User,
+  ): Promise<OrganizationResponseDto[]> {
+    return this.organizationsService.getMyOrganizations(user);
+  }
+
+  @Get(':id/orphan-count')
+  @Roles('client_admin')
+  @ApiOperation({ 
+    summary: 'Get orphan member count for organization deletion',
+    description: `
+      Get the count of members who will become orphaned if this organization is deleted.
+      
+      ## Authorization:
+      - client_admin: Can check orphan count for their own organization
+      
+      ## Response:
+      - Total member count
+      - Count of members who will become orphans (only belong to this organization)
+    `
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Organization ID',
+    example: 'uuid-here',
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Orphan count retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        totalMembers: { type: 'number', example: 10 },
+        willBecomeOrphans: { type: 'number', example: 8 }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - Invalid or missing JWT token',
+    type: AuthErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Forbidden - Insufficient permissions',
+    type: AuthErrorResponseDto
+  })
+  async getOrphanCount(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<{ totalMembers: number; willBecomeOrphans: number }> {
+    this.organizationsService['validateOrgAccess'](id, user);
+    return this.organizationsService.getOrphanMemberCount(id);
+  }
+
   @Get('check-slug/:slug')
   @ApiOperation({ 
     summary: 'Check if organization slug is available',
@@ -271,6 +351,47 @@ export class OrganizationsController {
       };
     }
     return this.organizationsService.globalSearch(query, user);
+  }
+
+  @Get('by-slug/:slug')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee')
+  @ApiOperation({ 
+    summary: 'Get organization by slug',
+    description: `
+      Retrieve detailed information about a specific organization using its URL-friendly slug.
+      
+      ## Authorization:
+      - super_admin: Access any organization
+      - internal_*: Access any organization
+      - client_*: Access only organizations they are a member of
+    `
+  })
+  @ApiParam({
+    name: 'slug',
+    description: 'Organization URL-friendly slug',
+    type: 'string',
+    example: 'acme-corp'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Organization retrieved successfully',
+    type: OrganizationResponseDto
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Forbidden - Not a member of this organization',
+    type: AuthErrorResponseDto
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'Organization not found',
+    type: BusinessErrorResponseDto
+  })
+  async findBySlug(
+    @Param('slug') slug: string,
+    @CurrentUser() user: User,
+  ): Promise<OrganizationResponseDto> {
+    return this.organizationsService.findBySlugWithAccess(slug, user);
   }
 
   @Get(':id')

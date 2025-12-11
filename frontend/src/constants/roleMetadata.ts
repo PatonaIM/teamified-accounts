@@ -50,3 +50,30 @@ export const getRoleDisplayName = (roleType: string): string => {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };
+
+export const formatRoleDisplay = (roleType: string | undefined | null): string => {
+  if (!roleType) return 'No Role';
+  
+  const acronyms = ['hr', 'it', 'ceo', 'cto', 'cfo', 'coo', 'vp', 'svp', 'evp', 'api', 'sso', 'id'];
+  
+  // Remove prefixes
+  const cleaned = roleType.replace('client_', '').replace('internal_', '');
+  
+  // Format with proper casing
+  const formatted = cleaned
+    .split('_')
+    .map(word => {
+      const lowerWord = word.toLowerCase();
+      if (acronyms.includes(lowerWord)) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+  
+  // Final pass to ensure all acronyms are uppercase
+  return acronyms.reduce((result, acronym) => {
+    const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
+    return result.replace(regex, acronym.toUpperCase());
+  }, formatted);
+};

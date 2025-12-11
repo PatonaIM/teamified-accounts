@@ -39,6 +39,7 @@ import {
   FormControl,
   InputLabel,
   LinearProgress,
+  Menu,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -73,11 +74,15 @@ import {
   Apps,
   FilterList,
   Block,
+  MoreVert,
+  PersonRemove,
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
 import roleService from '../services/roleService';
 import api from '../services/api';
+import organizationsService from '../services/organizationsService';
+import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
 
 interface UserRole {
   id: string;
@@ -135,14 +140,6 @@ export default function UserDetailPage() {
   const isDarkMode = theme.palette.mode === 'dark';
   const { user: currentUser } = useAuth();
 
-  // Check if current user can suspend/reactivate users (only internal users and super admins)
-  const canSuspendUsers = useMemo(() => {
-    if (!currentUser?.roles) return false;
-    return currentUser.roles.some(role => 
-      role === 'super_admin' || role.startsWith('internal_')
-    );
-  }, [currentUser?.roles]);
-
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,10 +183,47 @@ export default function UserDetailPage() {
   // Verification email state
   const [sendingVerification, setSendingVerification] = useState(false);
 
+  // Organization removal state
+  const [orgMenuAnchor, setOrgMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedOrg, setSelectedOrg] = useState<{ organizationId: string; organizationName: string; roleType: string } | null>(null);
+  const [showRemoveOrgConfirm, setShowRemoveOrgConfirm] = useState(false);
+  const [showLastAdminError, setShowLastAdminError] = useState(false);
+  const [removingFromOrg, setRemovingFromOrg] = useState(false);
+
   const navigationState = location.state as { 
     organizationId?: string; 
     organizationName?: string;
+    organizationSlug?: string;
+    fromClientPage?: boolean;
   } | null;
+
+  // Determine if this is a client user viewing from their organization context
+  const isClientContext = navigationState?.fromClientPage === true;
+  
+  // Check if current user is a client user (for permission calculation)
+  const isClientUser = currentUser?.roles?.some(r => r.toLowerCase().startsWith('client_')) || false;
+  
+  // For client users, assume they're viewing their own organization members
+  // (route guard already ensures they have appropriate client role)
+  // For internal users, isOwnOrganization doesn't affect their permissions
+  const isOwnOrganization = isClientUser ? true : (isClientContext && !!navigationState?.organizationId);
+
+  // Get RBAC permissions based on user roles and context
+  const permissions = useOrganizationPermissions({
+    userRoles: currentUser?.roles || [],
+    isOwnOrganization,
+  });
+
+  const {
+    canViewUserDetails,
+    canChangeRoles,
+    canRemoveUsers,
+    canMarkNLWF,
+    canSendPasswordReset,
+    canSuspendUser,
+    canDeleteUser,
+    canViewActivity,
+  } = permissions;
 
   useEffect(() => {
     if (userId) {
@@ -202,6 +236,56 @@ export default function UserDetailPage() {
       fetchUserActivity();
     }
   }, [activeTab, userId, activityTimeRange]);
+
+  // Define tabs based on RBAC permissions (must be called before early returns for hooks consistency)
+  const allTabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = useMemo(() => [
+    { id: 'basic', label: 'Basic Information', icon: <Person /> },
+    { id: 'organizations', label: 'Organizations', icon: <Business /> },
+    { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
+    { id: 'activity', label: 'User Activity', icon: <History /> },
+    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
+    { id: 'suspend', label: user?.status === 'suspended' ? 'Reactivate User' : 'Suspend User', icon: <Block /> },
+    { id: 'delete', label: 'Delete User', icon: <Delete /> },
+  ], [user?.status]);
+
+  // Filter tabs based on RBAC permissions
+  const tabs = useMemo(() => allTabs.filter(tab => {
+    switch (tab.id) {
+      case 'basic':
+        return canViewUserDetails;
+      case 'organizations':
+        return permissions.isInternalUser;
+      case 'billing':
+        return permissions.canViewBilling && permissions.isInternalUser;
+      case 'activity':
+        return canViewActivity;
+      case 'reset-password':
+        return canSendPasswordReset;
+      case 'suspend':
+        return canSuspendUser;
+      case 'delete':
+        return canDeleteUser;
+      default:
+        return true;
+    }
+  }), [allTabs, canViewUserDetails, permissions.isInternalUser, permissions.canViewBilling, canViewActivity, canSendPasswordReset, canSuspendUser, canDeleteUser]);
+
+  // Ensure active tab is valid for current permissions
+  const validActiveTab = useMemo(() => {
+    const visibleTabs = tabs.filter(t => !['reset-password', 'suspend', 'delete'].includes(t.id));
+    const currentTabExists = visibleTabs.some(t => t.id === activeTab);
+    if (!currentTabExists && visibleTabs.length > 0) {
+      return visibleTabs[0].id;
+    }
+    return activeTab;
+  }, [tabs, activeTab]);
+
+  // Update activeTab if current selection is not available
+  useEffect(() => {
+    if (validActiveTab !== activeTab && !['reset-password', 'suspend', 'delete'].includes(activeTab)) {
+      setActiveTab(validActiveTab);
+    }
+  }, [validActiveTab, activeTab]);
 
   const fetchUserDetails = async () => {
     if (!userId) return;
@@ -476,6 +560,41 @@ export default function UserDetailPage() {
     }
   };
 
+  // Organization menu handlers
+  const handleOpenOrgMenu = (event: React.MouseEvent<HTMLElement>, org: { organizationId: string; organizationName: string; roleType: string }) => {
+    setOrgMenuAnchor(event.currentTarget);
+    setSelectedOrg(org);
+  };
+
+  const handleCloseOrgMenu = () => {
+    setOrgMenuAnchor(null);
+  };
+
+  const handleRemoveFromOrg = async () => {
+    if (!selectedOrg || !userId) return;
+    
+    setRemovingFromOrg(true);
+    try {
+      await organizationsService.removeMember(selectedOrg.organizationId, userId);
+      setSnackbar({ open: true, message: `User removed from ${selectedOrg.organizationName} successfully`, severity: 'success' });
+      setShowRemoveOrgConfirm(false);
+      handleCloseOrgMenu();
+      fetchUserDetails(); // Refresh user data to update organizations list
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to remove user from organization';
+      
+      // Check if this is a "last admin" error
+      if (errorMessage.toLowerCase().includes('last admin') || errorMessage.toLowerCase().includes('assign another admin')) {
+        setShowRemoveOrgConfirm(false);
+        setShowLastAdminError(true);
+      } else {
+        setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+      }
+    } finally {
+      setRemovingFromOrg(false);
+    }
+  };
+
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Unknown';
     try {
@@ -557,6 +676,25 @@ export default function UserDetailPage() {
     }
   };
 
+  const formatRoleType = (roleType: string): string => {
+    const acronyms = ['hr', 'it', 'ceo', 'cto', 'cfo', 'coo', 'vp', 'svp', 'evp', 'api', 'sso', 'id'];
+    const formatted = roleType
+      .split('_')
+      .map(word => {
+        const lowerWord = word.toLowerCase();
+        if (acronyms.includes(lowerWord)) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ');
+    
+    return acronyms.reduce((result, acronym) => {
+      const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
+      return result.replace(regex, acronym.toUpperCase());
+    }, formatted);
+  };
+
   const getDeviceIcon = (userAgent: string) => {
     const ua = userAgent.toLowerCase();
     if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
@@ -590,10 +728,52 @@ export default function UserDetailPage() {
         <Alert severity="error">{error || 'User not found'}</Alert>
         <Button
           variant="outlined"
-          onClick={() => navigate('/admin/users')}
+          onClick={() => {
+            if (isClientContext && navigationState?.organizationSlug) {
+              navigate(`/organization/${navigationState.organizationSlug}`);
+            } else if (navigationState?.organizationId) {
+              navigate('/admin/organizations', {
+                state: { selectedOrgId: navigationState.organizationId }
+              });
+            } else {
+              navigate(-1);
+            }
+          }}
           sx={{ mt: 2, textTransform: 'none', fontWeight: 600 }}
         >
-          Back to Users
+          Go Back
+        </Button>
+      </Box>
+    );
+  }
+
+  // Authorization guard - redirect if user doesn't have permission to view user details
+  if (!canViewUserDetails) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Stack direction="row" alignItems="center" sx={{ mb: 3 }}>
+          <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
+            <ArrowBack />
+          </IconButton>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            Access Denied
+          </Typography>
+        </Stack>
+        <Alert severity="error">
+          You don't have permission to view this user's details.
+        </Alert>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            if (isClientContext && navigationState?.organizationSlug) {
+              navigate(`/organization/${navigationState.organizationSlug}`);
+            } else {
+              navigate(-1);
+            }
+          }}
+          sx={{ mt: 2, textTransform: 'none', fontWeight: 600 }}
+        >
+          Go Back
         </Button>
       </Box>
     );
@@ -602,23 +782,18 @@ export default function UserDetailPage() {
   const userFullName = `${user.firstName || 'Unknown'} ${user.lastName || 'User'}`;
   const isCandidate = roles.some(r => r.role === 'candidate');
 
-  const allTabs: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
-    { id: 'basic', label: 'Basic Information', icon: <Person /> },
-    { id: 'organizations', label: 'Organizations', icon: <Business /> },
-    { id: 'billing', label: 'Billing Details', icon: <CreditCard /> },
-    { id: 'activity', label: 'User Activity', icon: <History /> },
-    { id: 'reset-password', label: 'Reset Password', icon: <LockReset /> },
-    { id: 'suspend', label: user.status === 'suspended' ? 'Reactivate User' : 'Suspend User', icon: <Block /> },
-    { id: 'delete', label: 'Delete User', icon: <Delete /> },
-  ];
-
-  // Filter tabs based on permissions - hide suspend option for client users
-  const tabs = allTabs.filter(tab => {
-    if (tab.id === 'suspend' && !canSuspendUsers) {
-      return false;
+  // Contextual back navigation
+  const handleBackNavigation = () => {
+    if (isClientContext && navigationState?.organizationSlug) {
+      navigate(`/organization/${navigationState.organizationSlug}`);
+    } else if (navigationState?.organizationId) {
+      navigate('/admin/organizations', {
+        state: { selectedOrgId: navigationState.organizationId }
+      });
+    } else {
+      navigate(-1);
     }
-    return true;
-  });
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -737,7 +912,7 @@ export default function UserDetailPage() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={org.roleType}
+                            label={formatRoleType(org.roleType)}
                             size="small"
                             sx={getRoleDisplayColor(org.roleType)}
                           />
@@ -748,15 +923,25 @@ export default function UserDetailPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="small"
-                            onClick={() => navigate('/admin/organizations', {
-                              state: { selectedOrganizationId: org.organizationId }
-                            })}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            View Org
-                          </Button>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                              size="small"
+                              onClick={() => navigate('/admin/organizations', {
+                                state: { selectedOrganizationId: org.organizationId }
+                              })}
+                              sx={{ textTransform: 'none' }}
+                            >
+                              View Org
+                            </Button>
+                            {canRemoveUsers && (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleOpenOrgMenu(e, org)}
+                              >
+                                <MoreVert fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -768,6 +953,63 @@ export default function UserDetailPage() {
                 This user is not a member of any organizations.
               </Alert>
             )}
+
+            {/* Organization Actions Menu */}
+            <Menu
+              anchorEl={orgMenuAnchor}
+              open={Boolean(orgMenuAnchor)}
+              onClose={handleCloseOrgMenu}
+            >
+              <MenuItem onClick={() => { setShowRemoveOrgConfirm(true); handleCloseOrgMenu(); }}>
+                <PersonRemove sx={{ mr: 1, fontSize: 20 }} />
+                Remove from Organization
+              </MenuItem>
+            </Menu>
+
+            {/* Remove from Organization Confirmation Dialog */}
+            <Dialog open={showRemoveOrgConfirm} onClose={() => setShowRemoveOrgConfirm(false)}>
+              <DialogTitle>Remove User from Organization</DialogTitle>
+              <DialogContent>
+                <Typography>
+                  Are you sure you want to remove <strong>{user.firstName} {user.lastName}</strong> from <strong>{selectedOrg?.organizationName}</strong>?
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setShowRemoveOrgConfirm(false)}>Cancel</Button>
+                <Button 
+                  onClick={handleRemoveFromOrg} 
+                  color="error" 
+                  variant="contained"
+                  disabled={removingFromOrg}
+                >
+                  {removingFromOrg ? 'Removing...' : 'Remove'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Last Admin Error Dialog */}
+            <Dialog open={showLastAdminError} onClose={() => setShowLastAdminError(false)}>
+              <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                <Warning color="error" />
+                Cannot Remove Admin
+              </DialogTitle>
+              <DialogContent>
+                <Typography sx={{ mb: 2 }}>
+                  <strong>{user.firstName} {user.lastName}</strong> is the only admin in <strong>{selectedOrg?.organizationName}</strong> and cannot be removed.
+                </Typography>
+                <Typography color="text.secondary">
+                  Every organization must have at least one admin. To remove this user, please first assign another user as an admin of this organization.
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button 
+                  variant="contained" 
+                  onClick={() => setShowLastAdminError(false)}
+                >
+                  Understood
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Box>
         );
 
@@ -1172,7 +1414,7 @@ export default function UserDetailPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <IconButton 
-          onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+          onClick={handleBackNavigation}
           sx={{ 
             mr: 2,
             color: 'primary.main',
@@ -1192,9 +1434,11 @@ export default function UserDetailPage() {
               cursor: 'pointer',
               '&:hover': { color: 'primary.main' }
             }}
-            onClick={() => navigate(isCandidate ? '/admin/tools/candidate-users' : '/admin/organizations')}
+            onClick={handleBackNavigation}
           >
-            {isCandidate ? 'Candidate User' : 'Organization Management'}
+            {isClientContext 
+              ? (navigationState?.organizationName || 'My Organization')
+              : (isCandidate ? 'Candidate User' : 'Organization Management')}
           </Typography>
           <ChevronRight sx={{ color: 'text.secondary' }} />
           <Typography variant="h4" sx={{ fontWeight: 700 }}>

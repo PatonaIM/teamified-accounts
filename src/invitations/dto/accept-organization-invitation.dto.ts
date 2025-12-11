@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, MinLength, IsEmail, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, MinLength, IsEmail, Matches, IsOptional } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class AcceptOrganizationInvitationDto {
@@ -14,14 +14,24 @@ export class AcceptOrganizationInvitationDto {
   inviteCode: string;
 
   @ApiProperty({
-    description: 'Email address of the user accepting the invitation',
-    example: 'user@example.com',
+    description: 'Work email address (from the invitation) that will be linked to the organization',
+    example: 'john@company.com',
     format: 'email',
   })
   @IsEmail({}, { message: 'Please provide a valid email address' })
   @IsNotEmpty()
   @Transform(({ value }) => value?.trim().toLowerCase())
   email: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional personal email to link to an existing Teamified account. If provided and matches an existing active user, the work email will be linked to that account instead of creating a new user.',
+    example: 'john.doe@gmail.com',
+    format: 'email',
+  })
+  @IsOptional()
+  @IsEmail({}, { message: 'Please provide a valid personal email address' })
+  @Transform(({ value }) => value?.trim().toLowerCase())
+  personalEmail?: string;
 
   @ApiProperty({
     description: 'Password for the new account (min 8 characters, must include uppercase, lowercase, number, and special character)',
@@ -38,33 +48,33 @@ export class AcceptOrganizationInvitationDto {
   )
   password: string;
 
-  @ApiProperty({
-    description: 'Password confirmation - must match the password field',
+  @ApiPropertyOptional({
+    description: 'Password confirmation - must match the password field. Required for new accounts, not needed for account linking.',
     example: 'MySecurePass123!',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  confirmPassword: string;
+  confirmPassword?: string;
 
-  @ApiProperty({
-    description: 'First name of the user',
+  @ApiPropertyOptional({
+    description: 'First name of the user. Required for new accounts, not needed for account linking.',
     example: 'John',
     minLength: 1,
     maxLength: 100,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Transform(({ value }) => value?.trim())
-  firstName: string;
+  firstName?: string;
 
-  @ApiProperty({
-    description: 'Last name of the user',
+  @ApiPropertyOptional({
+    description: 'Last name of the user. Required for new accounts, not needed for account linking.',
     example: 'Doe',
     minLength: 1,
     maxLength: 100,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Transform(({ value }) => value?.trim())
-  lastName: string;
+  lastName?: string;
 }

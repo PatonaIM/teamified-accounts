@@ -94,6 +94,9 @@ export class User {
   @Column({ name: 'password_changed_by_admin_id', type: 'uuid', nullable: true })
   passwordChangedByAdminId: string | null;
 
+  @Column({ name: 'password_updated_at', type: 'timestamptz', nullable: true })
+  passwordUpdatedAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

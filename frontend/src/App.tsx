@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
@@ -36,7 +36,10 @@ import ReleaseNotesIndexPage from './pages/docs/release-notes/ReleaseNotesIndexP
 import ReleaseNote_2025_12_02 from './pages/docs/ReleaseNote_2025_12_02';
 import ReleaseNote_2025_12_03 from './pages/docs/ReleaseNote_2025_12_03';
 import ReleaseNote_v102 from './pages/docs/ReleaseNote_v102';
+import ReleaseNote_v103 from './pages/docs/ReleaseNote_v103';
+import ReleaseNote_v104 from './pages/docs/ReleaseNote_v104';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
+import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -54,6 +57,70 @@ import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
 import CandidateUsersPage from './pages/account/CandidateUsersPage';
 import './App.css';
+
+// Redirect component for old /admin/users/:userId route to new /users/:userId
+function UserDetailRedirect() {
+  const { userId } = useParams<{ userId: string }>();
+  const location = useLocation();
+  return <Navigate to={`/users/${userId}`} state={location.state} replace />;
+}
+
+// Redirect component for /organization to first organization
+// Uses cached slug for instant navigation on repeat visits
+function OrganizationRedirect() {
+  // Try cached slug first for instant redirect
+  const cachedSlug = React.useMemo(() => {
+    try {
+      return localStorage.getItem('lastOrgSlug');
+    } catch {
+      return null;
+    }
+  }, []);
+  
+  const [orgSlug, setOrgSlug] = React.useState<string | null>(cachedSlug);
+  const [checked, setChecked] = React.useState(!!cachedSlug);
+  
+  React.useEffect(() => {
+    // If we have a cached slug, redirect immediately (no fetch needed)
+    if (cachedSlug) {
+      return;
+    }
+    
+    // Otherwise fetch organizations
+    const fetchOrg = async () => {
+      try {
+        const { default: OrganizationsService } = await import('./services/organizationsService');
+        const orgs = await OrganizationsService.getMyOrganizations();
+        if (orgs.length > 0) {
+          const slug = orgs[0].slug;
+          setOrgSlug(slug);
+          // Cache for future instant redirects
+          try {
+            localStorage.setItem('lastOrgSlug', slug);
+          } catch {}
+        }
+      } catch (error) {
+        console.error('Failed to fetch organizations:', error);
+      } finally {
+        setChecked(true);
+      }
+    };
+    fetchOrg();
+  }, [cachedSlug]);
+  
+  // Redirect immediately if we have a slug (cached or fetched)
+  if (orgSlug) {
+    return <Navigate to={`/organization/${orgSlug}`} replace />;
+  }
+  
+  // Show minimal loading only when fetching (not when using cache)
+  if (!checked) {
+    return null; // No spinner - just brief empty state before redirect
+  }
+  
+  // No organizations found, go to profile
+  return <Navigate to="/account/profile" replace />;
+}
 
 function App() {
   return (
@@ -123,6 +190,23 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
+                {/* Organization routes - all wrapped in AccountLayout for smooth navigation */}
+                <Route 
+                  path="/organization" 
+                  element={
+                    <ProtectedRoute>
+                      <AccountLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  {/* Redirect /organization to first organization */}
+                  <Route index element={<OrganizationRedirect />} />
+                  <Route path=":slug" element={
+                    <RoleBasedRoute allowedRoles={['super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager']}>
+                      <MyOrganizationPage />
+                    </RoleBasedRoute>
+                  } />
+                </Route>
                 <Route 
                   path="/account" 
                   element={
@@ -134,9 +218,27 @@ function App() {
                   <Route index element={<Navigate to="/account/profile" replace />} />
                   <Route path="apps" element={<MyAppsPage />} />
                   <Route path="profile" element={<MyProfilePage />} />
-                  <Route path="organization" element={
-                    <RoleBasedRoute allowedRoles={['client_admin']}>
-                      <MyOrganizationPage />
+                  <Route path="security" element={<Navigate to="/account/profile" replace />} />
+                </Route>
+                {/* User Detail Page - accessible to both internal and client users */}
+                <Route 
+                  path="/users/:userId" 
+                  element={
+                    <ProtectedRoute>
+                      <AccountLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={
+                    <RoleBasedRoute allowedRoles={[
+                      'super_admin', 
+                      'internal_account_manager', 
+                      'internal_hr',
+                      'internal_staff',
+                      'client_admin', 
+                      'client_hr'
+                    ]}>
+                      <UserDetailPage />
                     </RoleBasedRoute>
                   } />
                 </Route>
@@ -196,13 +298,10 @@ function App() {
                       </RoleBasedRoute>
                     } 
                   />
+                  {/* Redirect old admin user detail route to new location */}
                   <Route 
                     path="users/:userId" 
-                    element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
-                        <UserDetailPage />
-                      </RoleBasedRoute>
-                    } 
+                    element={<UserDetailRedirect />}
                   />
                 </Route>
                 <Route path="/test" element={<IntegratedTestSuite />} />
@@ -223,6 +322,7 @@ function App() {
                   <Route path="developer/organization-api" element={<OrganizationApiPage />} />
                   <Route path="developer/profile-pictures" element={<ProfilePicturesApiPage />} />
                   <Route path="developer/user-activity" element={<UserActivityApiPage />} />
+                  <Route path="developer/user-emails" element={<UserEmailsApiPage />} />
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
                   <Route path="sso-integration" element={<SsoIntegrationPage />} />
@@ -230,6 +330,8 @@ function App() {
                   <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/2025-12-13" element={<ReleaseNote_v104 />} />
+                  <Route path="release-notes/2025-12-05" element={<ReleaseNote_v103 />} />
                   <Route path="release-notes/2025-12-04" element={<ReleaseNote_v102 />} />
                   <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />
                   <Route path="release-notes/2025-12-02" element={<ReleaseNote_2025_12_02 />} />

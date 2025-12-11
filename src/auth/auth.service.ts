@@ -24,6 +24,7 @@ import { AuditService } from '../audit/audit.service';
 import { UserRole } from '../user-roles/entities/user-role.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
+import { UserEmail } from '../user-emails/entities/user-email.entity';
 
 @Injectable()
 export class AuthService {
@@ -42,6 +43,8 @@ export class AuthService {
     private organizationRepository: Repository<Organization>,
     @InjectRepository(OrganizationMember)
     private organizationMemberRepository: Repository<OrganizationMember>,
+    @InjectRepository(UserEmail)
+    private userEmailRepository: Repository<UserEmail>,
     private passwordService: PasswordService,
     private jwtService: JwtTokenService,
     private sessionService: SessionService,
@@ -55,6 +58,45 @@ export class AuthService {
       order: { createdAt: 'ASC' }, // Get the first role assigned
     });
     return userRole?.roleType || 'User';
+  }
+
+  /**
+   * Find a user by any of their linked emails (personal or work).
+   * This enables the "Candidate + Employee" model where users can log in
+   * with any of their verified emails.
+   * 
+   * Search order:
+   * 1. Check the primary users.email field
+   * 2. Check the user_emails table for linked emails
+   */
+  async findUserByAnyEmail(email: string): Promise<User | null> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // First, check the primary email in users table
+    let user = await this.userRepository.findOne({
+      where: { email: normalizedEmail, isActive: true, deletedAt: IsNull() },
+      relations: ['userRoles'],
+    });
+
+    if (user) {
+      return user;
+    }
+
+    // If not found, check the user_emails table for linked emails
+    const userEmail = await this.userEmailRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (userEmail) {
+      // Found a linked email, now get the user
+      user = await this.userRepository.findOne({
+        where: { id: userEmail.userId, isActive: true, deletedAt: IsNull() },
+        relations: ['userRoles'],
+      });
+      return user;
+    }
+
+    return null;
   }
 
   /**
@@ -320,10 +362,8 @@ This is an automated message from Teamified.
     const jitter = Math.floor(Math.random() * 200) + 200;
     await new Promise(resolve => setTimeout(resolve, jitter));
 
-    // Check if user exists and is active (ignore soft-deleted users)
-    const user = await this.userRepository.findOne({
-      where: { email, isActive: true, deletedAt: IsNull() },
-    });
+    // Check if user exists using any linked email (personal or work)
+    const user = await this.findUserByAnyEmail(email);
 
     if (!user) {
       return {
@@ -344,28 +384,12 @@ This is an automated message from Teamified.
   ): Promise<LoginResponseDto> {
     const { email, password } = loginDto;
 
-    // Find user by email with roles (ignore soft-deleted users)
-    const user = await this.userRepository.findOne({
-      where: { email, isActive: true, deletedAt: IsNull() },
-      relations: ['userRoles'],
-    });
+    // Find user by any linked email (personal or work emails)
+    // This supports the "Candidate + Employee" model where users can log in
+    // with their personal email, work email, or any other linked email
+    const user = await this.findUserByAnyEmail(email);
 
     if (!user) {
-      // Skip audit logging for failed logins when there's no user ID
-      // since the database requires actorUserId to be NOT NULL
-      // await this.auditService.log({
-      //   actorUserId: null,
-      //   actorRole: null,
-      //   action: 'login_failure',
-      //   entityType: 'User',
-      //   entityId: null,
-      //   changes: {
-      //     email,
-      //     reason: 'user_not_found',
-      //   },
-      //   ip,
-      //   userAgent,
-      // });
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -566,7 +590,7 @@ This is an automated message from Teamified.
     };
   }
 
-  async getProfileData(userId: string): Promise<{ profileData: any }> {
+  async getProfileData(userId: string): Promise<{ profileData: any; passwordUpdatedAt: Date | null }> {
     const user = await this.userRepository.findOne({
       where: { id: userId, isActive: true },
     });
@@ -595,11 +619,15 @@ This is an automated message from Teamified.
             createdAt: new Date().toISOString(),
             version: '1.0'
           }
-        }
+        },
+        passwordUpdatedAt: user.passwordUpdatedAt || null,
       };
     }
 
-    return { profileData: user.profileData };
+    return { 
+      profileData: user.profileData,
+      passwordUpdatedAt: user.passwordUpdatedAt || null,
+    };
   }
 
   async updateProfileData(userId: string, profileData: any): Promise<{ profileData: any }> {
@@ -802,6 +830,7 @@ This is an automated message from Teamified.
       mustChangePassword: true,
       passwordChangedByAdminAt: new Date(),
       passwordChangedByAdminId: adminUserId,
+      passwordUpdatedAt: new Date(),
     });
 
     // Invalidate all existing sessions for security
@@ -930,6 +959,7 @@ This is an automated message from Teamified.
       passwordHash: hashedPassword,
       passwordResetToken: null,
       passwordResetTokenExpiry: null,
+      passwordUpdatedAt: new Date(),
     });
 
     // Invalidate all existing sessions for security
@@ -956,6 +986,109 @@ This is an automated message from Teamified.
     this.logger.log(`Password successfully reset for user: ${user.email}`);
 
     return { message: 'Your password has been reset successfully' };
+  }
+
+  /**
+   * Change password for authenticated user.
+   * Requires the current password for verification - no email required.
+   * This is different from resetPassword which uses a token.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    confirmNewPassword: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; success: boolean }> {
+    // Validate new password confirmation
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException('New passwords do not match');
+    }
+
+    // Validate new password policy
+    const passwordValidation = this.passwordService.validatePasswordPolicy(newPassword);
+    if (!passwordValidation.isValid) {
+      throw new BadRequestException({
+        message: 'New password does not meet security requirements',
+        errors: passwordValidation.errors,
+      });
+    }
+
+    // Find the user
+    const user = await this.userRepository.findOne({
+      where: { id: userId, isActive: true, deletedAt: IsNull() },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await this.passwordService.verifyPassword(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isCurrentPasswordValid) {
+      const userRole = await this.getUserPrimaryRole(user.id);
+      await this.auditService.log({
+        actorUserId: user.id,
+        actorRole: userRole,
+        action: 'password_change_failed',
+        entityType: 'User',
+        entityId: user.id,
+        changes: {
+          reason: 'incorrect_current_password',
+        },
+        ip,
+        userAgent,
+      });
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    // Check that new password is different from current
+    const isSamePassword = await this.passwordService.verifyPassword(
+      newPassword,
+      user.passwordHash,
+    );
+
+    if (isSamePassword) {
+      throw new BadRequestException('New password must be different from your current password');
+    }
+
+    // Hash the new password
+    const hashedPassword = await this.passwordService.hashPassword(newPassword);
+
+    // Update user password, clear mustChangePassword flag, and track update time
+    await this.userRepository.update(user.id, {
+      passwordHash: hashedPassword,
+      mustChangePassword: false,
+      passwordUpdatedAt: new Date(),
+    });
+
+    // Log the password change
+    const userRole = await this.getUserPrimaryRole(user.id);
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: userRole,
+      action: 'password_changed',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        passwordChanged: true,
+        changedAt: new Date().toISOString(),
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`Password successfully changed for user: ${user.email}`);
+
+    return { 
+      message: 'Your password has been changed successfully',
+      success: true,
+    };
   }
 
   /**
@@ -1178,6 +1311,7 @@ This is an automated message from Teamified.
       mustChangePassword: false,
       passwordChangedByAdminAt: null,
       passwordChangedByAdminId: null,
+      passwordUpdatedAt: new Date(),
     });
 
     // Reload user to get updated mustChangePassword=false for token generation

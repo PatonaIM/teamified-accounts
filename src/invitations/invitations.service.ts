@@ -23,6 +23,7 @@ import { AuditService } from '../audit/audit.service';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { User } from '../auth/entities/user.entity';
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { UserEmail, EmailType } from '../user-emails/entities/user-email.entity';
 import { PasswordService } from '../auth/services/password.service';
 import { EmailService } from '../email/services/email.service';
 import { Organization } from '../organizations/entities/organization.entity';
@@ -42,6 +43,8 @@ export class InvitationsService {
     private userRoleRepository: Repository<UserRole>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
+    @InjectRepository(UserEmail)
+    private userEmailRepository: Repository<UserEmail>,
     private auditService: AuditService,
     private passwordService: PasswordService,
     private emailService: EmailService,
@@ -913,8 +916,135 @@ export class InvitationsService {
   }
 
   /**
+   * Accept invitation as an authenticated user
+   * For existing users who are already logged in - no password required
+   */
+  async acceptInvitationAuthenticated(
+    inviteCode: string,
+    user: User,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string; organizationId: string; organizationName: string; role: string }> {
+    this.logger.log(`[acceptInvitationAuthenticated] Starting for user ${user.email}`);
+
+    // 1. Find and validate invitation
+    const invitation = await this.invitationRepository.findOne({
+      where: { inviteCode },
+      relations: ['organization', 'invitedUser'],
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // 2. Check invitation validity
+    if (invitation.expiresAt < new Date()) {
+      throw new BadRequestException('Invitation has expired');
+    }
+
+    if (invitation.status !== InvitationStatus.PENDING) {
+      throw new BadRequestException(`Invitation has already been ${invitation.status}`);
+    }
+
+    if (invitation.maxUses && invitation.currentUses >= invitation.maxUses) {
+      throw new BadRequestException('Invitation has reached maximum uses');
+    }
+
+    // 3. Verify user's email matches the invitation
+    const invitedEmail = invitation.email || invitation.invitedUser?.email;
+    if (invitedEmail && user.email.toLowerCase() !== invitedEmail.toLowerCase()) {
+      throw new BadRequestException(
+        `This invitation was sent to ${invitedEmail}. Please log in with that email address.`
+      );
+    }
+
+    // 4. Check if user is already a member of this organization
+    const existingMembership = await this.memberRepository.findOne({
+      where: { 
+        userId: user.id, 
+        organizationId: invitation.organizationId 
+      },
+    });
+
+    if (existingMembership) {
+      if (existingMembership.status === 'active') {
+        throw new BadRequestException('You are already a member of this organization');
+      }
+      // Reactivate inactive membership
+      existingMembership.status = 'active';
+      await this.memberRepository.save(existingMembership);
+    } else {
+      // Create new membership
+      const membership = this.memberRepository.create({
+        userId: user.id,
+        organizationId: invitation.organizationId,
+        status: 'active',
+        joinedAt: new Date(),
+      });
+      await this.memberRepository.save(membership);
+    }
+
+    // 5. Assign role if not already assigned
+    const existingRole = await this.userRoleRepository.findOne({
+      where: {
+        userId: user.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+      },
+    });
+
+    if (!existingRole) {
+      const userRole = this.userRoleRepository.create({
+        userId: user.id,
+        roleType: invitation.roleType,
+        scope: 'organization',
+        scopeEntityId: invitation.organizationId,
+        grantedBy: invitation.invitedBy,
+      });
+      await this.userRoleRepository.save(userRole);
+    }
+
+    // 6. Update invitation usage (directly, to avoid redundant database load)
+    invitation.currentUses += 1;
+    if (invitation.maxUses && invitation.currentUses >= invitation.maxUses) {
+      invitation.status = InvitationStatus.ACCEPTED;
+    }
+    await this.invitationRepository.save(invitation);
+
+    // 7. Log the acceptance
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: invitation.roleType,
+      action: 'invitation.accepted_authenticated',
+      entityType: 'invitation',
+      entityId: invitation.id,
+      changes: {
+        organizationId: invitation.organizationId,
+        organizationName: invitation.organization.name,
+        roleType: invitation.roleType,
+        currentUses: invitation.currentUses,
+        maxUses: invitation.maxUses,
+        status: invitation.status,
+      },
+      ip,
+      userAgent,
+    });
+
+    this.logger.log(`[acceptInvitationAuthenticated] User ${user.email} joined ${invitation.organization.name} (uses: ${invitation.currentUses}/${invitation.maxUses || 'unlimited'})`);
+
+    return {
+      message: 'Successfully joined organization',
+      organizationId: invitation.organizationId,
+      organizationName: invitation.organization.name,
+      role: invitation.roleType,
+    };
+  }
+
+  /**
    * Accept organization invitation - Public endpoint for new users
    * Handles complete signup + organization membership flow
+   * Supports account linking via optional personalEmail field
    */
   async acceptOrganizationInvitation(
     acceptDto: AcceptOrganizationInvitationDto,
@@ -922,43 +1052,114 @@ export class InvitationsService {
     ip?: string,
     userAgent?: string,
   ): Promise<AcceptInvitationResponseDto> {
-    const { inviteCode, email, password, confirmPassword, firstName, lastName } = acceptDto;
+    const { inviteCode, email, password, confirmPassword, firstName, lastName, personalEmail } = acceptDto;
+    const workEmail = email.toLowerCase(); // This is the work email from the invitation
+    const isAccountLinkingRequest = !!personalEmail;
 
-    // 1. Validate passwords match
-    if (password !== confirmPassword) {
-      throw new BadRequestException('Passwords do not match');
-    }
+    // 1. Validate required fields based on flow type
+    if (!isAccountLinkingRequest) {
+      // For new accounts: firstName, lastName, and confirmPassword are required
+      if (!firstName?.trim()) {
+        throw new BadRequestException('First name is required');
+      }
+      if (!lastName?.trim()) {
+        throw new BadRequestException('Last name is required');
+      }
+      if (!confirmPassword) {
+        throw new BadRequestException('Password confirmation is required');
+      }
+      if (password !== confirmPassword) {
+        throw new BadRequestException('Passwords do not match');
+      }
 
-    // 2. Validate password policy
-    const passwordValidation = this.passwordService.validatePasswordPolicy(password);
-    if (!passwordValidation.isValid) {
-      throw new BadRequestException({
-        message: 'Password does not meet security requirements',
-        errors: passwordValidation.errors,
-      });
+      // Validate password policy for new accounts
+      const passwordValidation = this.passwordService.validatePasswordPolicy(password);
+      if (!passwordValidation.isValid) {
+        throw new BadRequestException({
+          message: 'Password does not meet security requirements',
+          errors: passwordValidation.errors,
+        });
+      }
     }
+    // For account linking: password is used for verification, not creation (no policy check needed)
 
     // 3. Find and validate invitation using findByCode() (handles expiration, usage, status checks)
     const invitation = await this.findByCode(inviteCode);
 
-    // 4. Check if user exists with this email
-    let user = await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
+    // 4. Check if work email is already in use
+    const existingWorkEmailUser = await this.userRepository.findOne({
+      where: { email: workEmail },
     });
 
-    // 5. If user exists and is active (not invited status): throw ConflictException
-    if (user && user.isActive && user.status !== 'invited') {
-      throw new ConflictException('User already has an account');
+    // Also check if work email exists in user_emails table
+    const existingWorkEmailRecord = await this.userEmailRepository.findOne({
+      where: { email: workEmail },
+    });
+
+    if (existingWorkEmailRecord) {
+      throw new ConflictException('This work email is already linked to an account');
     }
 
-    // Hash the password
+    // 5. Handle account linking flow if personalEmail is provided
+    let user: User | null = null;
+    let isAccountLinking = false;
+
+    if (personalEmail) {
+      // Try to find existing user by personal email
+      const existingUserByPersonalEmail = await this.userRepository.findOne({
+        where: { email: personalEmail.toLowerCase() },
+      });
+
+      // Also check user_emails table for the personal email
+      const existingPersonalEmailRecord = await this.userEmailRepository.findOne({
+        where: { email: personalEmail.toLowerCase() },
+        relations: ['user'],
+      });
+
+      const linkedUser = existingUserByPersonalEmail || existingPersonalEmailRecord?.user;
+
+      if (linkedUser && linkedUser.isActive && linkedUser.status !== 'invited') {
+        // Found an active user - verify password to prove account ownership
+        const isPasswordValid = await this.passwordService.verifyPassword(
+          password,
+          linkedUser.passwordHash,
+        );
+        if (!isPasswordValid) {
+          throw new BadRequestException('Invalid password for the existing account. Please enter your current password to link accounts.');
+        }
+        // Password verified - link the work email to this account
+        user = linkedUser;
+        isAccountLinking = true;
+        this.logger.log(`Account linking: Found and verified existing user ${linkedUser.id} via personal email ${personalEmail}`);
+      } else if (linkedUser) {
+        // User exists but is not active - don't allow linking
+        throw new BadRequestException('The personal email provided is associated with an inactive account. Please create a new account instead.');
+      } else {
+        // Personal email not found - inform user
+        throw new BadRequestException('No existing account found with that personal email. Leave the field empty to create a new account.');
+      }
+    } else {
+      // No personal email - check if work email exists as a user
+      user = existingWorkEmailUser;
+      
+      // If user exists and is active (not invited status): throw ConflictException
+      if (user && user.isActive && user.status !== 'invited') {
+        throw new ConflictException('User already has an account');
+      }
+    }
+
+    // Hash the password (only used for new accounts, ignored for account linking)
     const hashedPassword = await this.passwordService.hashPassword(password);
 
-    // 6 & 7. Create or update user
-    if (!user) {
-      // Create new user
+    // 6 & 7. Create or update user (skip if account linking)
+    if (isAccountLinking && user) {
+      // For account linking, we don't modify the existing user's password or details
+      // We just add the work email and create membership
+      this.logger.log(`Account linking: Skipping user creation, using existing user ${user.id}`);
+    } else if (!user) {
+      // Create new user with work email as primary
       user = this.userRepository.create({
-        email: email.toLowerCase(),
+        email: workEmail,
         firstName,
         lastName,
         passwordHash: hashedPassword,
@@ -968,6 +1169,7 @@ export class InvitationsService {
         emailVerificationToken: uuidv4(),
         emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
+      user = await this.userRepository.save(user);
     } else {
       // Activate invited or inactive user
       user.passwordHash = hashedPassword;
@@ -978,9 +1180,24 @@ export class InvitationsService {
       user.emailVerified = false;
       user.emailVerificationToken = uuidv4();
       user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      user = await this.userRepository.save(user);
     }
 
-    const savedUser = await this.userRepository.save(user);
+    const savedUser = user;
+
+    // 7.5. Create work email record in user_emails table (linked to organization)
+    const workEmailRecord = this.userEmailRepository.create({
+      userId: savedUser.id,
+      email: workEmail,
+      emailType: EmailType.WORK,
+      organizationId: invitation.organizationId,
+      isPrimary: !isAccountLinking, // Primary only if this is a new account
+      isVerified: false,
+      verificationToken: uuidv4(),
+      verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+    await this.userEmailRepository.save(workEmailRecord);
+    this.logger.log(`Created work email record for ${workEmail} linked to org ${invitation.organizationId}`);
 
     // 8. Check for existing membership (may exist with 'invited' status) or create new one
     let membership = await this.memberRepository.findOne({
@@ -1037,22 +1254,7 @@ export class InvitationsService {
     }
 
     // 12. Create comprehensive audit logs
-    await Promise.all([
-      this.auditService.log({
-        actorUserId: savedUser.id,
-        actorRole: invitation.roleType,
-        action: 'account_created',
-        entityType: 'User',
-        entityId: savedUser.id,
-        changes: {
-          email: savedUser.email,
-          firstName: savedUser.firstName,
-          lastName: savedUser.lastName,
-          isActive: true,
-        },
-        ip,
-        userAgent,
-      }),
+    const auditLogs = [
       this.auditService.log({
         actorUserId: savedUser.id,
         actorRole: invitation.roleType,
@@ -1064,6 +1266,7 @@ export class InvitationsService {
           userId: savedUser.id,
           status: 'active',
           invitedBy: invitation.invitedBy,
+          isAccountLinking,
         },
         ip,
         userAgent,
@@ -1083,11 +1286,74 @@ export class InvitationsService {
         ip,
         userAgent,
       }),
-    ]);
+      this.auditService.log({
+        actorUserId: savedUser.id,
+        actorRole: invitation.roleType,
+        action: 'work_email_linked',
+        entityType: 'UserEmail',
+        entityId: workEmailRecord.id,
+        changes: {
+          workEmail,
+          organizationId: invitation.organizationId,
+          isAccountLinking,
+          personalEmail: personalEmail || null,
+        },
+        ip,
+        userAgent,
+      }),
+    ];
 
-    this.logger.log(`User ${savedUser.email} accepted organization invitation and joined organization ${invitation.organizationId}`);
+    // Only log account creation if not account linking
+    if (!isAccountLinking) {
+      auditLogs.push(
+        this.auditService.log({
+          actorUserId: savedUser.id,
+          actorRole: invitation.roleType,
+          action: 'account_created',
+          entityType: 'User',
+          entityId: savedUser.id,
+          changes: {
+            email: savedUser.email,
+            firstName: savedUser.firstName,
+            lastName: savedUser.lastName,
+            isActive: true,
+          },
+          ip,
+          userAgent,
+        }),
+      );
+    } else {
+      auditLogs.push(
+        this.auditService.log({
+          actorUserId: savedUser.id,
+          actorRole: invitation.roleType,
+          action: 'account_linked',
+          entityType: 'User',
+          entityId: savedUser.id,
+          changes: {
+            workEmailLinked: workEmail,
+            personalEmail: personalEmail,
+            organizationId: invitation.organizationId,
+          },
+          ip,
+          userAgent,
+        }),
+      );
+    }
+
+    await Promise.all(auditLogs);
+
+    if (isAccountLinking) {
+      this.logger.log(`Account linking: User ${savedUser.email} linked work email ${workEmail} and joined organization ${invitation.organizationId}`);
+    } else {
+      this.logger.log(`User ${savedUser.email} accepted organization invitation and joined organization ${invitation.organizationId}`);
+    }
 
     // 13. Return response DTO with user info
+    const responseMessage = isAccountLinking
+      ? `Work email ${workEmail} has been linked to your existing account. You can now log in with either email.`
+      : 'Account activated successfully. Please check your email to verify your email address.';
+
     return {
       userId: savedUser.id,
       email: savedUser.email,
@@ -1095,7 +1361,7 @@ export class InvitationsService {
       lastName: savedUser.lastName,
       isActive: savedUser.isActive,
       emailVerified: savedUser.emailVerified,
-      message: 'Account activated successfully. Please check your email to verify your email address.',
+      message: responseMessage,
     };
   }
 
@@ -1555,7 +1821,7 @@ This is an automated message from Teamified.
   async preview(code: string): Promise<InvitationPreviewDto> {
     const invitation = await this.invitationRepository.findOne({
       where: { inviteCode: code },
-      relations: ['organization', 'inviter'],
+      relations: ['organization', 'inviter', 'invitedUser'],
     });
 
     if (!invitation) {
@@ -1591,6 +1857,13 @@ This is an automated message from Teamified.
         break;
     }
 
+    // Check if the invited user has completed signup
+    // A user has completed signup if they have a password set AND have first/last name filled in
+    const invitedUser = invitation.invitedUser;
+    const hasCompletedSignup = invitedUser 
+      ? !!(invitedUser.passwordHash && invitedUser.firstName && invitedUser.lastName)
+      : false;
+
     return {
       organizationName: invitation.organization.name,
       organizationSlug: invitation.organization.slug,
@@ -1602,6 +1875,10 @@ This is an automated message from Teamified.
       isValid,
       validityMessage,
       createdAt: invitation.createdAt,
+      invitedEmail: invitation.email || invitedUser?.email,
+      hasCompletedSignup,
+      invitedUserFirstName: hasCompletedSignup ? invitedUser?.firstName : undefined,
+      invitedUserLastName: hasCompletedSignup ? invitedUser?.lastName : undefined,
     };
   }
 

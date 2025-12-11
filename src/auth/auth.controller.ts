@@ -975,6 +975,72 @@ export class AuthController {
     );
   }
 
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @HttpCode(HttpStatus.OK)
+  @SkipPasswordChangeCheck()
+  @ApiOperation({
+    summary: 'Change password (authenticated)',
+    description: `
+      Change your password by providing the current password and a new password.
+      No email is required - just your current password for verification.
+      
+      ## Process Flow:
+      1. User provides current password for verification
+      2. User provides new password and confirmation
+      3. System validates current password is correct
+      4. System validates new password meets requirements
+      5. Password is updated
+      
+      ## Security Features:
+      - Requires authentication (JWT token)
+      - Rate limited to 5 attempts per 5 minutes
+      - Current password must be verified
+      - New password must be different from current
+      - Password must meet security requirements
+      - All attempts are logged for security monitoring
+    `,
+  })
+  @ApiBody({
+    type: () => require('./dto/change-password.dto').ChangePasswordDto,
+    description: 'Current password and new password details',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    type: () => require('./dto/change-password.dto').ChangePasswordResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Current password incorrect or new password requirements not met',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing token',
+    type: AuthErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async changePassword(
+    @Body() changePasswordDto: { currentPassword: string; newPassword: string; confirmNewPassword: string },
+    @Request() req: any,
+  ): Promise<{ message: string; success: boolean }> {
+    return this.authService.changePassword(
+      req.user.sub || req.user.userId,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+      changePasswordDto.confirmNewPassword,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
   @Get('debug/token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({

@@ -18,6 +18,7 @@ import { LegacyInvitation } from '../invitations/entities/legacy-invitation.enti
 import { UserRole } from '../user-roles/entities/user-role.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
+import { UserEmail } from '../user-emails/entities/user-email.entity';
 import { UserRolesModule } from '../user-roles/user-roles.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { EmailModule } from '../email/email.module';
@@ -26,7 +27,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Session, LegacyInvitation, UserRole, Organization, OrganizationMember]),
+    TypeOrmModule.forFeature([User, Session, LegacyInvitation, UserRole, Organization, OrganizationMember, UserEmail]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

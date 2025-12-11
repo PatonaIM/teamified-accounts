@@ -33,10 +33,12 @@ import {
 } from '@mui/material';
 import { Search, Add, Business, ArrowBack, Edit, Warning, CameraAlt, MoreVert, PersonRemove, PersonOff } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import organizationsService, { type Organization, type OrganizationMember, type GlobalSearchResponse } from '../services/organizationsService';
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
-import { getRoleColor, getRolePriority } from '../constants/roleMetadata';
+import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
+import { getRoleColor, getRolePriority, formatRoleDisplay } from '../constants/roleMetadata';
 
 const COMPANY_SIZES = [
   '1-10',
@@ -153,10 +155,28 @@ const OrganizationManagementPage: React.FC = () => {
   // Confirmation dialogs state
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showNLWFConfirm, setShowNLWFConfirm] = useState(false);
+  const [showLastAdminError, setShowLastAdminError] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Prevent duplicate API calls by tracking if we're already loading
   const loadingRef = React.useRef(false);
+
+  // Auth and permissions
+  const { user } = useAuth();
+  const permissions = useOrganizationPermissions({
+    userRoles: user?.roles || [],
+    isOwnOrganization: false,
+  });
+
+  const {
+    canRemoveUsers,
+    canChangeRoles,
+    canMarkNLWF,
+    canSendPasswordReset,
+    canSuspendUser,
+    canViewUserDetails,
+    isSuperAdmin,
+  } = permissions;
 
   // Load organizations on mount
   useEffect(() => {
@@ -592,10 +612,11 @@ const OrganizationManagementPage: React.FC = () => {
   };
 
   const handleInvitationSuccess = () => {
-    loadMembers(); // Reload members to show invited users (modal stays open for results)
+    loadMembers();
   };
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>, member: OrganizationMember) => {
+    if (!canRemoveUsers && !canChangeRoles && !canMarkNLWF) return;
     event.stopPropagation();
     setUserMenuAnchor(event.currentTarget);
     setSelectedMember(member);
@@ -605,8 +626,21 @@ const OrganizationManagementPage: React.FC = () => {
     setUserMenuAnchor(null);
   };
 
+  const handleUserRowClick = (member: OrganizationMember, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!canViewUserDetails) return;
+    navigate(`/users/${member.userId}`, {
+      state: {
+        organizationId: selectedOrg?.id,
+        organizationName: selectedOrg?.name,
+        organizationSlug: selectedOrg?.slug,
+        fromClientPage: false,
+      }
+    });
+  };
+
   const handleRemoveFromOrg = async () => {
-    if (!selectedOrg || !selectedMember) return;
+    if (!selectedOrg || !selectedMember || !canRemoveUsers) return;
     
     setActionLoading(true);
     try {
@@ -614,16 +648,24 @@ const OrganizationManagementPage: React.FC = () => {
       setSuccess('User removed from organization successfully!');
       setShowRemoveConfirm(false);
       handleCloseUserMenu();
-      loadMembers(); // Reload members list
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove user from organization');
+      loadMembers();
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to remove user from organization';
+      
+      // Check if this is a "last admin" error
+      if (errorMessage.toLowerCase().includes('last admin') || errorMessage.toLowerCase().includes('assign another admin')) {
+        setShowRemoveConfirm(false);
+        setShowLastAdminError(true);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleMarkNLWF = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember || !canMarkNLWF) return;
     
     setActionLoading(true);
     try {
@@ -631,7 +673,7 @@ const OrganizationManagementPage: React.FC = () => {
       setSuccess('User marked as NLWF (inactive) successfully!');
       setShowNLWFConfirm(false);
       handleCloseUserMenu();
-      loadMembers(); // Reload members list
+      loadMembers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark user as NLWF');
     } finally {
@@ -639,6 +681,13 @@ const OrganizationManagementPage: React.FC = () => {
     }
   };
 
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    if (!selectedOrg || !canChangeRoles) {
+      throw new Error('Permission denied');
+    }
+    await organizationsService.updateMemberRole(selectedOrg.id, userId, { roleType: newRole });
+    loadMembers();
+  };
 
   // Count members by status for filter display
   // Status values from backend: 'active', 'invited', 'nlwf'
@@ -885,7 +934,7 @@ const OrganizationManagementPage: React.FC = () => {
                   <Paper
                     key={user.id}
                     onClick={() => {
-                      navigate(`/admin/users/${user.id}`);
+                      navigate(`/users/${user.id}`);
                       clearGlobalSearch();
                     }}
                     sx={{
@@ -1354,12 +1403,7 @@ const OrganizationManagementPage: React.FC = () => {
                           return (
                             <Paper
                               key={member.id}
-                              onClick={() => navigate(`/admin/users/${member.userId}`, {
-                                state: {
-                                  organizationId: selectedOrg?.id,
-                                  organizationName: selectedOrg?.name
-                                }
-                              })}
+                              onClick={(e) => handleUserRowClick(member, e)}
                               sx={{
                                 p: 2,
                                 mb: 2,
@@ -1420,6 +1464,15 @@ const OrganizationManagementPage: React.FC = () => {
                                           sx={{ height: 20, fontSize: '0.7rem' }}
                                         />
                                       )}
+                                      {member.status === 'suspended' && (
+                                        <Chip
+                                          label="Suspended"
+                                          size="small"
+                                          color="error"
+                                          variant="filled"
+                                          sx={{ height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
                                     </Box>
                                     <Typography variant="caption" color="text.secondary">
                                       {member.userEmail}
@@ -1428,7 +1481,7 @@ const OrganizationManagementPage: React.FC = () => {
                                 </Box>
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                   <Chip
-                                    label={member.roleType || 'No role'}
+                                    label={formatRoleDisplay(member.roleType)}
                                     size="small"
                                     color={getRoleColor(member.roleType)}
                                     variant="outlined"
@@ -1436,13 +1489,15 @@ const OrganizationManagementPage: React.FC = () => {
                                       opacity: isNlwf ? 0.6 : 1,
                                     }}
                                   />
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => handleOpenUserMenu(e, member)}
-                                    sx={{ ml: 1 }}
-                                  >
-                                    <MoreVert />
-                                  </IconButton>
+                                  {(canRemoveUsers || canChangeRoles || canMarkNLWF) && member.userId !== user?.id && (
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => handleOpenUserMenu(e, member)}
+                                      sx={{ ml: 1 }}
+                                    >
+                                      <MoreVert />
+                                    </IconButton>
+                                  )}
                                 </Box>
                               </Box>
                             </Paper>
@@ -1780,25 +1835,29 @@ const OrganizationManagementPage: React.FC = () => {
         open={Boolean(userMenuAnchor)}
         onClose={handleCloseUserMenu}
       >
-        <MenuItem 
-          onClick={() => {
-            setShowNLWFConfirm(true);
-            handleCloseUserMenu();
-          }}
-        >
-          <PersonOff sx={{ mr: 1, fontSize: 20 }} />
-          Mark as NLWF (Inactive)
-        </MenuItem>
-        <MenuItem 
-          onClick={() => {
-            setShowRemoveConfirm(true);
-            handleCloseUserMenu();
-          }}
-          sx={{ color: 'error.main' }}
-        >
-          <PersonRemove sx={{ mr: 1, fontSize: 20 }} />
-          Remove from Organization
-        </MenuItem>
+        {canMarkNLWF && selectedMember?.status !== 'nlwf' && (
+          <MenuItem 
+            onClick={() => {
+              setShowNLWFConfirm(true);
+              handleCloseUserMenu();
+            }}
+          >
+            <PersonOff sx={{ mr: 1, fontSize: 20 }} />
+            Mark as NLWF (Inactive)
+          </MenuItem>
+        )}
+        {canRemoveUsers && (
+          <MenuItem 
+            onClick={() => {
+              setShowRemoveConfirm(true);
+              handleCloseUserMenu();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <PersonRemove sx={{ mr: 1, fontSize: 20 }} />
+            Remove from Organization
+          </MenuItem>
+        )}
       </Menu>
 
       {/* Remove from Organization Confirmation Dialog */}
@@ -1847,6 +1906,30 @@ const OrganizationManagementPage: React.FC = () => {
             startIcon={actionLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
             {actionLoading ? 'Updating...' : 'Mark as NLWF'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Last Admin Error Dialog */}
+      <Dialog open={showLastAdminError} onClose={() => setShowLastAdminError(false)}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <Warning color="error" />
+          Cannot Remove Admin
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            <strong>{selectedMember?.userName}</strong> is the only admin in this organization and cannot be removed.
+          </Typography>
+          <Typography color="text.secondary">
+            Every organization must have at least one admin. To remove this user, please first assign another user as an admin of this organization.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="contained" 
+            onClick={() => setShowLastAdminError(false)}
+          >
+            Understood
           </Button>
         </DialogActions>
       </Dialog>

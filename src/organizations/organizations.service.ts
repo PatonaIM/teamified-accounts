@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity';
@@ -18,6 +18,8 @@ import { ConvertCandidateDto, ConvertCandidateResponseDto } from './dto/convert-
 import { RoleType } from '../invitations/dto/create-invitation.dto';
 import { ObjectStorageService } from '../blob-storage/object-storage.service';
 import { GlobalSearchResponseDto, UserSearchResult } from './dto/search-global.dto';
+import { UserEmailsService } from '../user-emails/user-emails.service';
+import { EmailType } from '../user-emails/entities/user-email.entity';
 
 @Injectable()
 export class OrganizationsService {
@@ -37,6 +39,8 @@ export class OrganizationsService {
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
     private readonly objectStorageService: ObjectStorageService,
+    @Inject(forwardRef(() => UserEmailsService))
+    private readonly userEmailsService: UserEmailsService,
   ) {}
 
   /**
@@ -148,6 +152,62 @@ export class OrganizationsService {
     if (!policy.allowedOrgIds.includes(organizationId)) {
       throw new ForbiddenException('You are not a member of this organization');
     }
+  }
+
+  /**
+   * Check if a user can access another user's details
+   * Client users can only access users within their shared organizations
+   * Internal users can access any user
+   */
+  async canUserAccessUser(currentUserId: string, targetUserId: string): Promise<boolean> {
+    const currentUser = await this.userRepository.findOne({
+      where: { id: currentUserId },
+      relations: ['userRoles', 'organizationMembers'],
+    });
+    
+    if (!currentUser) {
+      return false;
+    }
+    
+    const roles = this.getAllRoles(currentUser);
+    
+    const internalRoles = [
+      'super_admin',
+      'admin',
+      'internal_hr',
+      'hr',
+      'internal_recruiter',
+      'internal_account_manager',
+      'internal_finance',
+      'internal_marketing',
+      'internal_staff',
+      'timesheet_approver',
+    ];
+    
+    const hasInternalRole = roles.some(r => internalRoles.includes(r));
+    
+    if (hasInternalRole) {
+      return true;
+    }
+    
+    const activeMemberships = currentUser.organizationMembers?.filter(
+      om => om.status === 'active'
+    ) || [];
+    
+    const currentUserOrgIds = activeMemberships.map(om => om.organizationId);
+    
+    if (currentUserOrgIds.length === 0) {
+      return false;
+    }
+    
+    const sharedMembership = await this.memberRepository
+      .createQueryBuilder('member')
+      .where('member.userId = :targetUserId', { targetUserId })
+      .andWhere('member.status = :status', { status: 'active' })
+      .andWhere('member.organizationId IN (:...orgIds)', { orgIds: currentUserOrgIds })
+      .getOne();
+    
+    return !!sharedMembership;
   }
 
   async create(
@@ -377,7 +437,16 @@ export class OrganizationsService {
   }
 
   async getMyOrganization(currentUser: User): Promise<OrganizationResponseDto> {
-    const policy = this.buildOrgAccessPolicy(currentUser);
+    const enrichedUser = await this.userRepository.findOne({
+      where: { id: currentUser.id },
+      relations: ['organizationMembers', 'organizationMembers.organization', 'userRoles'],
+    });
+    
+    if (!enrichedUser) {
+      throw new NotFoundException('User not found');
+    }
+    
+    const policy = this.buildOrgAccessPolicy(enrichedUser);
     
     if (policy.noAccess || policy.allowedOrgIds.length === 0) {
       throw new NotFoundException('You do not belong to any organization');
@@ -385,7 +454,116 @@ export class OrganizationsService {
     
     const organizationId = policy.allowedOrgIds[0];
     
-    return this.findOne(organizationId, currentUser);
+    return this.findOne(organizationId, enrichedUser);
+  }
+
+  async getMyOrganizations(currentUser: User): Promise<OrganizationResponseDto[]> {
+    const enrichedUser = await this.userRepository.findOne({
+      where: { id: currentUser.id },
+      relations: ['organizationMembers', 'organizationMembers.organization', 'userRoles'],
+    });
+    
+    if (!enrichedUser) {
+      return [];
+    }
+    
+    const policy = this.buildOrgAccessPolicy(enrichedUser);
+    
+    if (policy.noAccess) {
+      return [];
+    }
+    
+    // Collect org IDs to fetch
+    let orgIds: string[] = [];
+    
+    if (policy.canViewAll) {
+      // For internal users, get org IDs from their active memberships
+      const activeMemberships = enrichedUser.organizationMembers?.filter(
+        om => om.status === 'active'
+      ) || [];
+      orgIds = activeMemberships.map(om => om.organizationId);
+    } else {
+      // For client users, use the allowed org IDs from policy
+      orgIds = policy.allowedOrgIds;
+    }
+    
+    if (orgIds.length === 0) {
+      return [];
+    }
+    
+    // Batch fetch all organizations with member counts in a single query
+    const orgsWithCounts = await this.organizationRepository
+      .createQueryBuilder('org')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .select([
+        'org.id',
+        'org.name',
+        'org.slug',
+        'org.industry',
+        'org.companySize',
+        'org.logoUrl',
+        'org.website',
+        'org.settings',
+        'org.subscriptionTier',
+        'org.subscriptionStatus',
+        'org.createdAt',
+        'org.updatedAt',
+      ])
+      .addSelect('COUNT(DISTINCT memberUser.id)', 'memberCount')
+      .where('org.id IN (:...orgIds)', { orgIds })
+      .andWhere('org.deletedAt IS NULL')
+      .groupBy('org.id')
+      .getRawAndEntities();
+    
+    // Map results to response DTOs
+    const organizations: OrganizationResponseDto[] = orgsWithCounts.entities.map((org, index) => {
+      const raw = orgsWithCounts.raw[index];
+      return {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        industry: org.industry,
+        companySize: org.companySize,
+        logoUrl: org.logoUrl,
+        website: org.website,
+        settings: org.settings,
+        subscriptionTier: org.subscriptionTier,
+        subscriptionStatus: org.subscriptionStatus,
+        createdAt: org.createdAt,
+        updatedAt: org.updatedAt,
+        memberCount: parseInt(raw.memberCount, 10) || 0,
+      };
+    });
+    
+    return organizations;
+  }
+
+  async getOrphanMemberCount(organizationId: string): Promise<{ totalMembers: number; willBecomeOrphans: number }> {
+    const members = await this.memberRepository.find({
+      where: { organizationId, status: 'active' },
+      relations: ['user'],
+    });
+    
+    let orphanCount = 0;
+    
+    for (const member of members) {
+      const otherMemberships = await this.memberRepository.count({
+        where: {
+          userId: member.userId,
+          status: 'active',
+        },
+      });
+      
+      if (otherMemberships <= 1) {
+        orphanCount++;
+      }
+    }
+    
+    return {
+      totalMembers: members.length,
+      willBecomeOrphans: orphanCount,
+    };
   }
 
   async findBySlug(slug: string): Promise<OrganizationResponseDto> {
@@ -398,6 +576,35 @@ export class OrganizationsService {
     }
 
     return this.mapToResponseDto(organization);
+  }
+
+  async findBySlugWithAccess(slug: string, currentUser: User): Promise<OrganizationResponseDto> {
+    const organization = await this.organizationRepository.findOne({
+      where: { slug, deletedAt: null } as any,
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with slug '${slug}' not found`);
+    }
+
+    this.validateOrgAccess(organization.id, currentUser);
+
+    const result = await this.organizationRepository
+      .createQueryBuilder('org')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .where('org.id = :id', { id: organization.id })
+      .andWhere('org.deletedAt IS NULL')
+      .addSelect('COUNT(memberUser.id)', 'membercount')
+      .groupBy('org.id')
+      .getRawAndEntities();
+
+    const memberCount = parseInt(result.raw[0]?.membercount, 10) || 0;
+
+    return {
+      ...this.mapToResponseDto(organization),
+      memberCount,
+    };
   }
 
   async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string; isSoftDeleted?: boolean }> {
@@ -751,6 +958,22 @@ export class OrganizationsService {
 
     this.logger.log(`Member added to organization ${organizationId}: user ${addMemberDto.userId} with role ${addMemberDto.roleType} by user ${currentUser.id}`);
 
+    // If a work email is provided, add it as a linked email for this organization
+    if (addMemberDto.workEmail) {
+      try {
+        await this.userEmailsService.addWorkEmailForOrganization(
+          addMemberDto.userId,
+          addMemberDto.workEmail,
+          organizationId,
+        );
+        this.logger.log(`Work email ${addMemberDto.workEmail} linked to user ${addMemberDto.userId} for organization ${organizationId}`);
+      } catch (error) {
+        // Log the error but don't fail the member addition
+        // The work email might already exist or be invalid
+        this.logger.warn(`Failed to add work email ${addMemberDto.workEmail} for user ${addMemberDto.userId}: ${error.message}`);
+      }
+    }
+
     const roles = this.getAllRoles(currentUser);
     await this.auditService.log({
       actorUserId: currentUser.id,
@@ -762,6 +985,7 @@ export class OrganizationsService {
         organizationId,
         userId: addMemberDto.userId,
         userEmail: user.email,
+        workEmail: addMemberDto.workEmail || null,
         roleType: addMemberDto.roleType,
         invitedBy: currentUser.id,
       },
@@ -909,6 +1133,26 @@ export class OrganizationsService {
         scopeEntityId: organizationId,
       },
     });
+
+    // Check if the user being removed is an admin (client_admin or super_admin)
+    const isAdminRole = userRole?.roleType === RoleType.CLIENT_ADMIN;
+    
+    if (isAdminRole) {
+      // Count how many admins exist in this organization
+      const adminCount = await this.userRoleRepository.count({
+        where: {
+          scope: 'organization',
+          scopeEntityId: organizationId,
+          roleType: RoleType.CLIENT_ADMIN,
+        },
+      });
+
+      if (adminCount <= 1) {
+        throw new BadRequestException(
+          'Cannot remove the last admin from this organization. Please assign another admin before removing this user.'
+        );
+      }
+    }
 
     if (userRole) {
       await this.userRoleRepository.remove(userRole);

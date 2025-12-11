@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { Repository, Like, FindManyOptions, DataSource, IsNull } from 'typeorm';
+import { Repository, Like, FindManyOptions, DataSource, IsNull, In } from 'typeorm';
 import { User } from '../../auth/entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
@@ -14,6 +14,8 @@ import { AuditService } from '../../audit/audit.service';
 import { SupabaseService } from '../../auth/services/supabase.service';
 import { Invitation, InvitationStatus } from '../../invitations/entities/invitation.entity';
 import { AuditLog } from '../../audit/entities/audit-log.entity';
+import { OrganizationMember } from '../../organizations/entities/organization-member.entity';
+import { UserRole } from '../../user-roles/entities/user-role.entity';
 
 @Injectable()
 export class UserService {
@@ -24,6 +26,10 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Invitation)
     private readonly invitationRepository: Repository<Invitation>,
+    @InjectRepository(OrganizationMember)
+    private readonly memberRepository: Repository<OrganizationMember>,
+    @InjectRepository(UserRole)
+    private readonly userRoleRepository: Repository<UserRole>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly passwordService: PasswordService,
@@ -110,18 +116,15 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User> {
-    console.log('UserService.findOne: Looking for user with ID:', id);
     const user = await this.userRepository.findOne({
       where: { id },
       relations: ['userRoles', 'organizationMembers', 'organizationMembers.organization'],
     });
 
     if (!user) {
-      console.log('UserService.findOne: User not found for ID:', id);
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    console.log('UserService.findOne: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
     return user;
   }
 
@@ -257,16 +260,104 @@ export class UserService {
     const userStatus = user.status;
     const deletedAt = new Date();
     let cancelledCount = 0;
+    let nlwfOrganizations: string[] = [];
+    let removedRolesCount = 0;
 
     // Generate unique placeholder email to free up the original email for reuse
     const anonymizedEmail = `deleted+${user.id}@teamified-archive.local`;
 
-    // Wrap database operations in a transaction
+    // Wrap ALL database operations in a transaction (including last admin check)
     await this.dataSource.transaction(async (manager) => {
       const userRepo = manager.getRepository(User);
       const invitationRepo = manager.getRepository(Invitation);
+      const memberRepo = manager.getRepository(OrganizationMember);
+      const roleRepo = manager.getRepository(UserRole);
 
-      // Cancel pending invitations to avoid blocking re-invitation with same email
+      // Step 0: Check if user is the last admin in ANY organization (inside transaction to avoid TOCTOU)
+      // Find all organizations where this user has client_admin role
+      const adminRoles = await roleRepo.find({
+        where: {
+          userId: id,
+          scope: 'organization',
+          roleType: 'client_admin',
+        },
+      });
+
+      // For each organization where user is a client_admin, check if there's at least one other admin
+      const lastAdminOrgs: string[] = [];
+      
+      if (adminRoles.length > 0) {
+        // Get unique org IDs where this user is client_admin
+        const orgIds = [...new Set(adminRoles.map(r => r.scopeEntityId).filter(Boolean) as string[])];
+        
+        // First, check if there are any OTHER super_admins in the system (any scope)
+        // Super admins can manage all organizations, so if one exists (besides the user being deleted),
+        // no organization is left without admin coverage
+        const otherSuperAdminCount = await roleRepo
+          .createQueryBuilder('role')
+          .where('role.roleType = :roleType', { roleType: 'super_admin' })
+          .andWhere('role.userId != :userId', { userId: id })
+          .getCount();
+        
+        // If there are other super_admins, no organization is left uncovered
+        if (otherSuperAdminCount === 0) {
+          // No super_admins exist (other than the user being deleted), so check each org individually
+          // Use a single aggregated query instead of per-org loop for efficiency
+          if (orgIds.length > 0) {
+            const uncoveredOrgs = await roleRepo
+              .createQueryBuilder('role')
+              .select('role.scopeEntityId', 'orgId')
+              .addSelect('COUNT(CASE WHEN role.userId != :userId THEN 1 END)', 'otherAdminCount')
+              .where('role.scope = :scope', { scope: 'organization' })
+              .andWhere('role.scopeEntityId IN (:...orgIds)', { orgIds })
+              .andWhere('role.roleType = :roleType', { roleType: 'client_admin' })
+              .setParameter('userId', id)
+              .groupBy('role.scopeEntityId')
+              .getRawMany();
+            
+            // Find orgs where there's no other admin (otherAdminCount = 0 or org not in result means this user is the only admin)
+            const orgsWithOtherAdmins = new Set(
+              uncoveredOrgs
+                .filter(row => parseInt(row.otherAdminCount, 10) > 0)
+                .map(row => row.orgId)
+            );
+            
+            for (const orgId of orgIds) {
+              if (!orgsWithOtherAdmins.has(orgId)) {
+                lastAdminOrgs.push(orgId);
+              }
+            }
+          }
+        }
+      }
+
+      if (lastAdminOrgs.length > 0) {
+        throw new BadRequestException(
+          `Cannot delete this user because they are the last admin in ${lastAdminOrgs.length} organization(s). Please assign another admin to these organizations before deleting this user.`
+        );
+      }
+
+      // Step 1: Mark all organization memberships as 'inactive' (NLWF)
+      const memberships = await memberRepo.find({
+        where: { userId: user.id },
+      });
+      
+      for (const membership of memberships) {
+        await memberRepo.update(membership.id, { status: 'inactive' });
+        nlwfOrganizations.push(membership.organizationId);
+      }
+
+      // Step 2: Remove all UserRole records for this user
+      const userRoles = await roleRepo.find({
+        where: { userId: user.id },
+      });
+      removedRolesCount = userRoles.length;
+      
+      if (userRoles.length > 0) {
+        await roleRepo.remove(userRoles);
+      }
+
+      // Step 3: Cancel pending invitations to avoid blocking re-invitation with same email
       // Update 1: Cancel invitations linked by user ID
       const cancelByUserId = await invitationRepo.update(
         { 
@@ -287,7 +378,7 @@ export class UserService {
 
       cancelledCount = (cancelByUserId.affected || 0) + (cancelByEmail.affected || 0);
 
-      // Create audit log for the soft delete
+      // Step 4: Create audit log for the soft delete
       const auditRepo = manager.getRepository(AuditLog);
       const auditLog = auditRepo.create({
         actorUserId: deletedBy || null,
@@ -299,6 +390,8 @@ export class UserService {
           email: userEmail,
           status: userStatus,
           cancelledInvitations: cancelledCount,
+          nlwfOrganizations: nlwfOrganizations,
+          removedRolesCount: removedRolesCount,
           deletedAt: deletedAt.toISOString(),
           softDelete: true,
           reason: reason || 'Admin deletion',
@@ -308,7 +401,7 @@ export class UserService {
       });
       await auditRepo.save(auditLog);
 
-      // Soft delete: Archive user data and anonymize email to allow re-registration
+      // Step 5: Soft delete - Archive user data and anonymize email to allow re-registration
       await userRepo.update(user.id, {
         deletedAt: deletedAt,
         deletedEmail: userEmail,
@@ -331,13 +424,13 @@ export class UserService {
     if (user.supabaseUserId) {
       this.supabaseService.deleteSupabaseUser(user.supabaseUserId)
         .then(() => {
-          this.logger.log(`User ${userEmail} soft deleted and email anonymized. Supabase account removed. (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+          this.logger.log(`User ${userEmail} soft deleted and email anonymized. Supabase account removed. Marked NLWF in ${nlwfOrganizations.length} org(s), removed ${removedRolesCount} role(s). (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
         })
         .catch((error) => {
           this.logger.error(`User ${userEmail} was soft deleted but Supabase deletion failed:`, error);
         });
     } else {
-      this.logger.log(`User ${userEmail} soft deleted and email anonymized (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
+      this.logger.log(`User ${userEmail} soft deleted and email anonymized. Marked NLWF in ${nlwfOrganizations.length} org(s), removed ${removedRolesCount} role(s). (status: ${userStatus}, cancelled ${cancelledCount} pending invitations) by ${deletedBy || 'system'}`);
     }
   }
 

@@ -128,7 +128,12 @@ const SessionAwareRedirect: React.FC = () => {
   }
 
   console.log('[SessionAwareRedirect] User not authenticated, redirecting to login');
-  return <Navigate to="/login" state={{ from: location }} replace />;
+  // Pass the current path as returnUrl so the user can be redirected back after login
+  const returnUrl = location.pathname + location.search;
+  const loginUrl = returnUrl && !isPublicPath(returnUrl) 
+    ? `/login?returnUrl=${encodeURIComponent(returnUrl)}`
+    : '/login';
+  return <Navigate to={loginUrl} replace />;
 };
 
 export default SessionAwareRedirect;

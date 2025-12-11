@@ -155,8 +155,23 @@ class OrganizationsService {
     return response.data;
   }
 
+  async getBySlug(slug: string): Promise<Organization> {
+    const response = await api.get(`${API_BASE_URL}/by-slug/${encodeURIComponent(slug)}`);
+    return response.data;
+  }
+
   async getMyOrganization(): Promise<Organization> {
     const response = await api.get(`${API_BASE_URL}/me`);
+    return response.data;
+  }
+
+  async getMyOrganizations(): Promise<Organization[]> {
+    const response = await api.get(`${API_BASE_URL}/my-organizations`);
+    return response.data;
+  }
+
+  async getOrphanCount(organizationId: string): Promise<{ totalMembers: number; willBecomeOrphans: number }> {
+    const response = await api.get(`${API_BASE_URL}/${organizationId}/orphan-count`);
     return response.data;
   }
 

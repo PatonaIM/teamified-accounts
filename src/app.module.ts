@@ -20,6 +20,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { UserAppPermissionsModule } from './user-app-permissions/user-app-permissions.module';
+import { UserEmailsModule } from './user-emails/user-emails.module';
 import { MustChangePasswordGuard } from './common/guards/must-change-password.guard';
 
 @Module({
@@ -67,6 +68,7 @@ import { MustChangePasswordGuard } from './common/guards/must-change-password.gu
     InvitationsModule, // Phase 3: New Invitation Flow
     AnalyticsModule, // Analytics API for User Management
     UserAppPermissionsModule, // App Permissions Management
+    UserEmailsModule, // Multi-email identity support
   ],
   controllers: [AppController],
   providers: [

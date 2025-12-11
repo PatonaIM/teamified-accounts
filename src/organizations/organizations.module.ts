@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from './entities/organization.entity';
 import { OrganizationMember } from './entities/organization-member.entity';
@@ -11,6 +11,7 @@ import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { EmailModule } from '../email/email.module';
 import { BlobStorageModule } from '../blob-storage/blob-storage.module';
+import { UserEmailsModule } from '../user-emails/user-emails.module';
 
 /**
  * Organizations Module
@@ -37,6 +38,7 @@ import { BlobStorageModule } from '../blob-storage/blob-storage.module';
     AuthModule,
     EmailModule,
     BlobStorageModule,
+    forwardRef(() => UserEmailsModule),
   ],
   controllers: [OrganizationsController],
   providers: [OrganizationsService],

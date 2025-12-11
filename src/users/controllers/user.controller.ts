@@ -16,6 +16,7 @@ import {
   UploadedFile,
   BadRequestException,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -38,6 +39,7 @@ import { User } from '../../auth/entities/user.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
 import { AzureBlobStorageService } from '../../blob-storage/azure-blob-storage.service';
 import { EmailService } from '../../email/services/email.service';
+import { OrganizationsService } from '../../organizations/organizations.service';
 import { UUID_PARAM_PATTERN } from '../../common/constants/routing';
 import * as path from 'path';
 
@@ -52,6 +54,7 @@ export class UserController {
     private readonly azureBlobStorageService: AzureBlobStorageService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
+    private readonly organizationsService: OrganizationsService,
   ) {}
 
   @Post()
@@ -117,10 +120,33 @@ export class UserController {
     // Manually add roles property to response (extracted from userRoles)
     const roles = user.userRoles?.map(r => r.roleType).filter(Boolean) || [];
 
+    // Transform organizationMembers into organizations array for frontend
+    // Only include active memberships (not invited/pending status)
+    // Role types are stored in userRoles with scopeEntityId = organizationId
+    const organizations = user.organizationMembers
+      ?.filter(om => om.status === 'active')
+      .map(om => {
+        // Find the role for this organization from userRoles
+        const orgRole = user.userRoles?.find(ur => 
+          ur.scope === 'organization' && ur.scopeEntityId === om.organizationId
+        );
+        return {
+          organizationId: om.organization?.id,
+          organizationName: om.organization?.name,
+          organizationSlug: om.organization?.slug,
+          organizationLogoUrl: om.organization?.logoUrl || null,
+          roleType: orgRole?.roleType || 'member',
+          joinedAt: om.createdAt?.toISOString(),
+        };
+      }).filter(org => org.organizationId) || [];
+
+    console.log('getCurrentUser: Transformed organizations:', organizations);
+
     return {
       user: {
         ...user,
         roles,
+        organizations,
       }
     };
   }
@@ -173,8 +199,17 @@ export class UserController {
 
   @Get(`:id(${UUID_PARAM_PATTERN})`)
   @UseGuards(RolesGuard)
-  @Roles('admin', 'timesheet_approver')
-  @ApiOperation({ summary: 'Get user by ID' })
+  @Roles('admin', 'timesheet_approver', 'internal_hr', 'internal_account_manager', 'internal_staff', 'client_admin', 'client_hr')
+  @ApiOperation({ 
+    summary: 'Get user by ID',
+    description: `
+      Retrieve detailed user information by ID.
+      
+      ## Authorization:
+      - super_admin, admin, internal_*: Can view any user
+      - client_admin, client_hr: Can only view users within their organization(s)
+    `
+  })
   @ApiResponse({
     status: 200,
     description: 'User retrieved successfully',
@@ -185,10 +220,52 @@ export class UserController {
     description: 'Invalid UUID format',
   })
   @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Client users can only view users within their organization',
+  })
+  @ApiResponse({
     status: 404,
     description: 'User not found',
   })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{ user: UserResponseDto }> {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: User,
+  ): Promise<{ user: UserResponseDto }> {
+    const currentUserRoles = currentUser.userRoles?.map(r => r.roleType) || [];
+    
+    const internalRoles = [
+      'super_admin',
+      'admin',
+      'internal_hr',
+      'internal_account_manager',
+      'internal_recruiter',
+      'internal_finance',
+      'internal_marketing',
+      'internal_staff',
+      'timesheet_approver',
+    ];
+    
+    const hasInternalRole = currentUserRoles.some(r => 
+      internalRoles.includes(r.toLowerCase())
+    );
+    
+    if (!hasInternalRole) {
+      const isClientUser = currentUserRoles.some(r => 
+        r.toLowerCase().startsWith('client_')
+      );
+      
+      if (isClientUser) {
+        const canAccess = await this.organizationsService.canUserAccessUser(
+          currentUser.id,
+          id
+        );
+        
+        if (!canAccess) {
+          throw new ForbiddenException('You can only view users within your organization');
+        }
+      }
+    }
+    
     const user = await this.userService.findOne(id);
     const userDto = plainToInstance(UserResponseDto, user, { excludeExtraneousValues: true });
     return { user: userDto };
@@ -384,6 +461,32 @@ export class UserController {
       message: 'Profile picture uploaded successfully',
       profilePictureUrl: result.url,
     };
+  }
+
+  @Get('me/activity')
+  @ApiOperation({ 
+    summary: 'Get current user activity',
+    description: 'Retrieves login history, connected apps, and recent actions for the authenticated user.'
+  })
+  @ApiQuery({
+    name: 'timeRange',
+    required: false,
+    description: 'Time range filter for activity data',
+    enum: ['1h', '3h', '6h', '12h', '24h', '3d', '7d', '30d'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User activity retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getMyActivity(
+    @CurrentUser() user: User,
+    @Query('timeRange') timeRange?: string,
+  ) {
+    return await this.userService.getUserActivity(user.id, timeRange);
   }
 
   @Get(`:id(${UUID_PARAM_PATTERN})/profile`)
