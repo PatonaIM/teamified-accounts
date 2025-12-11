@@ -161,12 +161,19 @@ export default function MyProfilePage() {
   const [activityTimeRange, setActivityTimeRange] = useState<string>('7d');
   const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
 
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     loadProfile();
     fetchMyActivity();
   }, []);
 
   useEffect(() => {
+    // Skip the initial mount (already fetched above)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     fetchMyActivity();
   }, [activityTimeRange]);
 
@@ -213,32 +220,34 @@ export default function MyProfilePage() {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const profileResult = await profileService.getProfileData();
-      let emailsResult: UserEmail[] = [];
-      let emailsFailed = false;
       
-      try {
-        emailsResult = await userEmailsService.getMyEmails();
-      } catch (error) {
-        console.error('Failed to load user emails:', error);
-        emailsFailed = true;
-      }
-
-      try {
-        const profileResponse = await api.get('/v1/auth/me/profile');
-        if (profileResponse.data.passwordUpdatedAt) {
-          setPasswordUpdatedAt(profileResponse.data.passwordUpdatedAt);
-        }
-      } catch (error) {
-        console.error('Failed to load password updated date:', error);
+      // Track whether email fetch actually failed
+      let emailsFetchFailed = false;
+      
+      // Run all API calls in parallel for faster loading
+      const [profileResult, emailsResult, passwordResult] = await Promise.all([
+        profileService.getProfileData(),
+        userEmailsService.getMyEmails().catch((error) => {
+          console.error('Failed to load user emails:', error);
+          emailsFetchFailed = true;
+          return [] as UserEmail[];
+        }),
+        api.get('/v1/auth/me/profile').catch((error) => {
+          console.error('Failed to load password updated date:', error);
+          return { data: {} };
+        }),
+      ]);
+      
+      if (passwordResult.data?.passwordUpdatedAt) {
+        setPasswordUpdatedAt(passwordResult.data.passwordUpdatedAt);
       }
       
-      console.log('MyProfilePage: Loaded profile data:', profileResult);
-      console.log('MyProfilePage: Loaded user emails:', emailsResult);
       setProfileData(profileResult);
       setUserEmails(emailsResult);
-      setEmailsLoadError(emailsFailed);
+      setEmailsLoadError(emailsFetchFailed);
       setProfilePicture(profileResult.profileData?.profilePicture || null);
+      console.log('MyProfilePage: Loaded profile data:', profileResult);
+      console.log('MyProfilePage: Loaded user emails:', emailsResult);
     } catch (error) {
       console.error('Failed to load profile:', error);
       showSnackbar('Failed to load profile data', 'error');

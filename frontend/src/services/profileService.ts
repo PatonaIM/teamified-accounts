@@ -332,21 +332,14 @@ class ProfileService {
       
       // Merge user data into profile data if available
       if (userData) {
-        console.log('profileService: userData found:', userData);
-        console.log('profileService: userData.roles:', userData.roles);
         convertedProfileData.firstName = userData.firstName || '';
         convertedProfileData.lastName = userData.lastName || '';
         convertedProfileData.emailAddress = userData.email || '';
         convertedProfileData.id = userData.id || '';
         convertedProfileData.roles = userData.roles || [];
         convertedProfileData.organizations = userData.organizations || [];
-        // Include the profileData with profilePicture from the user data
         convertedProfileData.profileData = userData.profileData || {};
-        console.log('profileService: Set convertedProfileData.roles to:', convertedProfileData.roles);
-        console.log('profileService: Set convertedProfileData.organizations to:', convertedProfileData.organizations);
-        console.log('profileService: Set convertedProfileData.profileData.profilePicture to:', userData.profileData?.profilePicture);
       } else {
-        console.log('profileService: userData is null, using JWT fallback');
         // Use fallback data from JWT token
         const token = localStorage.getItem('teamified_access_token');
         if (token) {
@@ -355,16 +348,11 @@ class ProfileService {
             convertedProfileData.id = payload.sub || '';
             convertedProfileData.emailAddress = payload.email || '';
             convertedProfileData.roles = payload.roles || [];
-            console.log('profileService: JWT payload.roles:', payload.roles);
-            console.log('profileService: Set convertedProfileData.roles to:', convertedProfileData.roles);
           } catch (e) {
             // Silent fail - use empty values
-            console.log('profileService: Failed to parse JWT:', e);
           }
         }
       }
-      
-      console.log('profileService: Returning profile data with roles:', convertedProfileData.roles);
       
       return convertedProfileData;
     } catch (error) {

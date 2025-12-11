@@ -181,25 +181,20 @@ const MyOrganizationPage: React.FC = () => {
   const loadOrganizations = async () => {
     setLoading(true);
     try {
-      // Always load the user's organizations first
+      // Load all user's organizations in a single API call
       const orgs = await organizationsService.getMyOrganizations();
       setOrganizations(orgs);
       
       if (urlSlug) {
-        // Try to load the specific organization by slug
-        try {
-          const org = await organizationsService.getBySlug(urlSlug);
-          setSelectedOrg(org);
-        } catch (err: any) {
-          console.error('Failed to load organization by slug:', err);
-          if (err?.response?.status === 403) {
-            setError('You do not have access to this organization');
-          } else if (err?.response?.status === 404) {
-            setError('Organization not found');
-          } else {
-            setError('Failed to load organization');
-          }
-          // If slug lookup fails but user has organizations, redirect to first one
+        // Find the organization from the already-loaded list (no extra API call)
+        const matchingOrg = orgs.find(org => org.slug === urlSlug);
+        
+        if (matchingOrg) {
+          setSelectedOrg(matchingOrg);
+        } else {
+          // Org not found in user's organizations
+          setError('Organization not found or you do not have access');
+          // Redirect to first available org if user has any
           if (orgs.length > 0) {
             navigate(`/organization/${orgs[0].slug}`, { replace: true });
           }

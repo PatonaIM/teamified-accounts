@@ -110,18 +110,15 @@ export class UserService {
   }
 
   async findOne(id: string): Promise<User> {
-    console.log('UserService.findOne: Looking for user with ID:', id);
     const user = await this.userRepository.findOne({
       where: { id },
       relations: ['userRoles', 'organizationMembers', 'organizationMembers.organization'],
     });
 
     if (!user) {
-      console.log('UserService.findOne: User not found for ID:', id);
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    console.log('UserService.findOne: Found user:', { id: user.id, email: user.email, roles: user.userRoles?.map(r => r.roleType) });
     return user;
   }
 

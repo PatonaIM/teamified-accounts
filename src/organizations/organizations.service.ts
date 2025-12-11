@@ -473,39 +473,68 @@ export class OrganizationsService {
       return [];
     }
     
-    const organizations: OrganizationResponseDto[] = [];
+    // Collect org IDs to fetch
+    let orgIds: string[] = [];
     
-    // For internal users with canViewAll, return their organization memberships
     if (policy.canViewAll) {
+      // For internal users, get org IDs from their active memberships
       const activeMemberships = enrichedUser.organizationMembers?.filter(
         om => om.status === 'active'
       ) || [];
-      
-      for (const membership of activeMemberships) {
-        try {
-          const org = await this.findOne(membership.organizationId, enrichedUser);
-          organizations.push(org);
-        } catch (error) {
-          this.logger.warn(`Could not fetch organization ${membership.organizationId} for user ${currentUser.id}`);
-        }
-      }
-      
-      return organizations;
+      orgIds = activeMemberships.map(om => om.organizationId);
+    } else {
+      // For client users, use the allowed org IDs from policy
+      orgIds = policy.allowedOrgIds;
     }
     
-    // For client users, use the allowed org IDs from policy
-    if (policy.allowedOrgIds.length === 0) {
+    if (orgIds.length === 0) {
       return [];
     }
     
-    for (const orgId of policy.allowedOrgIds) {
-      try {
-        const org = await this.findOne(orgId, enrichedUser);
-        organizations.push(org);
-      } catch (error) {
-        this.logger.warn(`Could not fetch organization ${orgId} for user ${currentUser.id}`);
-      }
-    }
+    // Batch fetch all organizations with member counts in a single query
+    const orgsWithCounts = await this.organizationRepository
+      .createQueryBuilder('org')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .select([
+        'org.id',
+        'org.name',
+        'org.slug',
+        'org.industry',
+        'org.companySize',
+        'org.logoUrl',
+        'org.website',
+        'org.settings',
+        'org.subscriptionTier',
+        'org.subscriptionStatus',
+        'org.createdAt',
+        'org.updatedAt',
+      ])
+      .addSelect('COUNT(DISTINCT memberUser.id)', 'memberCount')
+      .where('org.id IN (:...orgIds)', { orgIds })
+      .andWhere('org.deletedAt IS NULL')
+      .groupBy('org.id')
+      .getRawAndEntities();
+    
+    // Map results to response DTOs
+    const organizations: OrganizationResponseDto[] = orgsWithCounts.entities.map((org, index) => {
+      const raw = orgsWithCounts.raw[index];
+      return {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        industry: org.industry,
+        companySize: org.companySize,
+        logoUrl: org.logoUrl,
+        website: org.website,
+        settings: org.settings,
+        subscriptionTier: org.subscriptionTier,
+        subscriptionStatus: org.subscriptionStatus,
+        createdAt: org.createdAt,
+        updatedAt: org.updatedAt,
+        memberCount: parseInt(raw.memberCount, 10) || 0,
+      };
+    });
     
     return organizations;
   }
