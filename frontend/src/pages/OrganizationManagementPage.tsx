@@ -155,6 +155,7 @@ const OrganizationManagementPage: React.FC = () => {
   // Confirmation dialogs state
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showNLWFConfirm, setShowNLWFConfirm] = useState(false);
+  const [showLastAdminError, setShowLastAdminError] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Prevent duplicate API calls by tracking if we're already loading
@@ -648,8 +649,16 @@ const OrganizationManagementPage: React.FC = () => {
       setShowRemoveConfirm(false);
       handleCloseUserMenu();
       loadMembers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove user from organization');
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to remove user from organization';
+      
+      // Check if this is a "last admin" error
+      if (errorMessage.toLowerCase().includes('last admin') || errorMessage.toLowerCase().includes('assign another admin')) {
+        setShowRemoveConfirm(false);
+        setShowLastAdminError(true);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -1897,6 +1906,30 @@ const OrganizationManagementPage: React.FC = () => {
             startIcon={actionLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
             {actionLoading ? 'Updating...' : 'Mark as NLWF'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Last Admin Error Dialog */}
+      <Dialog open={showLastAdminError} onClose={() => setShowLastAdminError(false)}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+          <Warning color="error" />
+          Cannot Remove Admin
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            <strong>{selectedMember?.userName}</strong> is the only admin in this organization and cannot be removed.
+          </Typography>
+          <Typography color="text.secondary">
+            Every organization must have at least one admin. To remove this user, please first assign another user as an admin of this organization.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            variant="contained" 
+            onClick={() => setShowLastAdminError(false)}
+          >
+            Understood
           </Button>
         </DialogActions>
       </Dialog>

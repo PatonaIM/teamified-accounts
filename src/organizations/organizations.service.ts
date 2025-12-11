@@ -1134,6 +1134,26 @@ export class OrganizationsService {
       },
     });
 
+    // Check if the user being removed is an admin (client_admin or super_admin)
+    const isAdminRole = userRole?.roleType === RoleType.CLIENT_ADMIN;
+    
+    if (isAdminRole) {
+      // Count how many admins exist in this organization
+      const adminCount = await this.userRoleRepository.count({
+        where: {
+          scope: 'organization',
+          scopeEntityId: organizationId,
+          roleType: RoleType.CLIENT_ADMIN,
+        },
+      });
+
+      if (adminCount <= 1) {
+        throw new BadRequestException(
+          'Cannot remove the last admin from this organization. Please assign another admin before removing this user.'
+        );
+      }
+    }
+
     if (userRole) {
       await this.userRoleRepository.remove(userRole);
     }
