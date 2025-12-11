@@ -485,12 +485,12 @@ export default function MyProfilePage() {
   const personalEmails = userEmails.filter(e => e.emailType === 'personal');
   const workEmails = userEmails.filter(e => e.emailType === 'work');
   
-  const workEmailsByOrg = workEmails.reduce((acc, email) => {
-    const orgName = email.organization?.name || 'Unknown Organization';
-    if (!acc[orgName]) {
-      acc[orgName] = [];
+  const workEmailsByOrgId = workEmails.reduce((acc, email) => {
+    const orgId = email.organization?.id || email.organizationId || 'unknown';
+    if (!acc[orgId]) {
+      acc[orgId] = [];
     }
-    acc[orgName].push(email);
+    acc[orgId].push(email);
     return acc;
   }, {} as Record<string, UserEmail[]>);
 
@@ -794,39 +794,6 @@ export default function MyProfilePage() {
             )}
           </Box>
 
-          {Object.keys(workEmailsByOrg).length > 0 && (
-            <>
-              <Divider />
-              
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <WorkIcon color="primary" fontSize="small" />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Work Emails
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Stack spacing={2}>
-                  {Object.entries(workEmailsByOrg).map(([orgName, emails]) => (
-                    <Box key={orgName}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                          {orgName}
-                        </Typography>
-                      </Box>
-                      <Stack spacing={1} sx={{ pl: 3 }}>
-                        {emails.map(email => renderEmailRow(email))}
-                      </Stack>
-                    </Box>
-                  ))}
-                </Stack>
-              </Box>
-            </>
-          )}
-
           <Divider />
 
           <Box>
@@ -872,57 +839,107 @@ export default function MyProfilePage() {
             
             {organizations.length > 0 ? (
               <Stack spacing={2}>
-                {organizations.map(org => (
-                  <Box 
-                    key={org.organizationId}
-                    onClick={() => org.organizationSlug && navigate(`/organization/${org.organizationSlug}`)}
-                    sx={{ 
-                      p: 2,
-                      borderRadius: 2,
-                      bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                      border: '1px solid',
-                      borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-                      cursor: org.organizationSlug ? 'pointer' : 'default',
-                      transition: 'all 0.2s ease',
-                      '&:hover': org.organizationSlug ? {
-                        bgcolor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                        borderColor: 'primary.main',
-                      } : {},
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar
-                          src={org.organizationLogoUrl || undefined}
-                          variant="circular"
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            bgcolor: org.organizationLogoUrl ? 'transparent' : (isDarkMode ? 'primary.dark' : 'primary.light'),
-                          }}
-                        >
-                          {!org.organizationLogoUrl && (
-                            <BusinessIcon sx={{ fontSize: 24, color: isDarkMode ? 'white' : 'primary.main' }} />
-                          )}
-                        </Avatar>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                          {org.organizationName}
-                        </Typography>
+                {organizations.map(org => {
+                  const orgWorkEmails = workEmailsByOrgId[org.organizationId] || [];
+                  return (
+                    <Box 
+                      key={org.organizationId}
+                      sx={{ 
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                        border: '1px solid',
+                        borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      <Box 
+                        onClick={() => org.organizationSlug && navigate(`/organization/${org.organizationSlug}`)}
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          cursor: org.organizationSlug ? 'pointer' : 'default',
+                          transition: 'all 0.2s ease',
+                          borderRadius: 1,
+                          mx: -1,
+                          px: 1,
+                          py: 0.5,
+                          '&:hover': org.organizationSlug ? {
+                            bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                          } : {},
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar
+                            src={org.organizationLogoUrl || undefined}
+                            variant="circular"
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              bgcolor: org.organizationLogoUrl ? 'transparent' : (isDarkMode ? 'primary.dark' : 'primary.light'),
+                            }}
+                          >
+                            {!org.organizationLogoUrl && (
+                              <BusinessIcon sx={{ fontSize: 24, color: isDarkMode ? 'white' : 'primary.main' }} />
+                            )}
+                          </Avatar>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {org.organizationName}
+                          </Typography>
+                        </Box>
+                        <Chip 
+                          label={formatRoleType(org.roleType)} 
+                          size="small" 
+                          color="primary"
+                          sx={{ fontWeight: 500 }}
+                        />
                       </Box>
-                      <Chip 
-                        label={formatRoleType(org.roleType)} 
-                        size="small" 
-                        color="primary"
-                        sx={{ fontWeight: 500 }}
-                      />
+                      
+                      {orgWorkEmails.length > 0 && (
+                        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                            <WorkIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              Work Email
+                            </Typography>
+                          </Box>
+                          <Stack spacing={1}>
+                            {orgWorkEmails.map(email => renderEmailRow(email))}
+                          </Stack>
+                        </Box>
+                      )}
                     </Box>
-                  </Box>
-                ))}
+                  );
+                })}
               </Stack>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                 No organizational access. Accept pending invitations to join organizations.
               </Typography>
+            )}
+            
+            {workEmailsByOrgId['unknown']?.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Box 
+                  sx={{ 
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                    border: '1px solid',
+                    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                    <WorkIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      Other Work Emails
+                    </Typography>
+                  </Box>
+                  <Stack spacing={1}>
+                    {workEmailsByOrgId['unknown'].map(email => renderEmailRow(email))}
+                  </Stack>
+                </Box>
+              </Box>
             )}
           </Box>
 
