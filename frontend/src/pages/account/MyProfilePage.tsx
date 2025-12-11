@@ -919,29 +919,9 @@ export default function MyProfilePage() {
                   </Box>
                 ))}
               </Stack>
-            ) : profileData.roles && profileData.roles.length > 0 ? (
-              <Box 
-                sx={{ 
-                  p: 2,
-                  borderRadius: 2,
-                  bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                }}
-              >
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {profileData.roles.map((role, index) => (
-                    <Chip 
-                      key={index}
-                      label={formatRoleType(role)} 
-                      size="small" 
-                      color="primary"
-                      sx={{ fontWeight: 500 }}
-                    />
-                  ))}
-                </Stack>
-              </Box>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No organizational roles assigned
+                No organizational access. Accept pending invitations to join organizations.
               </Typography>
             )}
           </Box>
