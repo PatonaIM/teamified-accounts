@@ -39,6 +39,7 @@ import {
   FormControl,
   InputLabel,
   LinearProgress,
+  Menu,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -73,11 +74,14 @@ import {
   Apps,
   FilterList,
   Block,
+  MoreVert,
+  PersonRemove,
 } from '@mui/icons-material';
 import { formatDistanceToNow, format } from 'date-fns';
 import userService, { type User } from '../services/userService';
 import roleService from '../services/roleService';
 import api from '../services/api';
+import organizationsService from '../services/organizationsService';
 import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
 
 interface UserRole {
@@ -178,6 +182,13 @@ export default function UserDetailPage() {
 
   // Verification email state
   const [sendingVerification, setSendingVerification] = useState(false);
+
+  // Organization removal state
+  const [orgMenuAnchor, setOrgMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedOrg, setSelectedOrg] = useState<{ organizationId: string; organizationName: string; roleType: string } | null>(null);
+  const [showRemoveOrgConfirm, setShowRemoveOrgConfirm] = useState(false);
+  const [showLastAdminError, setShowLastAdminError] = useState(false);
+  const [removingFromOrg, setRemovingFromOrg] = useState(false);
 
   const navigationState = location.state as { 
     organizationId?: string; 
@@ -549,6 +560,41 @@ export default function UserDetailPage() {
     }
   };
 
+  // Organization menu handlers
+  const handleOpenOrgMenu = (event: React.MouseEvent<HTMLElement>, org: { organizationId: string; organizationName: string; roleType: string }) => {
+    setOrgMenuAnchor(event.currentTarget);
+    setSelectedOrg(org);
+  };
+
+  const handleCloseOrgMenu = () => {
+    setOrgMenuAnchor(null);
+  };
+
+  const handleRemoveFromOrg = async () => {
+    if (!selectedOrg || !userId) return;
+    
+    setRemovingFromOrg(true);
+    try {
+      await organizationsService.removeMember(selectedOrg.organizationId, userId);
+      setSnackbar({ open: true, message: `User removed from ${selectedOrg.organizationName} successfully`, severity: 'success' });
+      setShowRemoveOrgConfirm(false);
+      handleCloseOrgMenu();
+      fetchUserDetails(); // Refresh user data to update organizations list
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to remove user from organization';
+      
+      // Check if this is a "last admin" error
+      if (errorMessage.toLowerCase().includes('last admin') || errorMessage.toLowerCase().includes('assign another admin')) {
+        setShowRemoveOrgConfirm(false);
+        setShowLastAdminError(true);
+      } else {
+        setSnackbar({ open: true, message: errorMessage, severity: 'error' });
+      }
+    } finally {
+      setRemovingFromOrg(false);
+    }
+  };
+
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Unknown';
     try {
@@ -858,15 +904,25 @@ export default function UserDetailPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="small"
-                            onClick={() => navigate('/admin/organizations', {
-                              state: { selectedOrganizationId: org.organizationId }
-                            })}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            View Org
-                          </Button>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                              size="small"
+                              onClick={() => navigate('/admin/organizations', {
+                                state: { selectedOrganizationId: org.organizationId }
+                              })}
+                              sx={{ textTransform: 'none' }}
+                            >
+                              View Org
+                            </Button>
+                            {canRemoveUsers && (
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleOpenOrgMenu(e, org)}
+                              >
+                                <MoreVert fontSize="small" />
+                              </IconButton>
+                            )}
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -878,6 +934,63 @@ export default function UserDetailPage() {
                 This user is not a member of any organizations.
               </Alert>
             )}
+
+            {/* Organization Actions Menu */}
+            <Menu
+              anchorEl={orgMenuAnchor}
+              open={Boolean(orgMenuAnchor)}
+              onClose={handleCloseOrgMenu}
+            >
+              <MenuItem onClick={() => { setShowRemoveOrgConfirm(true); handleCloseOrgMenu(); }}>
+                <PersonRemove sx={{ mr: 1, fontSize: 20 }} />
+                Remove from Organization
+              </MenuItem>
+            </Menu>
+
+            {/* Remove from Organization Confirmation Dialog */}
+            <Dialog open={showRemoveOrgConfirm} onClose={() => setShowRemoveOrgConfirm(false)}>
+              <DialogTitle>Remove User from Organization</DialogTitle>
+              <DialogContent>
+                <Typography>
+                  Are you sure you want to remove <strong>{user.firstName} {user.lastName}</strong> from <strong>{selectedOrg?.organizationName}</strong>?
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setShowRemoveOrgConfirm(false)}>Cancel</Button>
+                <Button 
+                  onClick={handleRemoveFromOrg} 
+                  color="error" 
+                  variant="contained"
+                  disabled={removingFromOrg}
+                >
+                  {removingFromOrg ? 'Removing...' : 'Remove'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Last Admin Error Dialog */}
+            <Dialog open={showLastAdminError} onClose={() => setShowLastAdminError(false)}>
+              <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main' }}>
+                <Warning color="error" />
+                Cannot Remove Admin
+              </DialogTitle>
+              <DialogContent>
+                <Typography sx={{ mb: 2 }}>
+                  <strong>{user.firstName} {user.lastName}</strong> is the only admin in <strong>{selectedOrg?.organizationName}</strong> and cannot be removed.
+                </Typography>
+                <Typography color="text.secondary">
+                  Every organization must have at least one admin. To remove this user, please first assign another user as an admin of this organization.
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button 
+                  variant="contained" 
+                  onClick={() => setShowLastAdminError(false)}
+                >
+                  Understood
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Box>
         );
 
