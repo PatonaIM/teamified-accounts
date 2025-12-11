@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { AuthCodeStorageService } from '../auth/services/auth-code-storage.service';
 import { OAuthClientsService } from '../oauth-clients/oauth-clients.service';
 import { JwtTokenService } from '../auth/services/jwt.service';
+import { SessionService } from '../auth/services/session.service';
 import { UserService } from '../users/services/user.service';
 import { UserRolesService } from '../user-roles/services/user-roles.service';
 import { AuthorizeDto } from './dto/authorize.dto';
@@ -33,6 +34,7 @@ export class SsoService {
     private readonly authCodeStorage: AuthCodeStorageService,
     private readonly oauthClientsService: OAuthClientsService,
     private readonly jwtTokenService: JwtTokenService,
+    private readonly sessionService: SessionService,
     private readonly userService: UserService,
     private readonly userRolesService: UserRolesService,
   ) {}
@@ -214,6 +216,13 @@ export class SsoService {
     const tokenFamily = randomUUID();
     const refreshToken = this.jwtTokenService.generateRefreshToken(user, tokenFamily);
 
+    // Create session for refresh token support (required for token refresh to work)
+    // Pass the tokenFamily to ensure session and refresh token are aligned
+    await this.sessionService.createSession(user, refreshToken, {
+      ip: 'sso-client',
+      userAgent: `OAuth Client: ${client.name}`,
+    }, tokenFamily);
+
     // Get user roles
     const userRoles = await this.userRolesService.getUserRoles(user.id);
 
@@ -227,7 +236,7 @@ export class SsoService {
     return {
       access_token: accessToken,
       token_type: 'Bearer',
-      expires_in: 3600, // 1 hour
+      expires_in: 259200, // 72 hours in seconds
       refresh_token: refreshToken,
       user: {
         id: user.id,

@@ -26,8 +26,9 @@ export class SessionService {
     user: User,
     refreshToken: string,
     deviceMetadata: DeviceMetadata,
+    existingTokenFamily?: string,
   ): Promise<Session> {
-    const tokenFamily = this.jwtService.generateTokenFamily();
+    const tokenFamily = existingTokenFamily || this.jwtService.generateTokenFamily();
     const refreshTokenHash = this.jwtService.hashRefreshToken(refreshToken);
     const now = new Date();
     

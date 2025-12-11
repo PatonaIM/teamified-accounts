@@ -45,7 +45,7 @@ export class JwtTokenService {
 
     return this.nestJwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '15m',
+      expiresIn: '72h',
     });
   }
 
