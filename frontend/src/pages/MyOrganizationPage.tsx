@@ -37,6 +37,7 @@ import {
   PersonOff,
   KeyboardArrowDown,
   Construction,
+  ExitToApp,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -132,6 +133,9 @@ const MyOrganizationPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   const [orgSwitcherAnchor, setOrgSwitcherAnchor] = useState<null | HTMLElement>(null);
+  
+  const [showLeaveOrgConfirm, setShowLeaveOrgConfirm] = useState(false);
+  const [leavingOrg, setLeavingOrg] = useState(false);
 
 
   const permissions = useOrganizationPermissions({
@@ -405,6 +409,54 @@ const MyOrganizationPage: React.FC = () => {
     loadMembers();
   };
 
+  const handleLeaveOrganization = async () => {
+    if (!selectedOrg || !user) return;
+    
+    setLeavingOrg(true);
+    try {
+      await organizationsService.removeMember(selectedOrg.id, user.id);
+      setSuccess(`You have left ${selectedOrg.name} successfully!`);
+      setShowLeaveOrgConfirm(false);
+      
+      // Remove this org from the list and switch to another or redirect
+      const remainingOrgs = organizations.filter(org => org.id !== selectedOrg.id);
+      setOrganizations(remainingOrgs);
+      
+      if (remainingOrgs.length > 0) {
+        // Switch to the first remaining organization
+        setSelectedOrg(remainingOrgs[0]);
+        navigate(`/organization/${remainingOrgs[0].slug}`, { replace: true });
+      } else {
+        // No more organizations, redirect to home
+        navigate('/', { replace: true });
+      }
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to leave organization';
+      
+      // Check if this is a "last admin" error
+      if (errorMessage.toLowerCase().includes('last admin') || errorMessage.toLowerCase().includes('assign another admin')) {
+        setShowLeaveOrgConfirm(false);
+        setShowLastAdminError(true);
+        // Set selectedMember to current user for the error dialog
+        setSelectedMember({
+          id: '',
+          organizationId: selectedOrg.id,
+          userId: user.id,
+          userName: `${user.firstName} ${user.lastName}`,
+          userEmail: user.email,
+          roleType: 'client_admin',
+          status: 'active',
+          joinedAt: '',
+          createdAt: '',
+        });
+      } else {
+        setError(errorMessage);
+      }
+    } finally {
+      setLeavingOrg(false);
+    }
+  };
+
   const statusCounts = members.reduce((acc, member) => {
     const status = member.status?.toLowerCase() || 'active';
     acc[status] = (acc[status] || 0) + 1;
@@ -533,54 +585,73 @@ const MyOrganizationPage: React.FC = () => {
       {selectedOrg && (
         <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
           <Box sx={{ p: 3, borderBottom: '1px solid', borderColor: 'divider', position: 'relative' }}>
-            {organizations.length > 1 && (
-              <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-                <Button
-                  onClick={(e) => setOrgSwitcherAnchor(e.currentTarget)}
-                  endIcon={<KeyboardArrowDown />}
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.875rem',
-                    borderColor: 'divider',
-                    color: 'text.secondary',
-                    '&:hover': { bgcolor: 'action.hover', borderColor: 'divider' },
-                  }}
-                >
-                  Switch Organization ({organizations.length} available)
-                </Button>
-                <Menu
-                  anchorEl={orgSwitcherAnchor}
-                  open={Boolean(orgSwitcherAnchor)}
-                  onClose={() => setOrgSwitcherAnchor(null)}
-                >
-                  {organizations.map((org) => (
-                    <MenuItem
-                      key={org.id}
-                      onClick={() => handleOrgSwitch(org)}
-                      selected={org.id === selectedOrg?.id}
-                      sx={{ minWidth: 250 }}
+            <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+              <Stack direction="column" spacing={1} alignItems="flex-end">
+                {organizations.length > 1 && (
+                  <>
+                    <Button
+                      onClick={(e) => setOrgSwitcherAnchor(e.currentTarget)}
+                      endIcon={<KeyboardArrowDown />}
+                      variant="outlined"
+                      size="small"
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: '0.875rem',
+                        borderColor: 'divider',
+                        color: 'text.secondary',
+                        '&:hover': { bgcolor: 'action.hover', borderColor: 'divider' },
+                      }}
                     >
-                      <Avatar
-                        src={org.logoUrl || undefined}
-                        sx={{ width: 32, height: 32, mr: 2, bgcolor: 'primary.main' }}
-                      >
-                        <Business sx={{ fontSize: 16 }} />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {org.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {org.memberCount || 0} users
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </Box>
-            )}
+                      Switch Organization ({organizations.length} available)
+                    </Button>
+                    <Menu
+                      anchorEl={orgSwitcherAnchor}
+                      open={Boolean(orgSwitcherAnchor)}
+                      onClose={() => setOrgSwitcherAnchor(null)}
+                    >
+                      {organizations.map((org) => (
+                        <MenuItem
+                          key={org.id}
+                          onClick={() => handleOrgSwitch(org)}
+                          selected={org.id === selectedOrg?.id}
+                          sx={{ minWidth: 250 }}
+                        >
+                          <Avatar
+                            src={org.logoUrl || undefined}
+                            sx={{ width: 32, height: 32, mr: 2, bgcolor: 'primary.main' }}
+                          >
+                            <Business sx={{ fontSize: 16 }} />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {org.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {org.memberCount || 0} users
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  </>
+                )}
+                {canRemoveUsers && (
+                  <Button
+                    onClick={() => setShowLeaveOrgConfirm(true)}
+                    startIcon={<ExitToApp />}
+                    variant="text"
+                    size="small"
+                    color="error"
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    Leave Organization
+                  </Button>
+                )}
+              </Stack>
+            </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box sx={{ position: 'relative', display: 'inline-block' }}>
                 <Avatar
@@ -1115,6 +1186,27 @@ const MyOrganizationPage: React.FC = () => {
             disabled={actionLoading}
           >
             {actionLoading ? 'Processing...' : 'Mark as NLWF'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Leave Organization Confirmation Dialog */}
+      <Dialog open={showLeaveOrgConfirm} onClose={() => setShowLeaveOrgConfirm(false)}>
+        <DialogTitle>Leave Organization</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to leave <strong>{selectedOrg?.name}</strong>? You will lose access to this organization and its resources.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowLeaveOrgConfirm(false)}>Cancel</Button>
+          <Button 
+            onClick={handleLeaveOrganization} 
+            color="error" 
+            variant="contained"
+            disabled={leavingOrg}
+          >
+            {leavingOrg ? 'Leaving...' : 'Leave Organization'}
           </Button>
         </DialogActions>
       </Dialog>
