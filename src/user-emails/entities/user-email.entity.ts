@@ -18,7 +18,7 @@ export enum EmailType {
 }
 
 @Entity('user_emails')
-@Unique(['email'])
+@Unique(['email', 'organizationId'])
 @Index(['userId'])
 @Index(['email'])
 @Index(['organizationId'])
