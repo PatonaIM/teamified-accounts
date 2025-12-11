@@ -37,7 +37,7 @@ import {
   Cancel,
 } from '@mui/icons-material';
 import type { OrganizationPermissions } from '../../hooks/useOrganizationPermissions';
-import { getRoleColor } from '../../constants/roleMetadata';
+import { getRoleColor, formatRoleDisplay } from '../../constants/roleMetadata';
 import type { OrganizationMember } from '../../services/organizationsService';
 
 const CLIENT_ROLES = [
@@ -215,10 +215,9 @@ const UserDetailDialog: React.FC<UserDetailDialogProps> = ({
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Chip
-                label={member.roleType?.replace('client_', '').replace('internal_', '')}
+                label={formatRoleDisplay(member.roleType)}
                 size="small"
                 color={getRoleColor(member.roleType)}
-                sx={{ textTransform: 'capitalize' }}
               />
               <Chip
                 label={member.status || 'Active'}

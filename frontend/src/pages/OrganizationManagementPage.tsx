@@ -38,7 +38,7 @@ import organizationsService, { type Organization, type OrganizationMember, type 
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
 import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
-import { getRoleColor, getRolePriority } from '../constants/roleMetadata';
+import { getRoleColor, getRolePriority, formatRoleDisplay } from '../constants/roleMetadata';
 
 const COMPANY_SIZES = [
   '1-10',
@@ -1481,7 +1481,7 @@ const OrganizationManagementPage: React.FC = () => {
                                 </Box>
                                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                   <Chip
-                                    label={member.roleType || 'No role'}
+                                    label={formatRoleDisplay(member.roleType)}
                                     size="small"
                                     color={getRoleColor(member.roleType)}
                                     variant="outlined"

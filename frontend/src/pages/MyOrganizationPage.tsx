@@ -45,7 +45,7 @@ import organizationsService, { type Organization, type OrganizationMember } from
 import userService from '../services/userService';
 import OrganizationInvitationModal from '../components/invitations/OrganizationInvitationModal';
 import { useOrganizationPermissions } from '../hooks/useOrganizationPermissions';
-import { getRoleColor, getRolePriority } from '../constants/roleMetadata';
+import { getRoleColor, getRolePriority, formatRoleDisplay } from '../constants/roleMetadata';
 
 const COMPANY_SIZES = [
   '1-10',
@@ -926,10 +926,10 @@ const MyOrganizationPage: React.FC = () => {
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                   <Chip
-                                    label={member.roleType?.replace('client_', '').replace('internal_', '')}
+                                    label={formatRoleDisplay(member.roleType)}
                                     size="small"
                                     color={getRoleColor(member.roleType)}
-                                    sx={{ textTransform: 'capitalize', opacity: isNlwf ? 0.6 : 1 }}
+                                    sx={{ opacity: isNlwf ? 0.6 : 1 }}
                                   />
                                   {(canRemoveUsers || canChangeRoles || canMarkNLWF) && member.userId !== user?.id && (
                                     <IconButton
