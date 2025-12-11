@@ -313,7 +313,7 @@ export default function MyProfilePage() {
 
   const formatRoleType = (roleType: string): string => {
     const acronyms = ['hr', 'it', 'ceo', 'cto', 'cfo', 'coo', 'vp', 'svp', 'evp', 'api', 'sso', 'id'];
-    return roleType
+    const formatted = roleType
       .split('_')
       .map(word => {
         const lowerWord = word.toLowerCase();
@@ -323,6 +323,12 @@ export default function MyProfilePage() {
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
       })
       .join(' ');
+    
+    // Fix any remaining acronym casing issues (e.g., "Hr" -> "HR")
+    return acronyms.reduce((result, acronym) => {
+      const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
+      return result.replace(regex, acronym.toUpperCase());
+    }, formatted);
   };
 
   const formatPasswordUpdatedDate = (dateStr: string | null): string => {
