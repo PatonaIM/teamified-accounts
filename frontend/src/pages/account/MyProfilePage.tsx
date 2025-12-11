@@ -26,6 +26,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   useTheme as useMuiTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -148,6 +152,7 @@ export default function MyProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const [activity, setActivity] = useState<UserActivity | null>(null);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -404,22 +409,22 @@ export default function MyProfilePage() {
     }
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = async (): Promise<boolean> => {
     setPasswordError(null);
     
     if (!currentPassword || !newPassword || !confirmPassword) {
       setPasswordError('All password fields are required');
-      return;
+      return false;
     }
     
     if (newPassword !== confirmPassword) {
       setPasswordError('New passwords do not match');
-      return;
+      return false;
     }
     
     if (newPassword.length < 8) {
       setPasswordError('New password must be at least 8 characters');
-      return;
+      return false;
     }
     
     try {
@@ -433,8 +438,11 @@ export default function MyProfilePage() {
       setNewPassword('');
       setConfirmPassword('');
       setPasswordUpdatedAt(new Date().toISOString());
+      setPasswordModalOpen(false);
+      return true;
     } catch (err: any) {
       setPasswordError(err.response?.data?.message || 'Failed to change password');
+      return false;
     } finally {
       setChangingPassword(false);
     }
@@ -570,38 +578,36 @@ export default function MyProfilePage() {
           )}
         </Box>
         
-        {isEditMode && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {isPersonalEmail && (
-              <Tooltip title="Edit email">
-                <IconButton size="small" onClick={() => handleStartEditEmail(email)}>
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {!email.isVerified && (
-              <Tooltip title="Resend verification email">
-                <IconButton size="small" onClick={() => handleResendVerification(email.id)}>
-                  <SendIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {!email.isPrimary && email.isVerified && (
-              <Tooltip title="Set as primary">
-                <IconButton size="small" onClick={() => handleSetPrimary(email.id)}>
-                  <StarBorderIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {!email.isPrimary && (
-              <Tooltip title="Remove email">
-                <IconButton size="small" color="error" onClick={() => handleRemoveEmail(email.id, email.email)}>
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          {isPersonalEmail && (
+            <Tooltip title="Edit email">
+              <IconButton size="small" onClick={() => handleStartEditEmail(email)}>
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!email.isVerified && (
+            <Tooltip title="Resend verification email">
+              <IconButton size="small" onClick={() => handleResendVerification(email.id)}>
+                <SendIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!email.isPrimary && email.isVerified && (
+            <Tooltip title="Set as primary">
+              <IconButton size="small" onClick={() => handleSetPrimary(email.id)}>
+                <StarBorderIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {!email.isPrimary && (
+            <Tooltip title="Remove email">
+              <IconButton size="small" color="error" onClick={() => handleRemoveEmail(email.id, email.email)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
       </Box>
     );
   };
@@ -675,20 +681,6 @@ export default function MyProfilePage() {
               </Typography>
             </Box>
           </Box>
-          <Tooltip title={isEditMode ? 'Cancel editing' : 'Edit account'}>
-            <IconButton 
-              onClick={() => setIsEditMode(!isEditMode)}
-              sx={{ 
-                bgcolor: isEditMode ? 'error.main' : 'primary.main',
-                color: 'white',
-                '&:hover': {
-                  bgcolor: isEditMode ? 'error.dark' : 'primary.dark',
-                },
-              }}
-            >
-              {isEditMode ? <CloseIcon /> : <EditIcon />}
-            </IconButton>
-          </Tooltip>
         </Box>
 
         <Stack spacing={4}>
@@ -706,7 +698,7 @@ export default function MyProfilePage() {
                   Personal Email
                 </Typography>
               </Box>
-              {isEditMode && !showAddEmailInput && (
+              {!showAddEmailInput && (
                 <Button
                   size="small"
                   startIcon={<AddIcon />}
@@ -736,7 +728,7 @@ export default function MyProfilePage() {
               </Box>
             )}
             
-            {isEditMode && showAddEmailInput && (
+            {showAddEmailInput && (
               <Box 
                 sx={{ 
                   mt: 2,
@@ -829,68 +821,34 @@ export default function MyProfilePage() {
           <Divider />
 
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <LockIcon color="primary" fontSize="small" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Password
-              </Typography>
-            </Box>
-            
-            {isEditMode ? (
-              <Box sx={{ maxWidth: 400 }}>
-                {passwordError && (
-                  <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPasswordError(null)}>
-                    {passwordError}
-                  </Alert>
-                )}
-                <Stack spacing={2}>
-                  <TextField
-                    fullWidth
-                    type="password"
-                    label="Current Password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    size="small"
-                  />
-                  <TextField
-                    fullWidth
-                    type="password"
-                    label="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    size="small"
-                  />
-                  <TextField
-                    fullWidth
-                    type="password"
-                    label="Confirm New Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    size="small"
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleChangePassword}
-                    disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
-                    sx={{ alignSelf: 'flex-start' }}
-                  >
-                    {changingPassword ? <CircularProgress size={24} /> : 'Change Password'}
-                  </Button>
-                </Stack>
-              </Box>
-            ) : (
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  borderRadius: 2, 
-                  bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Last updated: {formatPasswordUpdatedDate(passwordUpdatedAt)}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LockIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Password
                 </Typography>
               </Box>
-            )}
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<LockIcon />}
+                onClick={() => setPasswordModalOpen(true)}
+              >
+                Change Password
+              </Button>
+            </Box>
+            
+            <Box 
+              sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Last updated: {formatPasswordUpdatedDate(passwordUpdatedAt)}
+              </Typography>
+            </Box>
           </Box>
 
           <Divider />
@@ -1244,6 +1202,79 @@ export default function MyProfilePage() {
           </Box>
         </Stack>
       </Paper>
+
+      <Dialog 
+        open={passwordModalOpen} 
+        onClose={() => {
+          setPasswordModalOpen(false);
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setPasswordError(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LockIcon color="primary" />
+          Change Password
+        </DialogTitle>
+        <DialogContent>
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2, mt: 1 }} onClose={() => setPasswordError(null)}>
+              {passwordError}
+            </Alert>
+          )}
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              type="password"
+              label="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              size="small"
+              autoFocus
+            />
+            <TextField
+              fullWidth
+              type="password"
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              size="small"
+            />
+            <TextField
+              fullWidth
+              type="password"
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              size="small"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setPasswordModalOpen(false);
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+              setPasswordError(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleChangePassword}
+            disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+          >
+            {changingPassword ? <CircularProgress size={24} /> : 'Change Password'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Box>
   );
