@@ -181,27 +181,38 @@ const MyOrganizationPage: React.FC = () => {
   const loadOrganizations = async () => {
     setLoading(true);
     try {
+      // Always load the user's organizations first
+      const orgs = await organizationsService.getMyOrganizations();
+      setOrganizations(orgs);
+      
       if (urlSlug) {
-        const org = await organizationsService.getBySlug(urlSlug);
-        setSelectedOrg(org);
-        const orgs = await organizationsService.getMyOrganizations();
-        setOrganizations(orgs);
+        // Try to load the specific organization by slug
+        try {
+          const org = await organizationsService.getBySlug(urlSlug);
+          setSelectedOrg(org);
+        } catch (err: any) {
+          console.error('Failed to load organization by slug:', err);
+          if (err?.response?.status === 403) {
+            setError('You do not have access to this organization');
+          } else if (err?.response?.status === 404) {
+            setError('Organization not found');
+          } else {
+            setError('Failed to load organization');
+          }
+          // If slug lookup fails but user has organizations, redirect to first one
+          if (orgs.length > 0) {
+            navigate(`/organization/${orgs[0].slug}`, { replace: true });
+          }
+        }
       } else {
-        const orgs = await organizationsService.getMyOrganizations();
-        setOrganizations(orgs);
+        // No slug provided, redirect to first organization
         if (orgs.length > 0) {
           navigate(`/organization/${orgs[0].slug}`, { replace: true });
         }
       }
     } catch (err: any) {
       console.error('Failed to load organizations:', err);
-      if (err?.response?.status === 403) {
-        setError('You do not have access to this organization');
-      } else if (err?.response?.status === 404) {
-        setError('Organization not found');
-      } else {
-        setError('Failed to load organization');
-      }
+      setError('Failed to load organizations');
     } finally {
       setLoading(false);
     }
