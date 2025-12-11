@@ -78,6 +78,10 @@ export default function MyProfilePage() {
   const [showAddEmailInput, setShowAddEmailInput] = useState(false);
   const [newEmailAddress, setNewEmailAddress] = useState('');
   const [submittingEmail, setSubmittingEmail] = useState(false);
+  
+  const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
+  const [editingEmailValue, setEditingEmailValue] = useState('');
+  const [updatingEmail, setUpdatingEmail] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -261,6 +265,33 @@ export default function MyProfilePage() {
     }
   };
 
+  const handleStartEditEmail = (email: UserEmail) => {
+    setEditingEmailId(email.id);
+    setEditingEmailValue(email.email);
+  };
+
+  const handleCancelEditEmail = () => {
+    setEditingEmailId(null);
+    setEditingEmailValue('');
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!editingEmailId || !editingEmailValue.trim()) return;
+    
+    try {
+      setUpdatingEmail(true);
+      await userEmailsService.updateEmail(editingEmailId, editingEmailValue.trim());
+      showSnackbar('Email updated successfully. Please check your inbox for verification.', 'success');
+      setEditingEmailId(null);
+      setEditingEmailValue('');
+      await loadProfile();
+    } catch (err: any) {
+      showSnackbar(err.response?.data?.message || err.message || 'Failed to update email', 'error');
+    } finally {
+      setUpdatingEmail(false);
+    }
+  };
+
   const handleChangePassword = async () => {
     setPasswordError(null);
     
@@ -336,67 +367,132 @@ export default function MyProfilePage() {
 
   const organizations = profileData.organizations || [];
 
-  const renderEmailRow = (email: UserEmail) => (
-    <Box 
-      key={email.id}
-      sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        gap: 1,
-        p: 1.5,
-        borderRadius: 2,
-        bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-        <Typography variant="body1">{email.email}</Typography>
-        {email.isPrimary && (
-          <Chip 
-            icon={<StarIcon sx={{ fontSize: 14 }} />} 
-            label="Primary" 
-            size="small" 
-            color="primary" 
-            variant="outlined"
-            sx={{ height: 24 }}
-          />
-        )}
-        {email.isVerified ? (
-          <Tooltip title="Verified">
-            <VerifiedIcon color="success" sx={{ fontSize: 18 }} />
-          </Tooltip>
-        ) : (
-          <Chip label="Unverified" size="small" color="warning" sx={{ height: 24 }} />
-        )}
-      </Box>
-      
-      {isEditMode && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {!email.isVerified && (
-            <Tooltip title="Resend verification email">
-              <IconButton size="small" onClick={() => handleResendVerification(email.id)}>
-                <SendIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+  const renderEmailRow = (email: UserEmail) => {
+    const isEditing = editingEmailId === email.id;
+    const isPersonalEmail = email.emailType === 'personal';
+    
+    if (isEditing && isPersonalEmail) {
+      return (
+        <Box 
+          key={email.id}
+          sx={{ 
+            p: 1.5,
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'primary.main',
+            bgcolor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+            <TextField
+              fullWidth
+              size="small"
+              label="Email Address"
+              type="email"
+              value={editingEmailValue}
+              onChange={(e) => setEditingEmailValue(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && editingEmailValue.trim()) {
+                  handleUpdateEmail();
+                } else if (e.key === 'Escape') {
+                  handleCancelEditEmail();
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleUpdateEmail}
+              disabled={!editingEmailValue.trim() || updatingEmail}
+              sx={{ minWidth: 80 }}
+            >
+              {updatingEmail ? <CircularProgress size={20} /> : 'Save'}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleCancelEditEmail}
+            >
+              Cancel
+            </Button>
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            Changing the email will require re-verification.
+          </Typography>
+        </Box>
+      );
+    }
+    
+    return (
+      <Box 
+        key={email.id}
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          gap: 1,
+          p: 1.5,
+          borderRadius: 2,
+          bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="body1">{email.email}</Typography>
+          {email.isPrimary && (
+            <Chip 
+              icon={<StarIcon sx={{ fontSize: 14 }} />} 
+              label="Primary" 
+              size="small" 
+              color="primary" 
+              variant="outlined"
+              sx={{ height: 24 }}
+            />
           )}
-          {!email.isPrimary && email.isVerified && (
-            <Tooltip title="Set as primary">
-              <IconButton size="small" onClick={() => handleSetPrimary(email.id)}>
-                <StarBorderIcon fontSize="small" />
-              </IconButton>
+          {email.isVerified ? (
+            <Tooltip title="Verified">
+              <VerifiedIcon color="success" sx={{ fontSize: 18 }} />
             </Tooltip>
-          )}
-          {!email.isPrimary && (
-            <Tooltip title="Remove email">
-              <IconButton size="small" color="error" onClick={() => handleRemoveEmail(email.id, email.email)}>
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+          ) : (
+            <Chip label="Unverified" size="small" color="warning" sx={{ height: 24 }} />
           )}
         </Box>
-      )}
-    </Box>
-  );
+        
+        {isEditMode && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {isPersonalEmail && (
+              <Tooltip title="Edit email">
+                <IconButton size="small" onClick={() => handleStartEditEmail(email)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!email.isVerified && (
+              <Tooltip title="Resend verification email">
+                <IconButton size="small" onClick={() => handleResendVerification(email.id)}>
+                  <SendIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!email.isPrimary && email.isVerified && (
+              <Tooltip title="Set as primary">
+                <IconButton size="small" onClick={() => handleSetPrimary(email.id)}>
+                  <StarBorderIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!email.isPrimary && (
+              <Tooltip title="Remove email">
+                <IconButton size="small" color="error" onClick={() => handleRemoveEmail(email.id, email.email)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+        )}
+      </Box>
+    );
+  };
 
   return (
     <Box sx={{ p: 2 }}>

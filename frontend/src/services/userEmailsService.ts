@@ -45,6 +45,11 @@ export const userEmailsService = {
     await api.delete(`/user-emails/${emailId}`);
   },
 
+  async updateEmail(emailId: string, email: string): Promise<UserEmail> {
+    const response = await api.put(`/user-emails/${emailId}`, { email });
+    return response.data;
+  },
+
   async verifyEmail(dto: VerifyEmailDto): Promise<UserEmail> {
     const response = await api.post('/user-emails/verify', dto);
     return response.data;

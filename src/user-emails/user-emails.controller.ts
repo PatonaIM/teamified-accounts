@@ -21,6 +21,7 @@ import {
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UserEmailsService } from './user-emails.service';
 import { AddUserEmailDto } from './dto/add-user-email.dto';
+import { UpdateUserEmailDto } from './dto/update-user-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { UserEmailResponseDto } from './dto/user-email-response.dto';
 
@@ -57,6 +58,27 @@ export class UserEmailsController {
     @Body() dto: AddUserEmailDto,
   ): Promise<UserEmailResponseDto> {
     return this.userEmailsService.addEmail(req.user.userId, dto);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update an existing personal email address' })
+  @ApiParam({ name: 'id', description: 'Email ID to update' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email updated successfully',
+    type: UserEmailResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'Cannot edit work emails' })
+  @ApiResponse({ status: 404, description: 'Email not found' })
+  @ApiResponse({ status: 409, description: 'Email already exists' })
+  async updateEmail(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserEmailDto,
+  ): Promise<UserEmailResponseDto> {
+    return this.userEmailsService.updateEmail(req.user.userId, id, dto.email);
   }
 
   @Delete(':id')

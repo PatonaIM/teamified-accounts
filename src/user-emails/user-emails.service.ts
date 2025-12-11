@@ -122,6 +122,67 @@ export class UserEmailsService {
     this.logger.log(`Email ${email.email} removed from user ${userId}`);
   }
 
+  async updateEmail(userId: string, emailId: string, newEmailAddress: string): Promise<UserEmailResponseDto> {
+    const email = await this.userEmailRepository.findOne({
+      where: { id: emailId, userId },
+      relations: ['organization'],
+    });
+
+    if (!email) {
+      throw new NotFoundException('Email not found');
+    }
+
+    if (email.emailType === EmailType.WORK) {
+      throw new ForbiddenException('Work emails cannot be edited. Contact your organization administrator.');
+    }
+
+    const normalizedEmail = newEmailAddress.toLowerCase().trim();
+
+    if (normalizedEmail === email.email) {
+      return this.toResponseDto(email);
+    }
+
+    const existingEmail = await this.userEmailRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingEmail) {
+      if (existingEmail.userId === userId) {
+        throw new ConflictException('This email is already linked to your account');
+      }
+      throw new ConflictException(
+        'This email is already associated with another account.',
+      );
+    }
+
+    const verificationToken = this.generateVerificationToken();
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
+
+    const oldEmail = email.email;
+    email.email = normalizedEmail;
+    email.isVerified = false;
+    email.verifiedAt = null;
+    email.verificationToken = verificationToken;
+    email.verificationTokenExpiry = verificationTokenExpiry;
+
+    await this.userEmailRepository.save(email);
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user) {
+      await this.sendVerificationEmail(normalizedEmail, user.firstName, verificationToken);
+    }
+
+    this.logger.log(`Email updated from ${oldEmail} to ${normalizedEmail} for user ${userId}`);
+
+    const updatedEmail = await this.userEmailRepository.findOne({
+      where: { id: emailId },
+      relations: ['organization'],
+    });
+
+    return this.toResponseDto(updatedEmail!);
+  }
+
   async verifyEmail(token: string): Promise<{ success: boolean; email: string }> {
     const email = await this.userEmailRepository.findOne({
       where: { verificationToken: token },
