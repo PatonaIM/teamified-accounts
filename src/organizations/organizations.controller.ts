@@ -139,14 +139,14 @@ export class OrganizationsController {
   }
 
   @Get('my-organizations')
-  @Roles('client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager')
   @ApiOperation({ 
     summary: 'Get all my organizations',
     description: `
       Retrieve all organizations that the current user belongs to.
       
       ## Authorization:
-      - All client roles can access their own organizations
+      - All client and internal roles can access their own organizations
       
       ## Response:
       - List of organization details for all user's organizations

@@ -469,11 +469,34 @@ export class OrganizationsService {
     
     const policy = this.buildOrgAccessPolicy(enrichedUser);
     
-    if (policy.noAccess || policy.allowedOrgIds.length === 0) {
+    if (policy.noAccess) {
       return [];
     }
     
     const organizations: OrganizationResponseDto[] = [];
+    
+    // For internal users with canViewAll, return their organization memberships
+    if (policy.canViewAll) {
+      const activeMemberships = enrichedUser.organizationMembers?.filter(
+        om => om.status === 'active'
+      ) || [];
+      
+      for (const membership of activeMemberships) {
+        try {
+          const org = await this.findOne(membership.organizationId, enrichedUser);
+          organizations.push(org);
+        } catch (error) {
+          this.logger.warn(`Could not fetch organization ${membership.organizationId} for user ${currentUser.id}`);
+        }
+      }
+      
+      return organizations;
+    }
+    
+    // For client users, use the allowed org IDs from policy
+    if (policy.allowedOrgIds.length === 0) {
+      return [];
+    }
     
     for (const orgId of policy.allowedOrgIds) {
       try {
