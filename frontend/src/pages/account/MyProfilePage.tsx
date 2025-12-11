@@ -845,10 +845,16 @@ export default function MyProfilePage() {
                   return (
                     <Box 
                       key={org.organizationId}
+                      onClick={() => org.organizationSlug && navigate(`/organization/${org.organizationSlug}`)}
                       sx={{ 
                         p: 2,
                         borderRadius: 2,
                         bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                        cursor: org.organizationSlug ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease',
+                        '&:hover': org.organizationSlug ? {
+                          bgcolor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                        } : {},
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
