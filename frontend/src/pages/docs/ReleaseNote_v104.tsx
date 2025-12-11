@@ -387,6 +387,57 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
+          {/* 8. SSO Token & Session Fixes */}
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Security color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                8. SSO Token & Session Fixes
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Critical fixes to the OAuth 2.0 SSO token exchange flow, ensuring proper session management 
+              and token refresh functionality for client applications.
+            </Typography>
+            
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Access Token Expiration Corrected" 
+                  secondary="Access tokens now correctly expire after 72 hours as documented, changed from the previous 15-minute misconfiguration"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Token Response expires_in Fixed" 
+                  secondary="The expires_in field in token responses now returns 259200 seconds (72 hours) to match actual token lifetime"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="SSO Session Creation Added" 
+                  secondary="Token exchange now properly creates session records, fixing 401 errors when refreshing tokens obtained via SSO"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Token Family Alignment" 
+                  secondary="Session records now use the same token family as their refresh tokens, ensuring proper token rotation tracking"
+                />
+              </ListItem>
+            </List>
+
+            <Typography variant="body2" color="warning.main" sx={{ mt: 2, fontStyle: 'italic' }}>
+              Note: Existing refresh tokens issued before this fix will not work. Users must log in again to receive new tokens with proper session tracking.
+            </Typography>
+          </Box>
+
+          <Divider />
+
           <Box sx={{ pt: 1 }}>
             <Button
               startIcon={<ArrowBack />}
