@@ -160,6 +160,9 @@ export default function MyProfilePage() {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityTimeRange, setActivityTimeRange] = useState<string>('7d');
   const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
+  const [connectedAppsExpanded, setConnectedAppsExpanded] = useState(false);
+  const [loginHistoryExpanded, setLoginHistoryExpanded] = useState(false);
+  const [recentActivityExpanded, setRecentActivityExpanded] = useState(false);
 
   const isInitialMount = useRef(true);
 
@@ -568,16 +571,6 @@ export default function MyProfilePage() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="body1">{email.email}</Typography>
-          {email.isPrimary && (
-            <Chip 
-              icon={<StarIcon sx={{ fontSize: 14 }} />} 
-              label="Primary" 
-              size="small" 
-              color="primary" 
-              variant="outlined"
-              sx={{ height: 24 }}
-            />
-          )}
           {email.isVerified ? (
             <Tooltip title="Verified">
               <VerifiedIcon color="success" sx={{ fontSize: 18 }} />
@@ -704,7 +697,7 @@ export default function MyProfilePage() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <EmailIcon color="primary" fontSize="small" />
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Personal Email
+                  Primary Email
                 </Typography>
               </Box>
               {!showAddEmailInput && (
@@ -949,14 +942,31 @@ export default function MyProfilePage() {
             {activityLoading && <LinearProgress sx={{ mb: 2 }} />}
 
             <Stack spacing={3}>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                  <AppsIcon fontSize="small" color="primary" />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Connected Applications
-                  </Typography>
-                </Stack>
+              <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                <Box 
+                  onClick={() => setConnectedAppsExpanded(!connectedAppsExpanded)}
+                  sx={{ 
+                    p: 2, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    '&:hover': { bgcolor: isDarkMode ? 'action.hover' : 'grey.50' },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <AppsIcon fontSize="small" color="primary" />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Connected Applications
+                    </Typography>
+                  </Stack>
+                  <IconButton size="small">
+                    {connectedAppsExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                  </IconButton>
+                </Box>
                 
+                <Collapse in={connectedAppsExpanded}>
+                  <Box sx={{ p: 2, pt: 0 }}>
                 {activity?.connectedApps && activity.connectedApps.length > 0 ? (
                   <Stack spacing={1.5}>
                     {activity.connectedApps.map((app) => {
@@ -1081,16 +1091,35 @@ export default function MyProfilePage() {
                     No connected applications found in this time range.
                   </Typography>
                 )}
+                  </Box>
+                </Collapse>
               </Paper>
 
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                  <LoginIcon fontSize="small" color="primary" />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Login History
-                  </Typography>
-                </Stack>
+              <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                <Box 
+                  onClick={() => setLoginHistoryExpanded(!loginHistoryExpanded)}
+                  sx={{ 
+                    p: 2, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    '&:hover': { bgcolor: isDarkMode ? 'action.hover' : 'grey.50' },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <LoginIcon fontSize="small" color="primary" />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Login History
+                    </Typography>
+                  </Stack>
+                  <IconButton size="small">
+                    {loginHistoryExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                  </IconButton>
+                </Box>
                 
+                <Collapse in={loginHistoryExpanded}>
+                  <Box sx={{ p: 2, pt: 0 }}>
                 {activity?.loginHistory && activity.loginHistory.length > 0 ? (
                   <TableContainer>
                     <Table size="small">
@@ -1128,28 +1157,50 @@ export default function MyProfilePage() {
                     No login history available in this time range.
                   </Typography>
                 )}
+                  </Box>
+                </Collapse>
               </Paper>
 
               {activity?.recentActions && activity.recentActions.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                    <TimelineIcon fontSize="small" color="primary" />
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      Recent Activity
-                    </Typography>
-                  </Stack>
-                  <Stack spacing={0.5}>
-                    {activity.recentActions.slice(0, 8).map((action, index) => (
-                      <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
-                        <Typography variant="caption" sx={{ flex: 1 }}>
-                          {action.action.replace(/_/g, ' ')} - {action.entityType}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                          {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
-                        </Typography>
+                <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                  <Box 
+                    onClick={() => setRecentActivityExpanded(!recentActivityExpanded)}
+                    sx={{ 
+                      p: 2, 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      '&:hover': { bgcolor: isDarkMode ? 'action.hover' : 'grey.50' },
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <TimelineIcon fontSize="small" color="primary" />
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        Recent Activity
+                      </Typography>
+                    </Stack>
+                    <IconButton size="small">
+                      {recentActivityExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                    </IconButton>
+                  </Box>
+                  
+                  <Collapse in={recentActivityExpanded}>
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      <Stack spacing={0.5}>
+                        {activity.recentActions.slice(0, 8).map((action, index) => (
+                          <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                            <Typography variant="caption" sx={{ flex: 1 }}>
+                              {action.action.replace(/_/g, ' ')} - {action.entityType}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                              {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
+                            </Typography>
+                          </Stack>
+                        ))}
                       </Stack>
-                    ))}
-                  </Stack>
+                    </Box>
+                  </Collapse>
                 </Paper>
               )}
             </Stack>
