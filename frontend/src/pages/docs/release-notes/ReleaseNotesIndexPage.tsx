@@ -23,19 +23,12 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
-    version: '1.0.5',
-    date: 'December 11, 2025',
-    title: 'Profile Page Improvements & Email Organization',
-    summary: 'Renamed Personal Email to Primary Email, work emails now shown within organization cards, collapsible Activity Stats sections, and proper acronym capitalization for role badges (HR, IT, CEO, etc.).',
-    path: '/docs/release-notes/2025-12-11',
-    isLatest: true,
-  },
-  {
     version: '1.0.4',
     date: 'December 13, 2025',
     title: 'Multi-Identity SSO & Account Security',
-    summary: 'Users can now link multiple email addresses (personal and work) to a single account. New Account Security page for managing linked emails and self-service password changes. Smart identity resolution enables login with any linked email using one password.',
+    summary: 'Users can link multiple emails to one account with smart identity resolution. Profile page improvements include Primary Email section, work emails in org cards, collapsible activity sections, and proper role badge formatting (HR, IT, CEO).',
     path: '/docs/release-notes/2025-12-13',
+    isLatest: true,
   },
   {
     version: '1.0.3',

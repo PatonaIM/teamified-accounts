@@ -302,12 +302,58 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
-          {/* 6. Database Migration */}
+          {/* 6. Profile Page Improvements */}
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Security color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                6. Profile Page Improvements
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Enhanced profile page with clearer email organization and improved activity sections.
+            </Typography>
+            
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Primary Email Section" 
+                  secondary="Renamed 'Personal Email' to 'Primary Email' for clearer terminology"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Work Emails in Organization Cards" 
+                  secondary="Work email addresses now display directly within each organization card in the Organizational Access section"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Collapsible Activity Sections" 
+                  secondary="Connected Applications, Login History, and Recent Activity sections are now collapsible and collapsed by default"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Role Badge Formatting" 
+                  secondary="Role acronyms like HR, IT, CEO, CTO, CFO, VP are now displayed in all caps across all pages"
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          {/* 7. Database Migration */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Storage color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                6. Database Updates
+                7. Database Updates
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
