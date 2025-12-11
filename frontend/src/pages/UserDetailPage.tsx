@@ -676,6 +676,25 @@ export default function UserDetailPage() {
     }
   };
 
+  const formatRoleType = (roleType: string): string => {
+    const acronyms = ['hr', 'it', 'ceo', 'cto', 'cfo', 'coo', 'vp', 'svp', 'evp', 'api', 'sso', 'id'];
+    const formatted = roleType
+      .split('_')
+      .map(word => {
+        const lowerWord = word.toLowerCase();
+        if (acronyms.includes(lowerWord)) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ');
+    
+    return acronyms.reduce((result, acronym) => {
+      const regex = new RegExp(`\\b${acronym}\\b`, 'gi');
+      return result.replace(regex, acronym.toUpperCase());
+    }, formatted);
+  };
+
   const getDeviceIcon = (userAgent: string) => {
     const ua = userAgent.toLowerCase();
     if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
@@ -893,7 +912,7 @@ export default function UserDetailPage() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={org.roleType}
+                            label={formatRoleType(org.roleType)}
                             size="small"
                             sx={getRoleDisplayColor(org.roleType)}
                           />
