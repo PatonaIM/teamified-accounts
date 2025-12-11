@@ -56,6 +56,7 @@ import DevicesIcon from '@mui/icons-material/Devices';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { profileService } from '../../services/profileService';
@@ -127,6 +128,7 @@ interface UserActivity {
 export default function MyProfilePage() {
   const { user, refreshUser } = useAuth();
   const { showSnackbar } = useSnackbar();
+  const navigate = useNavigate();
   const theme = useMuiTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -866,12 +868,19 @@ export default function MyProfilePage() {
                 {organizations.map(org => (
                   <Box 
                     key={org.organizationId}
+                    onClick={() => org.organizationSlug && navigate(`/organization/${org.organizationSlug}`)}
                     sx={{ 
                       p: 2,
                       borderRadius: 2,
                       bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
                       border: '1px solid',
                       borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+                      cursor: org.organizationSlug ? 'pointer' : 'default',
+                      transition: 'all 0.2s ease',
+                      '&:hover': org.organizationSlug ? {
+                        bgcolor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                        borderColor: 'primary.main',
+                      } : {},
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
