@@ -149,7 +149,7 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
           onClick={() => setDialogOpen(true)}
           size="small"
         >
-          Add Personal Email
+          Add Email
         </Button>
       </Box>
 
@@ -263,24 +263,20 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Personal Email Address</DialogTitle>
+        <DialogTitle>Add Email Address</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <TextField
               fullWidth
-              label="Personal Email Address"
+              label="Email Address"
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               sx={{ mb: 2 }}
               autoFocus
-              placeholder="e.g., yourname@gmail.com"
             />
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
               A verification email will be sent to the new address. You must verify the email before it can be used for login.
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Note: Work emails can only be added through employer invitations during onboarding.
             </Typography>
           </Box>
         </DialogContent>
@@ -291,7 +287,7 @@ export function LinkedEmails({ onEmailsUpdated, initialEmails }: LinkedEmailsPro
             variant="contained"
             disabled={!newEmail.trim() || submitting}
           >
-            {submitting ? <CircularProgress size={24} /> : 'Add Personal Email'}
+            {submitting ? <CircularProgress size={24} /> : 'Add Email'}
           </Button>
         </DialogActions>
       </Dialog>

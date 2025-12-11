@@ -541,45 +541,38 @@ export default function MyProfilePage() {
             )}
           </Box>
 
-          <Divider />
-          
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <WorkIcon color="primary" fontSize="small" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Work Emails
-                </Typography>
-              </Box>
-            </Box>
-            
-            {Object.keys(workEmailsByOrg).length > 0 ? (
-              <Stack spacing={2}>
-                {Object.entries(workEmailsByOrg).map(([orgName, emails]) => (
-                  <Box key={orgName}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                      <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                        {orgName}
-                      </Typography>
-                    </Box>
-                    <Stack spacing={1} sx={{ pl: 3 }}>
-                      {emails.map(email => renderEmailRow(email))}
-                    </Stack>
+          {Object.keys(workEmailsByOrg).length > 0 && (
+            <>
+              <Divider />
+              
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WorkIcon color="primary" fontSize="small" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Work Emails
+                    </Typography>
                   </Box>
-                ))}
-              </Stack>
-            ) : (
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                  No work emails linked yet
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  Work emails are added when your employer invites you to join their organization.
-                </Typography>
+                </Box>
+                
+                <Stack spacing={2}>
+                  {Object.entries(workEmailsByOrg).map(([orgName, emails]) => (
+                    <Box key={orgName}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          {orgName}
+                        </Typography>
+                      </Box>
+                      <Stack spacing={1} sx={{ pl: 3 }}>
+                        {emails.map(email => renderEmailRow(email))}
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
               </Box>
-            )}
-          </Box>
+            </>
+          )}
 
           <Divider />
 
