@@ -851,14 +851,39 @@ export default function MyProfilePage() {
                         bgcolor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
                       }}
                     >
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {org.organizationName}
-                      </Typography>
-                      {workEmail && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {workEmail}
-                        </Typography>
-                      )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar
+                            src={org.organizationLogoUrl || undefined}
+                            variant="circular"
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              bgcolor: org.organizationLogoUrl ? 'transparent' : (isDarkMode ? 'primary.dark' : 'primary.light'),
+                            }}
+                          >
+                            {!org.organizationLogoUrl && (
+                              <BusinessIcon sx={{ fontSize: 24, color: isDarkMode ? 'white' : 'primary.main' }} />
+                            )}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                              {org.organizationName}
+                            </Typography>
+                            {workEmail && (
+                              <Typography variant="body2" color="text.secondary">
+                                {workEmail}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        <Chip 
+                          label={formatRoleType(org.roleType)} 
+                          size="small" 
+                          color="primary"
+                          sx={{ fontWeight: 500 }}
+                        />
+                      </Box>
                     </Box>
                   );
                 })}
