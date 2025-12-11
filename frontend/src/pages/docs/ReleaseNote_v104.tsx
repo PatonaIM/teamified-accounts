@@ -105,12 +105,60 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
-          {/* 2. Account Security Page */}
+          {/* 2. Organization Membership Status Filtering */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Security color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                2. Account Security Page
+                2. Organization Membership Status Filtering
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Organizations and organizational access are now filtered based on membership status. 
+              Only organizations where the user has accepted the invitation (active membership) will 
+              appear in the UI. Pending invitations remain hidden until accepted.
+            </Typography>
+            
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Active Membership Filtering" 
+                  secondary="My Organizations and Organizational Access sections only show organizations with 'active' membership status"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Hidden Pending Invitations" 
+                  secondary="Organizations with 'invited' status are hidden until the invitation is accepted"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Profile Page Updates" 
+                  secondary="Organizational Access section no longer shows global roles when no organizations are active"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Consistent Behavior" 
+                  secondary="Backend /me endpoint and frontend profile page now consistently filter by active membership"
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          {/* 3. Account Security Page */}
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Security color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                3. Account Security Page
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -145,12 +193,12 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
-          {/* 3. User Emails API */}
+          {/* 4. User Emails API */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Code color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                3. User Emails API
+                4. User Emails API
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -203,12 +251,12 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
-          {/* 4. Employer-Driven Work Email Provisioning */}
+          {/* 5. Employer-Driven Work Email Provisioning */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Lock color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                4. Employer-Driven Work Email Provisioning
+                5. Employer-Driven Work Email Provisioning
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -254,12 +302,12 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
-          {/* 5. Database Migration */}
+          {/* 6. Database Migration */}
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Storage color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                5. Database Updates
+                6. Database Updates
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
