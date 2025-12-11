@@ -14,6 +14,18 @@ import {
   Alert,
   Button,
   TextField,
+  LinearProgress,
+  Collapse,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   useTheme as useMuiTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -30,6 +42,16 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
+import AppsIcon from '@mui/icons-material/Apps';
+import HistoryIcon from '@mui/icons-material/History';
+import LoginIcon from '@mui/icons-material/Login';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import DevicesIcon from '@mui/icons-material/Devices';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../../hooks/useAuth';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 import { profileService } from '../../services/profileService';
@@ -58,6 +80,44 @@ interface ProfileData {
   roles?: string[];
   organizations?: Organization[];
   passwordUpdatedAt?: string | null;
+}
+
+interface UserActivity {
+  loginHistory: Array<{
+    timestamp: string;
+    ip: string;
+    userAgent: string;
+    deviceType: string;
+  }>;
+  lastAppsUsed: Array<{
+    appName: string;
+    clientId: string;
+    lastUsed: string;
+  }>;
+  recentActions: Array<{
+    action: string;
+    entityType: string;
+    timestamp: string;
+    targetUserEmail?: string;
+  }>;
+  connectedApps: Array<{
+    oauthClientId: string;
+    appName: string;
+    firstLoginAt: string;
+    lastLoginAt: string;
+    loginCount: number;
+    activities: Array<{
+      id: string;
+      action: string;
+      feature?: string;
+      description?: string;
+      createdAt: string;
+    }>;
+    topFeatures: Array<{
+      feature: string;
+      count: number;
+    }>;
+  }>;
 }
 
 export default function MyProfilePage() {
@@ -89,9 +149,61 @@ export default function MyProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
+  const [activity, setActivity] = useState<UserActivity | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityTimeRange, setActivityTimeRange] = useState<string>('7d');
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     loadProfile();
+    fetchMyActivity();
   }, []);
+
+  useEffect(() => {
+    fetchMyActivity();
+  }, [activityTimeRange]);
+
+  const fetchMyActivity = async () => {
+    if (!user?.id) return;
+    
+    setActivityLoading(true);
+    try {
+      const response = await api.get(`/v1/users/${user.id}/activity`, {
+        params: { timeRange: activityTimeRange }
+      });
+      setActivity(response.data);
+    } catch (err) {
+      console.warn('Failed to load user activity:', err);
+      setActivity({
+        loginHistory: [],
+        lastAppsUsed: [],
+        recentActions: [],
+        connectedApps: [],
+      });
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const getDeviceIcon = (userAgent: string): string => {
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      return 'Mobile';
+    }
+    if (ua.includes('tablet') || ua.includes('ipad')) {
+      return 'Tablet';
+    }
+    if (ua.includes('windows')) {
+      return 'Windows';
+    }
+    if (ua.includes('mac')) {
+      return 'Mac';
+    }
+    if (ua.includes('linux')) {
+      return 'Linux';
+    }
+    return 'Unknown';
+  };
 
   const loadProfile = async () => {
     try {
@@ -858,6 +970,260 @@ export default function MyProfilePage() {
                 No organizational roles assigned
               </Typography>
             )}
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <HistoryIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  Activity Stats
+                </Typography>
+              </Box>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <FormControl size="small" sx={{ minWidth: 130 }}>
+                  <InputLabel id="activity-time-range-label">
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <FilterListIcon fontSize="small" />
+                      <span>Range</span>
+                    </Stack>
+                  </InputLabel>
+                  <Select
+                    labelId="activity-time-range-label"
+                    value={activityTimeRange}
+                    label="Range"
+                    onChange={(e) => setActivityTimeRange(e.target.value)}
+                    size="small"
+                  >
+                    <MenuItem value="1h">Last 1 hour</MenuItem>
+                    <MenuItem value="3h">Last 3 hours</MenuItem>
+                    <MenuItem value="6h">Last 6 hours</MenuItem>
+                    <MenuItem value="12h">Last 12 hours</MenuItem>
+                    <MenuItem value="24h">Last 24 hours</MenuItem>
+                    <MenuItem value="3d">Last 3 days</MenuItem>
+                    <MenuItem value="7d">Last week</MenuItem>
+                    <MenuItem value="30d">Last 30 days</MenuItem>
+                  </Select>
+                </FormControl>
+                <IconButton
+                  size="small"
+                  onClick={() => fetchMyActivity()}
+                  disabled={activityLoading}
+                >
+                  {activityLoading ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
+                </IconButton>
+              </Stack>
+            </Box>
+
+            {activityLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+            <Stack spacing={3}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <AppsIcon fontSize="small" color="primary" />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Connected Applications
+                  </Typography>
+                </Stack>
+                
+                {activity?.connectedApps && activity.connectedApps.length > 0 ? (
+                  <Stack spacing={1.5}>
+                    {activity.connectedApps.map((app) => {
+                      const isExpanded = expandedApps.has(app.oauthClientId);
+                      const toggleExpand = () => {
+                        setExpandedApps(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(app.oauthClientId)) {
+                            newSet.delete(app.oauthClientId);
+                          } else {
+                            newSet.add(app.oauthClientId);
+                          }
+                          return newSet;
+                        });
+                      };
+                      
+                      return (
+                        <Paper 
+                          key={app.oauthClientId} 
+                          variant="outlined" 
+                          sx={{ 
+                            overflow: 'hidden',
+                            bgcolor: isDarkMode ? 'background.default' : 'grey.50',
+                          }}
+                        >
+                          <Box
+                            onClick={toggleExpand}
+                            sx={{
+                              p: 1.5,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                bgcolor: isDarkMode ? 'action.hover' : 'grey.100',
+                              },
+                            }}
+                          >
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Stack direction="row" alignItems="center" spacing={1.5}>
+                                <Avatar 
+                                  sx={{ 
+                                    bgcolor: 'primary.main', 
+                                    width: 32, 
+                                    height: 32,
+                                    fontSize: '0.875rem',
+                                  }}
+                                >
+                                  {app.appName.charAt(0).toUpperCase()}
+                                </Avatar>
+                                <Stack spacing={0}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {app.appName}
+                                  </Typography>
+                                  <Stack direction="row" spacing={1.5} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary">
+                                      {app.loginCount} login{app.loginCount !== 1 ? 's' : ''}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      Last: {formatDistanceToNow(new Date(app.lastLoginAt), { addSuffix: true })}
+                                    </Typography>
+                                  </Stack>
+                                </Stack>
+                              </Stack>
+                              <Stack direction="row" alignItems="center" spacing={0.5}>
+                                {!isExpanded && app.topFeatures && app.topFeatures.length > 0 && (
+                                  <Stack direction="row" spacing={0.5}>
+                                    {app.topFeatures.slice(0, 2).map((f, idx) => (
+                                      <Chip
+                                        key={idx}
+                                        label={`${f.feature} (${f.count})`}
+                                        size="small"
+                                        sx={{ fontSize: '0.65rem', height: 20 }}
+                                      />
+                                    ))}
+                                  </Stack>
+                                )}
+                                <IconButton size="small">
+                                  {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                                </IconButton>
+                              </Stack>
+                            </Stack>
+                          </Box>
+                          
+                          <Collapse in={isExpanded}>
+                            <Divider />
+                            <Box sx={{ p: 1.5 }}>
+                              <Stack direction="row" spacing={3} sx={{ mb: 1 }}>
+                                <Stack>
+                                  <Typography variant="caption" color="text.secondary">First Login</Typography>
+                                  <Typography variant="body2">
+                                    {format(new Date(app.firstLoginAt), 'MMM d, yyyy')}
+                                  </Typography>
+                                </Stack>
+                                <Stack>
+                                  <Typography variant="caption" color="text.secondary">Total Logins</Typography>
+                                  <Typography variant="body2">{app.loginCount}</Typography>
+                                </Stack>
+                              </Stack>
+                              {app.topFeatures && app.topFeatures.length > 0 && (
+                                <Box sx={{ mt: 1 }}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                    Top Features
+                                  </Typography>
+                                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.5 }}>
+                                    {app.topFeatures.map((f, idx) => (
+                                      <Chip
+                                        key={idx}
+                                        label={`${f.feature} (${f.count})`}
+                                        size="small"
+                                        sx={{ fontSize: '0.7rem' }}
+                                      />
+                                    ))}
+                                  </Stack>
+                                </Box>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No connected applications found in this time range.
+                  </Typography>
+                )}
+              </Paper>
+
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <LoginIcon fontSize="small" color="primary" />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Login History
+                  </Typography>
+                </Stack>
+                
+                {activity?.loginHistory && activity.loginHistory.length > 0 ? (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Date & Time</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>Device</TableCell>
+                          <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>IP Address</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {activity.loginHistory.slice(0, 10).map((login, index) => (
+                          <TableRow key={index}>
+                            <TableCell sx={{ fontSize: '0.75rem' }}>
+                              {format(new Date(login.timestamp), 'MMM d, yyyy h:mm a')}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '0.75rem' }}>
+                              <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <DevicesIcon fontSize="small" color="action" sx={{ fontSize: 16 }} />
+                                <Typography variant="caption">{getDeviceIcon(login.userAgent)}</Typography>
+                              </Stack>
+                            </TableCell>
+                            <TableCell sx={{ fontSize: '0.75rem' }}>
+                              <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                                {login.ip}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No login history available in this time range.
+                  </Typography>
+                )}
+              </Paper>
+
+              {activity?.recentActions && activity.recentActions.length > 0 && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                    <TimelineIcon fontSize="small" color="primary" />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Recent Activity
+                    </Typography>
+                  </Stack>
+                  <Stack spacing={0.5}>
+                    {activity.recentActions.slice(0, 8).map((action, index) => (
+                      <Stack key={index} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.5 }}>
+                        <Typography variant="caption" sx={{ flex: 1 }}>
+                          {action.action.replace(/_/g, ' ')} - {action.entityType}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                          {formatDistanceToNow(new Date(action.timestamp), { addSuffix: true })}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
           </Box>
 
           <Divider />
