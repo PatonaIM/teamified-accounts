@@ -46,6 +46,12 @@ const AccountLayout: React.FC = () => {
     role.toLowerCase().startsWith('client_')
   );
 
+  const isInternalUser = user?.roles?.some((role: string) =>
+    ['super_admin', 'internal_hr', 'internal_account_manager'].includes(role.toLowerCase())
+  );
+
+  const hasOrganizationAccess = isClientUser || isInternalUser;
+
   const handleThemeToggle = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
   };
@@ -203,7 +209,7 @@ const AccountLayout: React.FC = () => {
               </ListItemButton>
             </ListItem>
 
-            {isClientUser && (
+            {hasOrganizationAccess && (
               <ListItem disablePadding>
                 <ListItemButton
                   selected={!appsDropdownOpen && location.pathname.startsWith('/organization/')}
@@ -240,7 +246,7 @@ const AccountLayout: React.FC = () => {
                   >
                     <Business />
                   </ListItemIcon>
-                  <ListItemText primary="My Organization" />
+                  <ListItemText primary={isInternalUser ? "My Organizations" : "My Organization"} />
                 </ListItemButton>
               </ListItem>
             )}
