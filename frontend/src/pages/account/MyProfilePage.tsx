@@ -14,14 +14,6 @@ import {
   Alert,
   Button,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   useTheme as useMuiTheme,
 } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -83,9 +75,8 @@ export default function MyProfilePage() {
   const [passwordUpdatedAt, setPasswordUpdatedAt] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [addEmailDialogOpen, setAddEmailDialogOpen] = useState(false);
+  const [showAddEmailInput, setShowAddEmailInput] = useState(false);
   const [newEmailAddress, setNewEmailAddress] = useState('');
-  const [newEmailType, setNewEmailType] = useState<'personal' | 'work'>('personal');
   const [submittingEmail, setSubmittingEmail] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -226,11 +217,11 @@ export default function MyProfilePage() {
       setSubmittingEmail(true);
       await userEmailsService.addEmail({
         email: newEmailAddress.trim(),
-        emailType: newEmailType,
+        emailType: 'personal',
       });
       showSnackbar('Email added successfully. Please check your inbox for verification.', 'success');
       setNewEmailAddress('');
-      setAddEmailDialogOpen(false);
+      setShowAddEmailInput(false);
       await loadProfile();
     } catch (err: any) {
       showSnackbar(err.message || 'Failed to add email', 'error');
@@ -507,14 +498,11 @@ export default function MyProfilePage() {
                   Personal Email
                 </Typography>
               </Box>
-              {isEditMode && (
+              {isEditMode && !showAddEmailInput && (
                 <Button
                   size="small"
                   startIcon={<AddIcon />}
-                  onClick={() => {
-                    setNewEmailType('personal');
-                    setAddEmailDialogOpen(true);
-                  }}
+                  onClick={() => setShowAddEmailInput(true)}
                 >
                   Add Email
                 </Button>
@@ -536,6 +524,62 @@ export default function MyProfilePage() {
                 <Typography variant="body1">{profileData.emailAddress}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   Primary account email
+                </Typography>
+              </Box>
+            )}
+            
+            {isEditMode && showAddEmailInput && (
+              <Box 
+                sx={{ 
+                  mt: 2,
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: '1px dashed',
+                  borderColor: 'primary.main',
+                  bgcolor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                }}
+              >
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="New Email Address"
+                    type="email"
+                    value={newEmailAddress}
+                    onChange={(e) => setNewEmailAddress(e.target.value)}
+                    placeholder="Enter email address"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newEmailAddress.trim()) {
+                        handleAddEmail();
+                      } else if (e.key === 'Escape') {
+                        setShowAddEmailInput(false);
+                        setNewEmailAddress('');
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleAddEmail}
+                    disabled={!newEmailAddress.trim() || submittingEmail}
+                    sx={{ minWidth: 80 }}
+                  >
+                    {submittingEmail ? <CircularProgress size={20} /> : 'Add'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setShowAddEmailInput(false);
+                      setNewEmailAddress('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  A verification email will be sent to confirm this address.
                 </Typography>
               </Box>
             )}
@@ -739,46 +783,6 @@ export default function MyProfilePage() {
         </Stack>
       </Paper>
 
-      <Dialog open={addEmailDialogOpen} onClose={() => setAddEmailDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add {newEmailType === 'work' ? 'Work' : 'Personal'} Email Address</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={newEmailAddress}
-              onChange={(e) => setNewEmailAddress(e.target.value)}
-              sx={{ mb: 2 }}
-              autoFocus
-            />
-            <FormControl fullWidth>
-              <InputLabel>Email Type</InputLabel>
-              <Select
-                value={newEmailType}
-                label="Email Type"
-                onChange={(e) => setNewEmailType(e.target.value as 'personal' | 'work')}
-              >
-                <MenuItem value="personal">Personal</MenuItem>
-                <MenuItem value="work">Work</MenuItem>
-              </Select>
-            </FormControl>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              A verification email will be sent to the new address. You must verify the email before it can be used for login.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddEmailDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleAddEmail}
-            variant="contained"
-            disabled={!newEmailAddress.trim() || submittingEmail}
-          >
-            {submittingEmail ? <CircularProgress size={24} /> : 'Add Email'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
