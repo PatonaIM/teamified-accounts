@@ -171,11 +171,9 @@ export default function MyProfilePage() {
   }, [activityTimeRange]);
 
   const fetchMyActivity = async () => {
-    if (!user?.id) return;
-    
     setActivityLoading(true);
     try {
-      const response = await api.get(`/v1/users/${user.id}/activity`, {
+      const response = await api.get('/v1/users/me/activity', {
         params: { timeRange: activityTimeRange }
       });
       setActivity(response.data);

@@ -460,6 +460,32 @@ export class UserController {
     };
   }
 
+  @Get('me/activity')
+  @ApiOperation({ 
+    summary: 'Get current user activity',
+    description: 'Retrieves login history, connected apps, and recent actions for the authenticated user.'
+  })
+  @ApiQuery({
+    name: 'timeRange',
+    required: false,
+    description: 'Time range filter for activity data',
+    enum: ['1h', '3h', '6h', '12h', '24h', '3d', '7d', '30d'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User activity retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getMyActivity(
+    @CurrentUser() user: User,
+    @Query('timeRange') timeRange?: string,
+  ) {
+    return await this.userService.getUserActivity(user.id, timeRange);
+  }
+
   @Get(`:id(${UUID_PARAM_PATTERN})/profile`)
   @UseGuards(RolesGuard)
   @Roles('admin', 'hr')
