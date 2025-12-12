@@ -123,12 +123,25 @@ const GoogleSignupPathPage: React.FC = () => {
         sx={{
           minHeight: '100vh',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          gap: 3,
         }}
       >
         <CircularProgress sx={{ color: 'white' }} />
+        <Button
+          variant="text"
+          onClick={handleBackToLogin}
+          sx={{ 
+            color: 'white', 
+            textTransform: 'none',
+            '&:hover': { textDecoration: 'underline', backgroundColor: 'transparent' }
+          }}
+        >
+          Go back to Login
+        </Button>
       </Box>
     );
   }
