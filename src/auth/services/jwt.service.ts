@@ -106,4 +106,16 @@ export class JwtTokenService {
   hashRefreshToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
+
+  /**
+   * Decode a JWT without verification (useful for id_token_hint)
+   * WARNING: This does NOT verify the signature. Use only for extracting hints.
+   */
+  decode(token: string): JwtPayload | null {
+    try {
+      return this.nestJwtService.decode(token) as JwtPayload | null;
+    } catch {
+      return null;
+    }
+  }
 }

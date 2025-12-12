@@ -438,6 +438,65 @@ export default function ReleaseNote_v104() {
 
           <Divider />
 
+          {/* 9. SSO Logout Endpoint */}
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Lock color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                9. Unified SSO Logout Endpoint
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              New centralized logout endpoint for OAuth 2.0 client applications, enabling proper 
+              RP-initiated logout with session revocation and redirect support.
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              <Link component={RouterLink} to="/docs/developer/session-management" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                View Session Management Guide <OpenInNew fontSize="small" />
+              </Link>
+            </Typography>
+            
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="GET /api/v1/sso/logout Endpoint" 
+                  secondary="Centralized logout that clears httpOnly cookies and revokes all user sessions in the database"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Redirect Support" 
+                  secondary="post_logout_redirect_uri parameter allows clients to receive users back after logout"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Session Revocation" 
+                  secondary="All user sessions and token families are revoked server-side, preventing token reuse"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Client Validation" 
+                  secondary="Optional client_id parameter validates redirect URIs against registered OAuth clients"
+                />
+              </ListItem>
+            </List>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              <strong>Usage:</strong> Client apps should clear local tokens first, then redirect to the logout endpoint:
+            </Typography>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', p: 1, mt: 1, borderRadius: 1 }}>
+              GET /api/v1/sso/logout?post_logout_redirect_uri=https://myapp.com/logged-out
+            </Typography>
+          </Box>
+
+          <Divider />
+
           <Box sx={{ pt: 1 }}>
             <Button
               startIcon={<ArrowBack />}

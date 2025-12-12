@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -55,6 +55,19 @@ export default function DocsSidebar() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
     getInitialExpandedState
   );
+
+  // Auto-expand section when navigating directly to a page
+  useEffect(() => {
+    docsNavConfig.forEach((section) => {
+      const isActive = section.items.some((item) => location.pathname === item.path);
+      if (isActive) {
+        setExpandedSections((prev) => ({
+          ...prev,
+          [section.title]: true,
+        }));
+      }
+    });
+  }, [location.pathname]);
 
   const toggleSection = (title: string) => {
     setExpandedSections((prev) => ({

@@ -474,4 +474,116 @@ export class SsoService {
   async validateClientCredentials(clientId: string, clientSecret: string) {
     return this.oauthClientsService.validateClient(clientId, clientSecret);
   }
+
+  /**
+   * SSO Logout: Revoke user sessions and optionally redirect back to client
+   * 
+   * This endpoint handles RP-initiated logout for OAuth 2.0 clients.
+   * It revokes all user sessions, clears cookies, and redirects to the post_logout_redirect_uri.
+   */
+  async logout(
+    userId: string | null,
+    postLogoutRedirectUri?: string,
+    clientId?: string,
+    state?: string,
+    idTokenHint?: string,
+  ): Promise<{ redirectUrl: string | null; message: string }> {
+    // Try to extract userId from id_token_hint if not already provided
+    // SECURITY: Only trust id_token_hint when we can verify it
+    let effectiveUserId = userId;
+    
+    if (!effectiveUserId && idTokenHint) {
+      // SECURITY: Only trust id_token_hint if we can verify its signature
+      // This prevents attackers from forging tokens to logout arbitrary users
+      try {
+        const payload = this.jwtTokenService.validateAccessToken(idTokenHint);
+        if (payload && payload.sub) {
+          effectiveUserId = payload.sub;
+          this.logger.log(`SSO logout: Identified user ${effectiveUserId} from verified id_token_hint`);
+        }
+      } catch {
+        // Token verification failed - do NOT trust the token
+        // Even with a valid client_id, we cannot safely use an unverified token
+        // as attackers could forge tokens to logout arbitrary users
+        this.logger.warn(`SSO logout: id_token_hint signature verification failed - ignoring hint`);
+      }
+    }
+    
+    // If we have a userId, revoke all their sessions
+    if (effectiveUserId) {
+      await this.sessionService.revokeAllUserSessions(effectiveUserId);
+      this.logger.log(`SSO logout: Revoked all sessions for user ${effectiveUserId}`);
+    }
+
+    // Validate redirect URI if provided
+    // SECURITY: Only allow redirects to registered OAuth client URIs or exact allowlist matches
+    let validatedRedirectUri: string | null = null;
+    
+    if (postLogoutRedirectUri) {
+      if (clientId) {
+        // If client_id is provided, validate the redirect URI against registered URIs
+        const client = await this.oauthClientsService.findByClientId(clientId);
+        if (client && client.is_active) {
+          const redirectUris = Array.isArray(client.redirect_uris)
+            ? client.redirect_uris
+            : [client.redirect_uris];
+          
+          // Check if the post_logout_redirect_uri matches any registered redirect URI
+          // Allow both exact match and origin match for flexibility
+          const postLogoutOrigin = new URL(postLogoutRedirectUri).origin;
+          const isValidRedirect = redirectUris.some(uri => {
+            try {
+              return uri === postLogoutRedirectUri || new URL(uri).origin === postLogoutOrigin;
+            } catch {
+              return false;
+            }
+          });
+          
+          if (isValidRedirect) {
+            validatedRedirectUri = postLogoutRedirectUri;
+          } else {
+            this.logger.warn(
+              `SSO logout: post_logout_redirect_uri ${postLogoutRedirectUri} not in allowed list for client ${clientId}`,
+            );
+          }
+        }
+      } else {
+        // SECURITY: Without client_id, only allow redirects to exact known safe origins
+        // Using strict equality to prevent subdomain/prefix attacks (e.g. accounts.teamified.com.evil.com)
+        try {
+          const redirectOrigin = new URL(postLogoutRedirectUri).origin;
+          
+          // Strict allowlist - exact origin equality only
+          const allowedOrigins = new Set([
+            'https://accounts.teamified.com',
+            'https://teamified.com',
+            'http://localhost:5000',
+            'http://localhost:3000',
+          ]);
+          
+          if (allowedOrigins.has(redirectOrigin)) {
+            validatedRedirectUri = postLogoutRedirectUri;
+          } else {
+            this.logger.warn(
+              `SSO logout: post_logout_redirect_uri ${postLogoutRedirectUri} rejected - client_id required for external redirects`,
+            );
+          }
+        } catch {
+          this.logger.warn(`SSO logout: Invalid post_logout_redirect_uri URL format`);
+        }
+      }
+    }
+
+    // Append state to redirect URL if provided
+    if (validatedRedirectUri && state) {
+      const url = new URL(validatedRedirectUri);
+      url.searchParams.set('state', state);
+      validatedRedirectUri = url.toString();
+    }
+
+    return {
+      redirectUrl: validatedRedirectUri,
+      message: userId ? 'Logged out successfully' : 'Session cleared',
+    };
+  }
 }

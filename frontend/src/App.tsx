@@ -27,6 +27,7 @@ import QuickstartPage from './pages/docs/developer/QuickstartPage';
 import OAuthPage from './pages/docs/developer/OAuthPage';
 import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
 import PasswordResetApiPage from './pages/docs/developer/PasswordResetApiPage';
+import SessionManagementPage from './pages/docs/developer/SessionManagementPage';
 import TestAccountsPage from './pages/docs/developer/TestAccountsPage';
 import ProfilePicturesApiPage from './pages/docs/developer/ProfilePicturesApiPage';
 import OrganizationApiPage from './pages/docs/developer/OrganizationApiPage';
@@ -329,10 +330,11 @@ function App() {
                   <Route path="developer/user-activity" element={<UserActivityApiPage />} />
                   <Route path="developer/user-emails" element={<UserEmailsApiPage />} />
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
+                  <Route path="developer/session-management" element={<SessionManagementPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
-                  <Route path="sso-integration" element={<SsoIntegrationPage />} />
-                  <Route path="multi-organization" element={<MultiOrganizationIntegrationPage />} />
-                  <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
+                  <Route path="developer/sso-integration" element={<SsoIntegrationPage />} />
+                  <Route path="developer/multi-organization" element={<MultiOrganizationIntegrationPage />} />
+                  <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
                   <Route path="release-notes/2025-12-13" element={<ReleaseNote_v104 />} />
