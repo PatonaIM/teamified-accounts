@@ -327,7 +327,7 @@ function App() {
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
                   <Route path="developer/session-management" element={<SessionManagementPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
-                  <Route path="sso-integration" element={<SsoIntegrationPage />} />
+                  <Route path="developer/sso-integration" element={<SsoIntegrationPage />} />
                   <Route path="multi-organization" element={<MultiOrganizationIntegrationPage />} />
                   <Route path="deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
