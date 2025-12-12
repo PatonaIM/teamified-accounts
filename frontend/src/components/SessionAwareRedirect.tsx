@@ -6,6 +6,7 @@ import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, g
 const LAST_PATH_KEY = 'teamified_last_path';
 const LAST_PATH_USER_KEY = 'teamified_last_path_user';
 const DEFAULT_AUTHENTICATED_PATH = '/account/profile';
+const SIGNUP_PATH = '/signup/path';
 
 const PUBLIC_PATHS = [
   '/login',
@@ -25,6 +26,22 @@ const PUBLIC_PATHS = [
   '/invitations/accept',
   '/accept-invitation',
 ];
+
+// Extract roles from JWT token to check if user needs to complete signup
+// Uses base64url decoding (JWTs use base64url, not standard base64)
+const getUserRolesFromToken = (token: string): string[] => {
+  try {
+    const payload = token.split('.')[1];
+    // Convert base64url to base64 (replace - with + and _ with /)
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    // Add padding if needed
+    const padded = base64 + '==='.slice(0, (4 - base64.length % 4) % 4);
+    const decoded = JSON.parse(atob(padded));
+    return decoded.roles || [];
+  } catch {
+    return [];
+  }
+};
 
 export const saveLastPath = (path: string, userId?: string): void => {
   if (!isPublicPath(path) && path !== '/') {
@@ -60,13 +77,22 @@ const SessionAwareRedirect: React.FC = () => {
   const location = useLocation();
   const [checking, setChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       console.log('[SessionAwareRedirect] Checking session status...');
       
-      if (isAuthenticated()) {
+      let accessToken = getAccessToken();
+      
+      if (isAuthenticated() && accessToken) {
         console.log('[SessionAwareRedirect] User has valid access token');
+        // Check if user has roles
+        const roles = getUserRolesFromToken(accessToken);
+        if (roles.length === 0) {
+          console.log('[SessionAwareRedirect] User has no roles, needs role selection');
+          setNeedsRoleSelection(true);
+        }
         setIsLoggedIn(true);
         setChecking(false);
         return;
@@ -79,8 +105,16 @@ const SessionAwareRedirect: React.FC = () => {
         try {
           console.log('[SessionAwareRedirect] Attempting to refresh token...');
           const response = await refreshAccessToken(refreshToken);
-          setAccessToken(response.data.accessToken);
+          accessToken = response.data.accessToken;
+          setAccessToken(accessToken);
           console.log('[SessionAwareRedirect] Token refreshed successfully');
+          
+          // Check if user has roles after refresh
+          const roles = getUserRolesFromToken(accessToken);
+          if (roles.length === 0) {
+            console.log('[SessionAwareRedirect] User has no roles after refresh, needs role selection');
+            setNeedsRoleSelection(true);
+          }
           setIsLoggedIn(true);
         } catch (error) {
           console.log('[SessionAwareRedirect] Token refresh failed:', error);
@@ -118,6 +152,12 @@ const SessionAwareRedirect: React.FC = () => {
   }
 
   if (isLoggedIn) {
+    // If user has no roles, redirect to signup path for role selection
+    if (needsRoleSelection) {
+      console.log('[SessionAwareRedirect] Redirecting to role selection page');
+      return <Navigate to={SIGNUP_PATH} replace />;
+    }
+    
     const lastPath = getLastPath();
     let targetPath = DEFAULT_AUTHENTICATED_PATH;
     

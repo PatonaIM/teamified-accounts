@@ -11,6 +11,7 @@ import * as crypto from 'crypto';
 import { User } from '../entities/user.entity';
 import { UserRole } from '../../user-roles/entities/user-role.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { OrganizationMember } from '../../organizations/entities/organization-member.entity';
 import { JwtTokenService } from './jwt.service';
 import { SessionService, DeviceMetadata } from './session.service';
 import { AuditService } from '../../audit/audit.service';
@@ -72,6 +73,8 @@ export class GoogleOAuthService {
     private readonly userRolesRepository: Repository<UserRole>,
     @InjectRepository(Organization)
     private readonly organizationsRepository: Repository<Organization>,
+    @InjectRepository(OrganizationMember)
+    private readonly organizationMembersRepository: Repository<OrganizationMember>,
     private readonly jwtTokenService: JwtTokenService,
     private readonly sessionService: SessionService,
     private readonly auditService: AuditService,
@@ -279,7 +282,9 @@ export class GoogleOAuthService {
         user.profilePictureUrl = profilePicture;
         await this.usersRepository.save(user);
       }
-      return { user, isNewUser: false };
+      // Check if user has roles - if not, they need to complete signup
+      const hasRoles = user.userRoles && user.userRoles.length > 0;
+      return { user, isNewUser: !hasRoles };
     }
 
     user = await this.usersRepository.findOne({
@@ -296,7 +301,9 @@ export class GoogleOAuthService {
       await this.usersRepository.save(user);
       
       this.logger.log(`Linked existing user ${email} to Google account`);
-      return { user, isNewUser: false };
+      // Check if user has roles - if not, they need to complete signup
+      const hasRoles = user.userRoles && user.userRoles.length > 0;
+      return { user, isNewUser: !hasRoles };
     }
 
     const newUser = this.usersRepository.create({
@@ -334,7 +341,9 @@ export class GoogleOAuthService {
             existingUser.emailVerified = true;
             await this.usersRepository.save(existingUser);
           }
-          return { user: existingUser, isNewUser: false };
+          // Check if user has roles - if not, they need to complete signup
+          const hasRoles = existingUser.userRoles && existingUser.userRoles.length > 0;
+          return { user: existingUser, isNewUser: !hasRoles };
         }
       }
 
@@ -470,6 +479,7 @@ export class GoogleOAuthService {
       const savedOrg = await this.organizationsRepository.save(organization);
       organizationId = savedOrg.id;
 
+      // Create the client_admin role
       const clientAdminRole = this.userRolesRepository.create({
         userId: user.id,
         roleType: 'client_admin',
@@ -477,6 +487,15 @@ export class GoogleOAuthService {
         scopeEntityId: savedOrg.id,
       });
       await this.userRolesRepository.save(clientAdminRole);
+
+      // Create organization membership record so user shows up in org members list
+      const orgMember = this.organizationMembersRepository.create({
+        organizationId: savedOrg.id,
+        userId: user.id,
+        status: 'active',
+        joinedAt: new Date(),
+      });
+      await this.organizationMembersRepository.save(orgMember);
 
       this.logger.log(`Created organization "${organizationName}" and assigned client_admin role to user ${user.email}`);
     } else {
