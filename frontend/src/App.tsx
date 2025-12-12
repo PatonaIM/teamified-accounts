@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import LoginPageMUI from './pages/LoginPageMUI';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -141,6 +142,10 @@ function App() {
                 <Route 
                   path="/auth/callback" 
                   element={<AuthCallbackPage />} 
+                />
+                <Route 
+                  path="/auth/google/callback" 
+                  element={<GoogleAuthCallbackPage />} 
                 />
                 <Route 
                   path="/reset-password" 

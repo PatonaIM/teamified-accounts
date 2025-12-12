@@ -76,6 +76,10 @@ export class User {
   @Index()
   supabaseUserId: string | null;
 
+  @Column({ name: 'google_user_id', length: 100, nullable: true, unique: true })
+  @Index()
+  googleUserId: string | null;
+
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
   lastLoginAt: Date | null;
 

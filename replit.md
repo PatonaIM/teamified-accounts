@@ -63,7 +63,8 @@ The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field fo
 -   **Redis/Vercel KV**: For session management and caching.
 -   **Workable API**: For syncing candidates and job postings.
 -   **Nodemailer**: For transactional email functionalities.
--   **Supabase**: Provides authentication services, including Google OAuth.
+-   **Supabase**: Provides authentication services (legacy, being replaced).
+-   **Google OAuth**: Direct Google OAuth integration for "Continue with Google" sign-in (requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets).
 
 ### Database
 

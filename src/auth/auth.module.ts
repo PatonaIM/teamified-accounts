@@ -12,6 +12,8 @@ import { EmailVerificationService } from './services/email-verification.service'
 import { SupabaseService } from './services/supabase.service';
 import { SupabaseAuthService } from './services/supabase-auth.service';
 import { SupabaseAuthController } from './controllers/supabase-auth.controller';
+import { GoogleOAuthService } from './services/google-oauth.service';
+import { GoogleOAuthController } from './controllers/google-oauth.controller';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
 import { LegacyInvitation } from '../invitations/entities/legacy-invitation.entity';
@@ -42,7 +44,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     forwardRef(() => OAuthClientsModule),
     ThrottlerModule,
   ],
-  controllers: [AuthController, SupabaseAuthController],
+  controllers: [AuthController, SupabaseAuthController, GoogleOAuthController],
   providers: [
     AuthService, 
     PasswordService, 
@@ -51,6 +53,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     EmailVerificationService,
     SupabaseService,
     SupabaseAuthService,
+    GoogleOAuthService,
     JwtAuthGuard,
   ],
   exports: [
@@ -61,6 +64,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     EmailVerificationService,
     SupabaseService,
     SupabaseAuthService,
+    GoogleOAuthService,
     JwtAuthGuard,
     JwtModule, // Export JwtModule so other modules can inject JwtService
   ],
