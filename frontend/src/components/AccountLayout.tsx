@@ -68,8 +68,9 @@ const AccountLayout: React.FC = () => {
     setAppsAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const handleLogout = async () => {
+    // Use the centralized logout function that clears local storage AND calls SSO logout
+    await logout();
     window.location.href = '/login';
   };
 

@@ -261,34 +261,46 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 
 export const logout = async (): Promise<void> => {
   try {
-    // Call logout endpoint to invalidate token on server
+    // Call internal auth logout endpoint to invalidate token on server
     await api.post('/v1/auth/logout');
   } catch (error) {
     // Continue with local logout even if server call fails
     console.warn('Server logout failed, continuing with local logout');
-  } finally {
-    // Always remove local tokens
-    removeTokens();
-    
-    // Clear last visited path and associated user ID
-    localStorage.removeItem('teamified_last_path');
-    localStorage.removeItem('teamified_last_path_user');
-    
-    // Clear theme preference cache
-    localStorage.removeItem('teamified_theme_auth');
-    
-    // Clear any SSO/OAuth related session storage (PKCE verifiers, state, etc.)
-    sessionStorage.removeItem('pkce_code_verifier');
-    sessionStorage.removeItem('pkce_state');
-    sessionStorage.removeItem('oauth_state');
-    
-    // Clear theme preferences on logout
-    try {
-      const { clearThemePreferences } = await import('../contexts/ThemeContext');
-      clearThemePreferences();
-    } catch (error) {
-      console.warn('Failed to clear theme preferences:', error);
-    }
+  }
+  
+  // Always remove local tokens first (before SSO logout to prevent redirect loops)
+  removeTokens();
+  
+  // Clear last visited path and associated user ID
+  localStorage.removeItem('teamified_last_path');
+  localStorage.removeItem('teamified_last_path_user');
+  
+  // Clear theme preference cache
+  localStorage.removeItem('teamified_theme_auth');
+  
+  // Clear any SSO/OAuth related session storage (PKCE verifiers, state, etc.)
+  sessionStorage.removeItem('pkce_code_verifier');
+  sessionStorage.removeItem('pkce_state');
+  sessionStorage.removeItem('oauth_state');
+  
+  // Clear theme preferences on logout
+  try {
+    const { clearThemePreferences } = await import('../contexts/ThemeContext');
+    clearThemePreferences();
+  } catch (error) {
+    console.warn('Failed to clear theme preferences:', error);
+  }
+  
+  // Call the unified SSO logout endpoint to revoke all sessions and clear httpOnly cookies
+  // This ensures logout works across all SSO-connected applications
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    await fetch(`${apiUrl}/api/v1/sso/logout`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  } catch (error) {
+    console.warn('SSO logout failed:', error);
   }
 };
 
