@@ -434,7 +434,15 @@ export class GoogleOAuthService {
     organizationName?: string,
     ip?: string,
     userAgent?: string,
-  ): Promise<{ success: boolean; message: string; role: string; organizationId?: string }> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    role: string;
+    organizationId?: string;
+    accessToken: string;
+    refreshToken: string;
+    user: { id: string; email: string; firstName: string; lastName: string; roles: string[] };
+  }> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       relations: ['userRoles'],
@@ -527,6 +535,16 @@ export class GoogleOAuthService {
 
     await this.sendWelcomeEmail(user, roleType);
 
+    // Reload user with updated roles to generate new tokens
+    const updatedUser = await this.usersRepository.findOne({
+      where: { id: user.id },
+      relations: ['userRoles'],
+    });
+
+    // Generate new tokens with updated roles
+    const roles = updatedUser.userRoles?.map(r => r.roleType) || [roleType];
+    const { accessToken, refreshToken } = await this.jwtTokenService.generateTokenPair(updatedUser);
+
     return {
       success: true,
       message: roleType === 'candidate' 
@@ -534,6 +552,15 @@ export class GoogleOAuthService {
         : `Welcome! Your organization "${organizationName}" has been created.`,
       role: roleType,
       organizationId,
+      accessToken,
+      refreshToken,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        roles,
+      },
     };
   }
 

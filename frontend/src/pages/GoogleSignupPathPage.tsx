@@ -18,9 +18,10 @@ import {
   Business,
   ArrowForward,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
+import { setAccessToken, setRefreshToken, removeTokens } from '../services/authService';
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,7 +45,12 @@ const GoogleSignupPathPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
+      const response = await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
+      // Store new tokens with updated roles
+      if (response.data.accessToken && response.data.refreshToken) {
+        setAccessToken(response.data.accessToken);
+        setRefreshToken(response.data.refreshToken);
+      }
       await refreshUser();
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
@@ -73,10 +79,15 @@ const GoogleSignupPathPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await api.post('/v1/auth/google/assign-role', {
+      const response = await api.post('/v1/auth/google/assign-role', {
         roleType: 'client_admin',
         organizationName: orgName.trim(),
       });
+      // Store new tokens with updated roles
+      if (response.data.accessToken && response.data.refreshToken) {
+        setAccessToken(response.data.accessToken);
+        setRefreshToken(response.data.refreshToken);
+      }
       await refreshUser();
       navigate('/organization', { replace: true });
     } catch (err: any) {
@@ -91,6 +102,11 @@ const GoogleSignupPathPage: React.FC = () => {
       }
       setIsLoading(false);
     }
+  };
+
+  const handleBackToLogin = () => {
+    removeTokens();
+    navigate('/login', { replace: true });
   };
 
   if (!user) {
@@ -336,6 +352,27 @@ const GoogleSignupPathPage: React.FC = () => {
                 </Box>
               </Box>
             )}
+
+            {/* Back to Login link for users stuck in a loop */}
+            <Box textAlign="center" mt={3}>
+              <Typography variant="body2" color="text.secondary">
+                Having trouble?{' '}
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={handleBackToLogin}
+                  sx={{ 
+                    textTransform: 'none', 
+                    p: 0, 
+                    minWidth: 'auto',
+                    verticalAlign: 'baseline',
+                    '&:hover': { textDecoration: 'underline' }
+                  }}
+                >
+                  Go back to Login
+                </Button>
+              </Typography>
+            </Box>
           </Paper>
         </Fade>
       </Container>
