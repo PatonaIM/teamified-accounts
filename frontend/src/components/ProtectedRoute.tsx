@@ -46,6 +46,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/force-change-password" replace />;
   }
 
+  // Redirect role-less users to signup path for role selection (except if already on signup/path)
+  if ((!user.roles || user.roles.length === 0) && location.pathname !== '/signup/path') {
+    return <Navigate to="/signup/path" replace />;
+  }
+
   return <>{children}</>;
 };
 

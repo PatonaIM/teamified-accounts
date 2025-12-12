@@ -19,8 +19,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { login, getAccessToken, isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
-import { SupabaseLoginButton } from '../components/auth/SupabaseLoginButton';
-import { isSupabaseConfigured } from '../config/supabase';
+import { GoogleLoginButton } from '../components/auth/GoogleLoginButton';
 import { getLastPath } from '../components/SessionAwareRedirect';
 
 const LoginPageMUI: React.FC = () => {
@@ -393,17 +392,13 @@ const LoginPageMUI: React.FC = () => {
                 {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
               </Button>
 
-              {isSupabaseConfigured() && (
-                <>
-                  <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                      or
-                    </Typography>
-                  </Divider>
+              <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                  or
+                </Typography>
+              </Divider>
 
-                  <SupabaseLoginButton />
-                </>
-              )}
+              <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
 
               <Box sx={{ textAlign: 'center', mt: 4 }}>
                 <Link

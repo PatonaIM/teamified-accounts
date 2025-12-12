@@ -103,10 +103,116 @@ export class EmailVerificationService {
 
     this.logger.log(`Email verification successful for user: ${user.email}`);
 
+    // Send welcome email after successful verification
+    await this.sendWelcomeEmail(user.id);
+
     return {
       message: 'Email verified successfully',
       verified: true,
     };
+  }
+
+  private async sendWelcomeEmail(userId: string): Promise<void> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['userRoles'],
+      });
+
+      if (!user) {
+        this.logger.warn(`User not found for welcome email: ${userId}`);
+        return;
+      }
+
+      const roleType = user.userRoles?.[0]?.roleType || 'candidate';
+      const subject = 'Welcome to Teamified!';
+      
+      let htmlContent: string;
+      let textContent: string;
+
+      if (roleType === 'candidate') {
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #667eea;">Welcome to Teamified, ${user.firstName}!</h1>
+            <p>Your email has been verified. Your candidate account is now ready!</p>
+            <div style="margin: 30px 0;">
+              <a href="https://jobseeker.teamified.com.au" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; 
+                        padding: 14px 28px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold;
+                        display: inline-block;">
+                Browse Jobs
+              </a>
+            </div>
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666;">
+              <li>Browse and apply for exciting job opportunities</li>
+              <li>Track your application status</li>
+              <li>Build your professional profile</li>
+            </ul>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">
+              If you didn't create this account, please contact our support team.
+            </p>
+          </div>
+        `;
+        textContent = `Welcome to Teamified, ${user.firstName}!\n\nYour email has been verified. Your candidate account is now ready!\n\nBrowse Jobs: https://jobseeker.teamified.com.au\n\nWith Teamified, you can:\n- Browse and apply for exciting job opportunities\n- Track your application status\n- Build your professional profile`;
+      } else {
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #667eea;">Welcome to Teamified, ${user.firstName}!</h1>
+            <p>Your email has been verified. Your employer account is now ready!</p>
+            <div style="margin: 30px 0;">
+              <a href="https://ats.teamified.com.au" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; 
+                        padding: 14px 28px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold;
+                        display: inline-block;
+                        margin-right: 10px;">
+                Post Your First Job
+              </a>
+              <a href="https://hris.teamified.com.au" 
+                 style="background: white; 
+                        color: #667eea; 
+                        padding: 14px 28px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold;
+                        border: 2px solid #667eea;
+                        display: inline-block;">
+                Set Up Your Organization
+              </a>
+            </div>
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666;">
+              <li>Post job openings and attract top talent</li>
+              <li>Manage your hiring pipeline</li>
+              <li>Onboard and manage your team members</li>
+            </ul>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">
+              If you didn't create this account, please contact our support team.
+            </p>
+          </div>
+        `;
+        textContent = `Welcome to Teamified, ${user.firstName}!\n\nYour email has been verified. Your employer account is now ready!\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members`;
+      }
+
+      await this.emailService.sendEmail({
+        to: user.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      });
+
+      this.logger.log(`Welcome email sent to ${user.email} after email verification (${roleType})`);
+    } catch (error) {
+      this.logger.error(`Failed to send welcome email to user ${userId}:`, error);
+    }
   }
 
   async sendVerificationReminder(userId: string): Promise<void> {

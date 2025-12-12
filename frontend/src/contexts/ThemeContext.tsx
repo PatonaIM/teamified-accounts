@@ -30,6 +30,7 @@ const PUBLIC_LIGHT_MODE_ROUTES = [
   '/signup-select',
   '/signup-candidate',
   '/signup-client-admin',
+  '/signup/path',
   '/reset-password',
   '/verify-email',
   '/invite',

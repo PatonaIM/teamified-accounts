@@ -5,6 +5,8 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { SnackbarProvider } from './contexts/SnackbarContext';
 import LoginPageMUI from './pages/LoginPageMUI';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
+import GoogleSignupPathPage from './pages/GoogleSignupPathPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -22,6 +24,7 @@ import SsoProductPage from './pages/docs/product/SsoPage';
 import RolesPage from './pages/docs/product/RolesPage';
 import PasswordResetPage from './pages/docs/product/PasswordResetPage';
 import UseCasesPage from './pages/docs/product/UseCasesPage';
+import GoogleOAuthPage from './pages/docs/product/GoogleOAuthPage';
 import QuickstartPage from './pages/docs/developer/QuickstartPage';
 import OAuthPage from './pages/docs/developer/OAuthPage';
 import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
@@ -39,6 +42,7 @@ import ReleaseNote_2025_12_03 from './pages/docs/ReleaseNote_2025_12_03';
 import ReleaseNote_v102 from './pages/docs/ReleaseNote_v102';
 import ReleaseNote_v103 from './pages/docs/ReleaseNote_v103';
 import ReleaseNote_v104 from './pages/docs/ReleaseNote_v104';
+import ReleaseNote_v105 from './pages/docs/ReleaseNote_v105';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
@@ -142,6 +146,14 @@ function App() {
                 <Route 
                   path="/auth/callback" 
                   element={<AuthCallbackPage />} 
+                />
+                <Route 
+                  path="/auth/google/callback" 
+                  element={<GoogleAuthCallbackPage />} 
+                />
+                <Route 
+                  path="/signup/path" 
+                  element={<GoogleSignupPathPage />} 
                 />
                 <Route 
                   path="/reset-password" 
@@ -313,6 +325,7 @@ function App() {
                   {/* Product Guide */}
                   <Route path="product/overview" element={<OverviewPage />} />
                   <Route path="product/sso" element={<SsoProductPage />} />
+                  <Route path="product/google-oauth" element={<GoogleOAuthPage />} />
                   <Route path="product/roles" element={<RolesPage />} />
                   <Route path="product/password-reset" element={<PasswordResetPage />} />
                   <Route path="product/use-cases" element={<UseCasesPage />} />
@@ -332,11 +345,12 @@ function App() {
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
-                  <Route path="release-notes/2025-12-13" element={<ReleaseNote_v104 />} />
-                  <Route path="release-notes/2025-12-05" element={<ReleaseNote_v103 />} />
-                  <Route path="release-notes/2025-12-04" element={<ReleaseNote_v102 />} />
-                  <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />
-                  <Route path="release-notes/2025-12-02" element={<ReleaseNote_2025_12_02 />} />
+                  <Route path="release-notes/v1.0.5" element={<ReleaseNote_v105 />} />
+                  <Route path="release-notes/v1.0.4" element={<ReleaseNote_v104 />} />
+                  <Route path="release-notes/v1.0.3" element={<ReleaseNote_v103 />} />
+                  <Route path="release-notes/v1.0.2" element={<ReleaseNote_v102 />} />
+                  <Route path="release-notes/v1.0.1" element={<ReleaseNote_2025_12_03 />} />
+                  <Route path="release-notes/v1.0.0" element={<ReleaseNote_2025_12_02 />} />
                 </Route>
                 
                 <Route path="/" element={<SessionAwareRedirect />} />

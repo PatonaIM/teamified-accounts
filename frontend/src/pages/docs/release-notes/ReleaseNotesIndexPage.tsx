@@ -23,40 +23,47 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.5',
+    date: 'December 12, 2025',
+    title: 'Direct Google SSO Login Features',
+    summary: 'Users can now sign in with "Continue with Google" using direct OAuth 2.0 integration - no third-party vendor dependency. Features secure one-time code exchange, httpOnly cookie token storage, and automatic account creation/linking.',
+    path: '/docs/release-notes/v1.0.5',
+    isLatest: true,
+  },
+  {
     version: '1.0.4',
-    date: 'December 13, 2025',
+    date: 'December 11, 2025',
     title: 'Multi-Identity SSO & Account Security',
     summary: 'Users can link multiple emails to one account with smart identity resolution. Profile page improvements include Primary Email section, work emails in org cards, collapsible activity sections, and proper role badge formatting (HR, IT, CEO).',
-    path: '/docs/release-notes/2025-12-13',
-    isLatest: true,
+    path: '/docs/release-notes/v1.0.4',
   },
   {
     version: '1.0.3',
     date: 'December 5, 2025',
     title: 'Performance Optimizations & Client RBAC',
     summary: 'Theme flash prevention, instant navigation rendering, multi-organization navigation improvements, extended client admin permissions for user management, and React hooks bug fixes.',
-    path: '/docs/release-notes/2025-12-05',
+    path: '/docs/release-notes/v1.0.3',
   },
   {
     version: '1.0.2',
     date: 'December 4, 2025',
     title: 'My Apps Launcher & Admin Tools Enhancements',
     summary: 'New My Apps dropdown for quick access to connected applications, OAuth Configuration management, improved organization deletion, and Candidate Users redesign with suspension functionality.',
-    path: '/docs/release-notes/2025-12-04',
+    path: '/docs/release-notes/v1.0.2',
   },
   {
     version: '1.0.1',
     date: 'December 3, 2025',
     title: 'User Activity Tracking',
     summary: 'Comprehensive user activity tracking capabilities enabling connected applications to send usage data to Teamified Accounts for centralized analytics and monitoring.',
-    path: '/docs/release-notes/2025-12-03',
+    path: '/docs/release-notes/v1.0.1',
   },
   {
     version: '1.0.0',
     date: 'December 2, 2025',
     title: 'Teamified Accounts - Patch Notes',
     summary: 'Profile pictures support, organization creation improvements, and bug fixes for My Profile, Organization Management, and Candidate Management.',
-    path: '/docs/release-notes/2025-12-02',
+    path: '/docs/release-notes/v1.0.0',
   },
 ];
 

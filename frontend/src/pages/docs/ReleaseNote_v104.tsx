@@ -40,7 +40,7 @@ export default function ReleaseNote_v104() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Chip label="v1.0.4" color="primary" sx={{ fontWeight: 600 }} />
                   <Typography variant="body2" color="text.secondary">
-                    December 13, 2025
+                    December 11, 2025
                   </Typography>
                 </Stack>
                 <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>

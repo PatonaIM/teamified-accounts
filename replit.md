@@ -29,6 +29,24 @@ Core features include:
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
 - **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.
+- **Direct Google OAuth Integration**: Users can sign in with "Continue with Google" alongside traditional email-password login. Features:
+  - Direct OAuth 2.0 flow without third-party vendor dependency (replaces Supabase)
+  - Secure temporary code exchange pattern (tokens never exposed in URLs)
+  - Automatic user creation or account linking for Google sign-ins
+  - httpOnly cookie-based token storage for enhanced security
+  - Google user ID stored in `google_user_id` column for identity linking
+  - Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` secrets from Google Cloud Console
+  - Redirect URI must be configured in Google Cloud Console as: `{BASE_URL}/api/v1/auth/google/callback`
+  - **Intent-Aware Role Selection**: New Google users are prompted to choose Candidate or Employer roles (matching email signup UX):
+    - Candidates: One-click signup with no additional form required
+    - Employers: Minimal form with just organization name to get started
+    - API endpoint: `POST /api/v1/auth/google/assign-role` for role assignment after selection
+    - Frontend page: `/signup/google-path` for role selection flow
+  - **Unified Welcome Emails**: All new users receive personalized welcome emails with role-specific CTAs:
+    - Candidates: "Browse Jobs" button linking to Jobseeker Portal
+    - Employers: "Post Your First Job" (ATS) and "Set Up Your Organization" (HRIS) buttons
+    - Sent after email verification for email signup users, after role selection for Google users
+
 - **Multi-Identity SSO (Candidate + Employee Model)**: Users can link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Login works with any linked email using a single password. Key features:
   - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking
   - Smart identity resolution via `findUserByAnyEmail` helper method in AuthService
@@ -63,7 +81,8 @@ The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field fo
 -   **Redis/Vercel KV**: For session management and caching.
 -   **Workable API**: For syncing candidates and job postings.
 -   **Nodemailer**: For transactional email functionalities.
--   **Supabase**: Provides authentication services, including Google OAuth.
+-   **Supabase**: Provides authentication services (legacy, being replaced).
+-   **Google OAuth**: Direct Google OAuth integration for "Continue with Google" sign-in (requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets).
 
 ### Database
 
