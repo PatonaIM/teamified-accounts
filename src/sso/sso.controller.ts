@@ -20,6 +20,7 @@ import { SsoService } from './sso.service';
 import { AuthorizeDto } from './dto/authorize.dto';
 import { TokenExchangeDto } from './dto/token.dto';
 import { RecordActivityDto } from './dto/user-activity.dto';
+import { LogoutDto } from './dto/logout.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 
 @Controller('v1/sso')
@@ -189,6 +190,96 @@ export class SsoController {
     });
     
     return res.json({ message: 'Session cleared successfully' });
+  }
+
+  /**
+   * SSO Logout Endpoint (RP-Initiated Logout)
+   * GET /api/v1/sso/logout
+   * 
+   * Centralized logout endpoint for OAuth 2.0 clients.
+   * Clears all user sessions (cookies + database) and optionally redirects back to client.
+   * 
+   * Query Parameters:
+   * - post_logout_redirect_uri: (optional) URL to redirect after logout
+   * - id_token_hint: (optional) The ID token for user identification
+   * - client_id: (optional) OAuth client ID for redirect URI validation
+   * - state: (optional) State parameter to pass back to client
+   * 
+   * Usage by client apps:
+   * 1. Clear local tokens (localStorage/sessionStorage)
+   * 2. Redirect user to: /api/v1/sso/logout?post_logout_redirect_uri=https://myapp.com/logged-out
+   * 3. User lands back on client app, fully logged out everywhere
+   */
+  @Get('logout')
+  async logout(
+    @Query() logoutDto: LogoutDto,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    // Try to identify user from cookie or Authorization header
+    let userId: string | null = null;
+    let token: string | undefined;
+    
+    // Check Authorization header first
+    const authHeader = req.headers?.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (req.cookies?.access_token) {
+      // Fallback: Check for JWT in cookie
+      token = req.cookies.access_token;
+    }
+    
+    if (token) {
+      try {
+        const payload = this.jwtService.verify(token);
+        userId = payload.sub;
+        console.log('[SSO] Logout: Identified user from JWT:', userId);
+      } catch (error) {
+        console.log('[SSO] Logout: Could not verify JWT:', error.message);
+      }
+    }
+
+    // Perform logout (revoke sessions in database)
+    // Pass id_token_hint so service can identify user when cookies are not present
+    const result = await this.ssoService.logout(
+      userId,
+      logoutDto.post_logout_redirect_uri,
+      logoutDto.client_id,
+      logoutDto.state,
+      logoutDto.id_token_hint,
+    );
+
+    // Clear the httpOnly cookie
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    // Also clear refresh_token cookie if present
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    console.log('[SSO] Logout complete:', {
+      userId,
+      redirectUrl: result.redirectUrl,
+    });
+
+    // If a valid redirect URL was provided, redirect the user
+    if (result.redirectUrl) {
+      return res.redirect(HttpStatus.FOUND, result.redirectUrl);
+    }
+
+    // Otherwise, return JSON response
+    return res.json({
+      success: true,
+      message: result.message,
+    });
   }
 
   /**

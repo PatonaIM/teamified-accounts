@@ -35,6 +35,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'User Activity API', path: '/docs/developer/user-activity' },
       { title: 'User Emails API', path: '/docs/developer/user-emails' },
       { title: 'Password Reset API', path: '/docs/developer/password-reset-api' },
+      { title: 'Session Management', path: '/docs/developer/session-management' },
       { title: 'Deep Linking Guide', path: '/docs/deep-linking-guide' },
       { title: 'Multi-Organization', path: '/docs/multi-organization' },
       { title: 'Test Accounts', path: '/docs/developer/test-accounts' },

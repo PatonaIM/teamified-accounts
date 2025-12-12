@@ -288,23 +288,31 @@ export default function IntegratedTestSuite() {
   };
 
   const handleClearSession = async () => {
-    try {
-      await fetch(`${apiUrl}/api/v1/sso/clear-session`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-    } catch (err) {
-      console.error('Clear session failed:', err);
-    }
-
+    // Clear local state first
     setUserInfo(null);
     setAccessToken(null);
     setError(null);
     setLoading(false);
 
+    // Clear local storage (SSO test session and main app tokens)
     clearStoredSession();
-
     sessionStorage.removeItem('pkce_code_verifier');
+    
+    // Also clear main app localStorage tokens to prevent login loop
+    localStorage.removeItem('teamified_access_token');
+    localStorage.removeItem('teamified_refresh_token');
+    localStorage.removeItem('teamified_csrf_token');
+    localStorage.removeItem('teamified_user_data');
+
+    // Call the unified SSO logout endpoint to revoke server-side sessions
+    try {
+      await fetch(`${apiUrl}/api/v1/sso/logout`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('SSO logout failed:', err);
+    }
     sessionStorage.removeItem('pkce_state');
 
     callbackProcessedRef.current = false;
