@@ -97,7 +97,7 @@ const GoogleSignupPathPage: React.FC = () => {
         }
       }
       await refreshUser();
-      navigate('/organization', { replace: true });
+      navigate('/account/profile', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
       if (err?.response?.status === 401) {
