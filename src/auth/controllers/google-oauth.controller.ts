@@ -8,11 +8,15 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { GoogleOAuthService } from '../services/google-oauth.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../entities/user.entity';
 
 @ApiTags('Google OAuth')
 @Controller('v1/auth/google')
@@ -143,5 +147,39 @@ export class GoogleOAuthController {
   async exchangeCode(@Body('code') code: string) {
     const result = await this.googleOAuthService.exchangeTemporaryCode(code);
     return result;
+  }
+
+  @Post('assign-role')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Assign role to new Google user after signup path selection' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        roleType: { type: 'string', enum: ['candidate', 'client_admin'] },
+        organizationName: { type: 'string', description: 'Required for client_admin role' },
+      },
+      required: ['roleType'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Role assigned successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid role type or missing organization name' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async assignRole(
+    @CurrentUser() user: User,
+    @Body('roleType') roleType: string,
+    @Body('organizationName') organizationName?: string,
+    @Req() req?: Request,
+  ) {
+    return this.googleOAuthService.assignRoleToNewUser(
+      user.id,
+      roleType,
+      organizationName,
+      req?.ip,
+      req?.get('user-agent'),
+    );
   }
 }

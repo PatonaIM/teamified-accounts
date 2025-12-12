@@ -40,10 +40,12 @@ const GoogleAuthCallbackPage: React.FC = () => {
         }
 
         let targetUrl = returnUrl || '/account/profile';
+        let isNewUser = false;
         
         try {
           const result = await googleAuthService.exchangeCode(code);
           googleAuthService.storeTokens(result.accessToken, result.refreshToken);
+          isNewUser = result.isNewUser;
           if (result.returnUrl) {
             targetUrl = result.returnUrl;
           }
@@ -53,7 +55,9 @@ const GoogleAuthCallbackPage: React.FC = () => {
 
         await refreshUser();
 
-        if (targetUrl.includes('/api/v1/sso/authorize')) {
+        if (isNewUser) {
+          navigate('/signup/path', { replace: true });
+        } else if (targetUrl.includes('/api/v1/sso/authorize')) {
           window.location.href = targetUrl;
         } else {
           navigate(targetUrl, { replace: true });

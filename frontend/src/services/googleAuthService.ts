@@ -18,6 +18,7 @@ export interface GoogleAuthCallbackResponse {
     themePreference: string;
     mustChangePassword: boolean;
   };
+  isNewUser: boolean;
   returnUrl?: string;
 }
 

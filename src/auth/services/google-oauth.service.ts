@@ -10,9 +10,11 @@ import { Repository, IsNull } from 'typeorm';
 import * as crypto from 'crypto';
 import { User } from '../entities/user.entity';
 import { UserRole } from '../../user-roles/entities/user-role.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 import { JwtTokenService } from './jwt.service';
 import { SessionService, DeviceMetadata } from './session.service';
 import { AuditService } from '../../audit/audit.service';
+import { EmailService } from '../../email/services/email.service';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -47,6 +49,7 @@ interface TempAuthResult {
     themePreference: string;
     mustChangePassword: boolean;
   };
+  isNewUser: boolean;
   returnUrl?: string;
   createdAt: number;
 }
@@ -67,9 +70,12 @@ export class GoogleOAuthService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(UserRole)
     private readonly userRolesRepository: Repository<UserRole>,
+    @InjectRepository(Organization)
+    private readonly organizationsRepository: Repository<Organization>,
     private readonly jwtTokenService: JwtTokenService,
     private readonly sessionService: SessionService,
     private readonly auditService: AuditService,
+    private readonly emailService: EmailService,
   ) {
     this.clientId = this.configService.get<string>('GOOGLE_CLIENT_ID') || '';
     this.clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET') || '';
@@ -178,6 +184,7 @@ export class GoogleOAuthService {
       themePreference: string;
       mustChangePassword: boolean;
     };
+    isNewUser: boolean;
     returnUrl?: string;
   }> {
     let returnUrl: string | undefined;
@@ -196,7 +203,7 @@ export class GoogleOAuthService {
       throw new UnauthorizedException('Google email is not verified');
     }
 
-    const user = await this.findOrCreateByGoogle(
+    const { user, isNewUser } = await this.findOrCreateByGoogle(
       googleUser.id,
       googleUser.email,
       googleUser.given_name,
@@ -216,18 +223,18 @@ export class GoogleOAuthService {
 
     await this.sessionService.createSession(user, portalTokens.refreshToken, deviceMetadata);
 
-    const userRole = user.userRoles?.[0]?.roleType || 'candidate';
+    const userRole = user.userRoles?.[0]?.roleType || 'none';
     await this.auditService.log({
       actorUserId: user.id,
       actorRole: userRole,
-      action: 'google_oauth_login',
+      action: isNewUser ? 'google_oauth_signup' : 'google_oauth_login',
       entityType: 'User',
       entityId: user.id,
       changes: {
         googleUserId: googleUser.id,
         email: user.email,
         loginTime: new Date().toISOString(),
-        isNewUser: !user.lastLoginAt,
+        isNewUser,
       },
       ip,
       userAgent,
@@ -250,6 +257,7 @@ export class GoogleOAuthService {
         themePreference,
         mustChangePassword: user.mustChangePassword || false,
       },
+      isNewUser,
       returnUrl,
     };
   }
@@ -260,7 +268,7 @@ export class GoogleOAuthService {
     firstName: string,
     lastName: string,
     profilePicture?: string,
-  ): Promise<User> {
+  ): Promise<{ user: User; isNewUser: boolean }> {
     let user = await this.usersRepository.findOne({
       where: { googleUserId },
       relations: ['userRoles'],
@@ -271,7 +279,7 @@ export class GoogleOAuthService {
         user.profilePictureUrl = profilePicture;
         await this.usersRepository.save(user);
       }
-      return user;
+      return { user, isNewUser: false };
     }
 
     user = await this.usersRepository.findOne({
@@ -288,7 +296,7 @@ export class GoogleOAuthService {
       await this.usersRepository.save(user);
       
       this.logger.log(`Linked existing user ${email} to Google account`);
-      return user;
+      return { user, isNewUser: false };
     }
 
     const newUser = this.usersRepository.create({
@@ -306,20 +314,13 @@ export class GoogleOAuthService {
     try {
       const savedUser = await this.usersRepository.save(newUser);
 
-      const candidateRole = this.userRolesRepository.create({
-        userId: savedUser.id,
-        roleType: 'candidate',
-        scope: 'individual',
-        scopeEntityId: savedUser.id,
-      });
-      await this.userRolesRepository.save(candidateRole);
+      this.logger.log(`Created new user ${email} via Google OAuth - pending role selection`);
 
-      this.logger.log(`Created new user ${email} via Google OAuth`);
-
-      return await this.usersRepository.findOne({
+      const refreshedUser = await this.usersRepository.findOne({
         where: { id: savedUser.id },
         relations: ['userRoles'],
       });
+      return { user: refreshedUser, isNewUser: true };
     } catch (error) {
       if (error.code === '23505') {
         const existingUser = await this.usersRepository.findOne({
@@ -333,7 +334,7 @@ export class GoogleOAuthService {
             existingUser.emailVerified = true;
             await this.usersRepository.save(existingUser);
           }
-          return existingUser;
+          return { user: existingUser, isNewUser: false };
         }
       }
 
@@ -359,6 +360,7 @@ export class GoogleOAuthService {
       themePreference: string;
       mustChangePassword: boolean;
     };
+    isNewUser: boolean;
     returnUrl?: string;
   }): Promise<string> {
     this.cleanupExpiredCodes();
@@ -386,6 +388,7 @@ export class GoogleOAuthService {
       themePreference: string;
       mustChangePassword: boolean;
     };
+    isNewUser: boolean;
     returnUrl?: string;
   }> {
     this.cleanupExpiredCodes();
@@ -413,6 +416,207 @@ export class GoogleOAuthService {
       if (now - result.createdAt > this.TEMP_CODE_TTL) {
         this.tempAuthResults.delete(code);
       }
+    }
+  }
+
+  async assignRoleToNewUser(
+    userId: string,
+    roleType: string,
+    organizationName?: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean; message: string; role: string; organizationId?: string }> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['userRoles'],
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (user.userRoles && user.userRoles.length > 0) {
+      throw new BadRequestException('User already has a role assigned');
+    }
+
+    if (roleType !== 'candidate' && roleType !== 'client_admin') {
+      throw new BadRequestException('Invalid role type. Must be "candidate" or "client_admin"');
+    }
+
+    let organizationId: string | undefined;
+
+    if (roleType === 'client_admin') {
+      if (!organizationName || !organizationName.trim()) {
+        throw new BadRequestException('Organization name is required for employer signup');
+      }
+
+      const slug = this.generateSlug(organizationName);
+
+      const existingOrg = await this.organizationsRepository.findOne({
+        where: { slug },
+      });
+
+      if (existingOrg) {
+        throw new BadRequestException('An organization with a similar name already exists. Please choose a different name.');
+      }
+
+      const organization = this.organizationsRepository.create({
+        name: organizationName.trim(),
+        slug,
+        subscriptionTier: 'free',
+        subscriptionStatus: 'active',
+      });
+
+      const savedOrg = await this.organizationsRepository.save(organization);
+      organizationId = savedOrg.id;
+
+      const clientAdminRole = this.userRolesRepository.create({
+        userId: user.id,
+        roleType: 'client_admin',
+        scope: 'organization',
+        scopeEntityId: savedOrg.id,
+      });
+      await this.userRolesRepository.save(clientAdminRole);
+
+      this.logger.log(`Created organization "${organizationName}" and assigned client_admin role to user ${user.email}`);
+    } else {
+      const candidateRole = this.userRolesRepository.create({
+        userId: user.id,
+        roleType: 'candidate',
+        scope: 'individual',
+        scopeEntityId: user.id,
+      });
+      await this.userRolesRepository.save(candidateRole);
+
+      this.logger.log(`Assigned candidate role to user ${user.email}`);
+    }
+
+    await this.auditService.log({
+      actorUserId: user.id,
+      actorRole: roleType,
+      action: 'google_signup_role_assigned',
+      entityType: 'User',
+      entityId: user.id,
+      changes: {
+        roleType,
+        organizationId,
+        organizationName: organizationName?.trim(),
+      },
+      ip,
+      userAgent,
+    });
+
+    await this.sendWelcomeEmail(user, roleType);
+
+    return {
+      success: true,
+      message: roleType === 'candidate' 
+        ? 'Welcome! Your candidate account is ready.'
+        : `Welcome! Your organization "${organizationName}" has been created.`,
+      role: roleType,
+      organizationId,
+    };
+  }
+
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 100);
+  }
+
+  private async sendWelcomeEmail(user: User, roleType: string): Promise<void> {
+    try {
+      const subject = 'Welcome to Teamified!';
+      
+      let htmlContent: string;
+      let textContent: string;
+
+      if (roleType === 'candidate') {
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #667eea;">Welcome to Teamified, ${user.firstName}!</h1>
+            <p>Your candidate account is ready. Start exploring job opportunities today!</p>
+            <div style="margin: 30px 0;">
+              <a href="https://jobseeker.teamified.com.au" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; 
+                        padding: 14px 28px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold;
+                        display: inline-block;">
+                Browse Jobs
+              </a>
+            </div>
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666;">
+              <li>Browse and apply for exciting job opportunities</li>
+              <li>Track your application status</li>
+              <li>Build your professional profile</li>
+            </ul>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">
+              If you didn't create this account, please contact our support team.
+            </p>
+          </div>
+        `;
+        textContent = `Welcome to Teamified, ${user.firstName}!\n\nYour candidate account is ready. Start exploring job opportunities today!\n\nBrowse Jobs: https://jobseeker.teamified.com.au\n\nWith Teamified, you can:\n- Browse and apply for exciting job opportunities\n- Track your application status\n- Build your professional profile`;
+      } else {
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #667eea;">Welcome to Teamified, ${user.firstName}!</h1>
+            <p>Your employer account is ready. Start building your team today!</p>
+            <div style="margin: 30px 0;">
+              <a href="https://ats.teamified.com.au" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; 
+                        padding: 14px 28px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold;
+                        display: inline-block;
+                        margin-right: 10px;">
+                Post Your First Job
+              </a>
+              <a href="https://hris.teamified.com.au" 
+                 style="background: white; 
+                        color: #667eea; 
+                        padding: 14px 28px; 
+                        text-decoration: none; 
+                        border-radius: 8px; 
+                        font-weight: bold;
+                        border: 2px solid #667eea;
+                        display: inline-block;">
+                Set Up Your Organization
+              </a>
+            </div>
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666;">
+              <li>Post job openings and attract top talent</li>
+              <li>Manage your hiring pipeline</li>
+              <li>Onboard and manage your team members</li>
+            </ul>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">
+              If you didn't create this account, please contact our support team.
+            </p>
+          </div>
+        `;
+        textContent = `Welcome to Teamified, ${user.firstName}!\n\nYour employer account is ready. Start building your team today!\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members`;
+      }
+
+      await this.emailService.sendEmail({
+        to: user.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      });
+
+      this.logger.log(`Welcome email sent to ${user.email} (${roleType})`);
+    } catch (error) {
+      this.logger.error(`Failed to send welcome email to ${user.email}:`, error);
     }
   }
 }

@@ -6,6 +6,7 @@ import { SnackbarProvider } from './contexts/SnackbarContext';
 import LoginPageMUI from './pages/LoginPageMUI';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
+import GoogleSignupPathPage from './pages/GoogleSignupPathPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -149,6 +150,14 @@ function App() {
                 <Route 
                   path="/auth/google/callback" 
                   element={<GoogleAuthCallbackPage />} 
+                />
+                <Route 
+                  path="/signup/path" 
+                  element={
+                    <ProtectedRoute>
+                      <GoogleSignupPathPage />
+                    </ProtectedRoute>
+                  } 
                 />
                 <Route 
                   path="/reset-password" 

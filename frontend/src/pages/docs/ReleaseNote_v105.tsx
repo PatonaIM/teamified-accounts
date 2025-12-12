@@ -22,6 +22,8 @@ import {
   Cookie,
   Speed,
   Code,
+  PersonAdd,
+  Email,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -53,8 +55,9 @@ export default function ReleaseNote_v105() {
           <Alert severity="info" icon={<Google />}>
             <Typography variant="body2">
               <strong>What's New:</strong> Users can now sign in with their Google account directly, 
-              without any third-party vendor dependency. This provides a faster, more secure, and 
-              seamless authentication experience.
+              without any third-party vendor dependency. New users are prompted to choose between 
+              Candidate and Employer roles, and all new users receive personalized welcome emails 
+              with role-specific actions.
             </Typography>
           </Alert>
 
@@ -109,9 +112,95 @@ export default function ReleaseNote_v105() {
 
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <PersonAdd color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                2. Intent-Aware Role Selection
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              New Google users are now prompted to choose their account type (Candidate or Employer) 
+              instead of being auto-assigned a default role. This matches the experience for 
+              email signup users.
+            </Typography>
+            
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Role Selection Page" 
+                  secondary="New users see a choice between 'I'm a Candidate' and 'I'm an Employer'"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Simplified Candidate Signup" 
+                  secondary="Candidates need no additional form - just click to get started immediately"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Minimal Employer Form" 
+                  secondary="Employers only need to enter their organization name to create their account"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="POST /api/v1/auth/google/assign-role" 
+                  secondary="New endpoint to assign roles after Google users make their selection"
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Email color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                3. Unified Welcome Emails
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              All new users now receive personalized welcome emails with role-specific calls-to-action, 
+              whether they signed up via Google or traditional email.
+            </Typography>
+            
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Candidate Welcome Email" 
+                  secondary="Includes 'Browse Jobs' CTA linking to the Jobseeker Portal"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Employer Welcome Email" 
+                  secondary="Includes 'Post Your First Job' (ATS) and 'Set Up Your Organization' (HRIS) CTAs"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Sent at the Right Time" 
+                  secondary="Google users receive email after role selection; email users receive after verification"
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Security color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                2. Secure Token Exchange Pattern
+                4. Secure Token Exchange Pattern
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -150,7 +239,7 @@ export default function ReleaseNote_v105() {
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Cookie color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                3. httpOnly Cookie Token Storage
+                5. httpOnly Cookie Token Storage
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -189,7 +278,7 @@ export default function ReleaseNote_v105() {
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Code color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                4. New API Endpoints
+                6. New API Endpoints
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
@@ -234,7 +323,7 @@ export default function ReleaseNote_v105() {
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
               <Speed color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                5. Configuration Requirements
+                7. Configuration Requirements
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>

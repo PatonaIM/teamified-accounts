@@ -37,6 +37,15 @@ Core features include:
   - Google user ID stored in `google_user_id` column for identity linking
   - Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` secrets from Google Cloud Console
   - Redirect URI must be configured in Google Cloud Console as: `{BASE_URL}/api/v1/auth/google/callback`
+  - **Intent-Aware Role Selection**: New Google users are prompted to choose Candidate or Employer roles (matching email signup UX):
+    - Candidates: One-click signup with no additional form required
+    - Employers: Minimal form with just organization name to get started
+    - API endpoint: `POST /api/v1/auth/google/assign-role` for role assignment after selection
+    - Frontend page: `/signup/google-path` for role selection flow
+  - **Unified Welcome Emails**: All new users receive personalized welcome emails with role-specific CTAs:
+    - Candidates: "Browse Jobs" button linking to Jobseeker Portal
+    - Employers: "Post Your First Job" (ATS) and "Set Up Your Organization" (HRIS) buttons
+    - Sent after email verification for email signup users, after role selection for Google users
 
 - **Multi-Identity SSO (Candidate + Employee Model)**: Users can link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Login works with any linked email using a single password. Key features:
   - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking

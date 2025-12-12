@@ -65,11 +65,48 @@ export default function GoogleOAuthPage() {
             <ListItem>
               <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
               <ListItemText 
-                primary="4. You're signed in!" 
-                secondary="You're automatically logged in and redirected to your dashboard"
+                primary="4. Choose your account type (new users only)" 
+                secondary="Select whether you're a Candidate looking for jobs, or an Employer hiring talent"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+              <ListItemText 
+                primary="5. You're signed in!" 
+                secondary="You're automatically logged in and receive a welcome email with next steps"
               />
             </ListItem>
           </List>
+        </Paper>
+
+        <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            New User Experience
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            If you're new to Teamified and sign in with Google for the first time, you'll be asked to choose 
+            your account type:
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+              <ListItemText 
+                primary="Candidate" 
+                secondary="For job seekers looking for opportunities. Just click and you're ready to browse jobs!"
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+              <ListItemText 
+                primary="Employer" 
+                secondary="For businesses hiring talent. Enter your organization name to get started."
+              />
+            </ListItem>
+          </List>
+          <Typography variant="body2" color="text.secondary">
+            After choosing your account type, you'll receive a personalized welcome email with relevant 
+            actions - whether that's browsing jobs as a candidate or posting your first job as an employer.
+          </Typography>
         </Paper>
 
         <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
