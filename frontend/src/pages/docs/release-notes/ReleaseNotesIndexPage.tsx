@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.5',
+    date: 'December 12, 2025',
+    title: 'Direct Google SSO Login Features',
+    summary: 'Users can now sign in with "Continue with Google" using direct OAuth 2.0 integration - no third-party vendor dependency. Features secure one-time code exchange, httpOnly cookie token storage, and automatic account creation/linking.',
+    path: '/docs/release-notes/2025-12-12',
+    isLatest: true,
+  },
+  {
     version: '1.0.4',
     date: 'December 13, 2025',
     title: 'Multi-Identity SSO & Account Security',
     summary: 'Users can link multiple emails to one account with smart identity resolution. Profile page improvements include Primary Email section, work emails in org cards, collapsible activity sections, and proper role badge formatting (HR, IT, CEO).',
     path: '/docs/release-notes/2025-12-13',
-    isLatest: true,
   },
   {
     version: '1.0.3',
