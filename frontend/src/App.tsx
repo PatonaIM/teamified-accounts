@@ -153,11 +153,7 @@ function App() {
                 />
                 <Route 
                   path="/signup/path" 
-                  element={
-                    <ProtectedRoute>
-                      <GoogleSignupPathPage />
-                    </ProtectedRoute>
-                  } 
+                  element={<GoogleSignupPathPage />} 
                 />
                 <Route 
                   path="/reset-password" 
