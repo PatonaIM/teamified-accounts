@@ -441,7 +441,7 @@ export class GoogleOAuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new UnauthorizedException('Your session has expired or your account no longer exists. Please sign in again.');
     }
 
     if (user.userRoles && user.userRoles.length > 0) {

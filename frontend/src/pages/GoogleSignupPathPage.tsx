@@ -47,8 +47,16 @@ const GoogleSignupPathPage: React.FC = () => {
       await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
       await refreshUser();
       navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete signup');
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
+      if (err?.response?.status === 401) {
+        setError('Your session has expired. Please sign in again.');
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 2000);
+      } else {
+        setError(errorMessage);
+      }
       setIsLoading(false);
     }
   };
@@ -71,8 +79,16 @@ const GoogleSignupPathPage: React.FC = () => {
       });
       await refreshUser();
       navigate('/organization', { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete signup');
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
+      if (err?.response?.status === 401) {
+        setError('Your session has expired. Please sign in again.');
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 2000);
+      } else {
+        setError(errorMessage);
+      }
       setIsLoading(false);
     }
   };
