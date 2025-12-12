@@ -21,7 +21,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-import { setAccessToken, setRefreshToken, removeTokens } from '../services/authService';
+import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../services/authService';
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
@@ -46,10 +46,14 @@ const GoogleSignupPathPage: React.FC = () => {
     setError(null);
     try {
       const response = await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
-      // Store new tokens with updated roles
+      // Store new tokens and user data with updated roles
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken);
+        // Update cached user data with new roles from response
+        if (response.data.user) {
+          setUserData(response.data.user);
+        }
       }
       await refreshUser();
       navigate('/dashboard', { replace: true });
@@ -83,10 +87,14 @@ const GoogleSignupPathPage: React.FC = () => {
         roleType: 'client_admin',
         organizationName: orgName.trim(),
       });
-      // Store new tokens with updated roles
+      // Store new tokens and user data with updated roles
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken);
+        // Update cached user data with new roles from response
+        if (response.data.user) {
+          setUserData(response.data.user);
+        }
       }
       await refreshUser();
       navigate('/organization', { replace: true });
