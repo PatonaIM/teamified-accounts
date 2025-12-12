@@ -346,7 +346,7 @@ function App() {
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
                   <Route path="release-notes/2025-12-12" element={<ReleaseNote_v105 />} />
-                  <Route path="release-notes/2025-12-13" element={<ReleaseNote_v104 />} />
+                  <Route path="release-notes/2025-12-11" element={<ReleaseNote_v104 />} />
                   <Route path="release-notes/2025-12-05" element={<ReleaseNote_v103 />} />
                   <Route path="release-notes/2025-12-04" element={<ReleaseNote_v102 />} />
                   <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />

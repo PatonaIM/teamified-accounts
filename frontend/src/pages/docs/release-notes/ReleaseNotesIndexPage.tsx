@@ -32,10 +32,10 @@ const releaseNotes: ReleaseNote[] = [
   },
   {
     version: '1.0.4',
-    date: 'December 13, 2025',
+    date: 'December 11, 2025',
     title: 'Multi-Identity SSO & Account Security',
     summary: 'Users can link multiple emails to one account with smart identity resolution. Profile page improvements include Primary Email section, work emails in org cards, collapsible activity sections, and proper role badge formatting (HR, IT, CEO).',
-    path: '/docs/release-notes/2025-12-13',
+    path: '/docs/release-notes/2025-12-11',
   },
   {
     version: '1.0.3',
