@@ -345,12 +345,12 @@ function App() {
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
-                  <Route path="release-notes/2025-12-12" element={<ReleaseNote_v105 />} />
-                  <Route path="release-notes/2025-12-11" element={<ReleaseNote_v104 />} />
-                  <Route path="release-notes/2025-12-05" element={<ReleaseNote_v103 />} />
-                  <Route path="release-notes/2025-12-04" element={<ReleaseNote_v102 />} />
-                  <Route path="release-notes/2025-12-03" element={<ReleaseNote_2025_12_03 />} />
-                  <Route path="release-notes/2025-12-02" element={<ReleaseNote_2025_12_02 />} />
+                  <Route path="release-notes/v1.0.5" element={<ReleaseNote_v105 />} />
+                  <Route path="release-notes/v1.0.4" element={<ReleaseNote_v104 />} />
+                  <Route path="release-notes/v1.0.3" element={<ReleaseNote_v103 />} />
+                  <Route path="release-notes/v1.0.2" element={<ReleaseNote_v102 />} />
+                  <Route path="release-notes/v1.0.1" element={<ReleaseNote_2025_12_03 />} />
+                  <Route path="release-notes/v1.0.0" element={<ReleaseNote_2025_12_02 />} />
                 </Route>
                 
                 <Route path="/" element={<SessionAwareRedirect />} />

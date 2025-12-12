@@ -47,12 +47,12 @@ export const docsNavConfig: NavSection[] = [
     icon: 'NewReleases',
     items: [
       { title: 'All Releases', path: '/docs/release-notes' },
-      { title: 'v1.0.5 - Dec 12, 2025', path: '/docs/release-notes/2025-12-12' },
-      { title: 'v1.0.4 - Dec 11, 2025', path: '/docs/release-notes/2025-12-11' },
-      { title: 'v1.0.3 - Dec 5, 2025', path: '/docs/release-notes/2025-12-05' },
-      { title: 'v1.0.2 - Dec 4, 2025', path: '/docs/release-notes/2025-12-04' },
-      { title: 'v1.0.1 - Dec 3, 2025', path: '/docs/release-notes/2025-12-03' },
-      { title: 'v1.0.0 - Dec 2, 2025', path: '/docs/release-notes/2025-12-02' },
+      { title: 'v1.0.5 - Dec 12, 2025', path: '/docs/release-notes/v1.0.5' },
+      { title: 'v1.0.4 - Dec 11, 2025', path: '/docs/release-notes/v1.0.4' },
+      { title: 'v1.0.3 - Dec 5, 2025', path: '/docs/release-notes/v1.0.3' },
+      { title: 'v1.0.2 - Dec 4, 2025', path: '/docs/release-notes/v1.0.2' },
+      { title: 'v1.0.1 - Dec 3, 2025', path: '/docs/release-notes/v1.0.1' },
+      { title: 'v1.0.0 - Dec 2, 2025', path: '/docs/release-notes/v1.0.0' },
     ],
   },
 ];
