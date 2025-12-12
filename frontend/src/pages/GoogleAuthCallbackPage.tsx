@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Alert } from '@mui/material';
 import { googleAuthService } from '../services/googleAuthService';
@@ -9,9 +9,15 @@ const GoogleAuthCallbackPage: React.FC = () => {
   const { refreshUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(true);
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
+      if (hasProcessed.current) {
+        return;
+      }
+      hasProcessed.current = true;
+
       try {
         const { code, returnUrl, error: errorParam } = googleAuthService.getCallbackParams();
         
@@ -33,14 +39,20 @@ const GoogleAuthCallbackPage: React.FC = () => {
           return;
         }
 
-        const result = await googleAuthService.exchangeCode(code);
+        let targetUrl = returnUrl || '/account/profile';
         
-        googleAuthService.storeTokens(result.accessToken, result.refreshToken);
+        try {
+          const result = await googleAuthService.exchangeCode(code);
+          googleAuthService.storeTokens(result.accessToken, result.refreshToken);
+          if (result.returnUrl) {
+            targetUrl = result.returnUrl;
+          }
+        } catch (exchangeError) {
+          console.log('[GoogleAuth] Code exchange failed, tokens may already be set via cookies');
+        }
 
         await refreshUser();
 
-        const targetUrl = result.returnUrl || returnUrl || '/account/profile';
-        
         if (targetUrl.includes('/api/v1/sso/authorize')) {
           window.location.href = targetUrl;
         } else {
