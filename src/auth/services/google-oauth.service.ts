@@ -83,11 +83,24 @@ export class GoogleOAuthService {
     this.clientId = this.configService.get<string>('GOOGLE_CLIENT_ID') || '';
     this.clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET') || '';
     
-    const baseUrl = this.configService.get<string>('BASE_URL') ||
-      this.configService.get<string>('FRONTEND_URL') ||
-      (this.configService.get<string>('REPLIT_DEV_DOMAIN')
-        ? `https://${this.configService.get<string>('REPLIT_DEV_DOMAIN')}`
-        : 'http://localhost:5000');
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
+    const isProduction = nodeEnv === 'production';
+    
+    let baseUrl: string;
+    
+    if (this.configService.get<string>('BASE_URL')) {
+      baseUrl = this.configService.get<string>('BASE_URL')!;
+    } else if (this.configService.get<string>('FRONTEND_URL')) {
+      baseUrl = this.configService.get<string>('FRONTEND_URL')!;
+    } else if (isProduction && this.configService.get<string>('REPLIT_DOMAINS')) {
+      const domains = this.configService.get<string>('REPLIT_DOMAINS')!;
+      const primaryDomain = domains.split(',')[0].trim();
+      baseUrl = `https://${primaryDomain}`;
+    } else if (this.configService.get<string>('REPLIT_DEV_DOMAIN')) {
+      baseUrl = `https://${this.configService.get<string>('REPLIT_DEV_DOMAIN')}`;
+    } else {
+      baseUrl = 'http://localhost:5000';
+    }
     
     this.redirectUri = `${baseUrl}/api/v1/auth/google/callback`;
     
@@ -96,7 +109,7 @@ export class GoogleOAuthService {
     if (!this.isConfigured) {
       this.logger.warn('Google OAuth is not configured. Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET.');
     } else {
-      this.logger.log('Google OAuth configured successfully');
+      this.logger.log(`Google OAuth configured successfully with redirect URI: ${this.redirectUri}`);
     }
   }
 
