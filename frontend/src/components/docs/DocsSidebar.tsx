@@ -22,6 +22,7 @@ import {
 import { docsNavConfig } from '../../pages/docs/navConfig';
 import type { NavSection } from '../../pages/docs/navConfig';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const iconMap: Record<string, React.ReactNode> = {
   Business: <Business />,
@@ -34,7 +35,12 @@ export default function DocsSidebar() {
   const navigate = useNavigate();
   const muiTheme = useMuiTheme();
   const { currentTheme, setTheme } = useTheme();
+  const { user } = useAuth();
   const isDarkMode = muiTheme.palette.mode === 'dark';
+
+  const handleLogoClick = () => {
+    navigate(user ? '/account/profile' : '/login');
+  };
 
   const handleToggleTheme = () => {
     setTheme(isDarkMode ? 'teamified' : 'dark');
@@ -94,10 +100,30 @@ export default function DocsSidebar() {
         bgcolor: isDarkMode ? 'background.paper' : 'grey.50',
       }}
     >
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <MenuBook color="primary" />
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          Documentation
+      <Box 
+        onClick={handleLogoClick}
+        sx={{ 
+          p: 2, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          cursor: 'pointer',
+          '&:hover': {
+            opacity: 0.8,
+          },
+        }}
+      >
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          teamified
         </Typography>
       </Box>
 
