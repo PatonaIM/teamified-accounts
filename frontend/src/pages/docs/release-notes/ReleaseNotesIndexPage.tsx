@@ -24,7 +24,7 @@ interface ReleaseNote {
 const releaseNotes: ReleaseNote[] = [
   {
     version: '1.0.5',
-    date: 'December 12, 2025',
+    date: 'December 13, 2025',
     title: 'Direct Google SSO Login Features',
     summary: 'Users can now sign in with "Continue with Google" using direct OAuth 2.0 integration - no third-party vendor dependency. Features secure one-time code exchange, httpOnly cookie token storage, and automatic account creation/linking.',
     path: '/docs/release-notes/v1.0.5',
