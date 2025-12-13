@@ -43,7 +43,6 @@ export default function ReleaseNote_v105() {
                   <Typography variant="body2" color="text.secondary">
                     December 13, 2025
                   </Typography>
-                  <Chip label="1 min read" size="small" variant="outlined" />
                 </Stack>
                 <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
                   Direct Google SSO Login Features
