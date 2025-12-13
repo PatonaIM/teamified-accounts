@@ -41,7 +41,7 @@ export default function ReleaseNote_v105() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Chip label="v1.0.5" color="primary" sx={{ fontWeight: 600 }} />
                   <Typography variant="body2" color="text.secondary">
-                    December 12, 2025
+                    December 13, 2025
                   </Typography>
                   <Chip label="1 min read" size="small" variant="outlined" />
                 </Stack>
