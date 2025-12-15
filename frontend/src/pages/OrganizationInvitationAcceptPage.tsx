@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, CheckCircle, Business, Login as LoginIcon, LinkOutlined, InfoOutlined } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { login } from '../services/authService';
+import { login, logout } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 
@@ -347,11 +347,17 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
             <Button 
               variant="contained" 
               fullWidth 
-              onClick={() => {
-                navigate('/login?returnUrl=' + encodeURIComponent(`/invitations/accept/${code}`));
+              onClick={async () => {
+                try {
+                  await logout();
+                  window.location.reload();
+                } catch (err) {
+                  console.error('Logout failed:', err);
+                  window.location.reload();
+                }
               }}
             >
-              Switch Account
+              Log Out
             </Button>
           </Paper>
         </Container>
