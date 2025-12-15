@@ -61,6 +61,7 @@ import MyAppsPage from './pages/account/MyAppsPage';
 import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
 import CandidateUsersPage from './pages/account/CandidateUsersPage';
+import AnalyticsReportsPage from './pages/account/AnalyticsReportsPage';
 import './App.css';
 
 // Redirect component for old /admin/users/:userId route to new /users/:userId
@@ -284,6 +285,14 @@ function App() {
                     element={
                       <SuperAdminRoute>
                         <CandidateUsersPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics" 
+                    element={
+                      <SuperAdminRoute>
+                        <AnalyticsReportsPage />
                       </SuperAdminRoute>
                     } 
                   />

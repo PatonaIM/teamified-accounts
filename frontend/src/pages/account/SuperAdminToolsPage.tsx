@@ -121,7 +121,7 @@ export default function SuperAdminToolsPage() {
       icon: <AnalyticsIcon fontSize="large" />,
       title: 'Analytics & Reports',
       description: 'Generate platform-wide analytics and usage reports',
-      comingSoon: true,
+      path: '/admin/analytics',
     },
   ];
 
