@@ -40,6 +40,23 @@ export class InvitationsController {
 
   constructor(private readonly invitationsService: InvitationsService) {}
 
+  private getBaseUrl(req: any): string {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (process.env.BASE_URL) {
+      return process.env.BASE_URL;
+    } else if (process.env.FRONTEND_URL) {
+      return process.env.FRONTEND_URL;
+    } else if (isProduction && process.env.REPLIT_DOMAINS) {
+      const primaryDomain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
+      return `https://${primaryDomain}`;
+    } else if (process.env.REPLIT_DEV_DOMAIN) {
+      return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    } else {
+      return `${req.protocol}://${req.get('host')}`;
+    }
+  }
+
   @Post('accept')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for public endpoint
   @HttpCode(HttpStatus.CREATED)
@@ -164,12 +181,7 @@ export class InvitationsController {
     @Body() acceptDto: AcceptOrganizationInvitationDto,
     @Request() req: any,
   ): Promise<AcceptInvitationResponseDto> {
-    // Use frontend URL for email verification links
-    // Priority: FRONTEND_URL (custom/production) > REPLIT_DEV_DOMAIN (Replit) > request host (fallback)
-    const baseUrl = process.env.FRONTEND_URL 
-      || (process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : `${req.protocol}://${req.get('host')}`);
+    const baseUrl = this.getBaseUrl(req);
     return this.invitationsService.acceptOrganizationInvitation(
       acceptDto,
       baseUrl,
@@ -347,12 +359,7 @@ export class InvitationsController {
   ): Promise<AcceptInvitationResponseDto> {
     try {
       this.logger.log(`[acceptInternalInvitation] Starting invitation acceptance for ${acceptDto.email}`);
-      // Use frontend URL for email verification links
-      // Priority: FRONTEND_URL (custom/production) > REPLIT_DEV_DOMAIN (Replit) > request host (fallback)
-      const baseUrl = process.env.FRONTEND_URL 
-        || (process.env.REPLIT_DEV_DOMAIN 
-            ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-            : `${req.protocol}://${req.get('host')}`);
+      const baseUrl = this.getBaseUrl(req);
       const result = await this.invitationsService.acceptInternalInvitation(
         acceptDto,
         baseUrl,
@@ -455,12 +462,7 @@ export class InvitationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<InternalInvitationResponseDto> {
-    // Use frontend URL for invitation acceptance links
-    // Priority: FRONTEND_URL (custom/production) > REPLIT_DEV_DOMAIN (Replit) > request host (fallback)
-    const baseUrl = process.env.FRONTEND_URL 
-      || (process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : `${req.protocol}://${req.get('host')}`);
+    const baseUrl = this.getBaseUrl(req);
     return this.invitationsService.createInternalInvitation(
       createDto,
       user,
@@ -531,12 +533,7 @@ export class InvitationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<InternalInvitationResponseDto> {
-    // Use frontend URL for invitation acceptance links
-    // Priority: FRONTEND_URL (custom/production) > REPLIT_DEV_DOMAIN (Replit) > request host (fallback)
-    const baseUrl = process.env.FRONTEND_URL 
-      || (process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : `${req.protocol}://${req.get('host')}`);
+    const baseUrl = this.getBaseUrl(req);
     return this.invitationsService.generateShareableInviteLink(
       user,
       baseUrl,
@@ -642,12 +639,7 @@ export class InvitationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<InvitationResponseDto> {
-    // Use frontend URL for invitation acceptance links
-    // Priority: FRONTEND_URL (custom/production) > REPLIT_DEV_DOMAIN (Replit) > request host (fallback)
-    const baseUrl = process.env.FRONTEND_URL 
-      || (process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : `${req.protocol}://${req.get('host')}`);
+    const baseUrl = this.getBaseUrl(req);
     return this.invitationsService.generateOrgShareableLink(
       generateDto.organizationId,
       generateDto.roleType,
@@ -772,10 +764,7 @@ export class InvitationsController {
       userRoles: user?.userRoles?.map(r => r.roleType),
     });
     
-    const baseUrl = process.env.FRONTEND_URL 
-      || (process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : `${req.protocol}://${req.get('host')}`);
+    const baseUrl = this.getBaseUrl(req);
     
     try {
       const result = await this.invitationsService.sendOrgEmailInvitation(

@@ -118,10 +118,21 @@ export class GoogleOAuthController {
         path: '/api/v1/auth',
       });
 
-      const frontendUrl = process.env.FRONTEND_URL || 
-        (process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : 'http://localhost:5000');
+      const isProduction = process.env.NODE_ENV === 'production';
+      let frontendUrl: string;
+      
+      if (process.env.BASE_URL) {
+        frontendUrl = process.env.BASE_URL;
+      } else if (process.env.FRONTEND_URL) {
+        frontendUrl = process.env.FRONTEND_URL;
+      } else if (isProduction && process.env.REPLIT_DOMAINS) {
+        const primaryDomain = process.env.REPLIT_DOMAINS.split(',')[0].trim();
+        frontendUrl = `https://${primaryDomain}`;
+      } else if (process.env.REPLIT_DEV_DOMAIN) {
+        frontendUrl = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+      } else {
+        frontendUrl = 'http://localhost:5000';
+      }
 
       const callbackUrl = new URL(`${frontendUrl}/auth/google/callback`);
       callbackUrl.searchParams.set('code', tempCode);
