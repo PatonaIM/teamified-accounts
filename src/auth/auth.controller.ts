@@ -377,6 +377,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/', // Ensure cookie is sent on all routes including /api/v1/sso/authorize
       maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
     });
     
@@ -466,6 +467,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/', // Ensure cookie is sent on all routes
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
     
@@ -554,6 +556,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/', // Must match the path used when setting the cookie
     });
     
     return logoutResponse;

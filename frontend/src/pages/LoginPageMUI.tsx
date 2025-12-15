@@ -54,12 +54,40 @@ const LoginPageMUI: React.FC = () => {
     const checkAndRedirect = async () => {
       if (loading) return;
       
+      const targetUrl = returnUrl !== '/account/profile' ? returnUrl : (getLastPath() || '/account/profile');
+      const isSsoAuthorizeUrl = targetUrl.includes('/api/v1/sso/authorize');
+      
       if (user) {
         console.log('[LoginPageMUI] User already authenticated, redirecting...');
-        const targetUrl = returnUrl !== '/account/profile' ? returnUrl : (getLastPath() || '/account/profile');
         
-        if (targetUrl.includes('/api/v1/sso/authorize')) {
-          window.location.href = targetUrl;
+        if (isSsoAuthorizeUrl) {
+          // For SSO authorize URLs, verify the COOKIE is still valid on the server
+          // before redirecting, to prevent redirect loops when cookie is expired.
+          // IMPORTANT: We use credentials: 'include' WITHOUT Authorization header
+          // because the SSO authorize endpoint only checks cookies, not Bearer tokens.
+          try {
+            const verifyResponse = await fetch('/api/v1/auth/me', {
+              credentials: 'include',
+              // NO Authorization header - force cookie validation only
+            });
+            if (verifyResponse.ok) {
+              console.log('[LoginPageMUI] Cookie session verified, redirecting to SSO authorize');
+              window.location.href = targetUrl;
+            } else {
+              console.log('[LoginPageMUI] Cookie expired on server, clearing stale auth state');
+              // Clear stale auth state to prevent loop
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('refresh_token');
+              localStorage.removeItem('user_cache');
+              await refreshUser();
+            }
+          } catch (error) {
+            console.log('[LoginPageMUI] Cookie verification failed, clearing stale auth state');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_cache');
+            await refreshUser();
+          }
         } else {
           navigate(targetUrl, { replace: true });
         }
@@ -75,10 +103,9 @@ const LoginPageMUI: React.FC = () => {
             setAccessToken(response.data.accessToken);
             await refreshUser();
             
-            const targetUrl = returnUrl !== '/account/profile' ? returnUrl : (getLastPath() || '/account/profile');
             console.log('[LoginPageMUI] Token refreshed, redirecting to:', targetUrl);
             
-            if (targetUrl.includes('/api/v1/sso/authorize')) {
+            if (isSsoAuthorizeUrl) {
               window.location.href = targetUrl;
             } else {
               navigate(targetUrl, { replace: true });
