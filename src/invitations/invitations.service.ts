@@ -984,6 +984,28 @@ export class InvitationsService {
       await this.memberRepository.save(membership);
     }
 
+    // 4.5. Create work email association for this organization if it doesn't exist
+    const existingWorkEmail = await this.userEmailRepository.findOne({
+      where: { 
+        userId: user.id, 
+        organizationId: invitation.organizationId,
+        emailType: EmailType.WORK
+      }
+    });
+
+    if (!existingWorkEmail) {
+      const workEmail = this.userEmailRepository.create({
+        email: user.email,
+        userId: user.id,
+        organizationId: invitation.organizationId,
+        emailType: EmailType.WORK,
+        isPrimary: false,
+        isVerified: user.emailVerified || false,
+      });
+      await this.userEmailRepository.save(workEmail);
+      this.logger.log(`Created work email record for ${user.email} linked to org ${invitation.organizationId}`);
+    }
+
     // 5. Assign role if not already assigned
     const existingRole = await this.userRoleRepository.findOne({
       where: {
