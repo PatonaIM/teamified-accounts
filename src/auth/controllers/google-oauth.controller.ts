@@ -107,6 +107,7 @@ export class GoogleOAuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
+        path: '/', // Ensure cookie is sent on all routes
         maxAge: 15 * 60 * 1000,
       });
 
