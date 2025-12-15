@@ -58,8 +58,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  FunnelChart,
-  Funnel,
   LabelList,
 } from 'recharts';
 import analyticsService from '../../services/analyticsService';
