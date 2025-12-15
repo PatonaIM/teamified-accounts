@@ -62,7 +62,8 @@ import {
   Funnel,
   LabelList,
 } from 'recharts';
-import analyticsService, {
+import analyticsService from '../../services/analyticsService';
+import type {
   AppUsageAnalytics,
   LoginTrafficAnalytics,
   UserEngagementAnalytics,
