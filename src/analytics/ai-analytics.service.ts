@@ -151,8 +151,8 @@ The questions should:
 4. Vary in focus (users, apps, security, engagement, etc.)
 5. Be concise (under 60 characters each)
 
-Respond with a JSON array of exactly 5 question strings.
-Example: ["Which users logged in most this week?", "Why did signups spike on Monday?"]`;
+You MUST respond with a JSON object in exactly this format:
+{"questions": ["question 1", "question 2", "question 3", "question 4", "question 5"]}`;
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',

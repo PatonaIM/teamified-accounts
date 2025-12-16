@@ -291,15 +291,31 @@ function DynamicChart({ config }: { config: ChartConfig }) {
   );
 }
 
+const defaultSuggestions = [
+  'Which app has the highest engagement this month?',
+  'Show me login patterns by time of day',
+  'What is our user adoption funnel conversion rate?',
+  'Which features are most popular across all apps?',
+  'How many organizations are at risk of churning?',
+];
+
 function AIAnalyticsSection() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AIAnalyticsResponse | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>(defaultSuggestions);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    analyticsService.getAISuggestions().then(setSuggestions).catch(console.error);
+    analyticsService.getAISuggestions()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSuggestions(data);
+        }
+      })
+      .catch(() => {
+        // Keep default suggestions on error
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
