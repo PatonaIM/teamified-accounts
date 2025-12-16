@@ -42,7 +42,9 @@ import {
   Apps,
   Login as LoginIcon,
   DateRange as DateRangeIcon,
+  ArrowBack,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart,
   Bar,
@@ -1465,6 +1467,7 @@ function TimeToValueSection() {
 }
 
 export default function AnalyticsReportsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
   const tabs = [
@@ -1484,6 +1487,18 @@ export default function AnalyticsReportsPage() {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate('/admin/tools')}
+          sx={{ 
+            mr: 2,
+            color: 'primary.main',
+            '&:hover': { 
+              bgcolor: 'rgba(161, 106, 232, 0.08)' 
+            }
+          }}
+        >
+          <ArrowBack />
+        </IconButton>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           Analytics & Reports
         </Typography>
