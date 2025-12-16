@@ -258,7 +258,65 @@ function AIAnalyticsSection() {
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      {result && (
+      {loading && (
+        <Paper sx={{ p: 4, mb: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                animation: 'pulse 1.5s ease-in-out infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': { opacity: 1 },
+                  '50%': { opacity: 0.5 },
+                },
+              }}
+            >
+              <AIIcon 
+                sx={{ 
+                  fontSize: 32, 
+                  color: 'primary.main',
+                  animation: 'sparkle 1.2s ease-in-out infinite',
+                  '@keyframes sparkle': {
+                    '0%, 100%': { transform: 'scale(1) rotate(0deg)', filter: 'brightness(1)' },
+                    '25%': { transform: 'scale(1.1) rotate(5deg)', filter: 'brightness(1.3)' },
+                    '50%': { transform: 'scale(1) rotate(0deg)', filter: 'brightness(1.5)' },
+                    '75%': { transform: 'scale(1.1) rotate(-5deg)', filter: 'brightness(1.3)' },
+                  },
+                }} 
+              />
+              <Typography variant="h6" color="primary">
+                Analyzing your data...
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.main',
+                    animation: 'bounce 1.4s ease-in-out infinite',
+                    animationDelay: `${i * 0.16}s`,
+                    '@keyframes bounce': {
+                      '0%, 80%, 100%': { transform: 'scale(0.6)', opacity: 0.5 },
+                      '40%': { transform: 'scale(1)', opacity: 1 },
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              AI is processing your query and generating insights...
+            </Typography>
+          </Box>
+        </Paper>
+      )}
+
+      {!loading && result && (
         <Box>
           <Paper sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider' }}>
             <Typography variant="h6" gutterBottom>Summary</Typography>
