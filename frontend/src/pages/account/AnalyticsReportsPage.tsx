@@ -41,6 +41,7 @@ import {
   Refresh,
   Apps,
   Login as LoginIcon,
+  DateRange as DateRangeIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -89,6 +90,108 @@ function TabPanel({ children, value, index }: TabPanelProps) {
     <div role="tabpanel" hidden={value !== index}>
       {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
     </div>
+  );
+}
+
+type DateRangePreset = 
+  | '15m' | '30m' | '1h' | '3h' | '6h' | '12h' | '24h' | '3d' | '1w' | '30d' | 'custom';
+
+const DATE_RANGE_OPTIONS: { value: DateRangePreset; label: string }[] = [
+  { value: '15m', label: 'Last 15 mins' },
+  { value: '30m', label: 'Last 30 mins' },
+  { value: '1h', label: 'Last 1 hour' },
+  { value: '3h', label: 'Last 3 hours' },
+  { value: '6h', label: 'Last 6 hours' },
+  { value: '12h', label: 'Last 12 hours' },
+  { value: '24h', label: 'Last 24 hours' },
+  { value: '3d', label: 'Last 3 days' },
+  { value: '1w', label: 'Last 1 week' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: 'custom', label: 'Custom Range' },
+];
+
+function getDateRangeFromPreset(preset: DateRangePreset): { startDate: string; endDate: string } {
+  const now = new Date();
+  const endDate = now.toISOString();
+  let startDate: Date;
+
+  switch (preset) {
+    case '15m': startDate = new Date(now.getTime() - 15 * 60 * 1000); break;
+    case '30m': startDate = new Date(now.getTime() - 30 * 60 * 1000); break;
+    case '1h': startDate = new Date(now.getTime() - 60 * 60 * 1000); break;
+    case '3h': startDate = new Date(now.getTime() - 3 * 60 * 60 * 1000); break;
+    case '6h': startDate = new Date(now.getTime() - 6 * 60 * 60 * 1000); break;
+    case '12h': startDate = new Date(now.getTime() - 12 * 60 * 60 * 1000); break;
+    case '24h': startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); break;
+    case '3d': startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000); break;
+    case '1w': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+    case '30d': default: startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+  }
+
+  return { startDate: startDate.toISOString(), endDate };
+}
+
+interface DateRangeFilterProps {
+  value: DateRangePreset;
+  onChange: (preset: DateRangePreset, range: { startDate: string; endDate: string }) => void;
+  customStart?: string;
+  customEnd?: string;
+  onCustomChange?: (start: string, end: string) => void;
+}
+
+function DateRangeFilter({ value, onChange, customStart, customEnd, onCustomChange }: DateRangeFilterProps) {
+  const handlePresetChange = (preset: DateRangePreset) => {
+    if (preset === 'custom') {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      onChange(preset, { 
+        startDate: customStart || weekAgo.toISOString().split('T')[0], 
+        endDate: customEnd || now.toISOString().split('T')[0] 
+      });
+    } else {
+      onChange(preset, getDateRangeFromPreset(preset));
+    }
+  };
+
+  return (
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <DateRangeIcon color="action" />
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Date Range</InputLabel>
+          <Select
+            value={value}
+            label="Date Range"
+            onChange={(e) => handlePresetChange(e.target.value as DateRangePreset)}
+          >
+            {DATE_RANGE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+      {value === 'custom' && onCustomChange && (
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            type="date"
+            size="small"
+            label="Start Date"
+            value={customStart || ''}
+            onChange={(e) => onCustomChange(e.target.value, customEnd || '')}
+            InputLabelProps={{ shrink: true }}
+          />
+          <Typography variant="body2" color="text.secondary">to</Typography>
+          <TextField
+            type="date"
+            size="small"
+            label="End Date"
+            value={customEnd || ''}
+            onChange={(e) => onCustomChange(customStart || '', e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+      )}
+    </Box>
   );
 }
 
@@ -346,16 +449,54 @@ function AIAnalyticsSection() {
 function AppUsageSection() {
   const [data, setData] = useState<AppUsageAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getAppUsageAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getAppUsageAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      fetchData(range.startDate, range.endDate);
+    }
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) {
+      fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+    }
+  };
 
   return (
     <Box>
+      <DateRangeFilter
+        value={datePreset}
+        onChange={handleDateChange}
+        customStart={customStart}
+        customEnd={customEnd}
+        onCustomChange={handleCustomChange}
+      />
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 4 }}>
           <StatCard title="Total Feature Usage" value={data.totalFeatureUsage.toLocaleString()} icon={<Apps />} />
@@ -412,6 +553,8 @@ function AppUsageSection() {
           </TableContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
@@ -419,16 +562,54 @@ function AppUsageSection() {
 function LoginTrafficSection() {
   const [data, setData] = useState<LoginTrafficAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getLoginTrafficAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getLoginTrafficAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      fetchData(range.startDate, range.endDate);
+    }
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) {
+      fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+    }
+  };
 
   return (
     <Box>
+      <DateRangeFilter
+        value={datePreset}
+        onChange={handleDateChange}
+        customStart={customStart}
+        customEnd={customEnd}
+        onCustomChange={handleCustomChange}
+      />
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard title="Total Logins" value={data.totalLogins.toLocaleString()} icon={<LoginIcon />} />
@@ -446,7 +627,7 @@ function LoginTrafficSection() {
 
       <Card sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Login Trend (Last 30 Days)</Typography>
+          <Typography variant="h6" gutterBottom>Login Trend</Typography>
           <Box sx={{ height: 300 }}>
             <ResponsiveContainer>
               <AreaChart data={data.dailyTrend}>
@@ -477,6 +658,8 @@ function LoginTrafficSection() {
           </Box>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
