@@ -127,17 +127,67 @@ Respond in JSON format:
   }
 
   async getSuggestedQueries(): Promise<string[]> {
-    return [
+    const fallbackSuggestions = [
       'Which app has the highest engagement this month?',
       'Show me login patterns by time of day',
       'What is our user adoption funnel conversion rate?',
       'Which features are most popular across all apps?',
       'How many organizations are at risk of churning?',
-      'What is the average time for new users to take their first action?',
-      'Show me the device distribution of our users',
-      'Who are our top 10 power users?',
-      'What is our invitation acceptance rate?',
-      'Which features have the best retention?',
     ];
+
+    if (!this.openai) {
+      return fallbackSuggestions;
+    }
+
+    try {
+      const analyticsData = await this.platformAnalyticsService.getAllAnalyticsData();
+
+      const systemPrompt = `You are an analytics assistant for Teamified. Generate 5 relevant, contextual analytics questions based on the current platform data.
+
+The questions should:
+1. Be specific to patterns or insights visible in the data
+2. Highlight interesting trends, outliers, or opportunities
+3. Be actionable for platform administrators
+4. Vary in focus (users, apps, security, engagement, etc.)
+5. Be concise (under 60 characters each)
+
+Respond with a JSON array of exactly 5 question strings.
+Example: ["Which users logged in most this week?", "Why did signups spike on Monday?"]`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { 
+            role: 'user', 
+            content: `Current analytics data summary:\n${JSON.stringify({
+              totalUsers: analyticsData.userEngagement?.totalActiveUsers || 0,
+              topApps: analyticsData.appUsage?.topApps?.slice(0, 3) || [],
+              peakHour: analyticsData.loginTraffic?.peakHour || 'unknown',
+              atRiskOrgs: analyticsData.organizationHealth?.atRiskCount || 0,
+              activeSessions: analyticsData.sessions?.activeSessions || 0,
+              recentSecurityEvents: analyticsData.security?.securityEvents?.length || 0,
+              invitationAcceptanceRate: analyticsData.invitations?.stats?.acceptanceRate || 0,
+            }, null, 2)}` 
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 300,
+        temperature: 0.9,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return fallbackSuggestions;
+      }
+
+      const parsed = JSON.parse(content);
+      const suggestions = Array.isArray(parsed) ? parsed : parsed.questions || parsed.suggestions || [];
+      
+      return suggestions.length >= 3 ? suggestions.slice(0, 5) : fallbackSuggestions;
+    } catch (error) {
+      this.logger.error('Failed to generate AI suggestions', error);
+      return fallbackSuggestions;
+    }
   }
 }
