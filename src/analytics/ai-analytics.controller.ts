@@ -1,11 +1,14 @@
 import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiBody } from '@nestjs/swagger';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AIAnalyticsService, AIAnalyticsResponse } from './ai-analytics.service';
 
 class AIQueryDto {
+  @IsString()
+  @IsNotEmpty()
   query: string;
 }
 
