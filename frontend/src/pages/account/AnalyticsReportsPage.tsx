@@ -667,16 +667,43 @@ function LoginTrafficSection() {
 function UserEngagementSection() {
   const [data, setData] = useState<UserEngagementAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getUserEngagementAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getUserEngagementAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard title="Active Users" value={data.totalActiveUsers} icon={<People />} />
@@ -743,6 +770,8 @@ function UserEngagementSection() {
           </Card>
         </Grid>
       </Grid>
+      </>
+      )}
     </Box>
   );
 }
@@ -750,16 +779,43 @@ function UserEngagementSection() {
 function AdoptionFunnelSection() {
   const [data, setData] = useState<AppAdoptionFunnel | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getAppAdoptionFunnel({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getAppAdoptionFunnel().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <StatCard title="Overall Conversion Rate" value={`${data.overallConversionRate}%`} subtitle="From registration to active usage" icon={<TrendingUp />} />
       
       <Card sx={{ mt: 3, border: '1px solid', borderColor: 'divider' }}>
@@ -812,6 +868,8 @@ function AdoptionFunnelSection() {
           </TableContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
@@ -819,13 +877,33 @@ function AdoptionFunnelSection() {
 function OrganizationHealthSection() {
   const [data, setData] = useState<OrganizationHealthAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getOrganizationHealth({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getOrganizationHealth().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -839,6 +917,13 @@ function OrganizationHealthSection() {
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="Total Organizations" value={data.totalOrganizations} icon={<Business />} />
@@ -892,6 +977,8 @@ function OrganizationHealthSection() {
           </TableContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
@@ -899,16 +986,43 @@ function OrganizationHealthSection() {
 function SessionDeviceSection() {
   const [data, setData] = useState<SessionAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getSessionAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getSessionAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="Active Sessions" value={data.activeSessions} icon={<Devices />} />
@@ -937,6 +1051,8 @@ function SessionDeviceSection() {
           </Box>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
@@ -944,16 +1060,43 @@ function SessionDeviceSection() {
 function SecuritySection() {
   const [data, setData] = useState<SecurityAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getSecurityAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getSecurityAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="Total Audit Logs" value={data.totalAuditLogs} icon={<Security />} />
@@ -1028,6 +1171,8 @@ function SecuritySection() {
           </Card>
         </Grid>
       </Grid>
+      </>
+      )}
     </Box>
   );
 }
@@ -1035,16 +1180,43 @@ function SecuritySection() {
 function InvitationSection() {
   const [data, setData] = useState<InvitationAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getInvitationAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getInvitationAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard title="Total Sent" value={data.stats.totalSent} icon={<Mail />} />
@@ -1109,6 +1281,8 @@ function InvitationSection() {
           </Card>
         </Grid>
       </Grid>
+      </>
+      )}
     </Box>
   );
 }
@@ -1116,16 +1290,43 @@ function InvitationSection() {
 function FeatureStickinessSection() {
   const [data, setData] = useState<FeatureStickinessAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getFeatureStickinessAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getFeatureStickinessAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 4 }}>
           <StatCard title="Overall Return Rate" value={`${data.overallReturnRate}%`} icon={<TrendingUp />} />
@@ -1177,6 +1378,8 @@ function FeatureStickinessSection() {
           </TableContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
@@ -1184,16 +1387,43 @@ function FeatureStickinessSection() {
 function TimeToValueSection() {
   const [data, setData] = useState<TimeToValueAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const fetchData = (startDate?: string, endDate?: string) => {
+    setLoading(true);
+    analyticsService.getTimeToValueAnalytics({ startDate, endDate })
+      .then(setData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    analyticsService.getTimeToValueAnalytics().then(setData).catch(console.error).finally(() => setLoading(false));
+    const range = getDateRangeFromPreset('30d');
+    fetchData(range.startDate, range.endDate);
   }, []);
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>;
-  if (!data) return <Alert severity="error">Failed to load data</Alert>;
+  const handleDateChange = (preset: DateRangePreset, range: { startDate: string; endDate: string }) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') fetchData(range.startDate, range.endDate);
+  };
+
+  const handleCustomChange = (start: string, end: string) => {
+    setCustomStart(start);
+    setCustomEnd(end);
+    if (start && end) fetchData(new Date(start).toISOString(), new Date(end + 'T23:59:59').toISOString());
+  };
 
   return (
     <Box>
+      <DateRangeFilter value={datePreset} onChange={handleDateChange} customStart={customStart} customEnd={customEnd} onCustomChange={handleCustomChange} />
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+      ) : !data ? (
+        <Alert severity="error">Failed to load data</Alert>
+      ) : (
+      <>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard title="Avg Days to First Action" value={data.metrics.averageDaysToFirstAction} icon={<Speed />} />
@@ -1228,6 +1458,8 @@ function TimeToValueSection() {
           </Box>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }
@@ -1250,11 +1482,12 @@ export default function AnalyticsReportsPage() {
   ];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>Analytics & Reports</Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Platform-wide analytics across all apps using Teamified Accounts
-      </Typography>
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          Analytics & Reports
+        </Typography>
+      </Box>
 
       <Paper sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
         <Tabs

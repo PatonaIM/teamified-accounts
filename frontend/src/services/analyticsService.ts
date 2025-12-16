@@ -226,8 +226,9 @@ const analyticsService = {
     return response.data;
   },
 
-  async getUserEngagementAnalytics(): Promise<UserEngagementAnalytics> {
-    const response = await api.get('/v1/analytics/platform/user-engagement');
+  async getUserEngagementAnalytics(params?: QueryParams): Promise<UserEngagementAnalytics> {
+    const queryString = new URLSearchParams(params as Record<string, string>).toString();
+    const response = await api.get(`/v1/analytics/platform/user-engagement${queryString ? `?${queryString}` : ''}`);
     return response.data;
   },
 
@@ -237,8 +238,9 @@ const analyticsService = {
     return response.data;
   },
 
-  async getOrganizationHealth(): Promise<OrganizationHealthAnalytics> {
-    const response = await api.get('/v1/analytics/platform/organization-health');
+  async getOrganizationHealth(params?: QueryParams): Promise<OrganizationHealthAnalytics> {
+    const queryString = new URLSearchParams(params as Record<string, string>).toString();
+    const response = await api.get(`/v1/analytics/platform/organization-health${queryString ? `?${queryString}` : ''}`);
     return response.data;
   },
 
