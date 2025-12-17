@@ -631,36 +631,49 @@ const ClientAdminSignupPage: React.FC = () => {
                   placeholder="https://example.com"
                 />
 
-                <TextField
-                  fullWidth
-                  label="Business Description"
-                  value={formData.businessDescription}
-                  onChange={(e) => handleInputChange('businessDescription', e.target.value)}
-                  error={!!errors.businessDescription}
-                  helperText={errors.businessDescription}
-                  margin="normal"
-                  multiline
-                  rows={3}
-                  disabled={isLoading}
-                  placeholder="Tell us about your business..."
-                  InputProps={{
-                    endAdornment: isAnalyzingWebsite && (
-                      <InputAdornment position="end">
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <AutoAwesome
-                            sx={{
-                              color: '#7c3aed',
-                              animation: `${sparkle} 1s ease-in-out infinite`,
-                            }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            Analyzing...
-                          </Typography>
-                        </Box>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+                <Box sx={{ position: 'relative', mt: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="Business Description"
+                    value={formData.businessDescription}
+                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
+                    error={!!errors.businessDescription}
+                    helperText={errors.businessDescription}
+                    multiline
+                    rows={3}
+                    disabled={isLoading || isAnalyzingWebsite}
+                    placeholder="Tell us about your business..."
+                  />
+                  {isAnalyzingWebsite && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 22,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderRadius: 1,
+                        gap: 1,
+                      }}
+                    >
+                      <AutoAwesome
+                        sx={{
+                          color: '#7c3aed',
+                          fontSize: 32,
+                          animation: `${sparkle} 1s ease-in-out infinite`,
+                        }}
+                      />
+                      <Typography variant="body2" color="text.secondary">
+                        Analyzing your website...
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
 
                 <TextField
                   fullWidth
