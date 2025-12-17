@@ -328,43 +328,23 @@ const LoginPageMUI: React.FC = () => {
             variant="h2"
             sx={{
               fontWeight: 700,
-              mb: 1,
+              mb: 2,
               fontSize: '3rem',
               letterSpacing: '-0.02em',
             }}
           >
-            teamified
+            Teamified
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              opacity: 0.95,
-              fontSize: '0.875rem',
-              mb: 4,
-              fontWeight: 400,
-            }}
-          >
-            Employ with us.
-          </Typography>
-          
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 600,
-              mb: 2,
-              fontSize: '1.5rem',
+              opacity: 0.95,
+              fontSize: '1.25rem',
+              fontWeight: 400,
+              lineHeight: 1.5,
             }}
           >
-            Welcome to Teamified Accounts
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              opacity: 0.9,
-              lineHeight: 1.6,
-            }}
-          >
-            One account for all Teamified apps: Recruits, events, and seamless employment.
+            Build Your Global Team in Days — Not Weeks
           </Typography>
         </Box>
       </Box>
