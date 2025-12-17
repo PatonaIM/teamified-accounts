@@ -17,17 +17,15 @@ import {
   ArrowBack,
   NewReleases,
   CheckCircle,
-  Security,
-  Google,
-  Cookie,
-  Speed,
-  Code,
-  PersonAdd,
-  Email,
+  AutoAwesome,
+  DateRange,
+  Analytics,
+  TipsAndUpdates,
+  Search,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-export default function ReleaseNote_v105() {
+export default function ReleaseNote_v106() {
   const navigate = useNavigate();
 
   return (
@@ -39,24 +37,23 @@ export default function ReleaseNote_v105() {
               <NewReleases color="primary" sx={{ fontSize: 40 }} />
               <Box>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Chip label="v1.0.5" color="primary" sx={{ fontWeight: 600 }} />
+                  <Chip label="v1.0.6" color="primary" sx={{ fontWeight: 600 }} />
                   <Typography variant="body2" color="text.secondary">
-                    December 13, 2025
+                    December 17, 2025
                   </Typography>
                 </Stack>
                 <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
-                  Direct Google SSO Login Features
+                  AI-Powered Analytics & Enhanced Reporting
                 </Typography>
               </Box>
             </Stack>
           </Box>
 
-          <Alert severity="info" icon={<Google />}>
+          <Alert severity="info" icon={<AutoAwesome />}>
             <Typography variant="body2">
-              <strong>What's New:</strong> Users can now sign in with their Google account directly, 
-              without any third-party vendor dependency. New users are prompted to choose between 
-              Candidate and Employer roles, and all new users receive personalized welcome emails 
-              with role-specific actions.
+              <strong>What's New:</strong> The Analytics & Reports page now features AI-powered search 
+              capabilities, comprehensive date range filtering across all analytics sections, and 
+              dynamically generated query suggestions based on your platform data.
             </Typography>
           </Alert>
 
@@ -67,23 +64,23 @@ export default function ReleaseNote_v105() {
             <List dense disablePadding>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="'Continue with Google' button on login page" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="AI-powered natural language analytics search" primaryTypographyProps={{ variant: 'body2' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="New users choose Candidate or Employer role after Google sign-in" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Date range filtering with 11 preset options across all sections" primaryTypographyProps={{ variant: 'body2' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Personalized welcome emails with role-specific CTAs" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Dynamic AI-generated query suggestions based on current data" primaryTypographyProps={{ variant: 'body2' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Secure token exchange - tokens never exposed in URLs" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="10 comprehensive analytics sections with visualizations" primaryTypographyProps={{ variant: 'body2' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="No third-party vendor dependency (replaced Supabase)" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Enhanced loading animations for AI processing" primaryTypographyProps={{ variant: 'body2' }} />
               </ListItem>
             </List>
           </Box>
@@ -92,91 +89,43 @@ export default function ReleaseNote_v105() {
 
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <Google color="primary" />
+              <AutoAwesome color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                1. Direct Google OAuth Integration
+                1. AI-Powered Analytics Search
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Replaced the Supabase-based Google OAuth flow with a direct integration using Google's 
-              OAuth 2.0 APIs. This eliminates vendor dependency and gives us full control over the 
-              authentication process.
+              Ask questions about your platform data in natural language and receive intelligent 
+              insights with automatically generated visualizations. Powered by OpenAI's GPT-4o-mini model.
             </Typography>
             
             <List dense>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Continue with Google Button" 
-                  secondary="New Google sign-in button on the login page for one-click authentication"
+                  primary="Natural Language Queries" 
+                  secondary="Ask questions like 'Which app has the highest engagement?' or 'Show me login patterns by time of day'"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Automatic Account Creation" 
-                  secondary="New users signing in with Google get accounts created automatically with their Google profile data"
+                  primary="Automatic Visualizations" 
+                  secondary="AI generates appropriate charts (bar, line, pie, area) based on your query and the data"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Account Linking" 
-                  secondary="Existing users with matching email addresses are automatically linked to their Google account"
+                  primary="Actionable Insights" 
+                  secondary="Each response includes a summary and key insights to help with decision-making"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Google User ID Tracking" 
-                  secondary="New google_user_id column in user entity for reliable identity linking"
-                />
-              </ListItem>
-            </List>
-          </Box>
-
-          <Divider />
-
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <PersonAdd color="primary" />
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                2. Intent-Aware Role Selection
-              </Typography>
-            </Stack>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              New Google users are now prompted to choose their account type (Candidate or Employer) 
-              instead of being auto-assigned a default role. This matches the experience for 
-              email signup users.
-            </Typography>
-            
-            <List dense>
-              <ListItem>
-                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText 
-                  primary="Role Selection Page" 
-                  secondary="New users see a choice between 'I'm a Candidate' and 'I'm an Employer'"
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText 
-                  primary="Simplified Candidate Signup" 
-                  secondary="Candidates need no additional form - just click to get started immediately"
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText 
-                  primary="Minimal Employer Form" 
-                  secondary="Employers only need to enter their organization name to create their account"
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText 
-                  primary="POST /api/v1/auth/google/assign-role" 
-                  secondary="New endpoint to assign roles after Google users make their selection"
+                  primary="POST /api/v1/analytics/ai/query" 
+                  secondary="New endpoint for processing natural language analytics queries"
                 />
               </ListItem>
             </List>
@@ -186,36 +135,43 @@ export default function ReleaseNote_v105() {
 
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <Email color="primary" />
+              <TipsAndUpdates color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                3. Unified Welcome Emails
+                2. Dynamic AI Suggestions
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
-              All new users now receive personalized welcome emails with role-specific calls-to-action, 
-              whether they signed up via Google or traditional email.
+              Query suggestions are now dynamically generated by AI based on your current platform 
+              analytics data, providing relevant and contextual starting points for exploration.
             </Typography>
             
             <List dense>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Candidate Welcome Email" 
-                  secondary="Includes 'Browse Jobs' CTA linking to the Jobseeker Portal"
+                  primary="Context-Aware Suggestions" 
+                  secondary="AI analyzes current user counts, top apps, peak hours, and more to generate relevant questions"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Employer Welcome Email" 
-                  secondary="Includes 'Post Your First Job' (ATS) and 'Set Up Your Organization' (HRIS) CTAs"
+                  primary="Varied Questions" 
+                  secondary="Suggestions change each time, highlighting different trends and opportunities"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Sent at the Right Time" 
-                  secondary="Google users receive email after role selection; email users receive after verification"
+                  primary="Graceful Fallback" 
+                  secondary="Default suggestions displayed if AI generation fails or API key is not configured"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="GET /api/v1/analytics/ai/suggestions" 
+                  secondary="New endpoint returning AI-generated query suggestions"
                 />
               </ListItem>
             </List>
@@ -225,36 +181,43 @@ export default function ReleaseNote_v105() {
 
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <Security color="primary" />
+              <DateRange color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                4. Secure Token Exchange Pattern
+                3. Comprehensive Date Range Filtering
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Implemented a secure temporary code exchange system that ensures tokens are never 
-              exposed in URLs or browser history, protecting against token theft.
+              All 10 analytics sections now include date range filtering with 11 preset options 
+              and custom date picker support for flexible time-based analysis.
             </Typography>
             
             <List dense>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="One-Time Codes" 
-                  secondary="Server generates short-lived codes (60s TTL) that can only be exchanged once"
+                  primary="11 Preset Options" 
+                  secondary="Last 15 mins, 1 hour, 4 hours, 12 hours, 24 hours, 3 days, 7 days, 14 days, 30 days, 90 days, and custom range"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="CSRF Protection" 
-                  secondary="State parameter validation prevents cross-site request forgery attacks"
+                  primary="Custom Date Picker" 
+                  secondary="Select specific start and end dates for precise time-based analysis"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Race Condition Prevention" 
-                  secondary="useRef-based duplicate request prevention in the callback handler"
+                  primary="Default: Last 30 Days" 
+                  secondary="All sections default to showing the last 30 days of data"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Server-Side Filtering" 
+                  secondary="Date parameters passed to backend for efficient data retrieval"
                 />
               </ListItem>
             </List>
@@ -264,36 +227,85 @@ export default function ReleaseNote_v105() {
 
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <Cookie color="primary" />
+              <Analytics color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                5. httpOnly Cookie Token Storage
+                4. Analytics Sections Available
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Authentication tokens are now stored in httpOnly cookies during Google OAuth flows, 
-              providing enhanced security against XSS attacks.
+              The Analytics & Reports page includes 10 comprehensive sections covering all aspects 
+              of platform usage and health:
             </Typography>
             
             <List dense>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="XSS Protection" 
-                  secondary="Tokens stored in httpOnly cookies cannot be accessed by JavaScript, preventing theft via XSS"
+                  primary="AI Search" 
+                  secondary="Natural language analytics with AI-powered insights and visualizations"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Automatic Cookie Handling" 
-                  secondary="Browser automatically includes cookies in requests - no manual token management needed"
+                  primary="App Usage" 
+                  secondary="Track which apps are used most and feature usage patterns"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="Secure Flag Enabled" 
-                  secondary="Cookies are marked secure in production, ensuring HTTPS-only transmission"
+                  primary="Login Traffic" 
+                  secondary="Monitor login patterns by hour and day with peak time analysis"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="User Engagement" 
+                  secondary="View top users by engagement score and login activity"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Organization Health" 
+                  secondary="Identify healthy, at-risk, and inactive organizations"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Sessions" 
+                  secondary="Active session counts and device type distribution"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Security" 
+                  secondary="Audit logs, admin actions, and security event tracking"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Invitations" 
+                  secondary="Track invitation send and acceptance rates with top inviters"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Feature Stickiness" 
+                  secondary="Identify which features drive user retention"
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Time-to-Value & Adoption Funnel" 
+                  secondary="Measure how quickly users become active and conversion rates"
                 />
               </ListItem>
             </List>
@@ -303,83 +315,45 @@ export default function ReleaseNote_v105() {
 
           <Box>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <Code color="primary" />
+              <Search color="primary" />
               <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                6. New API Endpoints
+                5. UI/UX Improvements
               </Typography>
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
-              Backend endpoints for the complete Google OAuth flow:
+              Enhanced user experience with improved navigation and visual feedback:
             </Typography>
             
             <List dense>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="GET /api/v1/auth/google/status" 
-                  secondary="Check if Google OAuth is configured and available"
+                  primary="Back Button Navigation" 
+                  secondary="Easy navigation back to Admin Tools from the Analytics page"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="GET /api/v1/auth/google" 
-                  secondary="Initiate Google OAuth flow with state and redirect parameters"
+                  primary="Updated Header Styling" 
+                  secondary="Consistent header styling matching Organization Management page"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="GET /api/v1/auth/google/callback" 
-                  secondary="Handle Google's OAuth callback and generate temporary code"
+                  primary="AI Loading Animation" 
+                  secondary="Sparkle animation effect while AI processes queries"
                 />
               </ListItem>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText 
-                  primary="POST /api/v1/auth/google/exchange" 
-                  secondary="Exchange temporary code for access and refresh tokens"
+                  primary="Responsive Charts" 
+                  secondary="All charts are fully responsive and adapt to container size"
                 />
               </ListItem>
             </List>
-          </Box>
-
-          <Divider />
-
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <Speed color="primary" />
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                7. Configuration Requirements
-              </Typography>
-            </Stack>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              To enable Google Sign-in, the following secrets must be configured:
-            </Typography>
-            
-            <List dense>
-              <ListItem>
-                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText 
-                  primary="GOOGLE_CLIENT_ID" 
-                  secondary="OAuth 2.0 Client ID from Google Cloud Console"
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText 
-                  primary="GOOGLE_CLIENT_SECRET" 
-                  secondary="OAuth 2.0 Client Secret from Google Cloud Console"
-                />
-              </ListItem>
-            </List>
-
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Important:</strong> The authorized redirect URI in Google Cloud Console must be set to: 
-                <code style={{ marginLeft: 8 }}>{'{BASE_URL}'}/api/v1/auth/google/callback</code>
-              </Typography>
-            </Alert>
           </Box>
 
           <Divider />

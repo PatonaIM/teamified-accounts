@@ -1,0 +1,193 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
+import { PlatformAnalyticsService } from './platform-analytics.service';
+
+export interface ChartConfig {
+  type: 'bar' | 'line' | 'pie' | 'area' | 'table' | 'funnel' | 'heatmap';
+  title: string;
+  data: any[];
+  xKey?: string;
+  yKey?: string;
+  keys?: string[];
+  colors?: string[];
+}
+
+export interface AIAnalyticsResponse {
+  summary: string;
+  charts: ChartConfig[];
+  insights: string[];
+  rawData?: any;
+}
+
+@Injectable()
+export class AIAnalyticsService {
+  private readonly logger = new Logger(AIAnalyticsService.name);
+  private openai: OpenAI | null = null;
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly platformAnalyticsService: PlatformAnalyticsService,
+  ) {
+    const apiKey = this.configService.get<string>('OPEN_AI_API_KEY');
+    if (apiKey) {
+      this.openai = new OpenAI({ apiKey });
+    } else {
+      this.logger.warn('OPEN_AI_API_KEY not configured - AI analytics will be unavailable');
+    }
+  }
+
+  async processQuery(query: string): Promise<AIAnalyticsResponse> {
+    if (!this.openai) {
+      return {
+        summary: 'AI analytics is not configured. Please add the OPEN_AI_API_KEY secret.',
+        charts: [],
+        insights: ['AI features require OpenAI API key configuration.'],
+      };
+    }
+
+    try {
+      const analyticsData = await this.platformAnalyticsService.getAllAnalyticsData();
+
+      const systemPrompt = `You are an analytics assistant for the Teamified platform. You have access to platform analytics data and can help administrators understand their data.
+
+Available data includes:
+- App Usage: Which apps are used most, feature usage across all users, app names and login counts
+- Login Traffic: Login patterns by hour and day, peak times, daily trends
+- User Engagement: Individual user data including email, engagement score, login count, apps used, last active date. Contains topUsers array with the most engaged users.
+- Adoption Funnel: Registration to active usage conversion rates
+- Organization Health: Individual organization data with member counts, activity levels, health status
+- Sessions: Device types, active sessions, session counts by user
+- Security: Audit logs, admin actions, security events with actor details
+- Invitations: Sent/accepted rates, top inviters with names
+- Feature Stickiness: Which features drive return visits
+- Time to Value: How quickly users become active
+
+IMPORTANT: When asked about specific users, organizations, or individual records, always include a chart to display this data. Use the "bar" chart type with user emails or names as labels.
+
+When responding:
+1. Provide a clear summary answering the user's question
+2. ALWAYS suggest relevant charts to visualize the data - this is critical
+3. Include actionable insights
+
+For charts, use this JSON format:
+{
+  "type": "bar|line|pie|area",
+  "title": "Chart Title",
+  "data": [{ "name": "Label", "value": 123 }],
+  "xKey": "name",
+  "yKey": "value",
+  "keys": ["key1", "key2"] // for multi-series charts
+}
+
+For user lists, format data as:
+[{ "name": "user@email.com", "value": <engagementScore or loginCount> }]
+
+Respond in JSON format:
+{
+  "summary": "Your analysis summary",
+  "charts": [...chart configs],
+  "insights": ["Insight 1", "Insight 2"]
+}`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { 
+            role: 'user', 
+            content: `Here is the current analytics data:\n${JSON.stringify(analyticsData, null, 2)}\n\nUser question: ${query}` 
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 2000,
+        temperature: 0.7,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
+
+      const parsed = JSON.parse(content);
+      
+      return {
+        summary: parsed.summary || 'Analysis complete.',
+        charts: Array.isArray(parsed.charts) ? parsed.charts : [],
+        insights: Array.isArray(parsed.insights) ? parsed.insights : [],
+      };
+    } catch (error) {
+      this.logger.error('AI analytics query failed', error);
+      return {
+        summary: 'Unable to process your query. Please try rephrasing or ask a different question.',
+        charts: [],
+        insights: ['Error processing query. Check if the question is related to available analytics data.'],
+      };
+    }
+  }
+
+  async getSuggestedQueries(): Promise<string[]> {
+    const fallbackSuggestions = [
+      'Which app has the highest engagement this month?',
+      'Show me login patterns by time of day',
+      'What is our user adoption funnel conversion rate?',
+      'Which features are most popular across all apps?',
+      'How many organizations are at risk of churning?',
+    ];
+
+    if (!this.openai) {
+      return fallbackSuggestions;
+    }
+
+    try {
+      const analyticsData = await this.platformAnalyticsService.getAllAnalyticsData();
+
+      const systemPrompt = `You are an analytics assistant for Teamified. Generate 5 relevant, contextual analytics questions based on the current platform data.
+
+The questions should:
+1. Be specific to patterns or insights visible in the data
+2. Highlight interesting trends, outliers, or opportunities
+3. Be actionable for platform administrators
+4. Vary in focus (users, apps, security, engagement, etc.)
+5. Be concise (under 60 characters each)
+
+You MUST respond with a JSON object in exactly this format:
+{"questions": ["question 1", "question 2", "question 3", "question 4", "question 5"]}`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { 
+            role: 'user', 
+            content: `Current analytics data summary:\n${JSON.stringify({
+              totalUsers: analyticsData.userEngagement?.totalActiveUsers || 0,
+              topApps: analyticsData.appUsage?.topApps?.slice(0, 3) || [],
+              peakHour: analyticsData.loginTraffic?.peakHour || 'unknown',
+              atRiskOrgs: analyticsData.organizationHealth?.atRiskCount || 0,
+              activeSessions: analyticsData.sessions?.activeSessions || 0,
+              recentSecurityEvents: analyticsData.security?.securityEvents?.length || 0,
+              invitationAcceptanceRate: analyticsData.invitations?.stats?.acceptanceRate || 0,
+            }, null, 2)}` 
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 300,
+        temperature: 0.9,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return fallbackSuggestions;
+      }
+
+      const parsed = JSON.parse(content);
+      const suggestions = Array.isArray(parsed) ? parsed : parsed.questions || parsed.suggestions || [];
+      
+      return suggestions.length >= 3 ? suggestions.slice(0, 5) : fallbackSuggestions;
+    } catch (error) {
+      this.logger.error('Failed to generate AI suggestions', error);
+      return fallbackSuggestions;
+    }
+  }
+}

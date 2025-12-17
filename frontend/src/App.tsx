@@ -43,6 +43,7 @@ import ReleaseNote_v102 from './pages/docs/ReleaseNote_v102';
 import ReleaseNote_v103 from './pages/docs/ReleaseNote_v103';
 import ReleaseNote_v104 from './pages/docs/ReleaseNote_v104';
 import ReleaseNote_v105 from './pages/docs/ReleaseNote_v105';
+import ReleaseNote_v106 from './pages/docs/ReleaseNote_v106';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
@@ -61,6 +62,7 @@ import MyAppsPage from './pages/account/MyAppsPage';
 import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
 import CandidateUsersPage from './pages/account/CandidateUsersPage';
+import AnalyticsReportsPage from './pages/account/AnalyticsReportsPage';
 import './App.css';
 
 // Redirect component for old /admin/users/:userId route to new /users/:userId
@@ -288,6 +290,14 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="analytics" 
+                    element={
+                      <SuperAdminRoute>
+                        <AnalyticsReportsPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
                     path="audit-logs" 
                     element={
                       <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
@@ -345,6 +355,7 @@ function App() {
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/v1.0.6" element={<ReleaseNote_v106 />} />
                   <Route path="release-notes/v1.0.5" element={<ReleaseNote_v105 />} />
                   <Route path="release-notes/v1.0.4" element={<ReleaseNote_v104 />} />
                   <Route path="release-notes/v1.0.3" element={<ReleaseNote_v103 />} />
