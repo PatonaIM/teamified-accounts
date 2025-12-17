@@ -14,6 +14,8 @@ import { SupabaseAuthService } from './services/supabase-auth.service';
 import { SupabaseAuthController } from './controllers/supabase-auth.controller';
 import { GoogleOAuthService } from './services/google-oauth.service';
 import { GoogleOAuthController } from './controllers/google-oauth.controller';
+import { WebsiteAnalysisService } from './services/website-analysis.service';
+import { HubSpotService } from './services/hubspot.service';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
 import { LegacyInvitation } from '../invitations/entities/legacy-invitation.entity';
@@ -54,6 +56,8 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     SupabaseService,
     SupabaseAuthService,
     GoogleOAuthService,
+    WebsiteAnalysisService,
+    HubSpotService,
     JwtAuthGuard,
   ],
   exports: [
@@ -65,6 +69,8 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     SupabaseService,
     SupabaseAuthService,
     GoogleOAuthService,
+    WebsiteAnalysisService,
+    HubSpotService,
     JwtAuthGuard,
     JwtModule, // Export JwtModule so other modules can inject JwtService
   ],

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -12,23 +12,31 @@ import {
   Container,
   Fade,
   MenuItem,
+  FormControlLabel,
+  Checkbox,
+  Link,
+  keyframes,
 } from '@mui/material';
 import {
   Visibility,
   VisibilityOff,
   ArrowBack,
+  AutoAwesome,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { clientAdminSignup } from '../services/authService';
+import { clientAdminSignup, analyzeWebsite } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import CountrySelect, { countries } from '../components/CountrySelect';
+import PhoneInput from '../components/PhoneInput';
 
 const COMPANY_SIZES = [
-  '1-10',
-  '11-50',
-  '51-200',
-  '201-500',
-  '501-1000',
-  '1001+',
+  '1-20 employees',
+  '21-50 employees',
+  '51-100 employees',
+  '101-200 employees',
+  '201-500 employees',
+  '501-1000 employees',
+  '1000+ employees',
 ];
 
 const INDUSTRIES = [
@@ -43,6 +51,27 @@ const INDUSTRIES = [
   'Media & Entertainment',
   'Other',
 ];
+
+const sparkle = keyframes`
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+`;
+
+const getServiceAgreementUrl = (countryCode: string): string => {
+  const regionMap: Record<string, string> = {
+    AU: 'au',
+    GB: 'uk',
+    US: 'us',
+  };
+  const region = regionMap[countryCode] || 'us';
+  return `https://teamified.com/legal/service-agreement?region=${region}`;
+};
+
+const isValidUrl = (url: string): boolean => {
+  if (!url) return false;
+  const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
+  return urlPattern.test(url);
+};
 
 const ClientAdminSignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -64,27 +93,64 @@ const ClientAdminSignupPage: React.FC = () => {
     slug: '',
     industry: '',
     companySize: '',
+    country: 'US',
+    mobileCountryCode: 'AU',
+    mobileNumber: '',
+    phoneCountryCode: 'AU',
+    phoneNumber: '',
+    website: '',
+    businessDescription: '',
+    rolesNeeded: '',
+    howCanWeHelp: '',
+    termsAccepted: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
   const slugManuallyEditedRef = useRef(false);
+  const websiteAnalysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleInputChange = (field: string, value: string) => {
+  const analyzeWebsiteDebounced = useCallback(async (url: string) => {
+    if (!isValidUrl(url)) return;
+    
+    setIsAnalyzingWebsite(true);
+    try {
+      const result = await analyzeWebsite(url);
+      if (result.success && result.businessDescription) {
+        setFormData(prev => ({
+          ...prev,
+          businessDescription: result.businessDescription || '',
+        }));
+      }
+    } catch (error) {
+      console.error('Website analysis failed:', error);
+    } finally {
+      setIsAnalyzingWebsite(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (websiteAnalysisTimeoutRef.current) {
+        clearTimeout(websiteAnalysisTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
-    // Track manual slug edits using ref for immediate synchronous access
     if (field === 'slug') {
       slugManuallyEditedRef.current = true;
     }
 
-    // Auto-generate slug only if user hasn't manually edited it
-    if (field === 'companyName' && !slugManuallyEditedRef.current) {
+    if (field === 'companyName' && !slugManuallyEditedRef.current && typeof value === 'string') {
       const slugValue = value
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
@@ -92,6 +158,18 @@ const ClientAdminSignupPage: React.FC = () => {
         .replace(/-+/g, '-')
         .substring(0, 100);
       setFormData(prev => ({ ...prev, [field]: value, slug: slugValue }));
+    }
+
+    if (field === 'website' && typeof value === 'string') {
+      if (websiteAnalysisTimeoutRef.current) {
+        clearTimeout(websiteAnalysisTimeoutRef.current);
+      }
+      
+      if (isValidUrl(value) && !formData.businessDescription) {
+        websiteAnalysisTimeoutRef.current = setTimeout(() => {
+          analyzeWebsiteDebounced(value);
+        }, 1000);
+      }
     }
   };
 
@@ -140,12 +218,12 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.slug = 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)';
     }
 
-    if (formData.industry && formData.industry.length > 100) {
-      newErrors.industry = 'Industry must not exceed 100 characters';
+    if (formData.website && !isValidUrl(formData.website)) {
+      newErrors.website = 'Please enter a valid website URL';
     }
 
-    if (formData.companySize && formData.companySize.length > 20) {
-      newErrors.companySize = 'Company size must not exceed 20 characters';
+    if (!formData.termsAccepted) {
+      newErrors.termsAccepted = 'You must accept the terms to continue';
     }
 
     setErrors(newErrors);
@@ -163,6 +241,9 @@ const ClientAdminSignupPage: React.FC = () => {
     setErrors({});
 
     try {
+      const mobileDialCode = countries.find(c => c.code === formData.mobileCountryCode)?.dialCode || '';
+      const phoneDialCode = countries.find(c => c.code === formData.phoneCountryCode)?.dialCode || '';
+
       const result = await clientAdminSignup({
         email: formData.email,
         password: formData.password,
@@ -172,6 +253,16 @@ const ClientAdminSignupPage: React.FC = () => {
         slug: formData.slug || undefined,
         industry: formData.industry || undefined,
         companySize: formData.companySize || undefined,
+        country: formData.country || undefined,
+        mobileCountryCode: formData.mobileCountryCode || undefined,
+        mobileNumber: formData.mobileNumber ? `${mobileDialCode}${formData.mobileNumber.replace(/\s/g, '')}` : undefined,
+        phoneCountryCode: formData.phoneCountryCode || undefined,
+        phoneNumber: formData.phoneNumber ? `${phoneDialCode}${formData.phoneNumber.replace(/\s/g, '')}` : undefined,
+        website: formData.website || undefined,
+        businessDescription: formData.businessDescription || undefined,
+        rolesNeeded: formData.rolesNeeded || undefined,
+        howCanWeHelp: formData.howCanWeHelp || undefined,
+        termsAccepted: formData.termsAccepted,
       });
 
       try {
@@ -179,11 +270,9 @@ const ClientAdminSignupPage: React.FC = () => {
         navigate(returnUrl);
       } catch (refreshError) {
         console.error('Failed to refresh user after signup:', refreshError);
-        // Clear tokens to prevent stuck state
         const { removeTokens } = await import('../services/authService');
         removeTokens();
         setSuccessMessage('Account and organization created successfully! Redirecting to login...');
-        // Redirect to login after a brief delay
         setTimeout(() => {
           navigate('/login');
         }, 2000);
@@ -199,7 +288,6 @@ const ClientAdminSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    // If intent was specified (candidate or client), go back to login instead of selection
     if (intent === 'candidate' || intent === 'client') {
       const loginParams = new URLSearchParams();
       if (returnUrl !== '/account') {
@@ -207,7 +295,6 @@ const ClientAdminSignupPage: React.FC = () => {
       }
       navigate(`/login${loginParams.toString() ? `?${loginParams.toString()}` : ''}`);
     } else {
-      // No specific intent - go back to selection page
       navigate(`/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
     }
   };
@@ -241,7 +328,7 @@ const ClientAdminSignupPage: React.FC = () => {
                 fontWeight="bold"
                 color="secondary"
               >
-                Employer Sign Up
+                Business Sign Up
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Set up your organization account
@@ -322,6 +409,15 @@ const ClientAdminSignupPage: React.FC = () => {
                 disabled={isLoading}
               />
 
+              <Box sx={{ mt: 2 }}>
+                <CountrySelect
+                  value={formData.country}
+                  onChange={(value) => handleInputChange('country', value)}
+                  label="Country"
+                  disabled={isLoading}
+                />
+              </Box>
+
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
                 <TextField
                   select
@@ -363,6 +459,97 @@ const ClientAdminSignupPage: React.FC = () => {
                   ))}
                 </TextField>
               </Box>
+
+              <Box sx={{ mt: 3 }}>
+                <PhoneInput
+                  countryCode={formData.mobileCountryCode}
+                  phoneNumber={formData.mobileNumber}
+                  onCountryChange={(code) => handleInputChange('mobileCountryCode', code)}
+                  onPhoneChange={(number) => handleInputChange('mobileNumber', number)}
+                  label="Mobile Number"
+                  disabled={isLoading}
+                />
+              </Box>
+
+              <Box sx={{ mt: 2 }}>
+                <PhoneInput
+                  countryCode={formData.phoneCountryCode}
+                  phoneNumber={formData.phoneNumber}
+                  onCountryChange={(code) => handleInputChange('phoneCountryCode', code)}
+                  onPhoneChange={(number) => handleInputChange('phoneNumber', number)}
+                  label="Phone Number (optional)"
+                  disabled={isLoading}
+                />
+              </Box>
+
+              <TextField
+                fullWidth
+                label="Company Website (optional)"
+                value={formData.website}
+                onChange={(e) => handleInputChange('website', e.target.value)}
+                error={!!errors.website}
+                helperText={errors.website || 'Enter your website URL for auto-generated business description'}
+                margin="normal"
+                disabled={isLoading}
+                placeholder="https://example.com"
+              />
+
+              <TextField
+                fullWidth
+                label="Business Description"
+                value={formData.businessDescription}
+                onChange={(e) => handleInputChange('businessDescription', e.target.value)}
+                error={!!errors.businessDescription}
+                helperText={errors.businessDescription}
+                margin="normal"
+                multiline
+                rows={3}
+                disabled={isLoading}
+                placeholder="Tell us about your business..."
+                InputProps={{
+                  endAdornment: isAnalyzingWebsite && (
+                    <InputAdornment position="end">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AutoAwesome
+                          sx={{
+                            color: '#7c3aed',
+                            animation: `${sparkle} 1s ease-in-out infinite`,
+                          }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          Analyzing...
+                        </Typography>
+                      </Box>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="What roles do you need? (optional)"
+                value={formData.rolesNeeded}
+                onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
+                error={!!errors.rolesNeeded}
+                helperText={errors.rolesNeeded}
+                margin="normal"
+                disabled={isLoading}
+                placeholder="e.g., Software Engineers, Product Managers"
+              />
+
+              <TextField
+                fullWidth
+                label="How can we help you? (optional)"
+                value={formData.howCanWeHelp}
+                onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
+                error={!!errors.howCanWeHelp}
+                helperText={errors.howCanWeHelp}
+                margin="normal"
+                multiline
+                rows={2}
+                disabled={isLoading}
+                placeholder="Tell us how we can assist your hiring needs..."
+              />
 
               <TextField
                 fullWidth
@@ -421,6 +608,55 @@ const ClientAdminSignupPage: React.FC = () => {
                   ),
                 }}
               />
+
+              <Box sx={{ mt: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.termsAccepted}
+                      onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
+                      disabled={isLoading}
+                      color="secondary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" color="text.secondary">
+                      I accept the{' '}
+                      <Link
+                        href={getServiceAgreementUrl(formData.country)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="secondary"
+                      >
+                        Service Agreement
+                      </Link>
+                      ,{' '}
+                      <Link
+                        href="https://teamified.com/legal/term"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="secondary"
+                      >
+                        Terms
+                      </Link>
+                      {' '}and{' '}
+                      <Link
+                        href="https://teamified.com/legal/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="secondary"
+                      >
+                        Privacy Policy
+                      </Link>
+                    </Typography>
+                  }
+                />
+                {errors.termsAccepted && (
+                  <Typography variant="caption" color="error" sx={{ ml: 2 }}>
+                    {errors.termsAccepted}
+                  </Typography>
+                )}
+              </Box>
 
               <Button
                 type="submit"

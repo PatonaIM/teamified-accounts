@@ -439,7 +439,35 @@ export interface ClientAdminSignupData {
   slug?: string;
   industry?: string;
   companySize?: string;
+  country?: string;
+  mobileCountryCode?: string;
+  mobileNumber?: string;
+  phoneCountryCode?: string;
+  phoneNumber?: string;
+  website?: string;
+  businessDescription?: string;
+  rolesNeeded?: string;
+  howCanWeHelp?: string;
+  termsAccepted: boolean;
 }
+
+export interface AnalyzeWebsiteResponse {
+  success: boolean;
+  businessDescription?: string;
+  error?: string;
+}
+
+export const analyzeWebsite = async (websiteUrl: string): Promise<AnalyzeWebsiteResponse> => {
+  try {
+    const response = await api.post('/v1/auth/analyze-website', { websiteUrl });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return { success: false, error: error.response.data?.message || 'Analysis failed' };
+    }
+    return { success: false, error: 'Failed to analyze website. Please try again.' };
+  }
+};
 
 export interface SignupResponse {
   accessToken: string;

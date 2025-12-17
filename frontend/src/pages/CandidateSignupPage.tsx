@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -11,6 +11,9 @@ import {
   Paper,
   Container,
   Fade,
+  FormControlLabel,
+  Checkbox,
+  Link,
 } from '@mui/material';
 import {
   Visibility,
@@ -37,6 +40,7 @@ const CandidateSignupPage: React.FC = () => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    termsAccepted: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -44,7 +48,7 @@ const CandidateSignupPage: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -84,6 +88,10 @@ const CandidateSignupPage: React.FC = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!formData.termsAccepted) {
+      newErrors.termsAccepted = 'You must accept the terms to continue';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -111,11 +119,9 @@ const CandidateSignupPage: React.FC = () => {
         navigate(returnUrl);
       } catch (refreshError) {
         console.error('Failed to refresh user after signup:', refreshError);
-        // Clear tokens to prevent stuck state
         const { removeTokens } = await import('../services/authService');
         removeTokens();
         setSuccessMessage('Account created successfully! Redirecting to login...');
-        // Redirect to login after a brief delay
         setTimeout(() => {
           navigate('/login');
         }, 2000);
@@ -131,7 +137,6 @@ const CandidateSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
-    // If intent was specified (candidate or client), go back to login instead of selection
     if (intent === 'candidate' || intent === 'client') {
       const loginParams = new URLSearchParams();
       if (returnUrl !== '/account') {
@@ -139,7 +144,6 @@ const CandidateSignupPage: React.FC = () => {
       }
       navigate(`/login${loginParams.toString() ? `?${loginParams.toString()}` : ''}`);
     } else {
-      // No specific intent - go back to selection page
       navigate(`/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
     }
   };
@@ -173,7 +177,7 @@ const CandidateSignupPage: React.FC = () => {
                 fontWeight="bold"
                 color="primary"
               >
-                Candidate Sign Up
+                Job Seeker Sign Up
               </Typography>
               <Typography variant="body1" color="text.secondary">
                 Create your account in under 30 seconds
@@ -288,6 +292,46 @@ const CandidateSignupPage: React.FC = () => {
                   ),
                 }}
               />
+
+              <Box sx={{ mt: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.termsAccepted}
+                      onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
+                      disabled={isLoading}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" color="text.secondary">
+                      I accept the{' '}
+                      <Link
+                        href="https://teamified.com/legal/term"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="primary"
+                      >
+                        Terms
+                      </Link>
+                      {' '}and{' '}
+                      <Link
+                        href="https://teamified.com/legal/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        color="primary"
+                      >
+                        Privacy Policy
+                      </Link>
+                    </Typography>
+                  }
+                />
+                {errors.termsAccepted && (
+                  <Typography variant="caption" color="error" sx={{ ml: 2 }}>
+                    {errors.termsAccepted}
+                  </Typography>
+                )}
+              </Box>
 
               <Button
                 type="submit"

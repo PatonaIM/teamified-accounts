@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, Length, Matches, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, Length, Matches, IsOptional, IsUrl, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ClientAdminSignupDto {
@@ -72,14 +72,112 @@ export class ClientAdminSignupDto {
   industry?: string;
 
   @ApiProperty({
-    example: '11-50',
-    description: 'Company size (e.g., 1-10, 11-50, 51-200, 201-500, 501+)',
+    example: '21-50 employees',
+    description: 'Company size (e.g., 1-20 employees, 21-50 employees, etc.)',
     required: false,
   })
   @IsString()
   @IsOptional()
-  @MaxLength(20, { message: 'Company size must not exceed 20 characters' })
+  @MaxLength(30, { message: 'Company size must not exceed 30 characters' })
   companySize?: string;
+
+  @ApiProperty({
+    example: 'AU',
+    description: 'Country code (ISO 3166-1 alpha-2)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(2, { message: 'Country code must be 2 characters' })
+  country?: string;
+
+  @ApiProperty({
+    example: 'AU',
+    description: 'Mobile number country code (ISO 3166-1 alpha-2)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(2, { message: 'Mobile country code must be 2 characters' })
+  mobileCountryCode?: string;
+
+  @ApiProperty({
+    example: '412345678',
+    description: 'Mobile phone number without country code',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(20, { message: 'Mobile number must not exceed 20 characters' })
+  mobileNumber?: string;
+
+  @ApiProperty({
+    example: 'AU',
+    description: 'Phone number country code (ISO 3166-1 alpha-2)',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(2, { message: 'Phone country code must be 2 characters' })
+  phoneCountryCode?: string;
+
+  @ApiProperty({
+    example: '98765432',
+    description: 'Phone number without country code',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(20, { message: 'Phone number must not exceed 20 characters' })
+  phoneNumber?: string;
+
+  @ApiProperty({
+    example: 'https://acmecorp.com',
+    description: 'Company website URL',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255, { message: 'Website URL must not exceed 255 characters' })
+  website?: string;
+
+  @ApiProperty({
+    example: 'We are a technology company specializing in cloud solutions.',
+    description: 'Description of the business',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000, { message: 'Business description must not exceed 2000 characters' })
+  businessDescription?: string;
+
+  @ApiProperty({
+    example: 'Software Engineers, Product Managers',
+    description: 'Roles the company is looking to hire',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(500, { message: 'Roles needed must not exceed 500 characters' })
+  rolesNeeded?: string;
+
+  @ApiProperty({
+    example: 'We need help building our engineering team.',
+    description: 'How Teamified can help the company',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(1000, { message: 'How can we help must not exceed 1000 characters' })
+  howCanWeHelp?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'User has accepted the terms, privacy policy, and service agreement',
+  })
+  @IsBoolean({ message: 'Terms acceptance is required' })
+  @IsNotEmpty({ message: 'You must accept the terms and conditions' })
+  termsAccepted: boolean;
 }
 
 export class ClientAdminSignupResponseDto {
@@ -119,4 +217,46 @@ export class ClientAdminSignupResponseDto {
     description: 'Success message',
   })
   message: string;
+
+  @ApiProperty({
+    description: 'HubSpot contact creation result',
+    required: false,
+  })
+  hubspotContactCreated?: boolean;
+
+  @ApiProperty({
+    description: 'HubSpot contact ID if created',
+    required: false,
+  })
+  hubspotContactId?: string;
+}
+
+export class AnalyzeWebsiteDto {
+  @ApiProperty({
+    example: 'https://acmecorp.com',
+    description: 'Website URL to analyze',
+  })
+  @IsString()
+  @IsNotEmpty({ message: 'Website URL is required' })
+  @MaxLength(255, { message: 'Website URL must not exceed 255 characters' })
+  websiteUrl: string;
+}
+
+export class AnalyzeWebsiteResponseDto {
+  @ApiProperty({
+    description: 'Whether the analysis was successful',
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'AI-generated business description',
+    required: false,
+  })
+  businessDescription?: string;
+
+  @ApiProperty({
+    description: 'Error message if analysis failed',
+    required: false,
+  })
+  error?: string;
 }

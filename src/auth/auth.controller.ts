@@ -27,6 +27,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { WebsiteAnalysisService } from './services/website-analysis.service';
+import { AnalyzeWebsiteDto, AnalyzeWebsiteResponseDto } from './dto/client-admin-signup.dto';
 import { AcceptInvitationDto, AcceptInvitationResponseDto } from './dto/accept-invitation.dto';
 import { 
   LoginDto, 
@@ -56,6 +58,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly websiteAnalysisService: WebsiteAnalysisService,
   ) {}
 
   @Post('accept-invitation')
@@ -1064,6 +1067,44 @@ export class AuthController {
       payload: req.user,
       note: 'If roles are missing or incorrect, log out and log in again to get a fresh token with updated roles'
     };
+  }
+
+  @Post('analyze-website')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Analyze website and generate business description',
+    description: `
+      Analyze a company website using AI to generate a business description.
+      This is used during signup to auto-populate the business description field.
+      
+      ## Process Flow:
+      1. Fetch website content
+      2. Extract text from HTML
+      3. Use AI to generate a concise business description
+      
+      ## Rate Limits:
+      - 10 requests per minute per IP
+    `,
+  })
+  @ApiBody({
+    type: AnalyzeWebsiteDto,
+    description: 'Website URL to analyze',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Website analyzed successfully',
+    type: AnalyzeWebsiteResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async analyzeWebsite(
+    @Body() analyzeWebsiteDto: AnalyzeWebsiteDto,
+  ): Promise<AnalyzeWebsiteResponseDto> {
+    return this.websiteAnalysisService.analyzeWebsite(analyzeWebsiteDto.websiteUrl);
   }
 
   @Post('signup/client-admin')
