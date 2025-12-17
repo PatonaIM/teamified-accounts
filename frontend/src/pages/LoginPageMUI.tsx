@@ -347,9 +347,34 @@ const LoginPageMUI: React.FC = () => {
               fontSize: { xs: '1.25rem', md: '1.75rem' },
               fontWeight: 400,
               lineHeight: 1.5,
+              mb: 3,
             }}
           >
             Build Your Global Team in Days — Not Weeks
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              opacity: 0.8,
+              fontSize: '0.875rem',
+            }}
+          >
+            Learn more about Teamified. Visit{' '}
+            <Link
+              href="https://www.teamified.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                color: 'white',
+                fontWeight: 500,
+                textDecoration: 'underline',
+                '&:hover': {
+                  opacity: 0.9,
+                },
+              }}
+            >
+              www.teamified.com
+            </Link>
           </Typography>
         </Box>
       </Box>
