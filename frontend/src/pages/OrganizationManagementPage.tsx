@@ -1080,8 +1080,8 @@ const OrganizationManagementPage: React.FC = () => {
                         sx={{
                           ml: 1,
                           fontWeight: 600,
-                          bgcolor: 'warning.main',
-                          color: 'warning.contrastText',
+                          bgcolor: 'error.main',
+                          color: 'error.contrastText',
                         }}
                       />
                     ) : org.subscriptionTier && (
