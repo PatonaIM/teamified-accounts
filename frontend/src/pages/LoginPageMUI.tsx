@@ -129,11 +129,16 @@ const LoginPageMUI: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  const [shakeEmail, setShakeEmail] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    if (field === 'email' && emailAlreadyRegistered) {
+      setEmailAlreadyRegistered(false);
     }
   };
 
@@ -217,6 +222,7 @@ const LoginPageMUI: React.FC = () => {
   const handleModeToggle = () => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
     setErrors({});
+    setEmailAlreadyRegistered(false);
   };
 
   const handleSignupContinue = async (event: React.FormEvent) => {
@@ -243,11 +249,10 @@ const LoginPageMUI: React.FC = () => {
       const data = await response.json();
       
       if (data.valid) {
-        // Email exists - show error and switch to sign in mode
-        setErrors({ 
-          general: 'This email is already registered.' 
-        });
-        setMode('signin');
+        // Email exists - show error state, shake, and prompt to sign in
+        setEmailAlreadyRegistered(true);
+        setShakeEmail(true);
+        setTimeout(() => setShakeEmail(false), 500);
       } else {
         // Email doesn't exist - proceed to signup
         const signupParams = new URLSearchParams();
@@ -396,7 +401,11 @@ const LoginPageMUI: React.FC = () => {
                   fontSize: '0.9rem',
                 }}
               >
-                {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
+                {mode === 'signin' 
+                  ? 'New here? ' 
+                  : emailAlreadyRegistered 
+                    ? 'Are you trying to sign in? '
+                    : 'Already have an account? '}
                 <Box
                   component="span"
                   onClick={handleModeToggle}
@@ -425,22 +434,28 @@ const LoginPageMUI: React.FC = () => {
                 placeholder="Personal or Work Email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
-                helperText={errors.email}
+                error={!!errors.email || emailAlreadyRegistered}
+                helperText={errors.email || (emailAlreadyRegistered ? 'This email is already registered.' : '')}
                 disabled={isLoading}
                 sx={{
                   mb: 3,
+                  animation: shakeEmail ? 'shake 0.5s ease-in-out' : 'none',
+                  '@keyframes shake': {
+                    '0%, 100%': { transform: 'translateX(0)' },
+                    '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
+                    '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
+                  },
                   '& .MuiOutlinedInput-root': {
                     bgcolor: 'transparent',
                     borderRadius: 2,
                     '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.23)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.23)',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.4)',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#A16AE8',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#A16AE8',
                       borderWidth: 2,
                     },
                   },
