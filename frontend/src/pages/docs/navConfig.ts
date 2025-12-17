@@ -16,6 +16,7 @@ export const docsNavConfig: NavSection[] = [
     icon: 'Business',
     items: [
       { title: 'Platform Overview', path: '/docs/product/overview' },
+      { title: 'Signup Flow', path: '/docs/product/signup-flow' },
       { title: 'Single Sign-On (SSO)', path: '/docs/product/sso' },
       { title: 'Google Sign-In', path: '/docs/product/google-oauth' },
       { title: 'HubSpot Integration', path: '/docs/product/hubspot' },

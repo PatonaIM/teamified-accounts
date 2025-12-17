@@ -26,6 +26,7 @@ import PasswordResetPage from './pages/docs/product/PasswordResetPage';
 import UseCasesPage from './pages/docs/product/UseCasesPage';
 import GoogleOAuthPage from './pages/docs/product/GoogleOAuthPage';
 import HubSpotIntegrationPage from './pages/docs/product/HubSpotIntegrationPage';
+import SignupFlowPage from './pages/docs/product/SignupFlowPage';
 import QuickstartPage from './pages/docs/developer/QuickstartPage';
 import OAuthPage from './pages/docs/developer/OAuthPage';
 import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
@@ -336,6 +337,7 @@ function App() {
                   <Route index element={<Navigate to="/docs/product/overview" replace />} />
                   {/* Product Guide */}
                   <Route path="product/overview" element={<OverviewPage />} />
+                  <Route path="product/signup-flow" element={<SignupFlowPage />} />
                   <Route path="product/sso" element={<SsoProductPage />} />
                   <Route path="product/google-oauth" element={<GoogleOAuthPage />} />
                   <Route path="product/hubspot" element={<HubSpotIntegrationPage />} />
