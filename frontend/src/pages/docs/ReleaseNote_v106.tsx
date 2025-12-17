@@ -57,30 +57,30 @@ export default function ReleaseNote_v106() {
             </Typography>
           </Alert>
 
-          <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+          <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
               10-Second Summary
             </Typography>
             <List dense disablePadding>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="AI-powered natural language analytics search" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="AI-powered natural language analytics search" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Date range filtering with 11 preset options across all sections" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Date range filtering with 11 preset options across all sections" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Dynamic AI-generated query suggestions based on current data" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Dynamic AI-generated query suggestions based on current data" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="10 comprehensive analytics sections with visualizations" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="10 comprehensive analytics sections with visualizations" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Enhanced loading animations for AI processing" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Enhanced loading animations for AI processing" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
             </List>
           </Box>
