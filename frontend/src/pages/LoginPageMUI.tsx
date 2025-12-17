@@ -386,9 +386,8 @@ const LoginPageMUI: React.FC = () => {
                 }}
               >
                 {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
-                <Link
-                  component="button"
-                  type="button"
+                <Box
+                  component="span"
                   onClick={handleModeToggle}
                   sx={{
                     color: '#A16AE8',
@@ -401,7 +400,7 @@ const LoginPageMUI: React.FC = () => {
                   }}
                 >
                   {mode === 'signin' ? 'Create an account' : 'Sign in'}
-                </Link>
+                </Box>
               </Typography>
 
               {/* Error Alert */}
