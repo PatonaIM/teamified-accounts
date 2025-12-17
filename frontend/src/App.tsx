@@ -25,6 +25,8 @@ import RolesPage from './pages/docs/product/RolesPage';
 import PasswordResetPage from './pages/docs/product/PasswordResetPage';
 import UseCasesPage from './pages/docs/product/UseCasesPage';
 import GoogleOAuthPage from './pages/docs/product/GoogleOAuthPage';
+import HubSpotIntegrationPage from './pages/docs/product/HubSpotIntegrationPage';
+import SignupFlowPage from './pages/docs/product/SignupFlowPage';
 import QuickstartPage from './pages/docs/developer/QuickstartPage';
 import OAuthPage from './pages/docs/developer/OAuthPage';
 import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
@@ -44,6 +46,7 @@ import ReleaseNote_v103 from './pages/docs/ReleaseNote_v103';
 import ReleaseNote_v104 from './pages/docs/ReleaseNote_v104';
 import ReleaseNote_v105 from './pages/docs/ReleaseNote_v105';
 import ReleaseNote_v106 from './pages/docs/ReleaseNote_v106';
+import ReleaseNote_v107 from './pages/docs/ReleaseNote_v107';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
@@ -334,8 +337,10 @@ function App() {
                   <Route index element={<Navigate to="/docs/product/overview" replace />} />
                   {/* Product Guide */}
                   <Route path="product/overview" element={<OverviewPage />} />
+                  <Route path="product/signup-flow" element={<SignupFlowPage />} />
                   <Route path="product/sso" element={<SsoProductPage />} />
                   <Route path="product/google-oauth" element={<GoogleOAuthPage />} />
+                  <Route path="product/hubspot" element={<HubSpotIntegrationPage />} />
                   <Route path="product/roles" element={<RolesPage />} />
                   <Route path="product/password-reset" element={<PasswordResetPage />} />
                   <Route path="product/use-cases" element={<UseCasesPage />} />
@@ -355,6 +360,7 @@ function App() {
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/v1.0.7" element={<ReleaseNote_v107 />} />
                   <Route path="release-notes/v1.0.6" element={<ReleaseNote_v106 />} />
                   <Route path="release-notes/v1.0.5" element={<ReleaseNote_v105 />} />
                   <Route path="release-notes/v1.0.4" element={<ReleaseNote_v104 />} />

@@ -2,39 +2,52 @@ import React, { useEffect } from 'react';
 import {
   Box,
   Typography,
-  Button,
-  Paper,
   Container,
   Card,
   CardContent,
-  CardActions,
   Fade,
+  Chip,
+  Avatar,
+  Rating,
+  CardActionArea,
+  Button,
 } from '@mui/material';
 import {
-  PersonAdd,
-  Business,
   ArrowBack,
+  ArrowForward,
+  Public,
+  AutoAwesome,
+  Verified,
+  TrendingUp,
+  Videocam,
+  Groups,
+  Language,
+  CalendarToday,
+  Psychology,
+  BarChart,
+  Favorite,
+  CheckCircle,
+  Star,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import jobSeekerImage from '../assets/images/job-seeker.png';
+import businessImage from '../assets/images/business.png';
 
 const SignupPathSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Get email, returnUrl, and intent from query parameters
   const searchParams = new URLSearchParams(location.search);
   const email = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
   useEffect(() => {
-    // If no email provided, redirect back to login
     if (!email) {
       navigate('/login', { replace: true });
       return;
     }
 
-    // Build the query string for signup pages
     const buildQueryString = () => {
       const params = new URLSearchParams();
       params.set('email', email);
@@ -47,17 +60,13 @@ const SignupPathSelectionPage: React.FC = () => {
       return params.toString();
     };
 
-    // Auto-redirect based on intent parameter
     if (intent === 'candidate') {
-      // Candidate-only app: go directly to candidate signup
       navigate(`/signup-candidate?${buildQueryString()}`, { replace: true });
       return;
     } else if (intent === 'client') {
-      // Client-only app: go directly to employer signup
       navigate(`/signup-client-admin?${buildQueryString()}`, { replace: true });
       return;
     }
-    // If intent is 'both' or not specified, show the selection page
   }, [email, navigate, returnUrl, intent]);
 
   const handleCandidateSignup = () => {
@@ -68,198 +77,353 @@ const SignupPathSelectionPage: React.FC = () => {
     navigate(`/signup-client-admin?email=${encodeURIComponent(email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
   };
 
-  const handleBackToLogin = () => {
-    navigate('/login');
-  };
+  const jobSeekerFeatures = [
+    { icon: <Public fontSize="small" />, text: 'Global opportunities' },
+    { icon: <AutoAwesome fontSize="small" />, text: 'AI job matching' },
+    { icon: <Verified fontSize="small" />, text: 'Verified employers' },
+    { icon: <TrendingUp fontSize="small" />, text: 'Career growth' },
+  ];
+
+  const businessFeatures = [
+    { icon: <Videocam fontSize="small" />, text: 'AI video screening' },
+    { icon: <Groups fontSize="small" />, text: '250,000+ candidates' },
+    { icon: <Language fontSize="small" />, text: 'Hire in 50+ countries' },
+    { icon: <CalendarToday fontSize="small" />, text: 'Hire in days, not weeks' },
+  ];
+
+  const stats = [
+    { icon: <Psychology />, text: '5,000+ AI Interviews' },
+    { icon: <BarChart />, text: '1,000+ Roles Filled' },
+    { icon: <Favorite />, text: '50+ Countries' },
+  ];
 
   return (
     <Box
       sx={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 2,
+        padding: { xs: 2, md: 4 },
       }}
     >
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         <Fade in timeout={600}>
-          <Paper
-            elevation={24}
-            sx={{
-              padding: { xs: 3, sm: 4, md: 5 },
-              borderRadius: 3,
-              backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            }}
-          >
-            <Box textAlign="center" mb={4}>
+          <Box>
+            <Box textAlign="center" mb={5}>
               <Typography
-                variant="h4"
+                variant="h3"
                 component="h1"
                 gutterBottom
-                fontWeight="bold"
-                color="primary"
+                sx={{
+                  fontWeight: 700,
+                  color: 'white',
+                  fontSize: { xs: '2rem', md: '2.75rem' },
+                }}
               >
-                Welcome to Teamified
+                Let's get started
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                Let's get you set up. Choose the option that best describes you:
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {email}
+              <Typography variant="h6" sx={{ fontWeight: 400, color: 'rgba(255, 255, 255, 0.85)' }}>
+                Tell us who you are
               </Typography>
             </Box>
 
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-              {/* Candidate Signup Card */}
-              <Box sx={{ flex: 1 }}>
-                <Card
-                  elevation={4}
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: 8,
-                    },
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', md: 'row' }, 
+                gap: 4,
+                justifyContent: 'center',
+                mb: 3,
+              }}
+            >
+              <Card
+                elevation={8}
+                sx={{
+                  flex: 1,
+                  maxWidth: { md: 420 },
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+                    transform: 'translateY(-6px)',
+                  },
+                }}
+              >
+                <CardActionArea onClick={handleCandidateSignup} sx={{ height: '100%' }}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      height: 200,
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 6,
+                        height: '100%',
+                        backgroundColor: '#7c3aed',
+                        zIndex: 1,
+                      },
+                    }}
+                  >
                     <Box
+                      component="img"
+                      src={jobSeekerImage}
+                      alt="Job Seeker"
                       sx={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: '50%',
-                        backgroundColor: 'primary.main',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 16px',
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
                       }}
-                    >
-                      <PersonAdd sx={{ fontSize: 40, color: 'white' }} />
-                    </Box>
-                    <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
-                      I'm a Candidate
+                    />
+                  </Box>
+                  <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
+                      I'm a Job Seeker
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                      Join as a job seeker looking for opportunities. Quick and easy 30-second signup.
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Find your next global opportunity with AI-powered matching
                     </Typography>
-                    <Box component="ul" sx={{ textAlign: 'left', mt: 2, pl: 2 }}>
-                      <Typography component="li" variant="body2" color="text.secondary">
-                        Apply for jobs
-                      </Typography>
-                      <Typography component="li" variant="body2" color="text.secondary">
-                        Track applications
-                      </Typography>
-                      <Typography component="li" variant="body2" color="text.secondary">
-                        Build your profile
-                      </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3, justifyContent: 'center' }}>
+                      {jobSeekerFeatures.map((feature, index) => (
+                        <Chip
+                          key={index}
+                          icon={feature.icon}
+                          label={feature.text}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            borderColor: '#e0e0e0',
+                            backgroundColor: '#f5f5f5',
+                            '& .MuiChip-icon': { color: '#666' },
+                          }}
+                        />
+                      ))}
                     </Box>
-                  </CardContent>
-                  <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      startIcon={<PersonAdd />}
-                      onClick={handleCandidateSignup}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      Sign Up as Candidate
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Box>
 
-              {/* Client Admin Signup Card */}
-              <Box sx={{ flex: 1 }}>
-                <Card
-                  elevation={4}
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: 8,
-                    },
-                  }}
-                >
-                  <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
                     <Box
                       sx={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: '50%',
-                        backgroundColor: 'secondary.main',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        margin: '0 auto 16px',
-                      }}
-                    >
-                      <Business sx={{ fontSize: 40, color: 'white' }} />
-                    </Box>
-                    <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
-                      I'm an Employer
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                      Set up your organization account to post jobs and manage your team.
-                    </Typography>
-                    <Box component="ul" sx={{ textAlign: 'left', mt: 2, pl: 2 }}>
-                      <Typography component="li" variant="body2" color="text.secondary">
-                        Create organization
-                      </Typography>
-                      <Typography component="li" variant="body2" color="text.secondary">
-                        Post job openings
-                      </Typography>
-                      <Typography component="li" variant="body2" color="text.secondary">
-                        Manage team members
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                  <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      color="secondary"
-                      startIcon={<Business />}
-                      onClick={handleClientAdminSignup}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
+                        gap: 1,
+                        color: '#7c3aed',
+                        fontWeight: 600,
                         fontSize: '1rem',
                       }}
                     >
-                      Sign Up as Employer
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Box>
+                      Get Started
+                      <ArrowForward fontSize="small" />
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+
+              <Card
+                elevation={8}
+                sx={{
+                  flex: 1,
+                  maxWidth: { md: 420 },
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+                    transform: 'translateY(-6px)',
+                  },
+                }}
+              >
+                <CardActionArea onClick={handleClientAdminSignup} sx={{ height: '100%' }}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      height: 200,
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 6,
+                        height: '100%',
+                        backgroundColor: '#7c3aed',
+                        zIndex: 1,
+                      },
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={businessImage}
+                      alt="Business"
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </Box>
+                  <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
+                      We're a Business
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Build your dream team with pre-screened global talent
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3, justifyContent: 'center' }}>
+                      {businessFeatures.map((feature, index) => (
+                        <Chip
+                          key={index}
+                          icon={feature.icon}
+                          label={feature.text}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            borderColor: '#e0e0e0',
+                            backgroundColor: '#f5f5f5',
+                            '& .MuiChip-icon': { color: '#666' },
+                          }}
+                        />
+                      ))}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1,
+                        color: '#7c3aed',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      Get Started
+                      <ArrowForward fontSize="small" />
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
             </Box>
 
-            <Box textAlign="center" mt={4}>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
               <Button
                 startIcon={<ArrowBack />}
-                onClick={handleBackToLogin}
-                sx={{ textTransform: 'none' }}
+                onClick={() => navigate('/login')}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  textTransform: 'none',
+                  fontSize: '0.95rem',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
               >
                 Back to Login
               </Button>
             </Box>
-          </Paper>
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 2,
+                flexWrap: 'wrap',
+                mb: 5,
+              }}
+            >
+              {stats.map((stat, index) => (
+                <Chip
+                  key={index}
+                  icon={stat.icon}
+                  label={stat.text}
+                  variant="filled"
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    color: 'white',
+                    px: 1,
+                    py: 2.5,
+                    borderRadius: 10,
+                    backdropFilter: 'blur(10px)',
+                    '& .MuiChip-icon': { color: 'white' },
+                    '& .MuiChip-label': { fontWeight: 500 },
+                  }}
+                />
+              ))}
+            </Box>
+
+            <Box
+              sx={{
+                textAlign: 'center',
+                maxWidth: 600,
+                mx: 'auto',
+                mb: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 3,
+                p: 3,
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <Rating
+                value={5}
+                readOnly
+                icon={<Star sx={{ color: '#fbbf24' }} />}
+                emptyIcon={<Star />}
+                sx={{ mb: 2 }}
+              />
+              <Typography
+                variant="body1"
+                sx={{
+                  fontStyle: 'italic',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  mb: 3,
+                  lineHeight: 1.7,
+                }}
+              >
+                "Have a chat with Teamified. You will get a sense that it's much more of a relationship 
+                situation where they're really wanting to understand your business."
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white', width: 40, height: 40 }}>RE</Avatar>
+                <Box textAlign="left">
+                  <Typography variant="subtitle2" fontWeight="bold" sx={{ color: 'white' }}>
+                    Ryan Ebert
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    Founder & CEO, Innings
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 4,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CheckCircle sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.7)' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                  500+ Companies Trust Us
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Star sx={{ fontSize: 18, color: '#fbbf24' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                  4.9/5 Average Rating
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
         </Fade>
       </Container>
     </Box>

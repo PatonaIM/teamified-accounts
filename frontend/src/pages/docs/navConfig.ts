@@ -16,8 +16,10 @@ export const docsNavConfig: NavSection[] = [
     icon: 'Business',
     items: [
       { title: 'Platform Overview', path: '/docs/product/overview' },
+      { title: 'Signup Flow', path: '/docs/product/signup-flow' },
       { title: 'Single Sign-On (SSO)', path: '/docs/product/sso' },
       { title: 'Google Sign-In', path: '/docs/product/google-oauth' },
+      { title: 'HubSpot Integration', path: '/docs/product/hubspot' },
       { title: 'Roles & Permissions', path: '/docs/product/roles' },
       { title: 'Password Reset & Recovery', path: '/docs/product/password-reset' },
       { title: 'Common Use Cases', path: '/docs/product/use-cases' },
@@ -47,6 +49,7 @@ export const docsNavConfig: NavSection[] = [
     icon: 'NewReleases',
     items: [
       { title: 'All Releases', path: '/docs/release-notes' },
+      { title: 'v1.0.7 - Dec 18, 2025', path: '/docs/release-notes/v1.0.7' },
       { title: 'v1.0.6 - Dec 17, 2025', path: '/docs/release-notes/v1.0.6' },
       { title: 'v1.0.5 - Dec 13, 2025', path: '/docs/release-notes/v1.0.5' },
       { title: 'v1.0.4 - Dec 11, 2025', path: '/docs/release-notes/v1.0.4' },

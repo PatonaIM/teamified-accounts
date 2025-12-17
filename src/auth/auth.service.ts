@@ -25,6 +25,7 @@ import { UserRole } from '../user-roles/entities/user-role.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { UserEmail } from '../user-emails/entities/user-email.entity';
+import { HubSpotService } from './services/hubspot.service';
 
 @Injectable()
 export class AuthService {
@@ -50,6 +51,7 @@ export class AuthService {
     private sessionService: SessionService,
     private emailService: EmailService,
     private auditService: AuditService,
+    private hubspotService: HubSpotService,
   ) {}
 
   private async getUserPrimaryRole(userId: string): Promise<string> {
@@ -1138,7 +1140,11 @@ This is an automated message from Teamified.
     ip?: string,
     userAgent?: string,
   ): Promise<ClientAdminSignupResponseDto> {
-    const { email, password, firstName, lastName, companyName, slug: providedSlug, industry, companySize } = signupDto;
+    const { 
+      email, password, firstName, lastName, companyName, slug: providedSlug, 
+      industry, companySize, country, mobileNumber, phoneNumber, 
+      website, businessDescription, rolesNeeded, howCanWeHelp 
+    } = signupDto;
 
     // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
@@ -1242,6 +1248,37 @@ This is an automated message from Teamified.
 
     this.logger.log(`Client admin signup successful: ${savedUser.email}, Org: ${savedOrg.name}`);
 
+    // Create HubSpot contact asynchronously (non-blocking)
+    let hubspotContactCreated = false;
+    let hubspotContactId: string | undefined;
+    try {
+      const hubspotResult = await this.hubspotService.createOrUpdateContact({
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        company: companyName,
+        mobileNumber: mobileNumber,
+        phoneNumber: phoneNumber,
+        website: website,
+        businessDescription: businessDescription,
+        rolesNeeded: rolesNeeded,
+        howCanWeHelp: howCanWeHelp,
+        companySize: companySize,
+        country: country,
+      });
+
+      hubspotContactCreated = hubspotResult.success;
+      hubspotContactId = hubspotResult.contactId;
+
+      if (hubspotResult.success) {
+        this.logger.log(`HubSpot contact created/updated: ${hubspotResult.contactId}`);
+      } else {
+        this.logger.warn(`HubSpot contact creation failed: ${hubspotResult.error}`);
+      }
+    } catch (hubspotError) {
+      this.logger.error(`HubSpot exception: ${hubspotError instanceof Error ? hubspotError.message : String(hubspotError)}`);
+    }
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -1260,6 +1297,8 @@ This is an automated message from Teamified.
         companySize: savedOrg.companySize,
       },
       message: 'Account and organization created successfully',
+      hubspotContactCreated,
+      hubspotContactId,
     };
   }
 

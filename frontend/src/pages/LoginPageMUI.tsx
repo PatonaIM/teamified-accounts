@@ -120,6 +120,7 @@ const LoginPageMUI: React.FC = () => {
     checkAndRedirect();
   }, [user, loading, navigate, returnUrl, refreshUser]);
   
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
     email: '',
@@ -128,11 +129,16 @@ const LoginPageMUI: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  const [shakeEmail, setShakeEmail] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    if (field === 'email' && emailAlreadyRegistered) {
+      setEmailAlreadyRegistered(false);
     }
   };
 
@@ -213,6 +219,62 @@ const LoginPageMUI: React.FC = () => {
     setErrors({});
   };
 
+  const handleModeToggle = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setErrors({});
+    setEmailAlreadyRegistered(false);
+  };
+
+  const handleSignupContinue = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!validateEmail()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Check if email already exists
+      const response = await fetch('/api/v1/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.valid) {
+        // Email exists - show error state, shake, and prompt to sign in
+        setEmailAlreadyRegistered(true);
+        setShakeEmail(true);
+        setTimeout(() => setShakeEmail(false), 500);
+      } else {
+        // Email doesn't exist - proceed to signup
+        const signupParams = new URLSearchParams();
+        signupParams.set('email', formData.email);
+        if (returnUrl !== '/account/profile') {
+          signupParams.set('returnUrl', returnUrl);
+        }
+        if (intent) {
+          signupParams.set('intent', intent);
+        }
+        const signupUrl = `/signup-select?${signupParams.toString()}`;
+        navigate(signupUrl);
+      }
+    } catch (error) {
+      setErrors({ 
+        general: 'Unable to check email. Please try again.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -266,48 +328,53 @@ const LoginPageMUI: React.FC = () => {
           },
         }}
       >
-        <Box sx={{ maxWidth: 500, textAlign: 'center' }}>
+        <Box sx={{ maxWidth: 600, textAlign: 'center' }}>
           <Typography
-            variant="h2"
+            variant="h1"
             sx={{
               fontWeight: 700,
-              mb: 1,
-              fontSize: '3rem',
+              mb: 3,
+              fontSize: { xs: '3.5rem', md: '4.5rem' },
               letterSpacing: '-0.02em',
             }}
           >
-            teamified
+            Teamified
           </Typography>
           <Typography
-            variant="body1"
+            variant="h4"
             sx={{
               opacity: 0.95,
-              fontSize: '0.875rem',
-              mb: 4,
+              fontSize: { xs: '1.25rem', md: '1.75rem' },
               fontWeight: 400,
+              lineHeight: 1.5,
+              mb: 3,
             }}
           >
-            Employ with us.
-          </Typography>
-          
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 600,
-              mb: 2,
-              fontSize: '1.5rem',
-            }}
-          >
-            Welcome to Teamified Accounts
+            Build Your Global Team in Days — Not Weeks
           </Typography>
           <Typography
-            variant="body1"
+            variant="body2"
             sx={{
-              opacity: 0.9,
-              lineHeight: 1.6,
+              opacity: 0.8,
+              fontSize: '0.875rem',
             }}
           >
-            One account for all Teamified apps: Recruits, events, and seamless employment.
+            Learn more about Teamified. Visit{' '}
+            <Link
+              href="https://www.teamified.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                color: 'white',
+                fontWeight: 500,
+                textDecoration: 'underline',
+                '&:hover': {
+                  opacity: 0.9,
+                },
+              }}
+            >
+              www.teamified.com
+            </Link>
           </Typography>
         </Box>
       </Box>
@@ -336,18 +403,49 @@ const LoginPageMUI: React.FC = () => {
         >
           {/* Email Step */}
           {step === 'email' && (
-            <form onSubmit={handleEmailContinue}>
-              {/* Sign in Header */}
+            <form onSubmit={mode === 'signin' ? handleEmailContinue : handleSignupContinue}>
+              {/* Header */}
               <Typography
                 variant="h4"
                 sx={{
                   color: 'white',
                   fontWeight: 600,
-                  mb: 4,
+                  mb: 1,
                   textAlign: 'center',
                 }}
               >
-                Sign in
+                {mode === 'signin' ? 'Sign in' : 'Create New Account'}
+              </Typography>
+
+              {/* Mode Toggle Link */}
+              <Typography
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  textAlign: 'center',
+                  mb: 4,
+                  fontSize: '0.9rem',
+                }}
+              >
+                {mode === 'signin' 
+                  ? 'New here? ' 
+                  : emailAlreadyRegistered 
+                    ? 'Are you trying to sign in? '
+                    : 'Already have an account? '}
+                <Box
+                  component="span"
+                  onClick={handleModeToggle}
+                  sx={{
+                    color: '#A16AE8',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  {mode === 'signin' ? 'Create an account' : 'Sign in'}
+                </Box>
               </Typography>
 
               {/* Error Alert */}
@@ -358,30 +456,41 @@ const LoginPageMUI: React.FC = () => {
               )}
               <TextField
                 fullWidth
-                placeholder="Email or phone"
+                placeholder="Personal or Work Email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
-                helperText={errors.email}
+                error={!!errors.email || emailAlreadyRegistered}
+                helperText={errors.email || (emailAlreadyRegistered ? 'This email is already registered.' : '')}
                 disabled={isLoading}
                 sx={{
                   mb: 3,
+                  animation: shakeEmail ? 'shake 0.5s ease-in-out' : 'none',
+                  '@keyframes shake': {
+                    '0%, 100%': { transform: 'translateX(0)' },
+                    '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
+                    '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
+                  },
                   '& .MuiOutlinedInput-root': {
                     bgcolor: 'transparent',
                     borderRadius: 2,
                     '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.23)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.23)',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.4)',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#A16AE8',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#A16AE8',
                       borderWidth: 2,
                     },
                   },
                   '& .MuiInputBase-input': {
                     color: 'white',
+                    '&:-webkit-autofill': {
+                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
+                      WebkitTextFillColor: 'white',
+                      caretColor: 'white',
+                    },
                   },
                   '& .MuiInputBase-input::placeholder': {
                     color: 'rgba(255, 255, 255, 0.5)',
@@ -416,7 +525,7 @@ const LoginPageMUI: React.FC = () => {
                   },
                 }}
               >
-                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
               </Button>
 
               <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
@@ -428,20 +537,15 @@ const LoginPageMUI: React.FC = () => {
               <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
 
               <Box sx={{ textAlign: 'center', mt: 4 }}>
-                <Link
-                  href="/forgot-password"
+                <Typography
+                  variant="body2"
                   sx={{
                     color: 'rgba(255, 255, 255, 0.7)',
-                    textDecoration: 'none',
                     fontSize: '0.875rem',
-                    '&:hover': {
-                      color: '#A16AE8',
-                      textDecoration: 'underline',
-                    },
                   }}
                 >
-                  Need help? Contact support@teamified.com
-                </Link>
+                  Need help? Send us an email at hello@teamified.com
+                </Typography>
               </Box>
             </form>
           )}
@@ -498,6 +602,7 @@ const LoginPageMUI: React.FC = () => {
                         edge="end"
                         sx={{ 
                           color: 'rgba(255, 255, 255, 0.7)',
+                          zIndex: 1,
                           '&:hover': {
                             color: 'rgba(255, 255, 255, 0.9)',
                             bgcolor: 'rgba(255, 255, 255, 0.1)',
@@ -527,6 +632,11 @@ const LoginPageMUI: React.FC = () => {
                   },
                   '& .MuiInputBase-input': {
                     color: 'white',
+                    '&:-webkit-autofill': {
+                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
+                      WebkitTextFillColor: 'white',
+                      caretColor: 'white',
+                    },
                   },
                   '& .MuiInputBase-input::placeholder': {
                     color: 'rgba(255, 255, 255, 0.5)',
@@ -534,6 +644,9 @@ const LoginPageMUI: React.FC = () => {
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',
+                  },
+                  '& .MuiInputAdornment-root': {
+                    color: 'rgba(255, 255, 255, 0.7)',
                   },
                 }}
               />

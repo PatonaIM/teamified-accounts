@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.7',
+    date: 'December 18, 2025',
+    title: 'HubSpot Integration for Client User Signup Flow',
+    summary: 'Automatic HubSpot CRM contact creation on client signup, AI-powered website analysis using GPT-4o for auto-filling business descriptions, redesigned 2-step signup wizard, and enhanced country/phone input components with flag icons.',
+    path: '/docs/release-notes/v1.0.7',
+    isLatest: true,
+  },
+  {
     version: '1.0.6',
     date: 'December 17, 2025',
     title: 'AI-Powered Analytics & Enhanced Reporting',
     summary: 'New AI-powered analytics search with natural language queries, comprehensive date range filtering across all 10 analytics sections, and dynamically generated query suggestions based on current platform data.',
     path: '/docs/release-notes/v1.0.6',
-    isLatest: true,
   },
   {
     version: '1.0.5',

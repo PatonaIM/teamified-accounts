@@ -83,6 +83,11 @@ The data model uses PostgreSQL with TypeORM, featuring a flexible JSONB field fo
 -   **Nodemailer**: For transactional email functionalities.
 -   **Supabase**: Provides authentication services (legacy, being replaced).
 -   **Google OAuth**: Direct Google OAuth integration for "Continue with Google" sign-in (requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets).
+-   **HubSpot CRM**: Automatic contact creation during business signup (requires HUBSPOT_ACCESS_TOKEN secret). Features:
+    - Creates new contacts on client admin signup with company info, contact details, and lead qualification data
+    - Handles duplicate detection and contact updates for existing email addresses
+    - Stores business description, roles needed, how we can help, and company size
+-   **OpenAI (via Replit AI Integrations)**: AI-powered website analysis for auto-generating business descriptions during signup. Uses Replit's managed OpenAI integration - no API key configuration needed.
 
 ### Database
 
