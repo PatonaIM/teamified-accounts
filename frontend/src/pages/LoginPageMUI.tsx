@@ -544,7 +544,7 @@ const LoginPageMUI: React.FC = () => {
                     fontSize: '0.875rem',
                   }}
                 >
-                  Need help? Contact hello@teamified.com
+                  Need help? Send us an email at hello@teamified.com
                 </Typography>
               </Box>
             </form>
