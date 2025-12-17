@@ -169,7 +169,7 @@ const ClientAdminSignupPage: React.FC = () => {
       if (isValidUrl(value) && !formData.businessDescription) {
         websiteAnalysisTimeoutRef.current = setTimeout(() => {
           analyzeWebsiteDebounced(value);
-        }, 1000);
+        }, 2000);
       }
     }
   };
