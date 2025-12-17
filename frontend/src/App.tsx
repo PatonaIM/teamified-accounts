@@ -25,6 +25,7 @@ import RolesPage from './pages/docs/product/RolesPage';
 import PasswordResetPage from './pages/docs/product/PasswordResetPage';
 import UseCasesPage from './pages/docs/product/UseCasesPage';
 import GoogleOAuthPage from './pages/docs/product/GoogleOAuthPage';
+import HubSpotIntegrationPage from './pages/docs/product/HubSpotIntegrationPage';
 import QuickstartPage from './pages/docs/developer/QuickstartPage';
 import OAuthPage from './pages/docs/developer/OAuthPage';
 import UserManagementApiPage from './pages/docs/developer/UserManagementApiPage';
@@ -337,6 +338,7 @@ function App() {
                   <Route path="product/overview" element={<OverviewPage />} />
                   <Route path="product/sso" element={<SsoProductPage />} />
                   <Route path="product/google-oauth" element={<GoogleOAuthPage />} />
+                  <Route path="product/hubspot" element={<HubSpotIntegrationPage />} />
                   <Route path="product/roles" element={<RolesPage />} />
                   <Route path="product/password-reset" element={<PasswordResetPage />} />
                   <Route path="product/use-cases" element={<UseCasesPage />} />

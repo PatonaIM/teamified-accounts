@@ -18,6 +18,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'Platform Overview', path: '/docs/product/overview' },
       { title: 'Single Sign-On (SSO)', path: '/docs/product/sso' },
       { title: 'Google Sign-In', path: '/docs/product/google-oauth' },
+      { title: 'HubSpot Integration', path: '/docs/product/hubspot' },
       { title: 'Roles & Permissions', path: '/docs/product/roles' },
       { title: 'Password Reset & Recovery', path: '/docs/product/password-reset' },
       { title: 'Common Use Cases', path: '/docs/product/use-cases' },
