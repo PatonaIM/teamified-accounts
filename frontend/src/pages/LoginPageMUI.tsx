@@ -120,6 +120,7 @@ const LoginPageMUI: React.FC = () => {
     checkAndRedirect();
   }, [user, loading, navigate, returnUrl, refreshUser]);
   
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [step, setStep] = useState<'email' | 'password'>('email');
   const [formData, setFormData] = useState({
     email: '',
@@ -211,6 +212,31 @@ const LoginPageMUI: React.FC = () => {
     setStep('email');
     setFormData(prev => ({ ...prev, password: '' }));
     setErrors({});
+  };
+
+  const handleModeToggle = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setErrors({});
+  };
+
+  const handleSignupContinue = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    if (!validateEmail()) {
+      return;
+    }
+
+    // Go directly to signup-select without checking if email exists
+    const signupParams = new URLSearchParams();
+    signupParams.set('email', formData.email);
+    if (returnUrl !== '/account/profile') {
+      signupParams.set('returnUrl', returnUrl);
+    }
+    if (intent) {
+      signupParams.set('intent', intent);
+    }
+    const signupUrl = `/signup-select?${signupParams.toString()}`;
+    navigate(signupUrl);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -336,18 +362,46 @@ const LoginPageMUI: React.FC = () => {
         >
           {/* Email Step */}
           {step === 'email' && (
-            <form onSubmit={handleEmailContinue}>
-              {/* Sign in Header */}
+            <form onSubmit={mode === 'signin' ? handleEmailContinue : handleSignupContinue}>
+              {/* Header */}
               <Typography
                 variant="h4"
                 sx={{
                   color: 'white',
                   fontWeight: 600,
-                  mb: 4,
+                  mb: 1,
                   textAlign: 'center',
                 }}
               >
-                Sign in
+                {mode === 'signin' ? 'Sign in' : 'Create New Account'}
+              </Typography>
+
+              {/* Mode Toggle Link */}
+              <Typography
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  textAlign: 'center',
+                  mb: 4,
+                  fontSize: '0.9rem',
+                }}
+              >
+                {mode === 'signin' ? 'New here? ' : 'Already have an account? '}
+                <Link
+                  component="button"
+                  type="button"
+                  onClick={handleModeToggle}
+                  sx={{
+                    color: '#A16AE8',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  {mode === 'signin' ? 'Create an account' : 'Sign in'}
+                </Link>
               </Typography>
 
               {/* Error Alert */}
@@ -358,7 +412,7 @@ const LoginPageMUI: React.FC = () => {
               )}
               <TextField
                 fullWidth
-                placeholder="Email or phone"
+                placeholder="Personal or Work Email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 error={!!errors.email}
@@ -382,6 +436,11 @@ const LoginPageMUI: React.FC = () => {
                   },
                   '& .MuiInputBase-input': {
                     color: 'white',
+                    '&:-webkit-autofill': {
+                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
+                      WebkitTextFillColor: 'white',
+                      caretColor: 'white',
+                    },
                   },
                   '& .MuiInputBase-input::placeholder': {
                     color: 'rgba(255, 255, 255, 0.5)',
@@ -416,7 +475,7 @@ const LoginPageMUI: React.FC = () => {
                   },
                 }}
               >
-                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
               </Button>
 
               <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
@@ -498,6 +557,7 @@ const LoginPageMUI: React.FC = () => {
                         edge="end"
                         sx={{ 
                           color: 'rgba(255, 255, 255, 0.7)',
+                          zIndex: 1,
                           '&:hover': {
                             color: 'rgba(255, 255, 255, 0.9)',
                             bgcolor: 'rgba(255, 255, 255, 0.1)',
@@ -527,6 +587,11 @@ const LoginPageMUI: React.FC = () => {
                   },
                   '& .MuiInputBase-input': {
                     color: 'white',
+                    '&:-webkit-autofill': {
+                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
+                      WebkitTextFillColor: 'white',
+                      caretColor: 'white',
+                    },
                   },
                   '& .MuiInputBase-input::placeholder': {
                     color: 'rgba(255, 255, 255, 0.5)',
@@ -534,6 +599,9 @@ const LoginPageMUI: React.FC = () => {
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',
+                  },
+                  '& .MuiInputAdornment-root': {
+                    color: 'rgba(255, 255, 255, 0.7)',
                   },
                 }}
               />
