@@ -207,13 +207,6 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.slug = 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStep2 = () => {
-    const newErrors: { [key: string]: string } = {};
-
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
@@ -225,6 +218,13 @@ const ClientAdminSignupPage: React.FC = () => {
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors: { [key: string]: string } = {};
 
     if (formData.website && !isValidUrl(formData.website)) {
       newErrors.website = 'Please enter a valid website URL';
@@ -423,6 +423,64 @@ const ClientAdminSignupPage: React.FC = () => {
                   helperText={errors.slug || 'URL-friendly identifier (auto-generated from company name)'}
                   margin="normal"
                   disabled={isLoading}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password || 'At least 8 characters'}
+                  margin="normal"
+                  required
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          disabled={isLoading}
+                          sx={{
+                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Confirm Password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  error={!!errors.confirmPassword}
+                  helperText={errors.confirmPassword}
+                  margin="normal"
+                  required
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                          disabled={isLoading}
+                          sx={{
+                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          }}
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
 
                 <Button
@@ -628,64 +686,6 @@ const ClientAdminSignupPage: React.FC = () => {
                   rows={2}
                   disabled={isLoading}
                   placeholder="Tell us how we can assist your hiring needs..."
-                />
-
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  error={!!errors.password}
-                  helperText={errors.password || 'At least 8 characters'}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{
-                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                          }}
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-
-                <TextField
-                  fullWidth
-                  label="Confirm Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{
-                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                          }}
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
                 />
 
                 <Box sx={{ mt: 3 }}>
