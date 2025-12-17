@@ -298,7 +298,7 @@ async function validateSession() {
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
               SSO Logout Endpoint Reference
             </Typography>
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
                 <strong>GET</strong> /api/v1/sso/logout
               </Typography>

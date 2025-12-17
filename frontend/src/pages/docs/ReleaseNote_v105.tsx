@@ -60,30 +60,30 @@ export default function ReleaseNote_v105() {
             </Typography>
           </Alert>
 
-          <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+          <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
               10-Second Summary
             </Typography>
             <List dense disablePadding>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="'Continue with Google' button on login page" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="'Continue with Google' button on login page" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="New users choose Candidate or Employer role after Google sign-in" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="New users choose Candidate or Employer role after Google sign-in" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Personalized welcome emails with role-specific CTAs" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Personalized welcome emails with role-specific CTAs" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Secure token exchange - tokens never exposed in URLs" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="Secure token exchange - tokens never exposed in URLs" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="No third-party vendor dependency (replaced Supabase)" primaryTypographyProps={{ variant: 'body2' }} />
+                <ListItemText primary="No third-party vendor dependency (replaced Supabase)" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
             </List>
           </Box>
