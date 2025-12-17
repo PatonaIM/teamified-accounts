@@ -490,7 +490,7 @@ export default function ReleaseNote_v104() {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
               <strong>Usage:</strong> Client apps should clear local tokens first, then redirect to the logout endpoint:
             </Typography>
-            <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', p: 1, mt: 1, borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', color: 'text.primary', p: 1, mt: 1, borderRadius: 1 }}>
               GET /api/v1/sso/logout?post_logout_redirect_uri=https://myapp.com/logged-out
             </Typography>
           </Box>

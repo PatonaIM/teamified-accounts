@@ -376,7 +376,7 @@ curl -X GET ${userInfoUrl} \\
             <Typography variant="body2" color="text.secondary">
               When a user's type doesn't match the intent, the callback receives an OAuth error:
             </Typography>
-            <Typography variant="body2" component="code" sx={{ display: 'block', fontSize: '0.875rem', mt: 1, bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
+            <Typography variant="body2" component="code" sx={{ display: 'block', fontSize: '0.875rem', mt: 1, bgcolor: 'action.hover', color: 'text.primary', p: 1, borderRadius: 1 }}>
               ?error=access_denied&error_description=This+application+is+for+client+organizations+only...
             </Typography>
           </Box>
