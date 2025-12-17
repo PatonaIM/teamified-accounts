@@ -11,7 +11,6 @@ import {
   Paper,
   Container,
   Fade,
-  Slide,
   MenuItem,
   FormControlLabel,
   Checkbox,
@@ -343,7 +342,7 @@ const ClientAdminSignupPage: React.FC = () => {
             }}
           >
             {/* Step 1: Basic Information */}
-            <Slide direction="right" in={step === 'basic'} mountOnEnter unmountOnExit timeout={300}>
+            <Fade in={step === 'basic'} mountOnEnter unmountOnExit timeout={400}>
               <Box component="form" onSubmit={handleContinue} noValidate>
                 <Box textAlign="center" mb={4}>
                   <Typography
@@ -516,10 +515,10 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
-            </Slide>
+            </Fade>
 
             {/* Step 2: Company Details */}
-            <Slide direction="left" in={step === 'details'} mountOnEnter unmountOnExit timeout={300}>
+            <Fade in={step === 'details'} mountOnEnter unmountOnExit timeout={400}>
               <Box component="form" onSubmit={handleSubmit} noValidate>
                 <Box textAlign="center" mb={4}>
                   <Typography
@@ -787,7 +786,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
-            </Slide>
+            </Fade>
           </Paper>
         </Fade>
       </Container>
