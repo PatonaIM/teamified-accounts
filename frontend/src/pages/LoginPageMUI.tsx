@@ -537,20 +537,15 @@ const LoginPageMUI: React.FC = () => {
               <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
 
               <Box sx={{ textAlign: 'center', mt: 4 }}>
-                <Link
-                  href="/forgot-password"
+                <Typography
+                  variant="body2"
                   sx={{
                     color: 'rgba(255, 255, 255, 0.7)',
-                    textDecoration: 'none',
                     fontSize: '0.875rem',
-                    '&:hover': {
-                      color: '#A16AE8',
-                      textDecoration: 'underline',
-                    },
                   }}
                 >
-                  Need help? Contact support@teamified.com
-                </Link>
+                  Need help? Contact hello@teamified.com
+                </Typography>
               </Box>
             </form>
           )}
