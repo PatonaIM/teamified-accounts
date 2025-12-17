@@ -226,17 +226,48 @@ const LoginPageMUI: React.FC = () => {
       return;
     }
 
-    // Go directly to signup-select without checking if email exists
-    const signupParams = new URLSearchParams();
-    signupParams.set('email', formData.email);
-    if (returnUrl !== '/account/profile') {
-      signupParams.set('returnUrl', returnUrl);
+    setIsLoading(true);
+
+    try {
+      // Check if email already exists
+      const response = await fetch('/api/v1/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.valid) {
+        // Email exists - show error and switch to sign in mode
+        setErrors({ 
+          general: 'This email is already registered.' 
+        });
+        setMode('signin');
+      } else {
+        // Email doesn't exist - proceed to signup
+        const signupParams = new URLSearchParams();
+        signupParams.set('email', formData.email);
+        if (returnUrl !== '/account/profile') {
+          signupParams.set('returnUrl', returnUrl);
+        }
+        if (intent) {
+          signupParams.set('intent', intent);
+        }
+        const signupUrl = `/signup-select?${signupParams.toString()}`;
+        navigate(signupUrl);
+      }
+    } catch (error) {
+      setErrors({ 
+        general: 'Unable to check email. Please try again.' 
+      });
+    } finally {
+      setIsLoading(false);
     }
-    if (intent) {
-      signupParams.set('intent', intent);
-    }
-    const signupUrl = `/signup-select?${signupParams.toString()}`;
-    navigate(signupUrl);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
