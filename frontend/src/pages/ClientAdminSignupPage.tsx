@@ -83,6 +83,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
+  const [step, setStep] = useState<'basic' | 'details'>('basic');
   const [formData, setFormData] = useState({
     email: emailParam,
     password: '',
@@ -173,7 +174,7 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
-  const validateForm = () => {
+  const validateStep1 = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.email) {
@@ -194,18 +195,6 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.lastName = 'Last name must not exceed 50 characters';
     }
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
     if (!formData.companyName) {
       newErrors.companyName = 'Company name is required';
     } else if (formData.companyName.length > 255) {
@@ -216,6 +205,25 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.slug = 'Slug must be between 2 and 100 characters';
     } else if (formData.slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug)) {
       newErrors.slug = 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
     }
 
     if (formData.website && !isValidUrl(formData.website)) {
@@ -230,10 +238,17 @@ const ClientAdminSignupPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateStep1()) {
+      setStep('details');
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateStep2()) {
       return;
     }
 
@@ -288,6 +303,11 @@ const ClientAdminSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (step === 'details') {
+      setStep('basic');
+      return;
+    }
+    
     if (intent === 'candidate' || intent === 'client') {
       const loginParams = new URLSearchParams();
       if (returnUrl !== '/account') {
@@ -320,379 +340,439 @@ const ClientAdminSignupPage: React.FC = () => {
               backgroundColor: 'rgba(255, 255, 255, 0.98)',
             }}
           >
-            <Box textAlign="center" mb={4}>
-              <Typography
-                variant="h4"
-                component="h1"
-                gutterBottom
-                fontWeight="bold"
-                color="secondary"
-              >
-                Business Sign Up
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Set up your organization account
-              </Typography>
-            </Box>
+            {/* Step 1: Basic Information */}
+            {step === 'basic' && (
+              <Box component="form" onSubmit={handleContinue} noValidate>
+                <Box textAlign="center" mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    fontWeight="bold"
+                    color="secondary"
+                  >
+                    Business Sign Up
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Let's get started with the basics
+                  </Typography>
+                </Box>
 
-            {errors.general && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {errors.general}
-              </Alert>
-            )}
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
 
-            {successMessage && (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                {successMessage}
-              </Alert>
-            )}
-
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
-                helperText={errors.email}
-                margin="normal"
-                required
-                disabled={isLoading}
-              />
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
                 <TextField
                   fullWidth
-                  label="First Name"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  error={!!errors.firstName}
-                  helperText={errors.firstName}
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  margin="normal"
                   required
                   autoFocus
                   disabled={isLoading}
                 />
 
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    error={!!errors.firstName}
+                    helperText={errors.firstName}
+                    required
+                    disabled={isLoading}
+                  />
+
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    error={!!errors.lastName}
+                    helperText={errors.lastName}
+                    required
+                    disabled={isLoading}
+                  />
+                </Box>
+
                 <TextField
                   fullWidth
-                  label="Last Name"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  error={!!errors.lastName}
-                  helperText={errors.lastName}
+                  label="Company Name"
+                  value={formData.companyName}
+                  onChange={(e) => handleInputChange('companyName', e.target.value)}
+                  error={!!errors.companyName}
+                  helperText={errors.companyName}
+                  margin="normal"
                   required
                   disabled={isLoading}
                 />
-              </Box>
-
-              <TextField
-                fullWidth
-                label="Company Name"
-                value={formData.companyName}
-                onChange={(e) => handleInputChange('companyName', e.target.value)}
-                error={!!errors.companyName}
-                helperText={errors.companyName}
-                margin="normal"
-                required
-                disabled={isLoading}
-              />
-
-              <TextField
-                fullWidth
-                label="Organization Slug"
-                value={formData.slug}
-                onChange={(e) => handleInputChange('slug', e.target.value)}
-                error={!!errors.slug}
-                helperText={errors.slug || 'URL-friendly identifier (auto-generated from company name)'}
-                margin="normal"
-                disabled={isLoading}
-              />
-
-              <Box sx={{ mt: 2 }}>
-                <CountrySelect
-                  value={formData.country}
-                  onChange={(value) => handleInputChange('country', value)}
-                  label="Country"
-                  disabled={isLoading}
-                />
-              </Box>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Industry"
-                  value={formData.industry}
-                  onChange={(e) => handleInputChange('industry', e.target.value)}
-                  error={!!errors.industry}
-                  helperText={errors.industry}
-                  disabled={isLoading}
-                >
-                  <MenuItem value="">
-                    <em>Select industry (optional)</em>
-                  </MenuItem>
-                  {INDUSTRIES.map((industry) => (
-                    <MenuItem key={industry} value={industry}>
-                      {industry}
-                    </MenuItem>
-                  ))}
-                </TextField>
 
                 <TextField
-                  select
                   fullWidth
-                  label="Company Size"
-                  value={formData.companySize}
-                  onChange={(e) => handleInputChange('companySize', e.target.value)}
-                  error={!!errors.companySize}
-                  helperText={errors.companySize}
-                  disabled={isLoading}
-                >
-                  <MenuItem value="">
-                    <em>Select size (optional)</em>
-                  </MenuItem>
-                  {COMPANY_SIZES.map((size) => (
-                    <MenuItem key={size} value={size}>
-                      {size}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Box>
-
-              <Box sx={{ mt: 3 }}>
-                <PhoneInput
-                  countryCode={formData.mobileCountryCode}
-                  phoneNumber={formData.mobileNumber}
-                  onCountryChange={(code) => handleInputChange('mobileCountryCode', code)}
-                  onPhoneChange={(number) => handleInputChange('mobileNumber', number)}
-                  label="Mobile Number"
+                  label="Organization Slug"
+                  value={formData.slug}
+                  onChange={(e) => handleInputChange('slug', e.target.value)}
+                  error={!!errors.slug}
+                  helperText={errors.slug || 'URL-friendly identifier (auto-generated from company name)'}
+                  margin="normal"
                   disabled={isLoading}
                 />
-              </Box>
 
-              <Box sx={{ mt: 2 }}>
-                <PhoneInput
-                  countryCode={formData.phoneCountryCode}
-                  phoneNumber={formData.phoneNumber}
-                  onCountryChange={(code) => handleInputChange('phoneCountryCode', code)}
-                  onPhoneChange={(number) => handleInputChange('phoneNumber', number)}
-                  label="Phone Number (optional)"
-                  disabled={isLoading}
-                />
-              </Box>
-
-              <TextField
-                fullWidth
-                label="Company Website (optional)"
-                value={formData.website}
-                onChange={(e) => handleInputChange('website', e.target.value)}
-                error={!!errors.website}
-                helperText={errors.website || 'Enter your website URL for auto-generated business description'}
-                margin="normal"
-                disabled={isLoading}
-                placeholder="https://example.com"
-              />
-
-              <TextField
-                fullWidth
-                label="Business Description"
-                value={formData.businessDescription}
-                onChange={(e) => handleInputChange('businessDescription', e.target.value)}
-                error={!!errors.businessDescription}
-                helperText={errors.businessDescription}
-                margin="normal"
-                multiline
-                rows={3}
-                disabled={isLoading}
-                placeholder="Tell us about your business..."
-                InputProps={{
-                  endAdornment: isAnalyzingWebsite && (
-                    <InputAdornment position="end">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AutoAwesome
-                          sx={{
-                            color: '#7c3aed',
-                            animation: `${sparkle} 1s ease-in-out infinite`,
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          Analyzing...
-                        </Typography>
-                      </Box>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <TextField
-                fullWidth
-                label="What roles do you need? (optional)"
-                value={formData.rolesNeeded}
-                onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
-                error={!!errors.rolesNeeded}
-                helperText={errors.rolesNeeded}
-                margin="normal"
-                disabled={isLoading}
-                placeholder="e.g., Software Engineers, Product Managers"
-              />
-
-              <TextField
-                fullWidth
-                label="How can we help you? (optional)"
-                value={formData.howCanWeHelp}
-                onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
-                error={!!errors.howCanWeHelp}
-                helperText={errors.howCanWeHelp}
-                margin="normal"
-                multiline
-                rows={2}
-                disabled={isLoading}
-                placeholder="Tell us how we can assist your hiring needs..."
-              />
-
-              <TextField
-                fullWidth
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                error={!!errors.password}
-                helperText={errors.password || 'At least 8 characters'}
-                margin="normal"
-                required
-                disabled={isLoading}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        disabled={isLoading}
-                        sx={{
-                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                        }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <TextField
-                fullWidth
-                label="Confirm Password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword}
-                margin="normal"
-                required
-                disabled={isLoading}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        edge="end"
-                        disabled={isLoading}
-                        sx={{
-                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                        }}
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              <Box sx={{ mt: 3 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.termsAccepted}
-                      onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
-                      disabled={isLoading}
-                      color="secondary"
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      I accept the{' '}
-                      <Link
-                        href={getServiceAgreementUrl(formData.country)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="secondary"
-                      >
-                        Service Agreement
-                      </Link>
-                      ,{' '}
-                      <Link
-                        href="https://teamified.com/legal/term"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="secondary"
-                      >
-                        Terms
-                      </Link>
-                      {' '}and{' '}
-                      <Link
-                        href="https://teamified.com/legal/privacy"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        color="secondary"
-                      >
-                        Privacy Policy
-                      </Link>
-                    </Typography>
-                  }
-                />
-                {errors.termsAccepted && (
-                  <Typography variant="caption" color="error" sx={{ ml: 2 }}>
-                    {errors.termsAccepted}
-                  </Typography>
-                )}
-              </Box>
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="secondary"
-                size="large"
-                disabled={isLoading}
-                sx={{
-                  mt: 3,
-                  mb: 2,
-                  py: 1.5,
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                }}
-              >
-                {isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  'Create Account & Organization'
-                )}
-              </Button>
-
-              <Box textAlign="center" mt={2}>
                 <Button
-                  startIcon={<ArrowBack />}
-                  onClick={handleBack}
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="secondary"
+                  size="large"
                   disabled={isLoading}
-                  sx={{ textTransform: 'none' }}
+                  sx={{
+                    mt: 3,
+                    mb: 2,
+                    py: 1.5,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
                 >
-                  {intent === 'candidate' || intent === 'client' ? 'Back to Login' : 'Back to Selection'}
+                  Continue
                 </Button>
+
+                <Box textAlign="center" mt={2}>
+                  <Button
+                    startIcon={<ArrowBack />}
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {intent === 'candidate' || intent === 'client' ? 'Back to Login' : 'Back to Selection'}
+                  </Button>
+                </Box>
               </Box>
-            </Box>
+            )}
+
+            {/* Step 2: Company Details */}
+            {step === 'details' && (
+              <Box component="form" onSubmit={handleSubmit} noValidate>
+                <Box textAlign="center" mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    fontWeight="bold"
+                    color="secondary"
+                  >
+                    Tell us more about {formData.companyName}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Help us understand your business better
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                {successMessage && (
+                  <Alert severity="success" sx={{ mb: 3 }}>
+                    {successMessage}
+                  </Alert>
+                )}
+
+                <Box sx={{ mt: 2 }}>
+                  <CountrySelect
+                    value={formData.country}
+                    onChange={(value) => handleInputChange('country', value)}
+                    label="Country"
+                    disabled={isLoading}
+                  />
+                </Box>
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Industry"
+                    value={formData.industry}
+                    onChange={(e) => handleInputChange('industry', e.target.value)}
+                    error={!!errors.industry}
+                    helperText={errors.industry}
+                    disabled={isLoading}
+                  >
+                    <MenuItem value="">
+                      <em>Select industry (optional)</em>
+                    </MenuItem>
+                    {INDUSTRIES.map((industry) => (
+                      <MenuItem key={industry} value={industry}>
+                        {industry}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    select
+                    fullWidth
+                    label="Company Size"
+                    value={formData.companySize}
+                    onChange={(e) => handleInputChange('companySize', e.target.value)}
+                    error={!!errors.companySize}
+                    helperText={errors.companySize}
+                    disabled={isLoading}
+                  >
+                    <MenuItem value="">
+                      <em>Select size (optional)</em>
+                    </MenuItem>
+                    {COMPANY_SIZES.map((size) => (
+                      <MenuItem key={size} value={size}>
+                        {size}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+
+                <Box sx={{ mt: 3 }}>
+                  <PhoneInput
+                    countryCode={formData.mobileCountryCode}
+                    phoneNumber={formData.mobileNumber}
+                    onCountryChange={(code) => handleInputChange('mobileCountryCode', code)}
+                    onPhoneChange={(number) => handleInputChange('mobileNumber', number)}
+                    label="Mobile Number"
+                    disabled={isLoading}
+                  />
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <PhoneInput
+                    countryCode={formData.phoneCountryCode}
+                    phoneNumber={formData.phoneNumber}
+                    onCountryChange={(code) => handleInputChange('phoneCountryCode', code)}
+                    onPhoneChange={(number) => handleInputChange('phoneNumber', number)}
+                    label="Phone Number (optional)"
+                    disabled={isLoading}
+                  />
+                </Box>
+
+                <TextField
+                  fullWidth
+                  label="Company Website (optional)"
+                  value={formData.website}
+                  onChange={(e) => handleInputChange('website', e.target.value)}
+                  error={!!errors.website}
+                  helperText={errors.website || 'Enter your website URL for auto-generated business description'}
+                  margin="normal"
+                  disabled={isLoading}
+                  placeholder="https://example.com"
+                />
+
+                <TextField
+                  fullWidth
+                  label="Business Description"
+                  value={formData.businessDescription}
+                  onChange={(e) => handleInputChange('businessDescription', e.target.value)}
+                  error={!!errors.businessDescription}
+                  helperText={errors.businessDescription}
+                  margin="normal"
+                  multiline
+                  rows={3}
+                  disabled={isLoading}
+                  placeholder="Tell us about your business..."
+                  InputProps={{
+                    endAdornment: isAnalyzingWebsite && (
+                      <InputAdornment position="end">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AutoAwesome
+                            sx={{
+                              color: '#7c3aed',
+                              animation: `${sparkle} 1s ease-in-out infinite`,
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            Analyzing...
+                          </Typography>
+                        </Box>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="What roles do you need? (optional)"
+                  value={formData.rolesNeeded}
+                  onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
+                  error={!!errors.rolesNeeded}
+                  helperText={errors.rolesNeeded}
+                  margin="normal"
+                  disabled={isLoading}
+                  placeholder="e.g., Software Engineers, Product Managers"
+                />
+
+                <TextField
+                  fullWidth
+                  label="How can we help you? (optional)"
+                  value={formData.howCanWeHelp}
+                  onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
+                  error={!!errors.howCanWeHelp}
+                  helperText={errors.howCanWeHelp}
+                  margin="normal"
+                  multiline
+                  rows={2}
+                  disabled={isLoading}
+                  placeholder="Tell us how we can assist your hiring needs..."
+                />
+
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password || 'At least 8 characters'}
+                  margin="normal"
+                  required
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          disabled={isLoading}
+                          sx={{
+                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Confirm Password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  error={!!errors.confirmPassword}
+                  helperText={errors.confirmPassword}
+                  margin="normal"
+                  required
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                          disabled={isLoading}
+                          sx={{
+                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          }}
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                <Box sx={{ mt: 3 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.termsAccepted}
+                        onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
+                        disabled={isLoading}
+                        color="secondary"
+                      />
+                    }
+                    label={
+                      <Typography variant="body2" color="text.secondary">
+                        I accept the{' '}
+                        <Link
+                          href={getServiceAgreementUrl(formData.country)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          color="secondary"
+                        >
+                          Service Agreement
+                        </Link>
+                        ,{' '}
+                        <Link
+                          href="https://teamified.com/legal/term"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          color="secondary"
+                        >
+                          Terms
+                        </Link>
+                        {' '}and{' '}
+                        <Link
+                          href="https://teamified.com/legal/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          color="secondary"
+                        >
+                          Privacy Policy
+                        </Link>
+                      </Typography>
+                    }
+                  />
+                  {errors.termsAccepted && (
+                    <Typography variant="caption" color="error" sx={{ ml: 2 }}>
+                      {errors.termsAccepted}
+                    </Typography>
+                  )}
+                </Box>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  disabled={isLoading}
+                  sx={{
+                    mt: 3,
+                    mb: 2,
+                    py: 1.5,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {isLoading ? (
+                    <CircularProgress size={24} color="inherit" />
+                  ) : (
+                    'Create Account & Organization'
+                  )}
+                </Button>
+
+                <Box textAlign="center" mt={2}>
+                  <Button
+                    startIcon={<ArrowBack />}
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Back
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </Paper>
         </Fade>
       </Container>
