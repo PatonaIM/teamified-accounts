@@ -223,6 +223,9 @@ export const countries: Country[] = [
 
 const POPULAR_COUNTRY_CODES = ['AU', 'GB', 'US'];
 
+const getFlagUrl = (countryCode: string) => 
+  `https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`;
+
 interface CountrySelectProps {
   value: string;
   onChange: (countryCode: string) => void;
@@ -305,7 +308,11 @@ const CountrySelect: React.FC<CountrySelectProps> = ({
           readOnly: true,
           startAdornment: selectedCountry && (
             <InputAdornment position="start">
-              <Typography fontSize={20}>{selectedCountry.flag}</Typography>
+              <img 
+                src={getFlagUrl(selectedCountry.code)} 
+                alt={selectedCountry.name} 
+                style={{ width: 24, height: 18, objectFit: 'cover', borderRadius: 2 }}
+              />
             </InputAdornment>
           ),
           endAdornment: (
@@ -366,7 +373,11 @@ const CountrySelect: React.FC<CountrySelectProps> = ({
                   selected={value === country.code}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Typography fontSize={20}>{country.flag}</Typography>
+                    <img 
+                      src={getFlagUrl(country.code)} 
+                      alt={country.name} 
+                      style={{ width: 24, height: 18, objectFit: 'cover', borderRadius: 2 }}
+                    />
                   </ListItemIcon>
                   <ListItemText primary={country.name} />
                   {value === country.code && <Check fontSize="small" color="primary" />}
@@ -390,7 +401,11 @@ const CountrySelect: React.FC<CountrySelectProps> = ({
                   selected={value === country.code}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Typography fontSize={20}>{country.flag}</Typography>
+                    <img 
+                      src={getFlagUrl(country.code)} 
+                      alt={country.name} 
+                      style={{ width: 24, height: 18, objectFit: 'cover', borderRadius: 2 }}
+                    />
                   </ListItemIcon>
                   <ListItemText primary={country.name} />
                   {value === country.code && <Check fontSize="small" color="primary" />}

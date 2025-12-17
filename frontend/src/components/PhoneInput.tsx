@@ -18,6 +18,9 @@ import { countries, type Country } from './CountrySelect';
 
 const POPULAR_COUNTRY_CODES = ['AU', 'GB', 'US'];
 
+const getFlagUrl = (countryCode: string) => 
+  `https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`;
+
 interface PhoneInputProps {
   countryCode: string;
   phoneNumber: string;
@@ -120,7 +123,13 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
             },
           }}
         >
-          <Typography fontSize={20}>{selectedCountry?.flag}</Typography>
+          {selectedCountry && (
+            <img 
+              src={getFlagUrl(selectedCountry.code)} 
+              alt={selectedCountry.name} 
+              style={{ width: 24, height: 18, objectFit: 'cover', borderRadius: 2 }}
+            />
+          )}
           <Typography variant="body2" color="text.secondary">
             {selectedCountry?.dialCode}
           </Typography>
@@ -197,7 +206,11 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
                   selected={countryCode === country.code}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Typography fontSize={20}>{country.flag}</Typography>
+                    <img 
+                      src={getFlagUrl(country.code)} 
+                      alt={country.name} 
+                      style={{ width: 24, height: 18, objectFit: 'cover', borderRadius: 2 }}
+                    />
                   </ListItemIcon>
                   <ListItemText primary={country.name} />
                   <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
@@ -224,7 +237,11 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
                   selected={countryCode === country.code}
                 >
                   <ListItemIcon sx={{ minWidth: 36 }}>
-                    <Typography fontSize={20}>{country.flag}</Typography>
+                    <img 
+                      src={getFlagUrl(country.code)} 
+                      alt={country.name} 
+                      style={{ width: 24, height: 18, objectFit: 'cover', borderRadius: 2 }}
+                    />
                   </ListItemIcon>
                   <ListItemText primary={country.name} />
                   <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
