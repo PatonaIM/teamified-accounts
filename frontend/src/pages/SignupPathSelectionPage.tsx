@@ -10,8 +10,10 @@ import {
   Avatar,
   Rating,
   CardActionArea,
+  Button,
 } from '@mui/material';
 import {
+  ArrowBack,
   ArrowForward,
   Public,
   AutoAwesome,
@@ -134,7 +136,7 @@ const SignupPathSelectionPage: React.FC = () => {
                 flexDirection: { xs: 'column', md: 'row' }, 
                 gap: 4,
                 justifyContent: 'center',
-                mb: 5,
+                mb: 3,
               }}
             >
               <Card
@@ -308,6 +310,23 @@ const SignupPathSelectionPage: React.FC = () => {
                   </CardContent>
                 </CardActionArea>
               </Card>
+            </Box>
+
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Button
+                startIcon={<ArrowBack />}
+                onClick={() => navigate('/login')}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  textTransform: 'none',
+                  fontSize: '0.95rem',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                Back to Login
+              </Button>
             </Box>
 
             <Box
