@@ -254,7 +254,9 @@ const CountrySelect: React.FC<CountrySelectProps> = ({
   );
 
   const { popularCountries, otherCountries } = useMemo(() => {
-    const popular = countries.filter((c) => POPULAR_COUNTRY_CODES.includes(c.code));
+    const popular = POPULAR_COUNTRY_CODES
+      .map((code) => countries.find((c) => c.code === code))
+      .filter((c): c is Country => c !== undefined);
     const others = countries
       .filter((c) => !POPULAR_COUNTRY_CODES.includes(c.code))
       .sort((a, b) => a.name.localeCompare(b.name));
