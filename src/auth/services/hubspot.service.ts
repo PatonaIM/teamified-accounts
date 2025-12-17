@@ -49,9 +49,12 @@ export class HubSpotService {
       hs_lead_status: 'New Lead',
     };
 
-    const primaryPhone = data.mobileNumber || data.phone;
-    if (primaryPhone) {
-      properties.phone = primaryPhone;
+    if (data.mobileNumber) {
+      properties.mobilephone = data.mobileNumber;
+    }
+
+    if (data.phoneNumber) {
+      properties.phone = data.phoneNumber;
     }
 
     if (data.website) {
@@ -63,7 +66,7 @@ export class HubSpotService {
     }
 
     if (data.rolesNeeded) {
-      properties.what_roles_do_you_need = data.rolesNeeded;
+      properties.what_role_s_do_you_need_ = data.rolesNeeded;
     }
 
     if (data.howCanWeHelp) {
@@ -71,14 +74,23 @@ export class HubSpotService {
     }
 
     if (data.companySize) {
-      properties.company_size__contact = data.companySize;
-    }
-
-    if (data.phoneNumber) {
-      properties.secondary_phone = data.phoneNumber;
+      properties.company_size___contact = this.mapCompanySizeToHubSpot(data.companySize);
     }
 
     return properties;
+  }
+
+  private mapCompanySizeToHubSpot(companySize: string): string {
+    const sizeMap: Record<string, string> = {
+      '1-20 employees': '1-20',
+      '21-50 employees': '21-50',
+      '51-100 employees': '51-100',
+      '101-200 employees': '101-200',
+      '201-500 employees': '201-500',
+      '501-1000 employees': '501-1000',
+      '1000+ employees': '1000+',
+    };
+    return sizeMap[companySize] || companySize;
   }
 
   private async createContact(
