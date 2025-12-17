@@ -11,6 +11,7 @@ import {
   Paper,
   Container,
   Fade,
+  Slide,
   MenuItem,
   FormControlLabel,
   Checkbox,
@@ -338,10 +339,11 @@ const ClientAdminSignupPage: React.FC = () => {
               padding: { xs: 3, sm: 4, md: 5 },
               borderRadius: 3,
               backgroundColor: 'rgba(255, 255, 255, 0.98)',
+              overflow: 'hidden',
             }}
           >
             {/* Step 1: Basic Information */}
-            {step === 'basic' && (
+            <Slide direction="right" in={step === 'basic'} mountOnEnter unmountOnExit timeout={300}>
               <Box component="form" onSubmit={handleContinue} noValidate>
                 <Box textAlign="center" mb={4}>
                   <Typography
@@ -514,10 +516,10 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
-            )}
+            </Slide>
 
             {/* Step 2: Company Details */}
-            {step === 'details' && (
+            <Slide direction="left" in={step === 'details'} mountOnEnter unmountOnExit timeout={300}>
               <Box component="form" onSubmit={handleSubmit} noValidate>
                 <Box textAlign="center" mb={4}>
                   <Typography
@@ -785,7 +787,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
-            )}
+            </Slide>
           </Paper>
         </Fade>
       </Container>
