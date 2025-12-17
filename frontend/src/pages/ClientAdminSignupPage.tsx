@@ -642,7 +642,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     error={!!errors.businessDescription}
                     helperText={errors.businessDescription}
                     multiline
-                    rows={3}
+                    rows={5}
                     disabled={isLoading || isAnalyzingWebsite}
                     placeholder="Tell us about your business..."
                   />
