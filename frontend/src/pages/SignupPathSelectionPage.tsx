@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import {
   Box,
   Typography,
-  Button,
   Container,
   Card,
   CardContent,
@@ -10,6 +9,7 @@ import {
   Chip,
   Avatar,
   Rating,
+  CardActionArea,
 } from '@mui/material';
 import {
   ArrowForward,
@@ -103,7 +103,7 @@ const SignupPathSelectionPage: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f8f9fa',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         padding: { xs: 2, md: 4 },
       }}
     >
@@ -117,13 +117,13 @@ const SignupPathSelectionPage: React.FC = () => {
                 gutterBottom
                 sx={{
                   fontWeight: 700,
-                  color: '#1a1a2e',
+                  color: 'white',
                   fontSize: { xs: '2rem', md: '2.75rem' },
                 }}
               >
                 Let's get started
               </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
+              <Typography variant="h6" sx={{ fontWeight: 400, color: 'rgba(255, 255, 255, 0.85)' }}>
                 Tell us who you are
               </Typography>
             </Box>
@@ -138,185 +138,175 @@ const SignupPathSelectionPage: React.FC = () => {
               }}
             >
               <Card
-                elevation={0}
+                elevation={8}
                 sx={{
                   flex: 1,
                   maxWidth: { md: 420 },
                   borderRadius: 3,
-                  border: '1px solid #e0e0e0',
                   overflow: 'hidden',
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
-                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+                    transform: 'translateY(-6px)',
                   },
                 }}
               >
-                <Box
-                  sx={{
-                    position: 'relative',
-                    height: 200,
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: 6,
-                      height: '100%',
-                      backgroundColor: '#7c3aed',
-                      zIndex: 1,
-                    },
-                  }}
-                >
+                <CardActionArea onClick={handleCandidateSignup} sx={{ height: '100%' }}>
                   <Box
-                    component="img"
-                    src={jobSeekerImage}
-                    alt="Job Seeker"
                     sx={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                  />
-                </Box>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
-                    I'm a Job Seeker
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Find your next global opportunity with AI-powered matching
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                    {jobSeekerFeatures.map((feature, index) => (
-                      <Chip
-                        key={index}
-                        icon={feature.icon}
-                        label={feature.text}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          borderColor: '#e0e0e0',
-                          backgroundColor: '#f5f5f5',
-                          '& .MuiChip-icon': { color: '#666' },
-                        }}
-                      />
-                    ))}
-                  </Box>
-
-                  <Button
-                    fullWidth
-                    variant="text"
-                    endIcon={<ArrowForward />}
-                    onClick={handleCandidateSignup}
-                    sx={{
-                      justifyContent: 'flex-start',
-                      color: '#7c3aed',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      p: 0,
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        color: '#5b21b6',
+                      position: 'relative',
+                      height: 200,
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 6,
+                        height: '100%',
+                        backgroundColor: '#7c3aed',
+                        zIndex: 1,
                       },
                     }}
                   >
-                    Get Started
-                  </Button>
-                </CardContent>
+                    <Box
+                      component="img"
+                      src={jobSeekerImage}
+                      alt="Job Seeker"
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </Box>
+                  <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
+                      I'm a Job Seeker
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Find your next global opportunity with AI-powered matching
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3, justifyContent: 'center' }}>
+                      {jobSeekerFeatures.map((feature, index) => (
+                        <Chip
+                          key={index}
+                          icon={feature.icon}
+                          label={feature.text}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            borderColor: '#e0e0e0',
+                            backgroundColor: '#f5f5f5',
+                            '& .MuiChip-icon': { color: '#666' },
+                          }}
+                        />
+                      ))}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1,
+                        color: '#7c3aed',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      Get Started
+                      <ArrowForward fontSize="small" />
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
               </Card>
 
               <Card
-                elevation={0}
+                elevation={8}
                 sx={{
                   flex: 1,
                   maxWidth: { md: 420 },
                   borderRadius: 3,
-                  border: '1px solid #e0e0e0',
                   overflow: 'hidden',
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
-                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+                    transform: 'translateY(-6px)',
                   },
                 }}
               >
-                <Box
-                  sx={{
-                    position: 'relative',
-                    height: 200,
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: 6,
-                      height: '100%',
-                      backgroundColor: '#7c3aed',
-                      zIndex: 1,
-                    },
-                  }}
-                >
+                <CardActionArea onClick={handleClientAdminSignup} sx={{ height: '100%' }}>
                   <Box
-                    component="img"
-                    src={businessImage}
-                    alt="Business"
                     sx={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                  />
-                </Box>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
-                    We're a Business
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Build your dream team with pre-screened global talent
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                    {businessFeatures.map((feature, index) => (
-                      <Chip
-                        key={index}
-                        icon={feature.icon}
-                        label={feature.text}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          borderColor: '#e0e0e0',
-                          backgroundColor: '#f5f5f5',
-                          '& .MuiChip-icon': { color: '#666' },
-                        }}
-                      />
-                    ))}
-                  </Box>
-
-                  <Button
-                    fullWidth
-                    variant="text"
-                    endIcon={<ArrowForward />}
-                    onClick={handleClientAdminSignup}
-                    sx={{
-                      justifyContent: 'flex-start',
-                      color: '#7c3aed',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      p: 0,
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        color: '#5b21b6',
+                      position: 'relative',
+                      height: 200,
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 6,
+                        height: '100%',
+                        backgroundColor: '#7c3aed',
+                        zIndex: 1,
                       },
                     }}
                   >
-                    Get Started
-                  </Button>
-                </CardContent>
+                    <Box
+                      component="img"
+                      src={businessImage}
+                      alt="Business"
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </Box>
+                  <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
+                      We're a Business
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Build your dream team with pre-screened global talent
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3, justifyContent: 'center' }}>
+                      {businessFeatures.map((feature, index) => (
+                        <Chip
+                          key={index}
+                          icon={feature.icon}
+                          label={feature.text}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            borderColor: '#e0e0e0',
+                            backgroundColor: '#f5f5f5',
+                            '& .MuiChip-icon': { color: '#666' },
+                          }}
+                        />
+                      ))}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1,
+                        color: '#7c3aed',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      Get Started
+                      <ArrowForward fontSize="small" />
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
               </Card>
             </Box>
 
@@ -334,14 +324,15 @@ const SignupPathSelectionPage: React.FC = () => {
                   key={index}
                   icon={stat.icon}
                   label={stat.text}
-                  variant="outlined"
+                  variant="filled"
                   sx={{
-                    borderColor: '#e0e0e0',
-                    backgroundColor: 'white',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    color: 'white',
                     px: 1,
                     py: 2.5,
                     borderRadius: 10,
-                    '& .MuiChip-icon': { color: '#7c3aed' },
+                    backdropFilter: 'blur(10px)',
+                    '& .MuiChip-icon': { color: 'white' },
                     '& .MuiChip-label': { fontWeight: 500 },
                   }}
                 />
@@ -354,6 +345,10 @@ const SignupPathSelectionPage: React.FC = () => {
                 maxWidth: 600,
                 mx: 'auto',
                 mb: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 3,
+                p: 3,
+                backdropFilter: 'blur(10px)',
               }}
             >
               <Rating
@@ -367,7 +362,7 @@ const SignupPathSelectionPage: React.FC = () => {
                 variant="body1"
                 sx={{
                   fontStyle: 'italic',
-                  color: '#4a5568',
+                  color: 'rgba(255, 255, 255, 0.9)',
                   mb: 3,
                   lineHeight: 1.7,
                 }}
@@ -376,12 +371,12 @@ const SignupPathSelectionPage: React.FC = () => {
                 situation where they're really wanting to understand your business."
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
-                <Avatar sx={{ bgcolor: '#7c3aed', width: 40, height: 40 }}>RE</Avatar>
+                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white', width: 40, height: 40 }}>RE</Avatar>
                 <Box textAlign="left">
-                  <Typography variant="subtitle2" fontWeight="bold">
+                  <Typography variant="subtitle2" fontWeight="bold" sx={{ color: 'white' }}>
                     Ryan Ebert
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                     Founder & CEO, Innings
                   </Typography>
                 </Box>
@@ -397,14 +392,14 @@ const SignupPathSelectionPage: React.FC = () => {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <CheckCircle sx={{ fontSize: 18, color: '#666' }} />
-                <Typography variant="body2" color="text.secondary">
+                <CheckCircle sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.7)' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                   500+ Companies Trust Us
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Star sx={{ fontSize: 18, color: '#fbbf24' }} />
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                   4.9/5 Average Rating
                 </Typography>
               </Box>
