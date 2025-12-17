@@ -328,23 +328,23 @@ const LoginPageMUI: React.FC = () => {
           },
         }}
       >
-        <Box sx={{ maxWidth: 500, textAlign: 'center' }}>
+        <Box sx={{ maxWidth: 600, textAlign: 'center' }}>
           <Typography
-            variant="h2"
+            variant="h1"
             sx={{
               fontWeight: 700,
-              mb: 2,
-              fontSize: '3rem',
+              mb: 3,
+              fontSize: { xs: '3.5rem', md: '4.5rem' },
               letterSpacing: '-0.02em',
             }}
           >
             Teamified
           </Typography>
           <Typography
-            variant="h5"
+            variant="h4"
             sx={{
               opacity: 0.95,
-              fontSize: '1.25rem',
+              fontSize: { xs: '1.25rem', md: '1.75rem' },
               fontWeight: 400,
               lineHeight: 1.5,
             }}
