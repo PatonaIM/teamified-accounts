@@ -331,7 +331,7 @@ const ClientAdminSignupPage: React.FC = () => {
       }}
     >
       <Container maxWidth="md">
-        <Fade in timeout={600}>
+        <Fade in key={step} timeout={400}>
           <Paper
             elevation={24}
             sx={{
@@ -342,7 +342,7 @@ const ClientAdminSignupPage: React.FC = () => {
             }}
           >
             {/* Step 1: Basic Information */}
-            <Fade in={step === 'basic'} mountOnEnter unmountOnExit timeout={400}>
+            {step === 'basic' && (
               <Box component="form" onSubmit={handleContinue} noValidate>
                 <Box textAlign="center" mb={4}>
                   <Typography
@@ -515,10 +515,10 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
-            </Fade>
+            )}
 
             {/* Step 2: Company Details */}
-            <Fade in={step === 'details'} mountOnEnter unmountOnExit timeout={400}>
+            {step === 'details' && (
               <Box component="form" onSubmit={handleSubmit} noValidate>
                 <Box textAlign="center" mb={4}>
                   <Typography
@@ -786,7 +786,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
-            </Fade>
+            )}
           </Paper>
         </Fade>
       </Container>
