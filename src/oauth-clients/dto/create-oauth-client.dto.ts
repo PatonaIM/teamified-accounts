@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, IsEnum, ValidateNested, IsUrl } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsArray, IsOptional, IsEnum, ValidateNested, IsIn } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+
+export enum EnvironmentType {
+  DEVELOPMENT = 'development',
+  STAGING = 'staging',
+  PRODUCTION = 'production',
+}
 
 export class RedirectUriDto {
   @ApiProperty({
@@ -13,10 +19,17 @@ export class RedirectUriDto {
   @ApiProperty({
     description: 'Environment for this redirect URI',
     example: 'production',
-    enum: ['development', 'staging', 'production'],
+    enum: EnvironmentType,
   })
-  @IsEnum(['development', 'staging', 'production'])
+  @IsIn(['development', 'staging', 'production'])
   environment: 'development' | 'staging' | 'production';
+
+  constructor(data?: Partial<RedirectUriDto>) {
+    if (data) {
+      this.uri = data.uri;
+      this.environment = data.environment;
+    }
+  }
 }
 
 export class CreateOAuthClientDto {
@@ -45,6 +58,15 @@ export class CreateOAuthClientDto {
   })
   @IsArray()
   @ValidateNested({ each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.map((item: any) => {
+        if (item instanceof RedirectUriDto) return item;
+        return new RedirectUriDto(item);
+      });
+    }
+    return value;
+  })
   @Type(() => RedirectUriDto)
   redirect_uris: RedirectUriDto[];
 

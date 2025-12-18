@@ -443,9 +443,24 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                           '& .MuiSvgIcon-root': { color: 'white' },
                         }}
                       >
-                        <MenuItem value="development">Dev</MenuItem>
-                        <MenuItem value="staging">Staging</MenuItem>
-                        <MenuItem value="production">Prod</MenuItem>
+                        <MenuItem value="development">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.development }} />
+                            Dev
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="staging">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.staging }} />
+                            Staging
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="production">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.production }} />
+                            Prod
+                          </Box>
+                        </MenuItem>
                       </Select>
                     </FormControl>
                     {editingUriIndex === index ? (
@@ -561,9 +576,24 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                       },
                     }}
                   >
-                    <MenuItem value="development">Dev</MenuItem>
-                    <MenuItem value="staging">Staging</MenuItem>
-                    <MenuItem value="production">Prod</MenuItem>
+                    <MenuItem value="development">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.development }} />
+                        Dev
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="staging">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.staging }} />
+                        Staging
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="production">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.production }} />
+                        Prod
+                      </Box>
+                    </MenuItem>
                   </Select>
                 </FormControl>
                 <TextField
