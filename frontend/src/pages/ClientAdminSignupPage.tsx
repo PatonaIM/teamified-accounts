@@ -16,6 +16,7 @@ import {
   Checkbox,
   Link,
   keyframes,
+  Tooltip,
 } from '@mui/material';
 import {
   Visibility,
@@ -120,14 +121,13 @@ const ClientAdminSignupPage: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
   const slugManuallyEditedRef = useRef(false);
-  const websiteAnalysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const analyzeWebsiteDebounced = useCallback(async (url: string) => {
-    if (!isValidUrl(url)) return;
+  const handleAnalyzeWebsite = useCallback(async () => {
+    if (!isValidUrl(formData.website) || isAnalyzingWebsite) return;
     
     setIsAnalyzingWebsite(true);
     try {
-      const result = await analyzeWebsite(url);
+      const result = await analyzeWebsite(formData.website);
       if (result.success && result.businessDescription) {
         setFormData(prev => ({
           ...prev,
@@ -139,15 +139,7 @@ const ClientAdminSignupPage: React.FC = () => {
     } finally {
       setIsAnalyzingWebsite(false);
     }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (websiteAnalysisTimeoutRef.current) {
-        clearTimeout(websiteAnalysisTimeoutRef.current);
-      }
-    };
-  }, []);
+  }, [formData.website, isAnalyzingWebsite]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -167,18 +159,6 @@ const ClientAdminSignupPage: React.FC = () => {
         .replace(/-+/g, '-')
         .substring(0, 100);
       setFormData(prev => ({ ...prev, [field]: value, slug: slugValue }));
-    }
-
-    if (field === 'website' && typeof value === 'string') {
-      if (websiteAnalysisTimeoutRef.current) {
-        clearTimeout(websiteAnalysisTimeoutRef.current);
-      }
-      
-      if (isValidUrl(value) && !formData.businessDescription) {
-        websiteAnalysisTimeoutRef.current = setTimeout(() => {
-          analyzeWebsiteDebounced(value);
-        }, 2000);
-      }
     }
   };
 
@@ -641,7 +621,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   value={formData.website}
                   onChange={(e) => handleInputChange('website', e.target.value)}
                   error={!!errors.website}
-                  helperText={errors.website || 'Enter your website URL for auto-generated business description'}
+                  helperText={errors.website}
                   margin="normal"
                   disabled={isLoading}
                   placeholder="https://example.com"
@@ -660,6 +640,28 @@ const ClientAdminSignupPage: React.FC = () => {
                     disabled={isLoading || isAnalyzingWebsite}
                     placeholder="Tell us about your business..."
                   />
+                  {isValidUrl(formData.website) && !isAnalyzingWebsite && (
+                    <Tooltip title="Analyze my website" arrow placement="left">
+                      <IconButton
+                        onClick={handleAnalyzeWebsite}
+                        disabled={isLoading}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          opacity: 0.6,
+                          transition: 'opacity 0.2s, transform 0.2s',
+                          '&:hover': {
+                            opacity: 1,
+                            transform: 'scale(1.1)',
+                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                          },
+                        }}
+                      >
+                        <AutoAwesome sx={{ color: '#7c3aed', fontSize: 20 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   {isAnalyzingWebsite && (
                     <Box
                       sx={{
