@@ -334,7 +334,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
               onChange={(e) => setDefaultIntent(e.target.value as any)}
               required
               fullWidth
-              helperText="Controls which user types can access this application. This is authoritative and cannot be escalated via query parameters."
             >
               <MenuItem value="both">Both (Clients & Candidates)</MenuItem>
               <MenuItem value="client">Client Only</MenuItem>
@@ -385,9 +384,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   </Stack>
                 )}
               </Box>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-                OAuth callback URLs where users will be redirected after authentication. Each URI is tagged with an environment.
-              </Typography>
               
               <Stack spacing={1}>
                 {redirectUris.map((uriObj, index) => (
@@ -572,9 +568,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   Add
                 </Button>
               </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Tip: URLs containing .replit.app will automatically be tagged as Production.
-              </Typography>
             </Box>
           </Box>
         )}
