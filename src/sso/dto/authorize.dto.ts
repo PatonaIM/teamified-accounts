@@ -11,6 +11,10 @@ export class AuthorizeDto {
 
   @IsString()
   @IsOptional()
+  response_type?: string;
+
+  @IsString()
+  @IsOptional()
   state?: string;
 
   @IsString()
