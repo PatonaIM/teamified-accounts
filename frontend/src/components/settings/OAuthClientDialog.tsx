@@ -59,9 +59,21 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       setName(client.name);
       setDescription(client.description || '');
       setDefaultIntent(client.default_intent || 'both');
-      const uris = Array.isArray(client.redirect_uris) ? client.redirect_uris : [];
-      setRedirectUris(uris);
-      setOriginalRedirectUris([...uris]);
+      const rawUris = Array.isArray(client.redirect_uris) ? client.redirect_uris : [];
+      const validUris: RedirectUri[] = rawUris
+        .filter((uri): uri is RedirectUri => 
+          uri !== null && 
+          typeof uri === 'object' && 
+          !Array.isArray(uri) &&
+          typeof uri.uri === 'string' && 
+          uri.uri.trim() !== ''
+        )
+        .map(uri => ({
+          uri: uri.uri,
+          environment: uri.environment || 'development',
+        }));
+      setRedirectUris(validUris);
+      setOriginalRedirectUris([...validUris]);
     } else {
       resetForm();
     }
