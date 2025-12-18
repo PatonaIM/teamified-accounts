@@ -1164,12 +1164,25 @@ export class AuthController {
   async clientAdminSignup(
     @Body() signupDto: ClientAdminSignupDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<ClientAdminSignupResponseDto> {
-    return this.authService.clientAdminSignup(
+    const signupResponse = await this.authService.clientAdminSignup(
       signupDto,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
+    // This is critical for marketing redirect flow after signup
+    res.cookie('access_token', signupResponse.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/', // Ensure cookie is sent on all routes including /api/v1/sso/authorize
+      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
+    });
+    
+    return signupResponse;
   }
 
   @Post('signup/candidate')
@@ -1230,12 +1243,25 @@ export class AuthController {
   async candidateSignup(
     @Body() signupDto: CandidateSignupDto,
     @Request() req: any,
+    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<CandidateSignupResponseDto> {
-    return this.authService.candidateSignup(
+    const signupResponse = await this.authService.candidateSignup(
       signupDto,
       req.ip,
       req.get('user-agent'),
     );
+    
+    // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
+    // This is critical for marketing redirect flow after signup
+    res.cookie('access_token', signupResponse.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/', // Ensure cookie is sent on all routes including /api/v1/sso/authorize
+      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
+    });
+    
+    return signupResponse;
   }
 
   @Post('force-change-password')
