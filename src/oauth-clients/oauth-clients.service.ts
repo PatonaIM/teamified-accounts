@@ -175,14 +175,6 @@ export class OAuthClientsService {
       order: { created_at: 'DESC' },
     });
 
-    // Priority portal names for marketing redirects
-    const priorityPortals: Record<'client' | 'candidate', string[]> = {
-      candidate: ['Jobseeker Portal', 'Candidate Portal'],
-      client: ['ATS Portal', 'Employer Portal', 'HRIS Portal'],
-    };
-
-    let priorityClient: { client: OAuthClient; redirectUri: string } | null = null;
-    let exactIntentClient: { client: OAuthClient; redirectUri: string } | null = null;
     let fallbackClient: { client: OAuthClient; redirectUri: string } | null = null;
 
     for (const client of clients) {
@@ -197,24 +189,16 @@ export class OAuthClientsService {
       const replitUri = uris.find(uri => uri.includes('.replit.app'));
       const selectedUri = replitUri || uris[0];
 
-      const clientResult = { client, redirectUri: selectedUri };
+      if (client.default_intent === intent) {
+        return { client, redirectUri: selectedUri };
+      }
 
-      // Check if this is a priority portal for the intent
-      const isPriorityPortal = priorityPortals[intent].some(
-        name => client.name.toLowerCase() === name.toLowerCase()
-      );
-
-      if (isPriorityPortal && !priorityClient) {
-        priorityClient = clientResult;
-      } else if (client.default_intent === intent && !exactIntentClient) {
-        exactIntentClient = clientResult;
-      } else if (client.default_intent === 'both' && !fallbackClient) {
-        fallbackClient = clientResult;
+      if (client.default_intent === 'both' && !fallbackClient) {
+        fallbackClient = { client, redirectUri: selectedUri };
       }
     }
 
-    // Return in priority order: priority portal > exact intent match > fallback
-    return priorityClient || exactIntentClient || fallbackClient;
+    return fallbackClient;
   }
 
   validateRedirectUri(client: OAuthClient, redirectUri: string): boolean {
