@@ -96,9 +96,16 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setEnvironmentFilter(environmentFilter === env ? null : env);
   };
 
-  const filteredRedirectUris = environmentFilter
-    ? redirectUris.map((uri, index) => ({ uri, originalIndex: index })).filter(item => item.uri.environment === environmentFilter)
-    : redirectUris.map((uri, index) => ({ uri, originalIndex: index }));
+  const environmentOrder: Record<EnvironmentType, number> = {
+    production: 0,
+    staging: 1,
+    development: 2,
+  };
+
+  const filteredRedirectUris = redirectUris
+    .map((uri, index) => ({ uri, originalIndex: index }))
+    .filter(item => !environmentFilter || item.uri.environment === environmentFilter)
+    .sort((a, b) => environmentOrder[a.uri.environment] - environmentOrder[b.uri.environment]);
 
   const isUriModified = (uri: RedirectUri, index: number): boolean => {
     if (!client) return false;
