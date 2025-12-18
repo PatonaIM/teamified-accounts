@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OAuthClientsService } from './oauth-clients.service';
@@ -62,7 +63,15 @@ export class OAuthClientsController {
   @Patch(':id')
   @Roles('admin', 'hr_manager')
   @ApiOperation({ summary: 'Update OAuth client' })
-  update(@Param('id') id: string, @Body() updateDto: UpdateOAuthClientDto) {
+  update(@Param('id') id: string, @Body() updateDto: UpdateOAuthClientDto, @Req() req: any) {
+    console.log('[OAuthClientsController] Raw request body:', JSON.stringify(req.body));
+    console.log('[OAuthClientsController] Transformed DTO:', JSON.stringify(updateDto));
+    console.log('[OAuthClientsController] redirect_uris type:', typeof updateDto.redirect_uris);
+    console.log('[OAuthClientsController] redirect_uris isArray:', Array.isArray(updateDto.redirect_uris));
+    if (updateDto.redirect_uris && updateDto.redirect_uris.length > 0) {
+      console.log('[OAuthClientsController] First URI:', JSON.stringify(updateDto.redirect_uris[0]));
+      console.log('[OAuthClientsController] First URI type:', typeof updateDto.redirect_uris[0]);
+    }
     return this.oauthClientsService.update(id, updateDto);
   }
 
