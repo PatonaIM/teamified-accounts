@@ -7,8 +7,6 @@ import {
   Stack,
   Alert,
   Divider,
-  IconButton,
-  Snackbar,
   Select,
   MenuItem,
   FormControl,
@@ -20,7 +18,6 @@ import {
   Login,
   Info,
   Warning,
-  ContentCopy,
   OpenInNew,
   TouchApp,
   Analytics,
@@ -50,7 +47,6 @@ export default function IntegratedTestSuite() {
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [selectedIntent, setSelectedIntent] = useState<IntentType>('both');
   const [featureLoading, setFeatureLoading] = useState<string | null>(null);
   const [featureResults, setFeatureResults] = useState<FeatureUsageResult[]>(
@@ -271,15 +267,6 @@ export default function IntegratedTestSuite() {
       setSessionRestored(true);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCopyToken = async () => {
-    if (!accessToken) return; try {
-      await navigator.clipboard.writeText(accessToken);
-      setCopySuccess(true);
-    } catch (err) {
-      console.error('Failed to copy token:', err);
     }
   };
 
@@ -569,48 +556,6 @@ export default function IntegratedTestSuite() {
 
           {accessToken && (
             <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Access Token
-                </Typography>
-                <IconButton
-                  onClick={handleCopyToken}
-                  size="small"
-                  sx={{
-                    color: 'primary.main',
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
-                  title="Copy token"
-                >
-                  <ContentCopy fontSize="small" />
-                </IconButton>
-              </Box>
-              <Box
-                sx={{
-                  p: 2,
-                  bgcolor: 'action.hover',
-                  borderRadius: 1,
-                  fontFamily: 'monospace',
-                  fontSize: '0.75rem',
-                  wordBreak: 'break-all',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                }}
-              >
-                {accessToken}
-              </Box>
-            </Paper>
-          )}
-
-          {accessToken && (
-            <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
               <Stack
                 direction="row"
                 alignItems="center"
@@ -786,13 +731,6 @@ export default function IntegratedTestSuite() {
         </Stack>
       )}
 
-      <Snackbar
-        open={copySuccess}
-        autoHideDuration={2000}
-        onClose={() => setCopySuccess(false)}
-        message="Token copied to clipboard!"
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      />
     </Box>
   );
 }
