@@ -105,7 +105,26 @@ export class OAuthClientsService {
       client.description = updateDto.description;
     }
     if (updateDto.redirect_uris !== undefined) {
-      client.redirect_uris = updateDto.redirect_uris;
+      console.log('[OAuthClientsService] Received redirect_uris update:', JSON.stringify(updateDto.redirect_uris));
+      const validUris = Array.isArray(updateDto.redirect_uris) 
+        ? updateDto.redirect_uris.filter(uri => 
+            uri && 
+            typeof uri === 'object' && 
+            !Array.isArray(uri) &&
+            typeof uri.uri === 'string' && 
+            uri.uri.trim() !== ''
+          ).map(uri => ({
+            uri: uri.uri,
+            environment: uri.environment || 'development',
+          }))
+        : [];
+      console.log('[OAuthClientsService] Validated redirect_uris:', JSON.stringify(validUris));
+      
+      if (validUris.length === 0 && updateDto.redirect_uris.length > 0) {
+        console.warn('[OAuthClientsService] WARNING: All redirect URIs were invalid, keeping existing URIs');
+      } else {
+        client.redirect_uris = validUris;
+      }
     }
     if (updateDto.default_intent !== undefined) {
       client.default_intent = updateDto.default_intent;
