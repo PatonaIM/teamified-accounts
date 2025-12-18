@@ -1,5 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsArray, IsOptional, IsEnum, ValidateNested, IsUrl } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class RedirectUriDto {
+  @ApiProperty({
+    description: 'The redirect URI',
+    example: 'https://app.teamified.com/auth/callback',
+  })
+  @IsString()
+  uri: string;
+
+  @ApiProperty({
+    description: 'Environment for this redirect URI',
+    example: 'production',
+    enum: ['development', 'staging', 'production'],
+  })
+  @IsEnum(['development', 'staging', 'production'])
+  environment: 'development' | 'staging' | 'production';
+}
 
 export class CreateOAuthClientDto {
   @ApiProperty({
@@ -19,15 +37,16 @@ export class CreateOAuthClientDto {
   description?: string;
 
   @ApiProperty({
-    description: 'Allowed redirect URIs for OAuth flow',
+    description: 'Allowed redirect URIs for OAuth flow with environment tags',
     example: [
-      'https://app1.teamified.com/auth/callback',
-      'https://app1-dev.repl.co/auth/callback',
+      { uri: 'https://app.teamified.com/auth/callback', environment: 'production' },
+      { uri: 'https://app-dev.repl.co/auth/callback', environment: 'development' },
     ],
   })
   @IsArray()
-  @IsString({ each: true })
-  redirect_uris: string[];
+  @ValidateNested({ each: true })
+  @Type(() => RedirectUriDto)
+  redirect_uris: RedirectUriDto[];
 
   @ApiProperty({
     description: 'Target user audience for this application. Controls which user types can access this app.',
@@ -42,7 +61,7 @@ export class CreateOAuthClientDto {
 
   @ApiProperty({
     description: 'Application URL',
-    example: 'https://app1.teamified.com',
+    example: 'https://app.teamified.com',
     required: false,
   })
   @IsString()
@@ -57,14 +76,4 @@ export class CreateOAuthClientDto {
   @IsString()
   @IsOptional()
   owner?: string;
-
-  @ApiProperty({
-    description: 'Environment type',
-    example: 'production',
-    enum: ['development', 'staging', 'production'],
-    required: false,
-  })
-  @IsEnum(['development', 'staging', 'production'])
-  @IsOptional()
-  environment?: 'development' | 'staging' | 'production';
 }

@@ -21,6 +21,7 @@ import { createHash, randomUUID } from 'crypto';
 import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
 import { UserOAuthLogin } from './entities/user-oauth-login.entity';
 import { UserAppActivity } from './entities/user-app-activity.entity';
+import { getUriStrings } from '../oauth-clients/oauth-client.utils';
 
 @Injectable()
 export class SsoService {
@@ -54,15 +55,13 @@ export class SsoService {
     }
 
     // Get first redirect URI
-    const redirectUris = Array.isArray(client.redirect_uris)
-      ? client.redirect_uris
-      : [client.redirect_uris];
+    const uriStrings = getUriStrings(client);
 
-    if (redirectUris.length === 0) {
+    if (uriStrings.length === 0) {
       throw new BadRequestException('No redirect URI configured for this client');
     }
 
-    const redirectUri = redirectUris[0];
+    const redirectUri = uriStrings[0];
 
     // Generate state for CSRF protection
     const state = randomUUID();
@@ -92,11 +91,7 @@ export class SsoService {
     }
 
     // Validate redirect URI
-    const redirectUris = Array.isArray(client.redirect_uris)
-      ? client.redirect_uris
-      : [client.redirect_uris];
-
-    if (!redirectUris.includes(redirect_uri)) {
+    if (!this.oauthClientsService.validateRedirectUri(client, redirect_uri)) {
       throw new BadRequestException('Invalid redirect_uri');
     }
 
@@ -524,14 +519,12 @@ export class SsoService {
         // If client_id is provided, validate the redirect URI against registered URIs
         const client = await this.oauthClientsService.findByClientId(clientId);
         if (client && client.is_active) {
-          const redirectUris = Array.isArray(client.redirect_uris)
-            ? client.redirect_uris
-            : [client.redirect_uris];
+          const uriStrings = getUriStrings(client);
           
           // Check if the post_logout_redirect_uri matches any registered redirect URI
           // Allow both exact match and origin match for flexibility
           const postLogoutOrigin = new URL(postLogoutRedirectUri).origin;
-          const isValidRedirect = redirectUris.some(uri => {
+          const isValidRedirect = uriStrings.some(uri => {
             try {
               return uri === postLogoutRedirectUri || new URL(uri).origin === postLogoutOrigin;
             } catch {

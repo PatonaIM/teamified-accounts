@@ -1,18 +1,24 @@
 import api from './api';
 
+export type EnvironmentType = 'development' | 'staging' | 'production';
+
+export interface RedirectUri {
+  uri: string;
+  environment: EnvironmentType;
+}
+
 export interface OAuthClient {
   id: string;
   client_id: string;
   client_secret: string;
   name: string;
   description: string;
-  redirect_uris: string[];
+  redirect_uris: RedirectUri[];
   is_active: boolean;
   default_intent: 'client' | 'candidate' | 'both';
   metadata: {
     app_url?: string;
     owner?: string;
-    environment?: 'development' | 'staging' | 'production';
   };
   created_at: string;
   updated_at: string;
@@ -22,21 +28,19 @@ export interface OAuthClient {
 export interface CreateOAuthClientDto {
   name: string;
   description?: string;
-  redirect_uris: string[];
+  redirect_uris: RedirectUri[];
   default_intent?: 'client' | 'candidate' | 'both';
   app_url?: string;
   owner?: string;
-  environment?: 'development' | 'staging' | 'production';
 }
 
 export interface UpdateOAuthClientDto {
   name?: string;
   description?: string;
-  redirect_uris?: string[];
+  redirect_uris?: RedirectUri[];
   default_intent?: 'client' | 'candidate' | 'both';
   app_url?: string;
   owner?: string;
-  environment?: 'development' | 'staging' | 'production';
   is_active?: boolean;
 }
 

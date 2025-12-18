@@ -32,6 +32,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import jobSeekerImage from '../assets/images/job-seeker.png';
 import businessImage from '../assets/images/business.png';
+import { preserveMarketingSourceFromUrl, isMarketingSource, getMarketingSource } from '../services/marketingRedirectService';
 
 const SignupPathSelectionPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,13 @@ const SignupPathSelectionPage: React.FC = () => {
   const email = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
+  const sourceParam = searchParams.get('source');
+
+  useEffect(() => {
+    if (isMarketingSource(sourceParam)) {
+      preserveMarketingSourceFromUrl();
+    }
+  }, [sourceParam]);
 
   useEffect(() => {
     if (!email) {
@@ -57,6 +65,10 @@ const SignupPathSelectionPage: React.FC = () => {
       if (intent) {
         params.set('intent', intent);
       }
+      const marketingSource = getMarketingSource();
+      if (marketingSource) {
+        params.set('source', marketingSource);
+      }
       return params.toString();
     };
 
@@ -69,12 +81,25 @@ const SignupPathSelectionPage: React.FC = () => {
     }
   }, [email, navigate, returnUrl, intent]);
 
+  const buildSignupUrl = (path: string) => {
+    const params = new URLSearchParams();
+    params.set('email', email);
+    if (returnUrl !== '/account') {
+      params.set('returnUrl', returnUrl);
+    }
+    const marketingSource = getMarketingSource();
+    if (marketingSource) {
+      params.set('source', marketingSource);
+    }
+    return `${path}?${params.toString()}`;
+  };
+
   const handleCandidateSignup = () => {
-    navigate(`/signup-candidate?email=${encodeURIComponent(email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+    navigate(buildSignupUrl('/signup-candidate'));
   };
 
   const handleClientAdminSignup = () => {
-    navigate(`/signup-client-admin?email=${encodeURIComponent(email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+    navigate(buildSignupUrl('/signup-client-admin'));
   };
 
   const jobSeekerFeatures = [

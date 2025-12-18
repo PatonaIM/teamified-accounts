@@ -28,6 +28,7 @@ import { clientAdminSignup, analyzeWebsite } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
+import { checkAndHandleMarketingRedirect, preserveMarketingSourceFromUrl, getMarketingSource, isMarketingSource } from '../services/marketingRedirectService';
 
 const COMPANY_SIZES = [
   '1-20 employees',
@@ -82,6 +83,13 @@ const ClientAdminSignupPage: React.FC = () => {
   const emailParam = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
+  const sourceParam = searchParams.get('source');
+
+  useEffect(() => {
+    if (isMarketingSource(sourceParam)) {
+      preserveMarketingSourceFromUrl();
+    }
+  }, [sourceParam]);
 
   const [step, setStep] = useState<'basic' | 'details'>('basic');
   const [formData, setFormData] = useState({
@@ -282,6 +290,13 @@ const ClientAdminSignupPage: React.FC = () => {
 
       try {
         await refreshUser();
+        
+        const hasMarketingSource = getMarketingSource();
+        if (hasMarketingSource) {
+          const redirected = await checkAndHandleMarketingRedirect();
+          if (redirected) return;
+        }
+        
         navigate(returnUrl);
       } catch (refreshError) {
         console.error('Failed to refresh user after signup:', refreshError);

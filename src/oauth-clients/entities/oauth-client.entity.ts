@@ -8,6 +8,12 @@ import {
 } from 'typeorm';
 
 export type IntentType = 'client' | 'candidate' | 'both';
+export type EnvironmentType = 'development' | 'staging' | 'production';
+
+export interface RedirectUri {
+  uri: string;
+  environment: EnvironmentType;
+}
 
 @Entity('oauth_clients')
 export class OAuthClient {
@@ -26,8 +32,8 @@ export class OAuthClient {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ type: 'simple-array' })
-  redirect_uris: string[];
+  @Column({ type: 'jsonb', default: [] })
+  redirect_uris: RedirectUri[];
 
   @Column({ type: 'simple-array', nullable: true })
   deleted_redirect_uris: string[];
@@ -46,7 +52,6 @@ export class OAuthClient {
   metadata: {
     app_url?: string;
     owner?: string;
-    environment?: 'development' | 'staging' | 'production';
   };
 
   @CreateDateColumn()

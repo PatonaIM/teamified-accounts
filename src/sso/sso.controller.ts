@@ -17,6 +17,7 @@ import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { Throttle } from '@nestjs/throttler';
 import { SsoService } from './sso.service';
+import { MarketingRedirectService } from './marketing-redirect.service';
 import { AuthorizeDto } from './dto/authorize.dto';
 import { TokenExchangeDto } from './dto/token.dto';
 import { RecordActivityDto } from './dto/user-activity.dto';
@@ -27,6 +28,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 export class SsoController {
   constructor(
     private readonly ssoService: SsoService,
+    private readonly marketingRedirectService: MarketingRedirectService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -50,6 +52,51 @@ export class SsoController {
 
     // Return redirect URL as JSON so frontend can navigate
     return { redirectUrl };
+  }
+
+  /**
+   * Marketing Redirect Endpoint
+   * GET /api/v1/sso/marketing-redirect?source=marketing|marketing-dev
+   * 
+   * Called after signup from marketing site to redirect users to the appropriate portal
+   * based on their user type (client/candidate) and the source environment.
+   * 
+   * - source=marketing -> redirect to production portal
+   * - source=marketing-dev -> redirect to staging portal
+   * 
+   * Returns JSON with redirect information for frontend to handle.
+   */
+  @Get('marketing-redirect')
+  @UseGuards(JwtAuthGuard)
+  async marketingRedirect(
+    @Query('source') source: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user.sub;
+
+    if (!this.marketingRedirectService.isMarketingSource(source)) {
+      return {
+        shouldRedirect: false,
+        fallbackUrl: '/account/profile',
+        error: 'Invalid source parameter',
+      };
+    }
+
+    const result = await this.marketingRedirectService.getRedirectForUser(userId, source);
+
+    if (!result.shouldRedirect) {
+      return {
+        shouldRedirect: false,
+        fallbackUrl: '/account/profile',
+        error: result.error,
+      };
+    }
+
+    return {
+      shouldRedirect: true,
+      redirectUrl: result.redirectUrl,
+      clientId: result.clientId,
+    };
   }
 
   /**

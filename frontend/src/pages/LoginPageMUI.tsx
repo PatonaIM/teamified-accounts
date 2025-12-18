@@ -21,6 +21,7 @@ import { login, getAccessToken, isAuthenticated, getRefreshToken, refreshAccessT
 import { useAuth } from '../hooks/useAuth';
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton';
 import { getLastPath } from '../components/SessionAwareRedirect';
+import { preserveMarketingSourceFromUrl, isMarketingSource } from '../services/marketingRedirectService';
 
 const LoginPageMUI: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +30,13 @@ const LoginPageMUI: React.FC = () => {
   
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
+  const sourceParam = searchParams.get('source');
+
+  useEffect(() => {
+    if (isMarketingSource(sourceParam)) {
+      preserveMarketingSourceFromUrl();
+    }
+  }, [sourceParam]);
   
   // Extract intent from the returnUrl if it's an SSO authorize URL
   const extractIntentFromReturnUrl = (): string => {

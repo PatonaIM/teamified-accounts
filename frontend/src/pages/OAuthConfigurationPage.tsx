@@ -21,9 +21,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
-  Drawer,
   FormControl,
   InputLabel,
   Select,
@@ -39,12 +37,17 @@ import {
   Edit,
   ArrowBack,
   ContentCopy,
-  Check,
 } from '@mui/icons-material';
-import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { oauthClientsService } from '../services/oauthClientsService';
-import type { OAuthClient, CreateOAuthClientDto, UpdateOAuthClientDto } from '../services/oauthClientsService';
+import type { OAuthClient, RedirectUri, EnvironmentType } from '../services/oauthClientsService';
+import OAuthClientDialog from '../components/settings/OAuthClientDialog';
+
+const environmentColors: Record<EnvironmentType, string> = {
+  development: '#2196f3',
+  staging: '#ff9800',
+  production: '#4caf50',
+};
 
 const OAuthConfigurationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -58,34 +61,18 @@ const OAuthConfigurationPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState<'all' | 'development' | 'staging' | 'production'>('all');
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<OAuthClient | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [togglingClient, setTogglingClient] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [uriToDeleteIndex, setUriToDeleteIndex] = useState<number | null>(null);
-  const [showUriDeleteDialog, setShowUriDeleteDialog] = useState(false);
-  const [editingUriIndex, setEditingUriIndex] = useState<number | null>(null);
-  const [editingUriValue, setEditingUriValue] = useState('');
-  const [originalRedirectUris, setOriginalRedirectUris] = useState<string[]>([]);
-
-  // Form state
-  const [formData, setFormData] = useState<CreateOAuthClientDto>({
-    name: '',
-    description: '',
-    redirect_uris: [],
-    environment: undefined,
-  });
-  const [redirectUriInput, setRedirectUriInput] = useState('');
 
   useEffect(() => {
     fetchClients();
   }, []);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setPage(0);
   }, [searchQuery, environmentFilter]);
@@ -116,109 +103,19 @@ const OAuthConfigurationPage: React.FC = () => {
     setPage(0);
   };
 
-  const handleOpenDrawer = (client?: OAuthClient) => {
-    if (client) {
-      setEditingClient(client);
-      setFormData({
-        name: client.name,
-        description: client.description || '',
-        redirect_uris: client.redirect_uris,
-        environment: client.metadata?.environment,
-      });
-      setOriginalRedirectUris([...client.redirect_uris]);
-    } else {
-      setEditingClient(null);
-      setFormData({
-        name: '',
-        description: '',
-        redirect_uris: [],
-        environment: undefined,
-      });
-      setOriginalRedirectUris([]);
-    }
-    setRedirectUriInput('');
-    setDrawerOpen(true);
+  const handleOpenDialog = (client?: OAuthClient) => {
+    setEditingClient(client || null);
+    setDialogOpen(true);
   };
 
-  const handleCloseDrawer = () => {
-    setDrawerOpen(false);
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
     setEditingClient(null);
-    setFormData({
-      name: '',
-      description: '',
-      redirect_uris: [],
-      environment: undefined,
-    });
-    setRedirectUriInput('');
-    setOriginalRedirectUris([]);
   };
 
-  const isUriModified = (uri: string, index: number): boolean => {
-    if (!editingClient) return false;
-    const originalUri = originalRedirectUris[index];
-    if (originalUri === undefined) return true;
-    return uri !== originalUri;
-  };
-
-  const isNewUri = (index: number): boolean => {
-    if (!editingClient) return false;
-    return index >= originalRedirectUris.length;
-  };
-
-  const handleAddRedirectUri = () => {
-    if (redirectUriInput.trim()) {
-      setFormData({
-        ...formData,
-        redirect_uris: [...formData.redirect_uris, redirectUriInput.trim()],
-      });
-      setRedirectUriInput('');
-    }
-  };
-
-  const handleRemoveRedirectUri = (index: number) => {
-    setUriToDeleteIndex(index);
-    setShowUriDeleteDialog(true);
-  };
-
-  const handleConfirmUriDelete = () => {
-    if (uriToDeleteIndex !== null) {
-      setFormData({
-        ...formData,
-        redirect_uris: formData.redirect_uris.filter((_, i) => i !== uriToDeleteIndex),
-      });
-    }
-    setShowUriDeleteDialog(false);
-    setUriToDeleteIndex(null);
-  };
-
-  const handleSubmit = async () => {
-    // Validation
-    if (!formData.name.trim()) {
-      setError('Application name is required');
-      return;
-    }
-    if (formData.redirect_uris.length === 0) {
-      setError('At least one redirect URI is required');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      if (editingClient) {
-        await oauthClientsService.update(editingClient.id, formData);
-        setSuccess('OAuth client updated successfully!');
-      } else {
-        await oauthClientsService.create(formData);
-        setSuccess('OAuth client created successfully!');
-      }
-      handleCloseDrawer();
-      fetchClients();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to save OAuth client';
-      setError(errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
+  const handleDialogSuccess = () => {
+    fetchClients();
+    setSuccess(editingClient ? 'OAuth client updated successfully!' : 'OAuth client created successfully!');
   };
 
   const handleDeleteClick = (event: React.MouseEvent, client: OAuthClient) => {
@@ -271,6 +168,23 @@ const OAuthConfigurationPage: React.FC = () => {
     setSuccess('Copied to clipboard!');
   };
 
+  const getEnvironmentCounts = (uris: RedirectUri[]): Record<EnvironmentType, number> => {
+    const counts: Record<EnvironmentType, number> = { development: 0, staging: 0, production: 0 };
+    if (Array.isArray(uris)) {
+      uris.forEach(uri => {
+        if (uri && uri.environment) {
+          counts[uri.environment]++;
+        }
+      });
+    }
+    return counts;
+  };
+
+  const hasEnvironment = (uris: RedirectUri[], env: EnvironmentType): boolean => {
+    if (!Array.isArray(uris)) return false;
+    return uris.some(uri => uri && uri.environment === env);
+  };
+
   const filteredClients = clients.filter(client => {
     const matchesSearch = !searchQuery || 
       client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -278,7 +192,7 @@ const OAuthConfigurationPage: React.FC = () => {
       client.client_id.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesEnvironment = environmentFilter === 'all' || 
-      client.metadata?.environment === environmentFilter;
+      hasEnvironment(client.redirect_uris, environmentFilter);
 
     return matchesSearch && matchesEnvironment;
   });
@@ -287,15 +201,6 @@ const OAuthConfigurationPage: React.FC = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
-  const getEnvironmentColor = (env?: string) => {
-    switch (env) {
-      case 'production': return 'error';
-      case 'staging': return 'warning';
-      case 'development': return 'info';
-      default: return 'default';
-    }
-  };
 
   return (
     <Box>
@@ -349,7 +254,7 @@ const OAuthConfigurationPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => handleOpenDrawer()}
+            onClick={() => handleOpenDialog()}
             sx={{
               bgcolor: '#4CAF50',
               '&:hover': { bgcolor: '#45a049' },
@@ -374,7 +279,7 @@ const OAuthConfigurationPage: React.FC = () => {
             <TableRow sx={{ bgcolor: 'action.hover' }}>
               <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Client ID</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Environment</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Intent</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Redirect URIs</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
@@ -398,95 +303,135 @@ const OAuthConfigurationPage: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedClients.map((client) => (
-                <TableRow 
-                  key={client.id} 
-                  hover
-                  onClick={() => handleOpenDrawer(client)}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {client.name}
-                    </Typography>
-                    {client.description && (
-                      <Typography variant="caption" color="text.secondary">
-                        {client.description}
+              paginatedClients.map((client) => {
+                const envCounts = getEnvironmentCounts(client.redirect_uris);
+                return (
+                  <TableRow 
+                    key={client.id} 
+                    hover
+                    onClick={() => handleOpenDialog(client)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {client.name}
                       </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                        {client.client_id}
-                      </Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleCopyToClipboard(client.client_id)}
-                      >
-                        <ContentCopy fontSize="small" />
-                      </IconButton>
-                    </Stack>
-                  </TableCell>
-                  <TableCell>
-                    {client.metadata?.environment && (
-                      <Chip
-                        label={client.metadata.environment}
-                        size="small"
-                        color={getEnvironmentColor(client.metadata.environment)}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
-                      <Switch
-                        checked={client.is_active}
-                        onChange={(e) => { e.stopPropagation(); handleToggleActive(client); }}
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={togglingClient === client.id}
-                        size="small"
-                        sx={{
-                          '& .MuiSwitch-switchBase.Mui-checked': {
-                            color: '#4caf50',
-                          },
-                          '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                            backgroundColor: '#4caf50',
-                          },
-                          '& .MuiSwitch-switchBase': {
-                            color: '#9e9e9e',
-                          },
-                          '& .MuiSwitch-track': {
-                            backgroundColor: '#bdbdbd',
-                          },
-                        }}
-                      />
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {client.redirect_uris.length} URI{client.redirect_uris.length !== 1 ? 's' : ''}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="Edit">
-                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenDrawer(client); }}>
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
+                      {client.description && (
+                        <Typography variant="caption" color="text.secondary">
+                          {client.description}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                          {client.client_id}
+                        </Typography>
                         <IconButton
                           size="small"
-                          onClick={(e) => handleDeleteClick(e, client)}
-                          color="error"
+                          onClick={(e) => { e.stopPropagation(); handleCopyToClipboard(client.client_id); }}
                         >
-                          <Delete fontSize="small" />
+                          <ContentCopy fontSize="small" />
                         </IconButton>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={client.default_intent === 'both' ? 'Both' : client.default_intent === 'client' ? 'Client' : 'Candidate'}
+                        size="small"
+                        sx={{
+                          bgcolor: client.default_intent === 'client' ? '#9c27b0' : client.default_intent === 'candidate' ? '#00bcd4' : '#607d8b',
+                          color: 'white',
+                          textTransform: 'capitalize',
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>
+                        <Switch
+                          checked={client.is_active}
+                          onChange={(e) => { e.stopPropagation(); handleToggleActive(client); }}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={togglingClient === client.id}
+                          size="small"
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: '#4caf50',
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: '#4caf50',
+                            },
+                            '& .MuiSwitch-switchBase': {
+                              color: '#9e9e9e',
+                            },
+                            '& .MuiSwitch-track': {
+                              backgroundColor: '#bdbdbd',
+                            },
+                          }}
+                        />
                       </Tooltip>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        {envCounts.production > 0 && (
+                          <Chip 
+                            label={`${envCounts.production} Prod`} 
+                            size="small"
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.65rem',
+                              bgcolor: environmentColors.production,
+                              color: 'white',
+                            }} 
+                          />
+                        )}
+                        {envCounts.staging > 0 && (
+                          <Chip 
+                            label={`${envCounts.staging} Stg`} 
+                            size="small"
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.65rem',
+                              bgcolor: environmentColors.staging,
+                              color: 'white',
+                            }} 
+                          />
+                        )}
+                        {envCounts.development > 0 && (
+                          <Chip 
+                            label={`${envCounts.development} Dev`} 
+                            size="small"
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.65rem',
+                              bgcolor: environmentColors.development,
+                              color: 'white',
+                            }} 
+                          />
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Edit">
+                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleOpenDialog(client); }}>
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleDeleteClick(e, client)}
+                            color="error"
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -501,341 +446,64 @@ const OAuthConfigurationPage: React.FC = () => {
         />
       </TableContainer>
 
-      {/* Create/Edit Drawer */}
-      <Drawer anchor="right" open={drawerOpen} onClose={handleCloseDrawer}>
-        <Box sx={{ width: 650, p: 3 }}>
-          <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
-            {editingClient ? 'Edit OAuth Client' : 'Register New OAuth Client'}
-          </Typography>
+      <OAuthClientDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        onSuccess={handleDialogSuccess}
+        client={editingClient}
+      />
 
-          <Stack spacing={3}>
-            <TextField
-              label="Application Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-
-            <FormControl fullWidth>
-              <InputLabel>Environment</InputLabel>
-              <Select
-                value={formData.environment || ''}
-                label="Environment"
-                onChange={(e) => setFormData({ ...formData, environment: e.target.value as any })}
-              >
-                <MenuItem value="">None</MenuItem>
-                <MenuItem value="development">Development</MenuItem>
-                <MenuItem value="staging">Staging</MenuItem>
-                <MenuItem value="production">Production</MenuItem>
-              </Select>
-            </FormControl>
-
-            <Box>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                Redirect URIs
-              </Typography>
-              <Stack spacing={1}>
-                {formData.redirect_uris.map((uri, index) => (
-                  <Stack
-                    key={index}
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    sx={{
-                      p: 1,
-                      bgcolor: isNewUri(index) 
-                        ? 'rgba(76, 175, 80, 0.08)' 
-                        : isUriModified(uri, index) 
-                          ? 'rgba(255, 152, 0, 0.08)' 
-                          : 'action.hover',
-                      borderRadius: 1,
-                      border: isNewUri(index) 
-                        ? '1px solid rgba(76, 175, 80, 0.3)' 
-                        : isUriModified(uri, index) 
-                          ? '1px solid rgba(255, 152, 0, 0.3)' 
-                          : '1px solid transparent',
-                    }}
-                  >
-                    {editingUriIndex === index ? (
-                      <TextField
-                        value={editingUriValue}
-                        onChange={(e) => setEditingUriValue(e.target.value)}
-                        size="small"
-                        fullWidth
-                        autoFocus
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            const newUris = [...formData.redirect_uris];
-                            newUris[index] = editingUriValue;
-                            setFormData({ ...formData, redirect_uris: newUris });
-                            setEditingUriIndex(null);
-                            setEditingUriValue('');
-                          }
-                        }}
-                        sx={{ 
-                          flex: 1,
-                          '& .MuiInputBase-input': { 
-                            fontFamily: 'monospace', 
-                            fontSize: '0.75rem' 
-                          }
-                        }}
-                      />
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          flex: 1,
-                          fontFamily: 'monospace',
-                          fontSize: '0.75rem',
-                          wordBreak: 'break-all',
-                        }}
-                      >
-                        {uri}
-                      </Typography>
-                    )}
-                    {isNewUri(index) && editingUriIndex !== index && (
-                      <Chip 
-                        label="New" 
-                        size="small" 
-                        color="success"
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.65rem',
-                          '& .MuiChip-label': { px: 1 }
-                        }} 
-                      />
-                    )}
-                    {isUriModified(uri, index) && !isNewUri(index) && editingUriIndex !== index && (
-                      <Chip 
-                        label="Edited" 
-                        size="small" 
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.65rem',
-                          bgcolor: '#ff9800',
-                          color: 'white',
-                          '& .MuiChip-label': { px: 1 }
-                        }} 
-                      />
-                    )}
-                    {editingUriIndex === index ? (
-                      <Tooltip title="Save">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            const newUris = [...formData.redirect_uris];
-                            newUris[index] = editingUriValue;
-                            setFormData({ ...formData, redirect_uris: newUris });
-                            setEditingUriIndex(null);
-                            setEditingUriValue('');
-                          }}
-                          color="success"
-                        >
-                          <Check fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    ) : (
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setEditingUriIndex(index);
-                            setEditingUriValue(uri);
-                          }}
-                        >
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    <Tooltip title="Delete">
-                      <IconButton size="small" onClick={() => handleRemoveRedirectUri(index)} color="error">
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                ))}
-              </Stack>
-              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                <TextField
-                  placeholder="https://app.example.com/auth/callback"
-                  value={redirectUriInput}
-                  onChange={(e) => setRedirectUriInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddRedirectUri()}
-                  size="small"
-                  fullWidth
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      fontFamily: 'monospace',
-                      fontSize: '0.75rem',
-                    },
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleAddRedirectUri}
-                  disabled={!redirectUriInput.trim()}
-                  startIcon={<Add />}
-                  sx={{ whiteSpace: 'nowrap' }}
-                >
-                  Add
-                </Button>
-              </Stack>
-            </Box>
-
-            <Stack direction="row" spacing={2} sx={{ pt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={!formData.name || formData.redirect_uris.length === 0 || submitting}
-                fullWidth
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  bgcolor: '#4caf50',
-                  '&:hover': { bgcolor: '#43a047' },
-                }}
-              >
-                {submitting ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  editingClient ? 'Update Client' : 'Create Client'
-                )}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleCloseDrawer}
-                disabled={submitting}
-                fullWidth
-                sx={{ textTransform: 'none', fontWeight: 600 }}
-              >
-                Cancel
-              </Button>
-            </Stack>
-          </Stack>
-        </Box>
-      </Drawer>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={showDeleteDialog} 
+      <Dialog
+        open={showDeleteDialog}
         onClose={() => {
-          if (!deleting) {
-            setShowDeleteDialog(false);
-            setDeleteConfirmInput('');
-          }
+          setShowDeleteDialog(false);
+          setClientToDelete(null);
+          setDeleteConfirmInput('');
         }}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>Delete OAuth Client</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete the OAuth client "{clientToDelete?.name}"?
-            This will revoke access for this application.
-          </DialogContentText>
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Type <strong>{clientToDelete?.name}</strong> to confirm deletion:
-            </Typography>
-            <TextField
-              fullWidth
-              size="small"
-              value={deleteConfirmInput}
-              onChange={(e) => setDeleteConfirmInput(e.target.value)}
-              placeholder={clientToDelete?.name}
-              disabled={deleting}
-              autoFocus
-            />
-            {deleteConfirmInput === clientToDelete?.name && (
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                You are about to delete this OAuth client. This action cannot be undone.
-              </Alert>
-            )}
-          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Are you sure you want to delete <strong>{clientToDelete?.name}</strong>?
+            This action cannot be undone.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Type <strong>{clientToDelete?.name}</strong> to confirm:
+          </Typography>
+          <TextField
+            fullWidth
+            value={deleteConfirmInput}
+            onChange={(e) => setDeleteConfirmInput(e.target.value)}
+            placeholder={clientToDelete?.name}
+            size="small"
+          />
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => {
-              setShowDeleteDialog(false);
-              setDeleteConfirmInput('');
-            }}
-            disabled={deleting}
-          >
+          <Button onClick={() => {
+            setShowDeleteDialog(false);
+            setClientToDelete(null);
+            setDeleteConfirmInput('');
+          }}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleConfirmDelete} 
-            color="error"
-            variant="contained" 
-            disabled={deleting || deleteConfirmInput !== clientToDelete?.name}
-            sx={{ minWidth: 80 }}
-          >
-            {deleting ? <CircularProgress size={20} color="inherit" /> : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* URI Delete Confirmation Dialog */}
-      <Dialog
-        open={showUriDeleteDialog}
-        onClose={() => {
-          setShowUriDeleteDialog(false);
-          setUriToDeleteIndex(null);
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Remove Redirect URI</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to remove this redirect URI?
-          </DialogContentText>
-          {uriToDeleteIndex !== null && formData.redirect_uris[uriToDeleteIndex] && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>
-                {formData.redirect_uris[uriToDeleteIndex]}
-              </Typography>
-            </Box>
-          )}
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            This URI will be removed from the active list. The change will take effect when you save the client.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => {
-              setShowUriDeleteDialog(false);
-              setUriToDeleteIndex(null);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConfirmUriDelete}
+          <Button
+            onClick={handleConfirmDelete}
             color="error"
             variant="contained"
+            disabled={deleting || deleteConfirmInput !== clientToDelete?.name}
           >
-            Remove URI
+            {deleting ? <CircularProgress size={20} /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Success Snackbar */}
       <Snackbar
         open={!!success}
         autoHideDuration={3000}
         onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert severity="success" onClose={() => setSuccess(null)}>
           {success}

@@ -18,18 +18,24 @@ import {
   Business,
   ArrowForward,
 } from '@mui/icons-material';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../services/authService';
+import { checkAndHandleMarketingRedirect, preserveMarketingSourceFromUrl, getMarketingSource } from '../services/marketingRedirectService';
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showEmployerForm, setShowEmployerForm] = useState(false);
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    preserveMarketingSourceFromUrl();
+  }, [location.search]);
 
   useEffect(() => {
     if (!user) {
@@ -56,7 +62,14 @@ const GoogleSignupPathPage: React.FC = () => {
         }
       }
       await refreshUser();
-      navigate('/dashboard', { replace: true });
+      
+      const hasMarketingSource = getMarketingSource();
+      if (hasMarketingSource) {
+        const redirected = await checkAndHandleMarketingRedirect();
+        if (redirected) return;
+      }
+      
+      navigate('/account/profile', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
       if (err?.response?.status === 401) {
@@ -97,6 +110,13 @@ const GoogleSignupPathPage: React.FC = () => {
         }
       }
       await refreshUser();
+      
+      const hasMarketingSource = getMarketingSource();
+      if (hasMarketingSource) {
+        const redirected = await checkAndHandleMarketingRedirect();
+        if (redirected) return;
+      }
+      
       navigate('/account/profile', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';

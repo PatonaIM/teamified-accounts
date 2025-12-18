@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SsoController } from './sso.controller';
 import { SsoService } from './sso.service';
+import { MarketingRedirectService } from './marketing-redirect.service';
 import { AuthCodeStorageService } from '../auth/services/auth-code-storage.service';
 import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
 import { AuthModule } from '../auth/auth.module';
@@ -19,7 +20,7 @@ import { UserAppActivity } from './entities/user-app-activity.entity';
     UserRolesModule,
   ],
   controllers: [SsoController],
-  providers: [SsoService, AuthCodeStorageService],
-  exports: [SsoService],
+  providers: [SsoService, MarketingRedirectService, AuthCodeStorageService],
+  exports: [SsoService, MarketingRedirectService],
 })
 export class SsoModule {}
