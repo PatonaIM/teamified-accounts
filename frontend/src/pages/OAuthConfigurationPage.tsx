@@ -46,7 +46,7 @@ import OAuthClientDialog from '../components/settings/OAuthClientDialog';
 const environmentColors: Record<EnvironmentType, string> = {
   development: '#2196f3',
   staging: '#ff9800',
-  production: '#4caf50',
+  production: '#f44336',
 };
 
 const OAuthConfigurationPage: React.FC = () => {

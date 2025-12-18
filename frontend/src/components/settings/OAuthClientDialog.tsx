@@ -35,7 +35,7 @@ interface Props {
 const environmentColors: Record<EnvironmentType, string> = {
   development: '#2196f3',
   staging: '#ff9800',
-  production: '#4caf50',
+  production: '#f44336',
 };
 
 const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }) => {
