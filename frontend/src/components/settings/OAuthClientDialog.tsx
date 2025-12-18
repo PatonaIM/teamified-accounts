@@ -52,6 +52,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [originalRedirectUris, setOriginalRedirectUris] = useState<RedirectUri[]>([]);
   const [newUriInput, setNewUriInput] = useState('');
   const [newUriEnvironment, setNewUriEnvironment] = useState<EnvironmentType>('development');
+  const [environmentFilter, setEnvironmentFilter] = useState<EnvironmentType | null>(null);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -88,7 +89,16 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setOriginalRedirectUris([]);
     setNewUriInput('');
     setNewUriEnvironment('development');
+    setEnvironmentFilter(null);
   };
+
+  const toggleEnvironmentFilter = (env: EnvironmentType) => {
+    setEnvironmentFilter(environmentFilter === env ? null : env);
+  };
+
+  const filteredRedirectUris = environmentFilter
+    ? redirectUris.map((uri, index) => ({ uri, originalIndex: index })).filter(item => item.uri.environment === environmentFilter)
+    : redirectUris.map((uri, index) => ({ uri, originalIndex: index }));
 
   const isUriModified = (uri: RedirectUri, index: number): boolean => {
     if (!client) return false;
@@ -365,66 +375,76 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             <Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2">Redirect URIs</Typography>
-                {redirectUris.length > 0 && (
-                  <Stack direction="row" spacing={0.5}>
-                    {envCounts.production > 0 && (
-                      <Chip 
-                        label={`${envCounts.production} Prod`} 
-                        size="small"
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.65rem',
-                          bgcolor: environmentColors.production,
-                          color: 'white',
-                        }} 
-                      />
-                    )}
-                    {envCounts.staging > 0 && (
-                      <Chip 
-                        label={`${envCounts.staging} Staging`} 
-                        size="small"
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.65rem',
-                          bgcolor: environmentColors.staging,
-                          color: 'white',
-                        }} 
-                      />
-                    )}
-                    {envCounts.development > 0 && (
-                      <Chip 
-                        label={`${envCounts.development} Dev`} 
-                        size="small"
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.65rem',
-                          bgcolor: environmentColors.development,
-                          color: 'white',
-                        }} 
-                      />
-                    )}
-                  </Stack>
-                )}
+                <Stack direction="row" spacing={0.5}>
+                  <Chip 
+                    label={`${envCounts.production} Prod`} 
+                    size="small"
+                    onClick={() => toggleEnvironmentFilter('production')}
+                    sx={{ 
+                      height: 20, 
+                      fontSize: '0.65rem',
+                      bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
+                      color: environmentFilter === 'production' ? 'white' : 'text.secondary',
+                      border: `1px solid ${environmentColors.production}`,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                      },
+                    }} 
+                  />
+                  <Chip 
+                    label={`${envCounts.staging} Staging`} 
+                    size="small"
+                    onClick={() => toggleEnvironmentFilter('staging')}
+                    sx={{ 
+                      height: 20, 
+                      fontSize: '0.65rem',
+                      bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                      color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
+                      border: `1px solid ${environmentColors.staging}`,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                      },
+                    }} 
+                  />
+                  <Chip 
+                    label={`${envCounts.development} Dev`} 
+                    size="small"
+                    onClick={() => toggleEnvironmentFilter('development')}
+                    sx={{ 
+                      height: 20, 
+                      fontSize: '0.65rem',
+                      bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
+                      color: environmentFilter === 'development' ? 'white' : 'text.secondary',
+                      border: `1px solid ${environmentColors.development}`,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                      },
+                    }} 
+                  />
+                </Stack>
               </Box>
               
               <Stack spacing={1}>
-                {redirectUris.map((uriObj, index) => (
+                {filteredRedirectUris.map(({ uri: uriObj, originalIndex }) => (
                   <Box
-                    key={index}
+                    key={originalIndex}
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
                       p: 1.5,
-                      bgcolor: isNewUri(index) 
+                      bgcolor: isNewUri(originalIndex) 
                         ? 'rgba(76, 175, 80, 0.08)' 
-                        : isUriModified(uriObj, index) 
+                        : isUriModified(uriObj, originalIndex) 
                           ? 'rgba(255, 152, 0, 0.08)' 
                           : 'action.hover',
                       borderRadius: 1,
-                      border: isNewUri(index) 
+                      border: isNewUri(originalIndex) 
                         ? '1px solid rgba(76, 175, 80, 0.3)' 
-                        : isUriModified(uriObj, index) 
+                        : isUriModified(uriObj, originalIndex) 
                           ? '1px solid rgba(255, 152, 0, 0.3)' 
                           : '1px solid transparent',
                     }}
@@ -432,7 +452,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                     <FormControl size="small" sx={{ minWidth: 100 }}>
                       <Select
                         value={uriObj.environment}
-                        onChange={(e) => handleEnvironmentChange(index, e.target.value as EnvironmentType)}
+                        onChange={(e) => handleEnvironmentChange(originalIndex, e.target.value as EnvironmentType)}
                         sx={{
                           '& .MuiSelect-select': {
                             py: 0.5,
@@ -463,7 +483,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         </MenuItem>
                       </Select>
                     </FormControl>
-                    {editingUriIndex === index ? (
+                    {editingUriIndex === originalIndex ? (
                       <TextField
                         value={editingUriValue}
                         onChange={(e) => setEditingUriValue(e.target.value)}
@@ -473,7 +493,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         placeholder="https://app.teamified.com/auth/callback"
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
-                            handleRedirectUriChange(index, editingUriValue);
+                            handleRedirectUriChange(originalIndex, editingUriValue);
                             setEditingUriIndex(null);
                             setEditingUriValue('');
                           }
@@ -500,7 +520,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         {uriObj.uri || 'Empty URI - click edit to add'}
                       </Typography>
                     )}
-                    {isNewUri(index) && editingUriIndex !== index && (
+                    {isNewUri(originalIndex) && editingUriIndex !== originalIndex && (
                       <Chip 
                         label="New" 
                         size="small" 
@@ -512,7 +532,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         }} 
                       />
                     )}
-                    {isUriModified(uriObj, index) && !isNewUri(index) && editingUriIndex !== index && (
+                    {isUriModified(uriObj, originalIndex) && !isNewUri(originalIndex) && editingUriIndex !== originalIndex && (
                       <Chip 
                         label="Edited" 
                         size="small" 
@@ -525,12 +545,12 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         }} 
                       />
                     )}
-                    {editingUriIndex === index ? (
+                    {editingUriIndex === originalIndex ? (
                       <Tooltip title="Save">
                         <IconButton
                           size="small"
                           onClick={() => {
-                            handleRedirectUriChange(index, editingUriValue);
+                            handleRedirectUriChange(originalIndex, editingUriValue);
                             setEditingUriIndex(null);
                             setEditingUriValue('');
                           }}
@@ -544,7 +564,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         <IconButton
                           size="small"
                           onClick={() => {
-                            setEditingUriIndex(index);
+                            setEditingUriIndex(originalIndex);
                             setEditingUriValue(uriObj.uri);
                           }}
                         >
@@ -555,7 +575,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                     <Tooltip title="Delete">
                       <IconButton
                         size="small"
-                        onClick={() => handleRemoveRedirectUri(index)}
+                        onClick={() => handleRemoveRedirectUri(originalIndex)}
                         color="error"
                       >
                         <Delete fontSize="small" />
