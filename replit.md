@@ -29,6 +29,20 @@ Core features include:
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
 - **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.
+- **Environment-Tagged Redirect URIs**: OAuth client redirect URIs support per-URI environment tagging (development, staging, production). Features:
+  - JSONB storage with `{uri: string, environment: string}` structure
+  - Frontend UI with environment dropdown for each redirect URI
+  - Visual badges showing environment counts (Prod/Staging/Dev) in OAuth client list
+  - Utility functions for URI filtering by environment (`getUrisByEnvironment`)
+  - Migration auto-tags existing URIs: `*.replit.app` as production, others as development
+- **Marketing Redirect Flow**: Automatic redirect from marketing site to appropriate portal after signup. Features:
+  - `source=marketing` parameter triggers production environment redirect
+  - `source=marketing-dev` parameter triggers staging environment redirect
+  - User role detection: Candidates → Jobseeker Portal, Employers → ATS Portal
+  - OAuth client matching by intent (candidate/client) and environment
+  - Fallback to `/account/profile` if no matching portal found
+  - API endpoint: `GET /api/v1/sso/marketing-redirect`
+  - Frontend service: `marketingRedirectService.ts` preserves source across signup flow
 - **Direct Google OAuth Integration**: Users can sign in with "Continue with Google" alongside traditional email-password login. Features:
   - Direct OAuth 2.0 flow without third-party vendor dependency (replaces Supabase)
   - Secure temporary code exchange pattern (tokens never exposed in URLs)
