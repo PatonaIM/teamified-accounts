@@ -129,18 +129,40 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
 
   const handleRedirectUriChange = (index: number, value: string) => {
     const newUris = [...redirectUris];
-    newUris[index] = { ...newUris[index], uri: value };
+    const currentUri = newUris[index];
+    const currentEnv = (currentUri && typeof currentUri === 'object' && !Array.isArray(currentUri)) 
+      ? currentUri.environment || 'development' 
+      : 'development';
+    newUris[index] = { uri: value, environment: currentEnv };
     setRedirectUris(newUris);
   };
 
   const handleEnvironmentChange = (index: number, environment: EnvironmentType) => {
     const newUris = [...redirectUris];
-    newUris[index] = { ...newUris[index], environment };
-    setRedirectUris(newUris);
+    const currentUri = newUris[index];
+    if (currentUri && typeof currentUri === 'object' && !Array.isArray(currentUri) && typeof currentUri.uri === 'string') {
+      newUris[index] = { uri: currentUri.uri, environment };
+      setRedirectUris(newUris);
+    }
   };
 
   const handleSubmit = async () => {
-    const filteredUris = redirectUris.filter(uri => uri.uri.trim() !== '');
+    console.log('[OAuthClientDialog] redirectUris state:', JSON.stringify(redirectUris));
+    
+    const filteredUris = redirectUris
+      .filter((uri): uri is RedirectUri => 
+        uri !== null && 
+        typeof uri === 'object' && 
+        !Array.isArray(uri) &&
+        typeof uri.uri === 'string' && 
+        uri.uri.trim() !== ''
+      )
+      .map(uri => ({
+        uri: uri.uri,
+        environment: uri.environment || 'development',
+      }));
+    
+    console.log('[OAuthClientDialog] filteredUris to send:', JSON.stringify(filteredUris));
     
     if (filteredUris.length === 0) {
       showSnackbar('At least one redirect URI is required', 'error');
