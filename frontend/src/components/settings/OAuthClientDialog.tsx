@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Drawer,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -18,8 +19,9 @@ import {
   Tooltip,
   Select,
   FormControl,
+  Divider,
 } from '@mui/material';
-import { Add, Delete, ContentCopy, Edit, Check } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Edit, Check, Close } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -186,12 +188,34 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
 
   return (
     <>
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {createdClient ? 'Application Credentials' : client ? 'Edit Application' : 'Add Application'}
-      </DialogTitle>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={handleClose}
+      PaperProps={{
+        sx: {
+          width: { xs: '100%', sm: 500, md: 600 },
+          maxWidth: '100vw',
+        },
+      }}
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        p: 2,
+        borderBottom: 1,
+        borderColor: 'divider',
+      }}>
+        <Typography variant="h6">
+          {createdClient ? 'Application Credentials' : client ? 'Edit Application' : 'Add Application'}
+        </Typography>
+        <IconButton onClick={handleClose} size="small">
+          <Close />
+        </IconButton>
+      </Box>
       
-      <DialogContent dividers>
+      <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
         {createdClient ? (
           <Box>
             <Alert severity="warning" sx={{ mb: 3 }}>
@@ -542,9 +566,16 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             </Box>
           </Box>
         )}
-      </DialogContent>
+      </Box>
       
-      <DialogActions>
+      <Box sx={{ 
+        p: 2, 
+        borderTop: 1, 
+        borderColor: 'divider',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: 1,
+      }}>
         <Button onClick={handleClose} disabled={loading}>
           {createdClient ? 'Close' : 'Cancel'}
         </Button>
@@ -566,9 +597,9 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             )}
           </Button>
         )}
-      </DialogActions>
+      </Box>
 
-    </Dialog>
+    </Drawer>
 
     {/* URI Delete Confirmation Dialog */}
     <Dialog
