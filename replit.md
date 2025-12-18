@@ -39,10 +39,12 @@ Core features include:
   - `source=marketing` parameter triggers production environment redirect
   - `source=marketing-dev` parameter triggers staging environment redirect
   - User role detection: Candidates → Jobseeker Portal, Employers → ATS Portal
-  - OAuth client matching by intent (candidate/client) and environment
-  - Fallback to `/account/profile` if no matching portal found
+  - Portal client IDs configured via secrets: `JOBSEEKER_PORTAL_CLIENT_ID` and `ATS_PORTAL_CLIENT_ID`
+  - Looks for first `*.replit.app` redirect URI in the target environment (production/staging)
+  - Fallback to `/account/profile` if no matching portal or redirect URI found
   - API endpoint: `GET /api/v1/sso/marketing-redirect`
   - Frontend service: `marketingRedirectService.ts` preserves source across signup flow
+  - Marketing site links: `/signup/candidate?source=marketing` (candidates), `/signup/client?source=marketing` (employers)
 - **Direct Google OAuth Integration**: Users can sign in with "Continue with Google" alongside traditional email-password login. Features:
   - Direct OAuth 2.0 flow without third-party vendor dependency (replaces Supabase)
   - Secure temporary code exchange pattern (tokens never exposed in URLs)
