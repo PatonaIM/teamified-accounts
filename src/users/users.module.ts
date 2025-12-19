@@ -6,7 +6,6 @@ import { OrganizationMember } from '../organizations/entities/organization-membe
 import { UserRole } from '../user-roles/entities/user-role.entity';
 import { UserService } from './services/user.service';
 import { UserController } from './controllers/user.controller';
-import { UserS2SController } from './controllers/user-s2s.controller';
 import { AuthModule } from '../auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { BlobStorageModule } from '../blob-storage/blob-storage.module';
@@ -22,7 +21,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     EmailModule,
     forwardRef(() => OrganizationsModule),
   ],
-  controllers: [UserController, UserS2SController],
+  controllers: [UserController],
   providers: [UserService],
   exports: [UserService],
 })

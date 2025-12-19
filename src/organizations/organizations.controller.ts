@@ -27,9 +27,10 @@ import { OrganizationMemberResponseDto } from './dto/organization-member-respons
 import { ConvertCandidateDto, ConvertCandidateResponseDto } from './dto/convert-candidate.dto';
 import { OrganizationQueryDto, PaginatedOrganizationResponseDto } from './dto/organization-query.dto';
 import { GlobalSearchResponseDto } from './dto/search-global.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUserGuard } from '../common/guards/current-user.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { JwtOrServiceGuard } from '../common/guards/jwt-or-service.guard';
+import { CurrentUserOrServiceGuard } from '../common/guards/current-user-or-service.guard';
+import { RolesOrServiceGuard } from '../common/guards/roles-or-service.guard';
+import { RequiredScopes } from '../common/guards/service-token.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../auth/entities/user.entity';
@@ -38,7 +39,7 @@ import { AzureBlobStorageService } from '../blob-storage/azure-blob-storage.serv
 
 @ApiTags('organizations')
 @Controller('v1/organizations')
-@UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
+@UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
 @ApiBearerAuth()
 @ApiSecurity('JWT-auth')
 export class OrganizationsController {
@@ -257,6 +258,7 @@ export class OrganizationsController {
 
   @Get()
   @Roles('super_admin', 'internal_hr', 'internal_account_manager')
+  @RequiredScopes('read:organizations')
   @ApiOperation({ 
     summary: 'Get all organizations',
     description: `
@@ -266,6 +268,7 @@ export class OrganizationsController {
       - super_admin: Full access to all organizations
       - internal_hr: Can view all organizations for HR operations
       - internal_account_manager: Can view all organizations for account management
+      - S2S: Requires read:organizations scope
       
       ## Query Parameters:
       - page: Page number (default: 1)
@@ -299,7 +302,11 @@ export class OrganizationsController {
   async findAll(
     @CurrentUser() user: User,
     @Query() query: OrganizationQueryDto,
+    @Request() req: any,
   ): Promise<PaginatedOrganizationResponseDto> {
+    if (req.serviceClient) {
+      return this.organizationsService.findAllS2S(query);
+    }
     return this.organizationsService.findAll(user, query);
   }
 
@@ -396,6 +403,7 @@ export class OrganizationsController {
 
   @Get(':id')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
+  @RequiredScopes('read:organizations')
   @ApiOperation({ 
     summary: 'Get organization by ID',
     description: `
@@ -405,6 +413,7 @@ export class OrganizationsController {
       - super_admin: Access any organization
       - internal_*: Access any organization
       - client_admin: Access only their own organization (organization scope validated)
+      - S2S: Requires read:organizations scope
     `
   })
   @ApiParam({
@@ -437,7 +446,11 @@ export class OrganizationsController {
   async findOne(
     @Param('id') id: string,
     @CurrentUser() user: User,
+    @Request() req: any,
   ): Promise<OrganizationResponseDto> {
+    if (req.serviceClient) {
+      return this.organizationsService.findOneS2S(id);
+    }
     return this.organizationsService.findOne(id, user);
   }
 

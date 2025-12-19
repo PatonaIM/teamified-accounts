@@ -26,9 +26,10 @@ import { InvitationPreviewDto } from './dto/invitation-preview.dto';
 import { InternalInvitationResponseDto } from './dto/internal-invitation-response.dto';
 import { AcceptInvitationResponseDto } from '../auth/dto/accept-invitation.dto';
 import { ErrorResponseDto, ValidationErrorResponseDto, AuthErrorResponseDto, BusinessErrorResponseDto } from '../common/dto/error-response.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { CurrentUserGuard } from '../common/guards/current-user.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { JwtOrServiceGuard } from '../common/guards/jwt-or-service.guard';
+import { CurrentUserOrServiceGuard } from '../common/guards/current-user-or-service.guard';
+import { RolesOrServiceGuard } from '../common/guards/roles-or-service.guard';
+import { RequiredScopes } from '../common/guards/service-token.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../auth/entities/user.entity';
@@ -220,7 +221,7 @@ export class InvitationsController {
   }
 
   @Post('accept-authenticated')
-  @UseGuards(JwtAuthGuard, CurrentUserGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard)
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -375,7 +376,7 @@ export class InvitationsController {
   }
 
   @Post('internal')
-  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -474,7 +475,7 @@ export class InvitationsController {
   }
 
   @Post('internal/generate-link')
-  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -543,7 +544,7 @@ export class InvitationsController {
   }
 
   @Post('generate-link')
-  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -652,7 +653,7 @@ export class InvitationsController {
   }
 
   @Post('send-email')
-  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -792,7 +793,7 @@ export class InvitationsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -918,7 +919,7 @@ export class InvitationsController {
   }
 
   @Get('internal')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
@@ -964,8 +965,9 @@ export class InvitationsController {
   }
 
   @Get()
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin', 'client_admin', 'client_hr')
+  @RequiredScopes('read:invitations')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
   @ApiOperation({ 
@@ -976,6 +978,7 @@ export class InvitationsController {
       ## Access Control:
       - super_admin and internal_* roles can view all invitations
       - client_* roles only see invitations for organizations they belong to
+      - S2S: Requires read:invitations scope
       - Returns invitations created by all users (within scope)
       - Sensitive information is filtered based on user permissions
       
@@ -1021,12 +1024,16 @@ export class InvitationsController {
     @Request() req: any,
   ): Promise<InvitationResponseDto[]> {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
+    if (req.serviceClient) {
+      return this.invitationsService.findAllS2S();
+    }
     return this.invitationsService.findAll(user, undefined, baseUrl);
   }
 
   @Get(':id')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin', 'client_admin', 'client_hr')
+  @RequiredScopes('read:invitations')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')
   @ApiOperation({ 
@@ -1037,6 +1044,7 @@ export class InvitationsController {
       ## Access Control:
       - super_admin and internal_* roles can view all invitations
       - client_* roles can only view invitations for their organizations
+      - S2S: Requires read:invitations scope
       - Full invitation details including token are returned
       - Creator information is included for audit purposes
       
@@ -1089,12 +1097,15 @@ export class InvitationsController {
     @Param('id') id: string,
     @Request() req: any,
   ): Promise<InvitationResponseDto> {
+    if (req.serviceClient) {
+      return this.invitationsService.findOneS2S(id);
+    }
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     return this.invitationsService.findOne(id, baseUrl);
   }
 
   @Delete(':id')
-  @UseGuards(CurrentUserGuard, RolesGuard)
+  @UseGuards(JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard)
   @Roles('super_admin', 'client_admin')
   @ApiBearerAuth()
   @ApiSecurity('JWT-auth')

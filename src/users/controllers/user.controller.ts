@@ -31,8 +31,9 @@ import { UserListResponseDto } from '../dto/user-list-response.dto';
 import { BulkStatusUpdateDto } from '../dto/bulk-status-update.dto';
 import { BulkRoleAssignmentDto } from '../dto/bulk-role-assignment.dto';
 import { BulkOperationResponseDto } from '../dto/bulk-operation-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { JwtOrServiceGuard } from '../../common/guards/jwt-or-service.guard';
+import { RolesOrServiceGuard } from '../../common/guards/roles-or-service.guard';
+import { RequiredScopes } from '../../common/guards/service-token.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
@@ -45,7 +46,7 @@ import * as path from 'path';
 
 @ApiTags('Users')
 @Controller('v1/users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtOrServiceGuard)
 @ApiBearerAuth()
 export class UserController {
   constructor(
@@ -58,7 +59,7 @@ export class UserController {
   ) {}
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({
@@ -80,9 +81,10 @@ export class UserController {
   }
 
   @Get()
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'timesheet_approver')
-  @ApiOperation({ summary: 'Get paginated list of users' })
+  @RequiredScopes('read:users')
+  @ApiOperation({ summary: 'Get paginated list of users (supports S2S with read:users scope)' })
   @ApiResponse({
     status: 200,
     description: 'Users retrieved successfully',
@@ -95,12 +97,15 @@ export class UserController {
   @ApiQuery({ name: 'role', required: false, type: String, description: 'Filter by role' })
   @ApiQuery({ name: 'sortBy', required: false, type: String, description: 'Sort field' })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['ASC', 'DESC'], description: 'Sort order' })
-  async findAll(@Query() queryDto: UserQueryDto): Promise<UserListResponseDto> {
+  async findAll(@Query() queryDto: UserQueryDto, @Request() req: any): Promise<any> {
+    if (req.serviceClient) {
+      return await this.userService.findAllS2S(queryDto);
+    }
     return await this.userService.findAll(queryDto);
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrServiceGuard)
   @ApiOperation({ summary: 'Get current user' })
   @ApiResponse({
     status: 200,
@@ -152,7 +157,7 @@ export class UserController {
   }
 
   @Patch('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOrServiceGuard)
   @ApiOperation({ summary: 'Update current user settings (e.g., theme preference)' })
   @ApiResponse({
     status: 200,
@@ -198,8 +203,9 @@ export class UserController {
   }
 
   @Get(`:id(${UUID_PARAM_PATTERN})`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'timesheet_approver', 'internal_hr', 'internal_account_manager', 'internal_staff', 'client_admin', 'client_hr')
+  @RequiredScopes('read:users')
   @ApiOperation({ 
     summary: 'Get user by ID',
     description: `
@@ -208,6 +214,7 @@ export class UserController {
       ## Authorization:
       - super_admin, admin, internal_*: Can view any user
       - client_admin, client_hr: Can only view users within their organization(s)
+      - S2S: Requires read:users scope
     `
   })
   @ApiResponse({
@@ -230,7 +237,13 @@ export class UserController {
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() currentUser: User,
-  ): Promise<{ user: UserResponseDto }> {
+    @Request() req: any,
+  ): Promise<{ user: any }> {
+    if (req.serviceClient) {
+      const user = await this.userService.findOneS2S(id);
+      return { user };
+    }
+
     const currentUserRoles = currentUser.userRoles?.map(r => r.roleType) || [];
     
     const internalRoles = [
@@ -490,7 +503,7 @@ export class UserController {
   }
 
   @Get(`:id(${UUID_PARAM_PATTERN})/profile`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Get user profile data by ID (Admin only)' })
   @ApiResponse({
@@ -509,7 +522,7 @@ export class UserController {
   }
 
   @Put(`:id(${UUID_PARAM_PATTERN})/profile`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Update user profile data by ID (Admin only)' })
   @ApiResponse({
@@ -548,7 +561,7 @@ export class UserController {
   }
 
   @Patch(`:id(${UUID_PARAM_PATTERN})`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Update user (partial update)' })
   @ApiResponse({
@@ -577,7 +590,7 @@ export class UserController {
   }
 
   @Put(`:id(${UUID_PARAM_PATTERN})`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'timesheet_approver')
   @ApiOperation({ summary: 'Update user (full update)' })
   @ApiResponse({
@@ -606,7 +619,7 @@ export class UserController {
   }
 
   @Delete(`:id(${UUID_PARAM_PATTERN})`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete user' })
@@ -623,7 +636,7 @@ export class UserController {
   }
 
   @Patch(`:id(${UUID_PARAM_PATTERN})/status`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Update user status' })
   @ApiResponse({
@@ -648,7 +661,7 @@ export class UserController {
   }
 
   @Patch(`:id(${UUID_PARAM_PATTERN})/verify-email`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Mark user email as verified (Admin/HR only)' })
   @ApiResponse({
@@ -671,7 +684,7 @@ export class UserController {
   }
 
   @Post(`:id(${UUID_PARAM_PATTERN})/resend-verification`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ summary: 'Resend verification email to user (Admin/HR only)' })
   @ApiResponse({
@@ -717,7 +730,7 @@ export class UserController {
   }
 
   @Post('bulk/status')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Bulk update user status' })
   @ApiResponse({
@@ -736,7 +749,7 @@ export class UserController {
   }
 
   @Post('bulk/assign-role')
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Bulk assign roles to users' })
   @ApiResponse({
@@ -755,7 +768,7 @@ export class UserController {
   }
 
   @Get(`:id(${UUID_PARAM_PATTERN})/activity`)
-  @UseGuards(RolesGuard)
+  @UseGuards(RolesOrServiceGuard)
   @Roles('admin', 'hr')
   @ApiOperation({ 
     summary: 'Get user activity',

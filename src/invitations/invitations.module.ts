@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { InvitationsService } from './invitations.service';
 import { InvitationsController } from './invitations.controller';
-import { InvitationsS2SController } from './invitations-s2s.controller';
 import { Invitation } from './entities/invitation.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { Organization } from '../organizations/entities/organization.entity';
@@ -13,6 +12,7 @@ import { UserEmail } from '../user-emails/entities/user-email.entity';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { EmailModule } from '../email/email.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -21,8 +21,9 @@ import { EmailModule } from '../email/email.module';
     EmailModule,
     ThrottlerModule,
     forwardRef(() => AuthModule),
+    forwardRef(() => UsersModule),
   ],
-  controllers: [InvitationsController, InvitationsS2SController],
+  controllers: [InvitationsController],
   providers: [InvitationsService],
   exports: [InvitationsService],
 })
