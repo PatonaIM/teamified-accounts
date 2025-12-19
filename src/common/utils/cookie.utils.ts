@@ -12,27 +12,32 @@ export interface SharedCookieConfig {
 const TEAMIFIED_PARENT_DOMAIN = '.teamified.com';
 
 export function getSharedCookieDomain(): string | undefined {
-  const nodeEnv = process.env.NODE_ENV;
   const forceSharedDomain = process.env.SSO_SHARED_COOKIE_DOMAIN;
   
   if (forceSharedDomain) {
     return forceSharedDomain;
   }
   
-  if (nodeEnv === 'production') {
+  const baseUrl = process.env.BASE_URL || '';
+  if (baseUrl.includes('teamified.com')) {
     return TEAMIFIED_PARENT_DOMAIN;
   }
   
   return undefined;
 }
 
+function isSecureContext(): boolean {
+  const baseUrl = process.env.BASE_URL || '';
+  return baseUrl.startsWith('https://') || process.env.NODE_ENV === 'production';
+}
+
 export function getAccessTokenCookieOptions(maxAgeMs: number = 72 * 60 * 60 * 1000): CookieOptions {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const secure = isSecureContext();
   const domain = getSharedCookieDomain();
   
   const options: CookieOptions = {
     httpOnly: true,
-    secure: isProduction,
+    secure,
     sameSite: 'lax',
     path: '/',
     maxAge: maxAgeMs,
@@ -46,12 +51,12 @@ export function getAccessTokenCookieOptions(maxAgeMs: number = 72 * 60 * 60 * 10
 }
 
 export function getRefreshTokenCookieOptions(maxAgeMs: number = 7 * 24 * 60 * 60 * 1000): CookieOptions {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const secure = isSecureContext();
   const domain = getSharedCookieDomain();
   
   const options: CookieOptions = {
     httpOnly: true,
-    secure: isProduction,
+    secure,
     sameSite: 'lax',
     path: '/',
     maxAge: maxAgeMs,
@@ -65,12 +70,12 @@ export function getRefreshTokenCookieOptions(maxAgeMs: number = 7 * 24 * 60 * 60
 }
 
 export function getClearCookieOptions(): CookieOptions {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const secure = isSecureContext();
   const domain = getSharedCookieDomain();
   
   const options: CookieOptions = {
     httpOnly: true,
-    secure: isProduction,
+    secure,
     sameSite: 'lax',
     path: '/',
   };
