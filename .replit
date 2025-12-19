@@ -28,25 +28,24 @@ args = "Backend"
 name = "Frontend"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd frontend && npm run dev"
 waitForPort = 5000
 
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[workflows.workflow]]
 name = "Backend"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run start:dev"
-waitForPort = 3000
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [deployment]
 deploymentTarget = "vm"
@@ -65,4 +64,4 @@ localPort = 3000
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
+externalPort = 80
