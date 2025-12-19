@@ -63,6 +63,15 @@ Core features include:
     - Employers: "Post Your First Job" (ATS) and "Set Up Your Organization" (HRIS) buttons
     - Sent after email verification for email signup users, after role selection for Google users
 
+- **Cross-App SSO (Shared Cookies)**: True single sign-on across all Teamified applications using shared httpOnly cookies. Features:
+  - Cookie domain set to `.teamified.com` in production for cross-subdomain sharing
+  - All auth endpoints (login, refresh, logout, token exchange) set/clear cookies on shared domain
+  - Session check endpoint: `GET /api/v1/sso/session` allows client apps to verify existing sessions
+  - SDK support via `CookieAwareStorageStrategy` and `checkSharedSession()` method
+  - Security: httpOnly, secure (production), sameSite='lax' cookie flags
+  - Works alongside custom token storage strategies for backwards compatibility
+  - Documentation at `/docs/developer/sso-integration`
+
 - **Multi-Identity SSO (Candidate + Employee Model)**: Users can link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Login works with any linked email using a single password. Key features:
   - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking
   - Smart identity resolution via `findUserByAnyEmail` helper method in AuthService
