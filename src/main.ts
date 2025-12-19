@@ -357,8 +357,9 @@ async function bootstrap() {
     // Port configuration: Check if PORT env var is explicitly set
     // Production sets PORT=5000 in .replit [userenv.production]
     // Development doesn't set PORT, so default to 3000 to avoid frontend conflict
-    const portEnvVar = configService.get('PORT');
-    const nodeEnv = configService.get('NODE_ENV');
+    // Use process.env directly for reliability (ConfigService may not have loaded yet)
+    const portEnvVar = process.env.PORT || configService.get('PORT');
+    const nodeEnv = process.env.NODE_ENV || configService.get('NODE_ENV');
     
     let port: number;
     if (portEnvVar) {
@@ -371,7 +372,7 @@ async function bootstrap() {
       logger.log(`PORT not set: Using default port 3000 for development (frontend uses 5000)`);
     }
     
-    const host = configService.get('HOST', '0.0.0.0');
+    const host = process.env.HOST || configService.get('HOST', '0.0.0.0');
     
     logger.log(`Final port determination: NODE_ENV=${nodeEnv}, PORT env=${portEnvVar}, npm_lifecycle_event=${process.env.npm_lifecycle_event}, listening on port ${port}`);
     
