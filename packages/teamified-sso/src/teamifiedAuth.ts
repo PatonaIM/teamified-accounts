@@ -1,9 +1,10 @@
 import { createSupabaseClient } from './supabaseClient';
-import { LocalStorageStrategy } from './tokenStorage';
+import { LocalStorageStrategy, CookieAwareStorageStrategy } from './tokenStorage';
 import type {
   TeamifiedAuthConfig,
   TeamifiedAuthClient,
   PortalTokenResponse,
+  SharedSessionInfo,
 } from './types';
 import axios from 'axios';
 
@@ -11,7 +12,18 @@ export function createTeamifiedAuth(
   config: TeamifiedAuthConfig
 ): TeamifiedAuthClient {
   const supabase = createSupabaseClient(config.supabaseUrl, config.supabaseAnonKey);
-  const tokenStorage = config.tokenStorage || new LocalStorageStrategy();
+  
+  // Token storage for local token management
+  // Uses provided strategy, or CookieAwareStorageStrategy if enableCookieSSO, or defaults to LocalStorageStrategy
+  const tokenStorage = config.tokenStorage || 
+    (config.enableCookieSSO 
+      ? new CookieAwareStorageStrategy(config.portalApiUrl) 
+      : new LocalStorageStrategy());
+  
+  // Separate CookieAwareStorageStrategy instance for shared session checking
+  // This is always created to provide checkSharedSession() capability
+  // regardless of what token storage strategy is being used
+  const sessionChecker = new CookieAwareStorageStrategy(config.portalApiUrl);
 
   return {
     async signInWithGoogle() {
@@ -83,6 +95,12 @@ export function createTeamifiedAuth(
     async getSession() {
       const { data: { session } } = await supabase.auth.getSession();
       return session;
+    },
+
+    async checkSharedSession(): Promise<SharedSessionInfo | null> {
+      // Always use the dedicated session checker (CookieAwareStorageStrategy)
+      // This works regardless of what token storage strategy is configured
+      return sessionChecker.checkSharedSession();
     },
   };
 }

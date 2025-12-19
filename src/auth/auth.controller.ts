@@ -28,6 +28,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { WebsiteAnalysisService } from './services/website-analysis.service';
+import { getAccessTokenCookieOptions, getClearCookieOptions } from '../common/utils/cookie.utils';
 import { AnalyzeWebsiteDto, AnalyzeWebsiteResponseDto } from './dto/client-admin-signup.dto';
 import { AcceptInvitationDto, AcceptInvitationResponseDto } from './dto/accept-invitation.dto';
 import { 
@@ -376,13 +377,8 @@ export class AuthController {
     
     // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
     // API calls use Bearer tokens in Authorization header
-    res.cookie('access_token', loginResponse.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/', // Ensure cookie is sent on all routes including /api/v1/sso/authorize
-      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
-    });
+    // Cookie is set on shared domain (.teamified.com in production) for cross-app SSO
+    res.cookie('access_token', loginResponse.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
     
     return loginResponse;
   }
@@ -466,13 +462,8 @@ export class AuthController {
     );
     
     // Update httpOnly cookie with new access token
-    res.cookie('access_token', refreshResponse.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/', // Ensure cookie is sent on all routes
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
+    // Cookie is set on shared domain (.teamified.com in production) for cross-app SSO
+    res.cookie('access_token', refreshResponse.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
     
     return refreshResponse;
   }
@@ -555,12 +546,8 @@ export class AuthController {
     );
     
     // Clear the httpOnly cookie on logout
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/', // Must match the path used when setting the cookie
-    });
+    // Must use same domain as when setting the cookie for cross-app SSO
+    res.clearCookie('access_token', getClearCookieOptions());
     
     return logoutResponse;
   }
@@ -1174,13 +1161,8 @@ export class AuthController {
     
     // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
     // This is critical for marketing redirect flow after signup
-    res.cookie('access_token', signupResponse.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/', // Ensure cookie is sent on all routes including /api/v1/sso/authorize
-      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
-    });
+    // Cookie is set on shared domain (.teamified.com in production) for cross-app SSO
+    res.cookie('access_token', signupResponse.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
     
     return signupResponse;
   }
@@ -1253,13 +1235,8 @@ export class AuthController {
     
     // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
     // This is critical for marketing redirect flow after signup
-    res.cookie('access_token', signupResponse.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/', // Ensure cookie is sent on all routes including /api/v1/sso/authorize
-      maxAge: 15 * 60 * 1000, // 15 minutes (matches JWT expiry)
-    });
+    // Cookie is set on shared domain (.teamified.com in production) for cross-app SSO
+    res.cookie('access_token', signupResponse.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
     
     return signupResponse;
   }

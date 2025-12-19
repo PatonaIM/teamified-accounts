@@ -23,6 +23,7 @@ import { TokenExchangeDto } from './dto/token.dto';
 import { RecordActivityDto } from './dto/user-activity.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { getAccessTokenCookieOptions, getRefreshTokenCookieOptions, getClearCookieOptions } from '../common/utils/cookie.utils';
 
 @Controller('v1/sso')
 export class SsoController {
@@ -189,12 +190,26 @@ export class SsoController {
    * 
    * SSO app exchanges auth code for JWT access token
    * Body: { grant_type, code, client_id, client_secret, redirect_uri }
+   * 
+   * Also sets httpOnly cookies on the shared domain for cross-app SSO
    */
   @Post('token')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 requests per 60 seconds
-  async token(@Body() tokenDto: TokenExchangeDto) {
-    return await this.ssoService.exchangeToken(tokenDto);
+  async token(
+    @Body() tokenDto: TokenExchangeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokenResponse = await this.ssoService.exchangeToken(tokenDto);
+    
+    // Set httpOnly cookies on shared domain for cross-app SSO
+    // This allows other Teamified apps to detect the session
+    res.cookie('access_token', tokenResponse.access_token, getAccessTokenCookieOptions(tokenResponse.expires_in * 1000));
+    if (tokenResponse.refresh_token) {
+      res.cookie('refresh_token', tokenResponse.refresh_token, getRefreshTokenCookieOptions());
+    }
+    
+    return tokenResponse;
   }
 
   /**
@@ -220,6 +235,54 @@ export class SsoController {
   }
 
   /**
+   * Session Check Endpoint
+   * GET /api/v1/sso/session
+   * 
+   * Checks if a valid SSO session exists via the shared cookie.
+   * Client apps can call this endpoint to detect if the user is already
+   * logged in via another Teamified app, enabling true cross-app SSO.
+   * 
+   * Returns:
+   * - 200 with user info if valid session exists
+   * - 401 if no valid session
+   */
+  @Get('session')
+  async checkSession(@Req() req: any) {
+    let token: string | undefined;
+    
+    // Check Authorization header first
+    const authHeader = req.headers?.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (req.cookies?.access_token) {
+      // Fallback: Check for JWT in shared cookie
+      token = req.cookies.access_token;
+    }
+    
+    if (!token) {
+      throw new UnauthorizedException('No session found');
+    }
+    
+    try {
+      const payload = this.jwtService.verify(token);
+      
+      return {
+        authenticated: true,
+        user: {
+          id: payload.sub,
+          email: payload.email,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          roles: payload.roles || [],
+        },
+        expiresAt: new Date(payload.exp * 1000).toISOString(),
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+  }
+
+  /**
    * Clear SSO Session
    * POST /api/v1/sso/clear-session
    * 
@@ -229,12 +292,9 @@ export class SsoController {
   @Post('clear-session')
   @HttpCode(HttpStatus.OK)
   async clearSession(@Res() res: Response) {
-    // Clear the httpOnly cookie
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-    });
+    // Clear the httpOnly cookies using shared domain settings
+    res.clearCookie('access_token', getClearCookieOptions());
+    res.clearCookie('refresh_token', getClearCookieOptions());
     
     return res.json({ message: 'Session cleared successfully' });
   }
@@ -296,21 +356,9 @@ export class SsoController {
       logoutDto.id_token_hint,
     );
 
-    // Clear the httpOnly cookie
-    res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    });
-
-    // Also clear refresh_token cookie if present
-    res.clearCookie('refresh_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-    });
+    // Clear the httpOnly cookies using shared domain settings for cross-app SSO logout
+    res.clearCookie('access_token', getClearCookieOptions());
+    res.clearCookie('refresh_token', getClearCookieOptions());
 
     console.log('[SSO] Logout complete:', {
       userId,
