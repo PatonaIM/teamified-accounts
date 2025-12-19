@@ -36,6 +36,8 @@ import {
   ContentCopy,
   Info,
   Code,
+  VpnKey,
+  Warning,
 } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient } from '../../services/oauthClientsService';
 import OAuthClientDialog from './OAuthClientDialog';
@@ -52,6 +54,12 @@ const OAuthClientsTab: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [togglingClient, setTogglingClient] = useState<string | null>(null);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [clientToRegenerate, setClientToRegenerate] = useState<OAuthClient | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [newSecretDialogOpen, setNewSecretDialogOpen] = useState(false);
+  const [newSecret, setNewSecret] = useState<string>('');
+  const [regeneratedClientName, setRegeneratedClientName] = useState<string>('');
   const { showSnackbar } = useSnackbar();
 
   const loadClients = async () => {
@@ -125,6 +133,36 @@ const OAuthClientsTab: React.FC = () => {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     showSnackbar(`${label} copied to clipboard`, 'success');
+  };
+
+  const handleRegenerateClick = (client: OAuthClient) => {
+    setClientToRegenerate(client);
+    setRegenerateDialogOpen(true);
+  };
+
+  const handleRegenerateConfirm = async () => {
+    if (!clientToRegenerate) return;
+
+    try {
+      setRegenerating(true);
+      const updatedClient = await oauthClientsService.regenerateSecret(clientToRegenerate.id);
+      setNewSecret(updatedClient.client_secret);
+      setRegeneratedClientName(clientToRegenerate.name);
+      setRegenerateDialogOpen(false);
+      setClientToRegenerate(null);
+      setNewSecretDialogOpen(true);
+      loadClients();
+    } catch (error) {
+      showSnackbar('Failed to regenerate client secret', 'error');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleCloseNewSecretDialog = () => {
+    setNewSecretDialogOpen(false);
+    setNewSecret('');
+    setRegeneratedClientName('');
   };
 
   return (
@@ -337,6 +375,15 @@ const OAuthClientsTab: React.FC = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Tooltip title="Regenerate Secret">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => { e.stopPropagation(); handleRegenerateClick(client); }}
+                          color="warning"
+                        >
+                          <VpnKey fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
@@ -380,6 +427,113 @@ const OAuthClientsTab: React.FC = () => {
         confirmationName={clientToDelete?.name}
         loading={deleting}
       />
+
+      {/* Regenerate Secret Confirmation Dialog */}
+      <Dialog
+        open={regenerateDialogOpen}
+        onClose={() => !regenerating && setRegenerateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Warning color="warning" />
+            <Typography variant="h6" fontWeight={600}>
+              Regenerate Client Secret
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <AlertTitle>Warning: This action cannot be undone</AlertTitle>
+            Regenerating the client secret will immediately invalidate the current secret. 
+            Any applications using the old secret will stop working until updated with the new secret.
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to regenerate the secret for <strong>{clientToRegenerate?.name}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => setRegenerateDialogOpen(false)} 
+            disabled={regenerating}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleRegenerateConfirm}
+            disabled={regenerating}
+            startIcon={<VpnKey />}
+          >
+            {regenerating ? 'Regenerating...' : 'Regenerate Secret'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* New Secret Display Dialog */}
+      <Dialog
+        open={newSecretDialogOpen}
+        onClose={handleCloseNewSecretDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <VpnKey color="success" />
+            <Typography variant="h6" fontWeight={600}>
+              New Client Secret Generated
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="success" sx={{ mb: 3 }}>
+            <AlertTitle>Secret successfully regenerated for {regeneratedClientName}</AlertTitle>
+            Copy this secret now. It will not be shown again.
+          </Alert>
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+            Client Secret:
+          </Typography>
+          <Paper 
+            sx={{ 
+              p: 2, 
+              bgcolor: 'grey.900', 
+              color: 'grey.100', 
+              fontFamily: 'monospace', 
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              wordBreak: 'break-all'
+            }}
+          >
+            <Box sx={{ flex: 1 }}>{newSecret}</Box>
+            <Tooltip title="Copy Secret">
+              <IconButton
+                size="small"
+                onClick={() => copyToClipboard(newSecret, 'Client Secret')}
+                sx={{ color: 'grey.300' }}
+              >
+                <ContentCopy fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Paper>
+          <Alert severity="error" sx={{ mt: 2 }}>
+            <AlertTitle>Security Reminder</AlertTitle>
+            Store this secret securely in your application's environment variables. 
+            Never commit it to version control or expose it in client-side code.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            variant="contained"
+            onClick={handleCloseNewSecretDialog}
+          >
+            Done
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Integration Instructions Dialog */}
       <Dialog

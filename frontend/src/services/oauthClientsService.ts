@@ -32,6 +32,7 @@ export interface OAuthClient {
   metadata: {
     app_url?: string;
     owner?: string;
+    environment?: string;
   };
   created_at: string;
   updated_at: string;
