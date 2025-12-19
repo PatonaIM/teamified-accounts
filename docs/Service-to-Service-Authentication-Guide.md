@@ -6,6 +6,10 @@ This guide covers backend-to-backend authentication for systems that need to int
 
 Service-to-Service authentication uses the OAuth 2.0 Client Credentials Grant, allowing backend systems to authenticate directly using their client credentials. This is ideal for:
 
+> **Unified Endpoints (v1.0.10+)**: S2S tokens now work on the same API endpoints as user JWT tokens. No more separate `/api/v1/s2s/*` paths - simply use your S2S token on standard endpoints like `/api/v1/users`, `/api/v1/organizations`, and `/api/v1/invitations`.
+
+Use cases:
+
 - Background jobs and scheduled tasks
 - Microservice communication
 - Data synchronization processes
@@ -111,6 +115,12 @@ curl -X POST https://accounts.teamified.com/api/v1/sso/token \
 - Only scopes enabled for your client will be granted
 - Requesting unavailable scopes will result in a reduced scope set
 - The response `scope` field shows what was actually granted
+
+### Security: Write Operations
+
+> **Important (v1.0.10+)**: Write operations (POST, PUT, DELETE) are blocked for S2S clients by default. S2S authentication is designed primarily for read-only data access. Endpoints must explicitly enable S2S write access using the `@RequiredScopes` decorator.
+
+If you need write access for specific use cases (e.g., automated user provisioning), contact your administrator to ensure the endpoint supports S2S write operations.
 
 ---
 
@@ -505,7 +515,43 @@ TEAMIFIED_CLIENT_SECRET=staging-client-secret
 | Refresh tokens | No | Yes |
 | Cookies | No | Yes (httpOnly) |
 | User context | No (service identity) | Yes (user identity) |
-| Use case | Backend automation | User-facing apps |
+| API endpoints | Same unified endpoints | Same unified endpoints |
+| Write operations | Blocked by default | Full access based on role |
+| Use case | Backend automation, read-only sync | User-facing apps |
+
+---
+
+## Technical Details (v1.0.10+)
+
+### Dual-Auth Guards
+
+The backend uses dual-authentication guards that accept both user JWT tokens and S2S tokens:
+
+- **JwtOrServiceGuard**: Validates the token and sets `req.user` or `req.serviceClient`
+- **CurrentUserOrServiceGuard**: Extracts user or service identity from the request
+- **RolesOrServiceGuard**: Enforces role requirements for users, scope requirements for S2S
+
+### Endpoint Access Control
+
+Endpoints use the `@RequiredScopes` decorator to explicitly enable S2S access:
+
+```typescript
+@Get()
+@RequiredScopes('read:users')  // S2S with read:users scope can access
+async findAll() { ... }
+
+@Post()
+// No @RequiredScopes = S2S blocked with 403
+async create() { ... }
+```
+
+### Response Sanitization
+
+For security, S2S responses automatically sanitize sensitive fields:
+- Password hashes
+- Password reset tokens
+- Email verification tokens
+- Internal user IDs (Supabase, Google)
 
 ---
 
