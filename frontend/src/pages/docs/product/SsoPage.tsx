@@ -98,6 +98,36 @@ export default function SsoPage() {
 
         <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Cross-App SSO by Environment
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            SSO behavior varies based on the deployment environment due to browser cookie security policies.
+          </Typography>
+          <List>
+            <ListItem>
+              <ListItemText 
+                primary="Production (.teamified.com)" 
+                secondary="True seamless SSO - cookies are shared across all subdomains (hris.teamified.com, teamconnect.teamified.com, etc.). Log in once and access all apps instantly."
+              />
+            </ListItem>
+            <ListItem>
+              <ListItemText 
+                primary="Staging (.replit.app)" 
+                secondary="OAuth redirect-based SSO - each app redirects to Teamified Accounts for authentication. If already logged in, the flow completes instantly without showing the login form."
+              />
+            </ListItem>
+          </List>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Why the difference?</strong> The .replit.app domain is on the Public Suffix List (PSL), 
+              which prevents browsers from sharing cookies across subdomains for security reasons. 
+              Production deployments on .teamified.com don't have this restriction.
+            </Typography>
+          </Alert>
+        </Paper>
+
+        <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
             Supported OAuth Flows
           </Typography>
           <List>
