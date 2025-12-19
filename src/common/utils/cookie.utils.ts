@@ -10,6 +10,7 @@ export interface SharedCookieConfig {
 }
 
 const TEAMIFIED_PARENT_DOMAIN = '.teamified.com';
+const REPLIT_PARENT_DOMAIN = '.replit.app';
 
 export function getSharedCookieDomain(): string | undefined {
   const forceSharedDomain = process.env.SSO_SHARED_COOKIE_DOMAIN;
@@ -19,8 +20,13 @@ export function getSharedCookieDomain(): string | undefined {
   }
   
   const baseUrl = process.env.BASE_URL || '';
+  
   if (baseUrl.includes('teamified.com')) {
     return TEAMIFIED_PARENT_DOMAIN;
+  }
+  
+  if (baseUrl.includes('.replit.app')) {
+    return REPLIT_PARENT_DOMAIN;
   }
   
   return undefined;
