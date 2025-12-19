@@ -389,8 +389,8 @@ curl -X GET ${userInfoUrl} \\
           Cross-App SSO (Shared Sessions)
         </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
-          Teamified supports true cross-app SSO using shared httpOnly cookies. When a user logs into one Teamified app,
-          they're automatically authenticated across all Teamified apps without re-entering credentials.
+          Teamified supports cross-app SSO using shared httpOnly cookies. When a user logs into Teamified Accounts,
+          they can access other Teamified apps without re-entering credentials.
         </Typography>
         
         <Stack spacing={2}>
@@ -411,28 +411,73 @@ curl -X GET ${userInfoUrl} \\
             </Stack>
           </Box>
 
+          <Alert severity="warning" sx={{ my: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              Environment-Specific Behavior
+            </Typography>
+            <Typography variant="body2">
+              <strong>Production (.teamified.com):</strong> True seamless SSO - cookies are shared across all subdomains. 
+              Log in once and all apps recognize you instantly.
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <strong>Staging (.replit.app):</strong> OAuth redirect-based SSO only. The <code>.replit.app</code> domain 
+              is on the Public Suffix List (PSL), which prevents browsers from sharing cookies across subdomains. 
+              Each app will redirect to Teamified Accounts, but if you're already logged in there, the OAuth flow 
+              completes instantly without showing the login form.
+            </Typography>
+          </Alert>
+
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              Checking for Shared Session
+              Checking for Existing Session
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              Before redirecting to the authorization endpoint, check if the user already has a session:
+              Client apps can call the <code>/api/v1/sso/session</code> endpoint to check if the user has an existing session.
+              This works on both production and staging environments:
             </Typography>
             <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1 }}>
               <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}>
-{`// Check for existing shared session
-const response = await fetch('${apiUrl}/api/v1/sso/session', {
-  credentials: 'include', // Important: send cookies
+{`// Check for existing session before initiating OAuth
+const TEAMIFIED_ACCOUNTS_URL = 'https://accounts.teamified.com'; // or staging URL
+
+const response = await fetch(\`\${TEAMIFIED_ACCOUNTS_URL}/api/v1/sso/session\`, {
+  credentials: 'include', // Required: send cookies cross-origin
 });
 
 if (response.ok) {
   const session = await response.json();
-  // User is already authenticated
-  console.log('Shared session found:', session.user);
+  // User is already authenticated - no OAuth flow needed
+  console.log('Session found:', session.user);
+  // Use session.user data directly
 } else {
-  // No session, redirect to authorization
-  window.location.href = authorizationUrl;
+  // No session - redirect to OAuth authorization
+  window.location.href = \`\${TEAMIFIED_ACCOUNTS_URL}/api/v1/sso/authorize?...\`;
 }`}
+              </Typography>
+            </Box>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>How it works:</strong> Client apps don't need to know about cookies. They simply call the 
+                <code>/session</code> endpoint. If the user is logged into Teamified Accounts, the endpoint returns 
+                their session data. If not, redirect to the OAuth flow.
+              </Typography>
+            </Alert>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Cookie Domain Configuration
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              The system automatically detects the correct cookie domain based on the deployment:
+            </Typography>
+            <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1 }}>
+              <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}>
+{`| Environment          | Cookie Domain        | SSO Type                |
+|----------------------|---------------------|------------------------|
+| .teamified.com       | domain=.teamified.com | Seamless (shared)      |
+| .replit.app          | Host-only (no domain)| OAuth redirect         |
+| Custom domain        | SSO_SHARED_COOKIE_DOMAIN | Configurable      |`}
               </Typography>
             </Box>
           </Box>
@@ -441,12 +486,13 @@ if (response.ok) {
             <Typography variant="body2">
               <strong>SDK Support:</strong> If using the teamified-sso package, enable cookie SSO with{' '}
               <code>enableCookieSSO: true</code> in your config, then call <code>checkSharedSession()</code>.
+              Note: This only works on production (.teamified.com) deployments.
             </Typography>
           </Alert>
 
           <Alert severity="success">
             <Typography variant="body2">
-              <strong>Seamless Experience:</strong> Users only need to log in once. Other Teamified apps detect
+              <strong>Seamless Experience (Production):</strong> Users only need to log in once. Other Teamified apps detect
               the shared session automatically and can skip the OAuth flow entirely.
             </Typography>
           </Alert>

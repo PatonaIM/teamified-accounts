@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.8',
+    date: 'December 19, 2025',
+    title: 'Cross-App SSO Cookie Domain Fix',
+    summary: 'Fixed critical cookie domain issue that prevented successful login redirects on Replit deployments. Proper handling of Public Suffix List domains ensures OAuth SSO flows work correctly across all environments.',
+    path: '/docs/release-notes/v1.0.8',
+    isLatest: true,
+  },
+  {
     version: '1.0.7',
     date: 'December 18, 2025',
     title: 'HubSpot Integration for Client User Signup Flow',
     summary: 'Automatic HubSpot CRM contact creation on client signup, AI-powered website analysis using GPT-4o for auto-filling business descriptions, redesigned 2-step signup wizard, and enhanced country/phone input components with flag icons.',
     path: '/docs/release-notes/v1.0.7',
-    isLatest: true,
   },
   {
     version: '1.0.6',
