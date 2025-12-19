@@ -49,7 +49,7 @@ args = "npm run start:dev"
 
 [deployment]
 deploymentTarget = "vm"
-run = ["npm", "run", "start:prod"]
+run = ["bash", "-c", "PORT=5000 npm run start:prod"]
 build = ["npm", "run", "build:all"]
 
 [userenv]
