@@ -82,12 +82,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       setRedirectUris(validUris);
       setOriginalRedirectUris([...validUris]);
       setAllowClientCredentials(client.allow_client_credentials || false);
-      const scopes = client.allowed_scopes 
-        ? (typeof client.allowed_scopes === 'string' 
-            ? client.allowed_scopes.split(',').filter(s => s.trim()) 
-            : client.allowed_scopes)
-        : [];
-      setAllowedScopes(scopes);
+      setAllowedScopes(client.allowed_scopes || []);
     } else {
       resetForm();
     }

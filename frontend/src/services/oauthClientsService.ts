@@ -28,7 +28,7 @@ export interface OAuthClient {
   is_active: boolean;
   default_intent: 'client' | 'candidate' | 'both';
   allow_client_credentials: boolean;
-  allowed_scopes: string | null;
+  allowed_scopes: string[] | null;
   metadata: {
     app_url?: string;
     owner?: string;
