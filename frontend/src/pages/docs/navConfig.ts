@@ -39,6 +39,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'User Emails API', path: '/docs/developer/user-emails' },
       { title: 'Password Reset API', path: '/docs/developer/password-reset-api' },
       { title: 'Session Management', path: '/docs/developer/session-management' },
+      { title: 'S2S Authentication', path: '/docs/developer/s2s-authentication' },
       { title: 'Deep Linking Guide', path: '/docs/developer/deep-linking-guide' },
       { title: 'Multi-Organization', path: '/docs/developer/multi-organization' },
       { title: 'Test Accounts', path: '/docs/developer/test-accounts' },
@@ -49,6 +50,7 @@ export const docsNavConfig: NavSection[] = [
     icon: 'NewReleases',
     items: [
       { title: 'All Releases', path: '/docs/release-notes' },
+      { title: 'v1.0.9 - Dec 19, 2025', path: '/docs/release-notes/v1.0.9' },
       { title: 'v1.0.8 - Dec 19, 2025', path: '/docs/release-notes/v1.0.8' },
       { title: 'v1.0.7 - Dec 18, 2025', path: '/docs/release-notes/v1.0.7' },
       { title: 'v1.0.6 - Dec 17, 2025', path: '/docs/release-notes/v1.0.6' },
