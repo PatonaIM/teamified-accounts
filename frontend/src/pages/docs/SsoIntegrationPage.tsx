@@ -429,28 +429,39 @@ curl -X GET ${userInfoUrl} \\
 
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              Checking for Shared Session (Production Only)
+              Checking for Existing Session
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              On production (.teamified.com), check if the user already has a session before initiating OAuth:
+              Client apps can call the <code>/api/v1/sso/session</code> endpoint to check if the user has an existing session.
+              This works on both production and staging environments:
             </Typography>
             <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1 }}>
               <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}>
-{`// Check for existing shared session (works on .teamified.com)
-const response = await fetch('${apiUrl}/api/v1/sso/session', {
-  credentials: 'include', // Important: send cookies
+{`// Check for existing session before initiating OAuth
+const TEAMIFIED_ACCOUNTS_URL = 'https://accounts.teamified.com'; // or staging URL
+
+const response = await fetch(\`\${TEAMIFIED_ACCOUNTS_URL}/api/v1/sso/session\`, {
+  credentials: 'include', // Required: send cookies cross-origin
 });
 
 if (response.ok) {
   const session = await response.json();
-  // User is already authenticated
-  console.log('Shared session found:', session.user);
+  // User is already authenticated - no OAuth flow needed
+  console.log('Session found:', session.user);
+  // Use session.user data directly
 } else {
-  // No session, redirect to authorization
-  window.location.href = authorizationUrl;
+  // No session - redirect to OAuth authorization
+  window.location.href = \`\${TEAMIFIED_ACCOUNTS_URL}/api/v1/sso/authorize?...\`;
 }`}
               </Typography>
             </Box>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>How it works:</strong> Client apps don't need to know about cookies. They simply call the 
+                <code>/session</code> endpoint. If the user is logged into Teamified Accounts, the endpoint returns 
+                their session data. If not, redirect to the OAuth flow.
+              </Typography>
+            </Alert>
           </Box>
 
           <Box>

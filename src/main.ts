@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 import { Request, Response } from 'express';
 import * as express from 'express';
 import * as path from 'path';
+import { getTrustedOrigins, isPublicSuffix } from './common/utils/cookie.utils';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -77,17 +78,54 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
 
-    // Enable CORS - Allow all origins (CORS policy disabled)
+    // Enable CORS - Dynamic configuration based on environment
     logger.log('Configuring CORS...');
     
-    app.enableCors({
-      origin: true, // Allow all origins
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
-      credentials: true,
-    });
+    // On public suffix domains (staging), we use SameSite=none cookies
+    // This requires restricting CORS to trusted origins for security
+    const useRestrictedCors = isPublicSuffix();
+    const trustedOrigins = getTrustedOrigins();
     
-    logger.log('✅ CORS configured to allow ALL origins (CORS policy disabled)');
+    if (useRestrictedCors && trustedOrigins.length > 0) {
+      // Staging: Restricted CORS with allowlist (required for SameSite=none security)
+      app.enableCors({
+        origin: (origin, callback) => {
+          // Allow requests with no origin (same-origin, server-to-server, Postman, etc)
+          if (!origin) {
+            callback(null, true);
+            return;
+          }
+          
+          // Check if origin is in trusted list
+          if (trustedOrigins.some(trusted => origin === trusted || origin.endsWith(trusted.replace('https://', '.')))) {
+            callback(null, true);
+          } else {
+            // For staging, also allow any .replit.app origin (all Teamified staging apps)
+            if (origin.includes('.replit.app') || origin.includes('.replit.dev')) {
+              callback(null, true);
+            } else {
+              logger.warn(`CORS blocked origin: ${origin}`);
+              callback(new Error('Not allowed by CORS'));
+            }
+          }
+        },
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
+        credentials: true,
+      });
+      logger.log(`✅ CORS configured with trusted origins allowlist (staging mode)`);
+      logger.log(`   Trusted origins: ${trustedOrigins.join(', ')}`);
+      logger.log(`   Also allowing: *.replit.app, *.replit.dev`);
+    } else {
+      // Production: Allow all origins (cookies are protected by SameSite=lax + domain)
+      app.enableCors({
+        origin: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Requested-With'],
+        credentials: true,
+      });
+      logger.log('✅ CORS configured to allow ALL origins (production mode)');
+    }
 
     // Global validation pipe
     logger.log('Setting up validation pipe...');
