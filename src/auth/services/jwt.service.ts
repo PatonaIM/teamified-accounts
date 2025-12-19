@@ -17,6 +17,16 @@ export interface JwtPayload {
   jti: string;
 }
 
+export interface ServiceTokenPayload {
+  type: 'service';
+  clientId: string;
+  clientName: string;
+  scopes: string[];
+  iat: number;
+  exp: number;
+  jti: string;
+}
+
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -116,6 +126,48 @@ export class JwtTokenService {
       return this.nestJwtService.decode(token) as JwtPayload | null;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Generate a service token for client credentials grant (machine-to-machine)
+   * These tokens have no user context, only client and scope information
+   */
+  generateServiceToken(params: {
+    clientId: string;
+    clientName: string;
+    scopes: string[];
+  }): string {
+    const payload = {
+      type: 'service',
+      clientId: params.clientId,
+      clientName: params.clientName,
+      scopes: params.scopes,
+      jti: crypto.randomUUID(),
+    };
+
+    return this.nestJwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_SECRET'),
+      expiresIn: '1h', // Service tokens are short-lived
+    });
+  }
+
+  /**
+   * Validate a service token (for client credentials grant)
+   */
+  validateServiceToken(token: string): ServiceTokenPayload {
+    try {
+      const payload = this.nestJwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+
+      if (payload.type !== 'service') {
+        throw new UnauthorizedException('Invalid service token');
+      }
+
+      return payload as ServiceTokenPayload;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid service token');
     }
   }
 }

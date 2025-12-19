@@ -15,7 +15,7 @@ import { SessionService } from '../auth/services/session.service';
 import { UserService } from '../users/services/user.service';
 import { UserRolesService } from '../user-roles/services/user-roles.service';
 import { AuthorizeDto } from './dto/authorize.dto';
-import { TokenExchangeDto, TokenResponseDto } from './dto/token.dto';
+import { TokenExchangeDto, TokenResponseDto, ClientCredentialsTokenResponseDto } from './dto/token.dto';
 import { RecordActivityDto } from './dto/user-activity.dto';
 import { createHash, randomUUID } from 'crypto';
 import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
@@ -138,14 +138,31 @@ export class SsoService {
   }
 
   /**
-   * Token Exchange: Exchange auth code for JWT
+   * Token Exchange: Exchange auth code or client credentials for JWT
    */
-  async exchangeToken(tokenDto: TokenExchangeDto): Promise<TokenResponseDto> {
-    const { grant_type, code, client_id, client_secret, redirect_uri, code_verifier } = tokenDto;
+  async exchangeToken(tokenDto: TokenExchangeDto): Promise<TokenResponseDto | ClientCredentialsTokenResponseDto> {
+    const { grant_type, client_id } = tokenDto;
 
-    // Validate grant type
-    if (grant_type !== 'authorization_code') {
-      throw new BadRequestException('Unsupported grant_type');
+    // Route to appropriate handler based on grant type
+    if (grant_type === 'client_credentials') {
+      return this.handleClientCredentialsGrant(tokenDto);
+    }
+
+    return this.handleAuthorizationCodeGrant(tokenDto);
+  }
+
+  /**
+   * Handle Authorization Code Grant (user-interactive OAuth flow)
+   */
+  private async handleAuthorizationCodeGrant(tokenDto: TokenExchangeDto): Promise<TokenResponseDto> {
+    const { code, client_id, client_secret, redirect_uri, code_verifier } = tokenDto;
+
+    if (!code) {
+      throw new BadRequestException('Authorization code is required for authorization_code grant');
+    }
+
+    if (!redirect_uri) {
+      throw new BadRequestException('redirect_uri is required for authorization_code grant');
     }
 
     // Validate OAuth client
@@ -239,6 +256,72 @@ export class SsoService {
         firstName: user.firstName,
         lastName: user.lastName,
         roles: userRoles.length > 0 ? userRoles : ['client_employee'],
+      },
+    };
+  }
+
+  /**
+   * Handle Client Credentials Grant (service-to-service authentication)
+   * This flow is for machine-to-machine API access without a user context
+   */
+  private async handleClientCredentialsGrant(tokenDto: TokenExchangeDto): Promise<ClientCredentialsTokenResponseDto> {
+    const { client_id, client_secret, scope } = tokenDto;
+
+    if (!client_secret) {
+      throw new BadRequestException('client_secret is required for client_credentials grant');
+    }
+
+    // Validate OAuth client
+    const client = await this.oauthClientsService.findByClientId(client_id);
+    if (!client) {
+      throw new UnauthorizedException('Invalid client credentials');
+    }
+
+    if (!client.is_active) {
+      throw new UnauthorizedException('Client is not active');
+    }
+
+    // Check if client credentials grant is enabled for this client
+    if (!client.allow_client_credentials) {
+      throw new ForbiddenException('Client credentials grant is not enabled for this client');
+    }
+
+    // Verify client secret (required for client credentials grant)
+    const hashedSecret = createHash('sha256').update(client_secret).digest('hex');
+    if (client.client_secret !== hashedSecret) {
+      throw new UnauthorizedException('Invalid client credentials');
+    }
+
+    // Validate and filter requested scopes against allowed scopes
+    const allowedScopes = client.allowed_scopes || [];
+    const requestedScopes = scope || allowedScopes;
+    
+    // If scopes were requested, validate they are all allowed
+    const grantedScopes = requestedScopes.filter(s => allowedScopes.includes(s));
+    
+    if (requestedScopes.length > 0 && grantedScopes.length === 0) {
+      throw new ForbiddenException('None of the requested scopes are allowed for this client');
+    }
+
+    // Generate service access token (no user context)
+    const accessToken = this.jwtTokenService.generateServiceToken({
+      clientId: client.client_id,
+      clientName: client.name,
+      scopes: grantedScopes,
+    });
+
+    this.logger.log(
+      `Client credentials token issued for client ${client_id} with scopes: ${grantedScopes.join(', ')}`,
+    );
+
+    return {
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: 3600, // 1 hour for service tokens
+      scope: grantedScopes,
+      client: {
+        id: client.client_id,
+        name: client.name,
       },
     };
   }

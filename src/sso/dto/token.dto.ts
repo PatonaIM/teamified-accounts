@@ -1,13 +1,14 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsIn, IsArray } from 'class-validator';
 
 export class TokenExchangeDto {
   @IsString()
   @IsNotEmpty()
-  grant_type: string;
+  @IsIn(['authorization_code', 'client_credentials'])
+  grant_type: 'authorization_code' | 'client_credentials';
 
   @IsString()
-  @IsNotEmpty()
-  code: string;
+  @IsOptional()
+  code?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -18,12 +19,28 @@ export class TokenExchangeDto {
   client_secret?: string;
 
   @IsString()
-  @IsNotEmpty()
-  redirect_uri: string;
+  @IsOptional()
+  redirect_uri?: string;
 
   @IsString()
   @IsOptional()
   code_verifier?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  scope?: string[];
+}
+
+export class ClientCredentialsTokenResponseDto {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string[];
+  client: {
+    id: string;
+    name: string;
+  };
 }
 
 export class TokenResponseDto {
