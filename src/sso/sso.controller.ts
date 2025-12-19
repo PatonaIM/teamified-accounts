@@ -205,7 +205,8 @@ export class SsoController {
     // Set httpOnly cookies on shared domain for cross-app SSO
     // This allows other Teamified apps to detect the session
     res.cookie('access_token', tokenResponse.access_token, getAccessTokenCookieOptions(tokenResponse.expires_in * 1000));
-    if (tokenResponse.refresh_token) {
+    // Only set refresh_token cookie for authorization code grant (not client credentials)
+    if ('refresh_token' in tokenResponse && tokenResponse.refresh_token) {
       res.cookie('refresh_token', tokenResponse.refresh_token, getRefreshTokenCookieOptions());
     }
     
