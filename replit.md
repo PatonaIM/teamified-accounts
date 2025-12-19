@@ -26,6 +26,13 @@ Core features include:
 - **SSO Integration Test Page**: A `/test` route to demonstrate OAuth 2.0 + PKCE flow.
 - **Session Persistence & Deep Linking**: Ensures users remain logged in and are redirected to their last visited page after refresh or re-access.
 - **API Key Management**: Supports programmatic access via configurable API keys with audit logging.
+- **Service-to-Service (S2S) Authentication**: Backend systems can authenticate directly using OAuth 2.0 Client Credentials Grant without user sessions. Features:
+  - Admin UI in OAuth Configuration page to enable Client Credentials Grant per application
+  - Granular scope selection: read:users, write:users, read:organizations, write:organizations, read:invitations, write:invitations
+  - Visual S2S badge indicator in OAuth clients table for enabled clients
+  - Token endpoint: `POST /api/v1/sso/token` with `grant_type=client_credentials`
+  - Scope validation and ClientCredentialsGuard for protected endpoints
+  - Database fields: `allow_client_credentials` (boolean) and `allowed_scopes` (simple-array)
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
 - **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.
