@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, IsEnum, ValidateNested, IsIn } from 'class-validator';
+import { IsString, IsArray, IsOptional, IsEnum, ValidateNested, IsIn, IsBoolean } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export enum EnvironmentType {
@@ -98,4 +98,24 @@ export class CreateOAuthClientDto {
   @IsString()
   @IsOptional()
   owner?: string;
+
+  @ApiProperty({
+    description: 'Enable client credentials grant for service-to-service authentication',
+    example: false,
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  allow_client_credentials?: boolean;
+
+  @ApiProperty({
+    description: 'Allowed scopes for client credentials grant (e.g., read:users, read:organizations)',
+    example: ['read:users', 'read:organizations'],
+    required: false,
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowed_scopes?: string[];
 }

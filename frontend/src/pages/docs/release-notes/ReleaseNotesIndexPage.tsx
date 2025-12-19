@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.9',
+    date: 'December 19, 2025',
+    title: 'Service-to-Service (S2S) Authentication',
+    summary: 'Backend systems like HRIS integrations can now authenticate directly with Teamified Accounts APIs using OAuth 2.0 Client Credentials Grant. Admin UI enables S2S per client with granular scope selection.',
+    path: '/docs/release-notes/v1.0.9',
+    isLatest: true,
+  },
+  {
     version: '1.0.8',
     date: 'December 19, 2025',
     title: 'Cross-App SSO Cookie Domain Fix',
     summary: 'Fixed critical cookie domain issue that prevented successful login redirects on Replit deployments. Proper handling of Public Suffix List domains ensures OAuth SSO flows work correctly across all environments.',
     path: '/docs/release-notes/v1.0.8',
-    isLatest: true,
   },
   {
     version: '1.0.7',

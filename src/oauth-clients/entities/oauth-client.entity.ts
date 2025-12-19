@@ -65,4 +65,10 @@ export class OAuthClient {
 
   @Column({ type: 'uuid', nullable: true })
   created_by: string;
+
+  @Column({ default: false })
+  allow_client_credentials: boolean;
+
+  @Column({ type: 'simple-array', nullable: true })
+  allowed_scopes: string[];
 }

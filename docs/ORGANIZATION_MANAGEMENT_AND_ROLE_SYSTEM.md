@@ -1116,6 +1116,63 @@ Content-Type: application/json
 }
 ```
 
+### Client Credentials Grant (Service-to-Service)
+
+For machine-to-machine API access without a user context (e.g., HRIS calling organization/user endpoints):
+
+**Prerequisites:**
+1. OAuth Client must have `allow_client_credentials: true`
+2. Client must have `allowed_scopes` configured
+
+**Request:**
+```http
+POST /v1/sso/token
+Content-Type: application/json
+
+{
+  "grant_type": "client_credentials",
+  "client_id": "your-client-id",
+  "client_secret": "your-client-secret",
+  "scope": ["read:users", "read:organizations"]
+}
+```
+
+**Response:**
+```json
+{
+  "access_token": "service-jwt-token",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": ["read:users", "read:organizations"],
+  "client": {
+    "id": "your-client-id",
+    "name": "HRIS Integration"
+  }
+}
+```
+
+**Available Scopes:**
+| Scope | Description |
+|-------|-------------|
+| `read:users` | Read user profiles and lists |
+| `read:organizations` | Read organization data and members |
+| `write:users` | Create and update users |
+| `write:organizations` | Create and update organizations |
+| `read:invitations` | Read invitation data |
+| `write:invitations` | Create and manage invitations |
+
+**Using the Service Token:**
+```http
+GET /v1/users
+Authorization: Bearer <service-token>
+```
+
+**Key Differences from User Tokens:**
+- No user context (no `sub` claim in JWT)
+- Shorter expiry (1 hour vs 72 hours)
+- No refresh token (request new token when expired)
+- Scope-limited access (only allowed scopes)
+
 ### SSO Launch (Simplified)
 
 For authenticated users, launch SSO to a connected app:

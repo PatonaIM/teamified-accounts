@@ -20,9 +20,13 @@ import {
   Select,
   FormControl,
   Divider,
+  Switch,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
 } from '@mui/material';
-import { Add, Delete, ContentCopy, Edit, Check, Close } from '@mui/icons-material';
-import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType } from '../../services/oauthClientsService';
+import { Add, Delete, ContentCopy, Edit, Check, Close, Api } from '@mui/icons-material';
+import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
 interface Props {
@@ -53,6 +57,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [newUriInput, setNewUriInput] = useState('');
   const [newUriEnvironment, setNewUriEnvironment] = useState<EnvironmentType>('development');
   const [environmentFilter, setEnvironmentFilter] = useState<EnvironmentType | null>(null);
+  const [allowClientCredentials, setAllowClientCredentials] = useState(false);
+  const [allowedScopes, setAllowedScopes] = useState<string[]>([]);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -75,6 +81,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
         }));
       setRedirectUris(validUris);
       setOriginalRedirectUris([...validUris]);
+      setAllowClientCredentials(client.allow_client_credentials || false);
+      setAllowedScopes(client.allowed_scopes || []);
     } else {
       resetForm();
     }
@@ -90,6 +98,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setNewUriInput('');
     setNewUriEnvironment('development');
     setEnvironmentFilter(null);
+    setAllowClientCredentials(false);
+    setAllowedScopes([]);
   };
 
   const toggleEnvironmentFilter = (env: EnvironmentType) => {
@@ -191,6 +201,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       description: description || undefined,
       redirect_uris: filteredUris,
       default_intent: defaultIntent,
+      allow_client_credentials: allowClientCredentials,
+      allowed_scopes: allowClientCredentials ? allowedScopes : [],
     };
 
     try {
@@ -210,6 +222,14 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleScopeToggle = (scope: string) => {
+    setAllowedScopes(prev => 
+      prev.includes(scope) 
+        ? prev.filter(s => s !== scope)
+        : [...prev, scope]
+    );
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -647,6 +667,75 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   Add
                 </Button>
               </Stack>
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Api fontSize="small" color="action" />
+                <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Enable this to allow backend systems to authenticate directly using client credentials (without a user session).
+              </Typography>
+              
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={allowClientCredentials}
+                    onChange={(e) => setAllowClientCredentials(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2">Enable Client Credentials Grant</Typography>
+                }
+                sx={{ alignItems: 'flex-start', mb: 2 }}
+              />
+
+              {allowClientCredentials && (
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'action.hover', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Allowed API Scopes</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    Select which API operations this application can perform when using service-to-service authentication.
+                  </Typography>
+                  <FormGroup>
+                    {AVAILABLE_SCOPES.map((scope) => (
+                      <FormControlLabel
+                        key={scope.value}
+                        control={
+                          <Checkbox
+                            checked={allowedScopes.includes(scope.value)}
+                            onChange={() => handleScopeToggle(scope.value)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2" component="span">{scope.label}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                              {scope.description}
+                            </Typography>
+                          </Box>
+                        }
+                        sx={{ mb: 0.5 }}
+                      />
+                    ))}
+                  </FormGroup>
+                  {allowedScopes.length === 0 && (
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      Select at least one scope for the application to access APIs.
+                    </Alert>
+                  )}
+                </Box>
+              )}
             </Box>
           </Box>
         )}

@@ -7,6 +7,17 @@ export interface RedirectUri {
   environment: EnvironmentType;
 }
 
+export const AVAILABLE_SCOPES = [
+  { value: 'read:users', label: 'Read Users', description: 'View user profiles and lists' },
+  { value: 'write:users', label: 'Write Users', description: 'Create and update users' },
+  { value: 'read:organizations', label: 'Read Organizations', description: 'View organization data and members' },
+  { value: 'write:organizations', label: 'Write Organizations', description: 'Create and update organizations' },
+  { value: 'read:invitations', label: 'Read Invitations', description: 'View invitation data' },
+  { value: 'write:invitations', label: 'Write Invitations', description: 'Create and manage invitations' },
+] as const;
+
+export type ScopeValue = typeof AVAILABLE_SCOPES[number]['value'];
+
 export interface OAuthClient {
   id: string;
   client_id: string;
@@ -16,6 +27,8 @@ export interface OAuthClient {
   redirect_uris: RedirectUri[];
   is_active: boolean;
   default_intent: 'client' | 'candidate' | 'both';
+  allow_client_credentials: boolean;
+  allowed_scopes: string[] | null;
   metadata: {
     app_url?: string;
     owner?: string;
@@ -32,6 +45,8 @@ export interface CreateOAuthClientDto {
   default_intent?: 'client' | 'candidate' | 'both';
   app_url?: string;
   owner?: string;
+  allow_client_credentials?: boolean;
+  allowed_scopes?: string[];
 }
 
 export interface UpdateOAuthClientDto {
@@ -42,6 +57,8 @@ export interface UpdateOAuthClientDto {
   app_url?: string;
   owner?: string;
   is_active?: boolean;
+  allow_client_credentials?: boolean;
+  allowed_scopes?: string[];
 }
 
 export const oauthClientsService = {

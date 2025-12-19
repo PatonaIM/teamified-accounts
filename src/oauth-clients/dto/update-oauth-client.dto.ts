@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateOAuthClientDto, RedirectUriDto } from './create-oauth-client.dto';
-import { IsBoolean, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsBoolean, IsOptional, IsArray, ValidateNested, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -35,4 +35,5 @@ export class UpdateOAuthClientDto extends PartialType(CreateOAuthClientDto) {
   })
   @Type(() => RedirectUriDto)
   redirect_uris?: RedirectUriDto[];
+
 }

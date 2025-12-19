@@ -336,15 +336,31 @@ const OAuthConfigurationPage: React.FC = () => {
                       </Stack>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={client.default_intent === 'both' ? 'Both' : client.default_intent === 'client' ? 'Client' : 'Candidate'}
-                        size="small"
-                        sx={{
-                          bgcolor: client.default_intent === 'client' ? '#9c27b0' : client.default_intent === 'candidate' ? '#00bcd4' : '#607d8b',
-                          color: 'white',
-                          textTransform: 'capitalize',
-                        }}
-                      />
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Chip
+                          label={client.default_intent === 'both' ? 'Both' : client.default_intent === 'client' ? 'Client' : 'Candidate'}
+                          size="small"
+                          sx={{
+                            bgcolor: client.default_intent === 'client' ? '#9c27b0' : client.default_intent === 'candidate' ? '#00bcd4' : '#607d8b',
+                            color: 'white',
+                            textTransform: 'capitalize',
+                          }}
+                        />
+                        {client.allow_client_credentials && (
+                          <Tooltip title="Service-to-Service Authentication Enabled">
+                            <Chip
+                              label="S2S"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.65rem',
+                                bgcolor: '#ff5722',
+                                color: 'white',
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Tooltip title={client.is_active ? 'Click to deactivate' : 'Click to activate'}>

@@ -48,8 +48,10 @@ import ReleaseNote_v105 from './pages/docs/ReleaseNote_v105';
 import ReleaseNote_v106 from './pages/docs/ReleaseNote_v106';
 import ReleaseNote_v107 from './pages/docs/ReleaseNote_v107';
 import ReleaseNote_v108 from './pages/docs/ReleaseNote_v108';
+import ReleaseNote_v109 from './pages/docs/ReleaseNote_v109';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
+import S2SAuthenticationPage from './pages/docs/developer/S2SAuthenticationPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -353,6 +355,7 @@ function App() {
                   <Route path="developer/profile-pictures" element={<ProfilePicturesApiPage />} />
                   <Route path="developer/user-activity" element={<UserActivityApiPage />} />
                   <Route path="developer/user-emails" element={<UserEmailsApiPage />} />
+                  <Route path="developer/s2s-authentication" element={<S2SAuthenticationPage />} />
                   <Route path="developer/password-reset-api" element={<PasswordResetApiPage />} />
                   <Route path="developer/session-management" element={<SessionManagementPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
@@ -361,6 +364,7 @@ function App() {
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/v1.0.9" element={<ReleaseNote_v109 />} />
                   <Route path="release-notes/v1.0.8" element={<ReleaseNote_v108 />} />
                   <Route path="release-notes/v1.0.7" element={<ReleaseNote_v107 />} />
                   <Route path="release-notes/v1.0.6" element={<ReleaseNote_v106 />} />
