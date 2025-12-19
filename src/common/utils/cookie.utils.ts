@@ -10,7 +10,6 @@ export interface SharedCookieConfig {
 }
 
 const TEAMIFIED_PARENT_DOMAIN = '.teamified.com';
-const REPLIT_PARENT_DOMAIN = '.replit.app';
 
 export function getSharedCookieDomain(): string | undefined {
   const forceSharedDomain = process.env.SSO_SHARED_COOKIE_DOMAIN;
@@ -21,14 +20,16 @@ export function getSharedCookieDomain(): string | undefined {
   
   const baseUrl = process.env.BASE_URL || '';
   
+  // Only set domain for teamified.com - this enables cross-subdomain cookie sharing
+  // For .replit.app and other public suffixes, we don't set a domain
+  // because browsers block cookie domain setting on public suffix list domains
+  // The cookie will be "host-only" and work within the same app
   if (baseUrl.includes('teamified.com')) {
     return TEAMIFIED_PARENT_DOMAIN;
   }
   
-  if (baseUrl.includes('.replit.app')) {
-    return REPLIT_PARENT_DOMAIN;
-  }
-  
+  // Don't set domain for .replit.app - it's a public suffix
+  // Cookies will be host-only (e.g., only for teamified-accounts.replit.app)
   return undefined;
 }
 
