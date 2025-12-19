@@ -27,11 +27,14 @@ Core features include:
 - **Session Persistence & Deep Linking**: Ensures users remain logged in and are redirected to their last visited page after refresh or re-access.
 - **API Key Management**: Supports programmatic access via configurable API keys with audit logging.
 - **Service-to-Service (S2S) Authentication**: Backend systems can authenticate directly using OAuth 2.0 Client Credentials Grant without user sessions. Features:
+  - **Unified API Endpoints**: S2S tokens work on the same endpoints as user JWT tokens (`/api/v1/users`, `/api/v1/organizations`, `/api/v1/invitations`)
   - Admin UI in OAuth Configuration page to enable Client Credentials Grant per application
   - Granular scope selection: read:users, write:users, read:organizations, write:organizations, read:invitations, write:invitations
   - Visual S2S badge indicator in OAuth clients table for enabled clients
   - Token endpoint: `POST /api/v1/sso/token` with `grant_type=client_credentials`
-  - Scope validation and ClientCredentialsGuard for protected endpoints
+  - **Dual-auth guards**: JwtOrServiceGuard, CurrentUserOrServiceGuard, RolesOrServiceGuard handle both user JWT and S2S tokens
+  - **Security**: Write operations (POST/PUT/DELETE) blocked for S2S by default unless explicitly enabled with `@RequiredScopes`
+  - Response sanitization ensures sensitive fields (password hashes, tokens) never exposed in S2S responses
   - Database fields: `allow_client_credentials` (boolean) and `allowed_scopes` (simple-array)
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.

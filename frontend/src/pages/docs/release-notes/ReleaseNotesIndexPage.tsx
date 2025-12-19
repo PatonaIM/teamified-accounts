@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.10',
+    date: 'December 19, 2025',
+    title: 'Unified API Endpoints & S2S Security Improvements',
+    summary: 'S2S authentication now uses unified API endpoints (same as user auth). Removed separate /api/v1/s2s/* paths. Enhanced security blocks S2S on write endpoints by default with proper scope validation.',
+    path: '/docs/release-notes/v1.0.10',
+    isLatest: true,
+  },
+  {
     version: '1.0.9',
     date: 'December 19, 2025',
     title: 'Service-to-Service (S2S) Authentication',
     summary: 'Backend systems like HRIS integrations can now authenticate directly with Teamified Accounts APIs using OAuth 2.0 Client Credentials Grant. Admin UI enables S2S per client with granular scope selection.',
     path: '/docs/release-notes/v1.0.9',
-    isLatest: true,
   },
   {
     version: '1.0.8',

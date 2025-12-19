@@ -44,6 +44,13 @@ export default function S2SAuthenticationPage() {
         APIs without user sessions using OAuth 2.0 Client Credentials Grant.
       </Typography>
 
+      <Alert severity="success" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>Unified Endpoints:</strong> S2S authentication uses the same API endpoints as user authentication. 
+          Simply use your S2S token on standard endpoints like <code>/api/v1/users</code> and <code>/api/v1/organizations</code>.
+        </Typography>
+      </Alert>
+
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
           <strong>Interactive API Documentation:</strong>{' '}
@@ -272,15 +279,29 @@ grant_type=client_credentials
             Using the Access Token
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Include the access token in API requests as a Bearer token:
+            Include the access token in API requests as a Bearer token. S2S tokens work on the same unified endpoints as user authentication:
           </Typography>
           <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto' }}>
             <pre style={{ margin: 0 }}>
-{`GET /api/v1/users
+{`# List users (unified endpoint - works with both user JWT and S2S tokens)
+GET /api/v1/users
 Authorization: Bearer YOUR_ACCESS_TOKEN
-Content-Type: application/json`}
+
+# List organizations
+GET /api/v1/organizations
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+# List invitations
+GET /api/v1/invitations
+Authorization: Bearer YOUR_ACCESS_TOKEN`}
             </pre>
           </Paper>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Security Note:</strong> Write operations (POST, PUT, DELETE) are blocked for S2S clients by default. 
+              S2S authentication is designed for read-only data access. Contact support if you need write access for specific use cases.
+            </Typography>
+          </Alert>
         </Box>
 
         <Divider />
