@@ -177,9 +177,8 @@ export class SsoService {
 
     // Verify client secret (if provided)
     if (client_secret) {
-      // Hash the provided secret to compare with stored hash
-      const hashedSecret = createHash('sha256').update(client_secret).digest('hex');
-      if (client.client_secret !== hashedSecret) {
+      // Compare directly - secrets are stored as plaintext hex strings
+      if (client.client_secret !== client_secret) {
         throw new UnauthorizedException('Invalid client credentials');
       }
     }
@@ -287,8 +286,8 @@ export class SsoService {
     }
 
     // Verify client secret (required for client credentials grant)
-    const hashedSecret = createHash('sha256').update(client_secret).digest('hex');
-    if (client.client_secret !== hashedSecret) {
+    // Compare directly - secrets are stored as plaintext hex strings
+    if (client.client_secret !== client_secret) {
       throw new UnauthorizedException('Invalid client credentials');
     }
 
