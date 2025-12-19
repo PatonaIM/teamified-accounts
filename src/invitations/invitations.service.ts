@@ -1956,4 +1956,99 @@ This is an automated message from Teamified.
 
     return response;
   }
+
+  /**
+   * S2S: Get all invitations (no user context required)
+   * For service-to-service API access with read:invitations scope
+   */
+  async findAllS2S(organizationId?: string, status?: string): Promise<InvitationResponseDto[]> {
+    const queryBuilder = this.invitationRepository
+      .createQueryBuilder('invitation')
+      .leftJoinAndSelect('invitation.organization', 'organization')
+      .orderBy('invitation.createdAt', 'DESC');
+
+    if (organizationId) {
+      queryBuilder.andWhere('invitation.organizationId = :organizationId', { organizationId });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('invitation.status = :status', { status });
+    }
+
+    const invitations = await queryBuilder.getMany();
+    return invitations.map(inv => this.toResponseDto(inv));
+  }
+
+  /**
+   * S2S: Get invitation by ID (no user context required)
+   * For service-to-service API access with read:invitations scope
+   */
+  async findOneS2S(id: string): Promise<InvitationResponseDto> {
+    const invitation = await this.invitationRepository.findOne({
+      where: { id },
+      relations: ['organization'],
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    return this.toResponseDto(invitation);
+  }
+
+  /**
+   * S2S: Create invitation (no user context required)
+   * For service-to-service API access with write:invitations scope
+   */
+  async createS2S(
+    createDto: CreateInvitationDto,
+    baseUrl: string,
+    serviceClient?: { clientId: string; clientName: string; scopes: string[] },
+  ): Promise<InvitationResponseDto> {
+    // Verify organization exists
+    const organization = await this.organizationRepository.findOne({
+      where: { id: createDto.organizationId },
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // Generate unique invite code
+    const inviteCode = randomBytes(16).toString('hex');
+
+    // Calculate expiration date (default 7 days)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const invitation = this.invitationRepository.create({
+      id: uuidv4(),
+      organizationId: createDto.organizationId,
+      inviteCode,
+      invitedBy: `s2s:${serviceClient?.clientName || 'unknown'}`,
+      roleType: createDto.roleType,
+      status: InvitationStatus.PENDING,
+      expiresAt,
+      maxUses: createDto.maxUses || 1,
+      currentUses: 0,
+    });
+
+    const savedInvitation = await this.invitationRepository.save(invitation);
+
+    // Log audit
+    await this.auditService.log({
+      action: 'INVITATION_CREATED_S2S',
+      entityType: 'Invitation',
+      entityId: savedInvitation.id,
+      actorUserId: `s2s:${serviceClient?.clientId || 'unknown'}`,
+      actorRole: 'service',
+      changes: {
+        organizationId: createDto.organizationId,
+        roleType: createDto.roleType,
+        clientName: serviceClient?.clientName,
+      },
+    });
+
+    return this.toResponseDto(savedInvitation, baseUrl);
+  }
 }

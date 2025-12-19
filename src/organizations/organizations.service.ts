@@ -1626,4 +1626,112 @@ Welcome to the ${organization.name} team!
       totalUsers: userResults.length,
     };
   }
+
+  /**
+   * S2S: Get all organizations (no user context required)
+   * For service-to-service API access with read:organizations scope
+   */
+  async findAllS2S(queryParams?: any): Promise<any> {
+    const page = queryParams?.page || 1;
+    const limit = queryParams?.limit || 20;
+    const skip = (page - 1) * limit;
+    
+    const queryBuilder = this.organizationRepository
+      .createQueryBuilder('org')
+      .leftJoin('org.members', 'members', 'members.status = :activeStatus', { activeStatus: 'active' })
+      .leftJoin('members.user', 'memberUser', 'memberUser.status != :archivedStatus AND memberUser.deletedAt IS NULL', { archivedStatus: 'archived' })
+      .addSelect('COUNT(memberUser.id)', 'membercount')
+      .where('org.deletedAt IS NULL')
+      .groupBy('org.id');
+    
+    // Apply search filter
+    if (queryParams?.search) {
+      queryBuilder.andWhere(
+        '(org.name ILIKE :search OR org.slug ILIKE :search)',
+        { search: `%${queryParams.search}%` }
+      );
+    }
+    
+    // Apply industry filter
+    if (queryParams?.industry) {
+      queryBuilder.andWhere('org.industry = :industry', { industry: queryParams.industry });
+    }
+    
+    // Apply company size filter
+    if (queryParams?.companySize) {
+      queryBuilder.andWhere('org.companySize = :companySize', { companySize: queryParams.companySize });
+    }
+    
+    // Apply status filter
+    if (queryParams?.status !== undefined) {
+      queryBuilder.andWhere('org.status = :status', { status: queryParams.status });
+    }
+    
+    // Apply subscription tier filter
+    if (queryParams?.subscriptionTier) {
+      queryBuilder.andWhere('org.subscriptionTier = :tier', { tier: queryParams.subscriptionTier });
+    }
+    
+    const [{ total }] = await this.organizationRepository
+      .createQueryBuilder('org')
+      .select('COUNT(DISTINCT org.id)', 'total')
+      .where('org.deletedAt IS NULL')
+      .getRawMany();
+    
+    queryBuilder
+      .orderBy('org.name', 'ASC')
+      .offset(skip)
+      .limit(limit);
+    
+    const results = await queryBuilder.getRawAndEntities();
+    
+    const organizations = results.entities.map((org, index) => ({
+      ...this.mapToResponseDto(org),
+      memberCount: parseInt(results.raw[index].membercount) || 0,
+    }));
+    
+    return {
+      organizations,
+      pagination: {
+        page,
+        limit,
+        total: parseInt(total) || 0,
+        totalPages: Math.ceil((parseInt(total) || 0) / limit),
+      },
+    };
+  }
+
+  /**
+   * S2S: Get organization by ID (no user context required)
+   * For service-to-service API access with read:organizations scope
+   */
+  async findOneS2S(id: string): Promise<OrganizationResponseDto> {
+    const organization = await this.organizationRepository.findOne({
+      where: { id, deletedAt: null },
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    return this.mapToResponseDto(organization);
+  }
+
+  /**
+   * S2S: Get organization by slug (no user context required)
+   * For service-to-service API access with read:organizations scope
+   */
+  async findBySlugS2S(slug: string): Promise<OrganizationResponseDto> {
+    const normalizedSlug = this.normalizeSlug(slug);
+    
+    const organization = await this.organizationRepository.findOne({
+      where: { slug: normalizedSlug, deletedAt: null },
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    return this.mapToResponseDto(organization);
+  }
 }

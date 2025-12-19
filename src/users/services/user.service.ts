@@ -933,4 +933,47 @@ export class UserService {
     }
     return 'Desktop';
   }
+
+  /**
+   * S2S: Sanitize user data to remove sensitive fields
+   * Used for service-to-service API responses
+   */
+  private sanitizeUserForS2S(user: any): any {
+    const { 
+      passwordHash, 
+      passwordResetToken, 
+      passwordResetTokenExpiry,
+      emailVerificationToken,
+      emailVerificationTokenExpiry,
+      supabaseUserId,
+      ...safeUser 
+    } = user;
+
+    return {
+      ...safeUser,
+      roles: user.userRoles?.map((r: any) => r.roleType) || user.roles || [],
+    };
+  }
+
+  /**
+   * S2S: Get paginated list of users (sanitized for machine access)
+   * For service-to-service API access with read:users scope
+   */
+  async findAllS2S(queryDto: UserQueryDto): Promise<any> {
+    const result = await this.findAll(queryDto);
+    
+    return {
+      users: result.users.map((user: any) => this.sanitizeUserForS2S(user)),
+      pagination: result.pagination,
+    };
+  }
+
+  /**
+   * S2S: Get user by ID (sanitized for machine access)
+   * For service-to-service API access with read:users scope
+   */
+  async findOneS2S(id: string): Promise<any> {
+    const user = await this.findOne(id);
+    return this.sanitizeUserForS2S(user);
+  }
 }
