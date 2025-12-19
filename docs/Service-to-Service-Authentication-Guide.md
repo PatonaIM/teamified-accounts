@@ -64,7 +64,7 @@ curl -X POST https://accounts.teamified.com/api/v1/sso/token \
     "grant_type": "client_credentials",
     "client_id": "YOUR_CLIENT_ID",
     "client_secret": "YOUR_CLIENT_SECRET",
-    "scope": "read:users read:organizations"
+    "scope": ["read:users", "read:organizations"]
   }'
 ```
 
@@ -75,7 +75,7 @@ curl -X POST https://accounts.teamified.com/api/v1/sso/token \
 | `grant_type` | Yes | Must be `client_credentials` |
 | `client_id` | Yes | Your OAuth client ID |
 | `client_secret` | Yes | Your OAuth client secret |
-| `scope` | No | Space-separated list of requested scopes |
+| `scope` | No | Array of requested scopes (e.g., `["read:users", "read:organizations"]`) |
 
 ### Response
 
@@ -84,7 +84,7 @@ curl -X POST https://accounts.teamified.com/api/v1/sso/token \
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "read:users read:organizations"
+  "scope": ["read:users", "read:organizations"]
 }
 ```
 
@@ -160,7 +160,7 @@ class TeamifiedS2SClient {
       grant_type: 'client_credentials',
       client_id: this.clientId,
       client_secret: this.clientSecret,
-      scope: scopes.join(' '),
+      scope: scopes,
     });
 
     this.accessToken = response.data.access_token;
@@ -243,7 +243,7 @@ class TeamifiedS2SClient:
                 'grant_type': 'client_credentials',
                 'client_id': self.client_id,
                 'client_secret': self.client_secret,
-                'scope': ' '.join(scopes) if scopes else '',
+                'scope': scopes or [],
             }
         )
         response.raise_for_status()

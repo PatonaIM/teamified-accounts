@@ -225,11 +225,13 @@ export default function ReleaseNote_v1010() {
               <pre style={{ margin: 0, fontSize: '0.85rem' }}>
 {`# Step 1: Get S2S token
 curl -X POST https://accounts.teamified.com/api/v1/sso/token \\
-  -H "Content-Type: application/x-www-form-urlencoded" \\
-  -d "grant_type=client_credentials" \\
-  -d "client_id=YOUR_CLIENT_ID" \\
-  -d "client_secret=YOUR_CLIENT_SECRET" \\
-  -d "scope=read:users"
+  -H "Content-Type: application/json" \\
+  -d '{
+    "grant_type": "client_credentials",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "scope": ["read:users"]
+  }'
 
 # Step 2: Use the unified endpoint (same as user auth)
 curl -X GET https://accounts.teamified.com/api/v1/users \\

@@ -242,12 +242,14 @@ export default function S2SAuthenticationPage() {
           <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto' }}>
             <pre style={{ margin: 0 }}>
 {`POST /api/v1/sso/token
-Content-Type: application/x-www-form-urlencoded
+Content-Type: application/json
 
-grant_type=client_credentials
-&client_id=YOUR_CLIENT_ID
-&client_secret=YOUR_CLIENT_SECRET
-&scope=read:users read:organizations`}
+{
+  "grant_type": "client_credentials",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "scope": ["read:users", "read:organizations"]
+}`}
             </pre>
           </Paper>
         </Box>
@@ -262,7 +264,7 @@ grant_type=client_credentials
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "read:users read:organizations"
+  "scope": ["read:users", "read:organizations"]
 }`}
             </pre>
           </Paper>
@@ -320,13 +322,13 @@ Authorization: Bearer YOUR_ACCESS_TOKEN`}
   const response = await fetch('https://accounts.teamified.com/api/v1/sso/token', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
     },
-    body: new URLSearchParams({
+    body: JSON.stringify({
       grant_type: 'client_credentials',
       client_id: process.env.TEAMIFIED_CLIENT_ID,
       client_secret: process.env.TEAMIFIED_CLIENT_SECRET,
-      scope: 'read:users read:organizations',
+      scope: ['read:users', 'read:organizations'],
     }),
   });
   
@@ -359,11 +361,11 @@ import os
 def get_s2s_token():
     response = requests.post(
         'https://accounts.teamified.com/api/v1/sso/token',
-        data={
+        json={
             'grant_type': 'client_credentials',
             'client_id': os.environ['TEAMIFIED_CLIENT_ID'],
             'client_secret': os.environ['TEAMIFIED_CLIENT_SECRET'],
-            'scope': 'read:users read:organizations',
+            'scope': ['read:users', 'read:organizations'],
         }
     )
     return response.json()['access_token']

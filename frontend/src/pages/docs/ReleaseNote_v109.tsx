@@ -261,12 +261,14 @@ export default function ReleaseNote_v109() {
             <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 2 }}>
               <pre style={{ margin: 0, fontSize: '0.85rem' }}>
 {`POST /api/v1/sso/token
-Content-Type: application/x-www-form-urlencoded
+Content-Type: application/json
 
-grant_type=client_credentials
-&client_id=YOUR_CLIENT_ID
-&client_secret=YOUR_CLIENT_SECRET
-&scope=read:users read:organizations`}
+{
+  "grant_type": "client_credentials",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "scope": ["read:users", "read:organizations"]
+}`}
               </pre>
             </Paper>
 
@@ -279,7 +281,7 @@ grant_type=client_credentials
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "read:users read:organizations"
+  "scope": ["read:users", "read:organizations"]
 }`}
               </pre>
             </Paper>
