@@ -658,7 +658,7 @@ const ClientAdminSignupPage: React.FC = () => {
                           },
                         }}
                       >
-                        <AutoAwesome sx={{ color: '#7c3aed', fontSize: 20 }} />
+                        <AutoAwesome sx={{ color: '#7c3aed', fontSize: 26 }} />
                       </IconButton>
                     </Tooltip>
                   )}

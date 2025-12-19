@@ -88,6 +88,317 @@ When a user clicks "Team Connect" in the Portal navigation:
 - ✅ **Redirect URI validation** - Prevents code interception
 - ✅ **Audit logging** - All SSO attempts are logged
 - ✅ **Intent-based access control** - Restrict access by user type
+- ✅ **Cross-app shared cookies** - True SSO across all Teamified subdomains
+
+## Cross-App SSO (Shared Cookies) - NEW
+
+The Portal now supports true cross-app SSO using shared httpOnly cookies. When a user logs into any Teamified application, they're automatically authenticated across **all** Teamified apps without re-entering credentials or going through OAuth flows.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     User logs into Portal                            │
+│                              │                                       │
+│                              ▼                                       │
+│           Server sets httpOnly cookie on .teamified.com             │
+│                              │                                       │
+│              ┌───────────────┼───────────────┐                      │
+│              ▼               ▼               ▼                      │
+│     hris.teamified.com  teamconnect.teamified.com  ats.teamified.com│
+│              │               │               │                      │
+│              └───────────────┴───────────────┘                      │
+│                              │                                       │
+│                              ▼                                       │
+│         All apps can read the shared cookie automatically           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+1. When a user authenticates (login, Google OAuth, token exchange), the server sets an httpOnly cookie on `.teamified.com`
+2. This cookie is automatically shared across all subdomains
+3. Client apps can check for an existing session before initiating the OAuth flow
+4. If a session exists, users skip the OAuth flow entirely
+
+### Cookie Security Settings
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| `httpOnly` | `true` | Prevents JavaScript access (XSS protection) |
+| `secure` | `true` (production) | HTTPS only in production |
+| `sameSite` | `lax` | Allows cross-subdomain sharing while preventing CSRF |
+| `domain` | `.teamified.com` | Shared across all subdomains |
+
+### Session Check Endpoint
+
+Client apps can verify if a user already has an active session:
+
+```
+GET /api/v1/sso/session
+```
+
+**Request:**
+```typescript
+const response = await fetch('https://accounts.teamified.com/api/v1/sso/session', {
+  credentials: 'include', // IMPORTANT: Send cookies with request
+});
+```
+
+**Response (200 OK - Session exists):**
+```json
+{
+  "authenticated": true,
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe"
+  }
+}
+```
+
+**Response (401 Unauthorized - No session):**
+```json
+{
+  "authenticated": false,
+  "message": "No valid session"
+}
+```
+
+### Implementing Cross-App SSO in Your Client App
+
+#### Option 1: Using the @teamified/sso SDK (Recommended)
+
+```typescript
+import { createTeamifiedAuth, CookieAwareStorageStrategy } from '@teamified/sso';
+
+export const auth = createTeamifiedAuth({
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL!,
+  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY!,
+  portalApiUrl: import.meta.env.VITE_PORTAL_API_URL!,
+  enableCookieSSO: true, // Enable cookie-based SSO
+});
+
+// In your app initialization or protected route:
+async function checkExistingSession() {
+  const session = await auth.checkSharedSession();
+  
+  if (session) {
+    // User is already authenticated via shared cookie!
+    console.log('Welcome back,', session.user.firstName);
+    // Skip OAuth flow - user is already logged in
+    return session.user;
+  } else {
+    // No shared session - redirect to login
+    window.location.href = '/login';
+    return null;
+  }
+}
+```
+
+#### Option 2: Manual Implementation (Without SDK)
+
+```typescript
+// services/ssoService.ts
+const PORTAL_URL = 'https://accounts.teamified.com';
+
+interface SharedSession {
+  authenticated: boolean;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+}
+
+export async function checkSharedSession(): Promise<SharedSession | null> {
+  try {
+    const response = await fetch(`${PORTAL_URL}/api/v1/sso/session`, {
+      credentials: 'include', // CRITICAL: Include cookies
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to check shared session:', error);
+    return null;
+  }
+}
+
+// Usage in your app
+async function initializeApp() {
+  const session = await checkSharedSession();
+  
+  if (session?.authenticated) {
+    // User has an active session from another Teamified app
+    // Store user info locally and proceed
+    localStorage.setItem('user', JSON.stringify(session.user));
+    navigateToDashboard();
+  } else {
+    // No session - start normal OAuth flow
+    redirectToLogin();
+  }
+}
+```
+
+#### Option 3: React Hook Implementation
+
+```typescript
+// hooks/useSharedSession.ts
+import { useState, useEffect } from 'react';
+
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export function useSharedSession() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_PORTAL_API_URL}/v1/sso/session`,
+          { credentials: 'include' }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        }
+      } catch (err) {
+        setError('Failed to check session');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    checkSession();
+  }, []);
+
+  return { user, loading, error, isAuthenticated: !!user };
+}
+
+// Usage in component
+function App() {
+  const { user, loading, isAuthenticated } = useSharedSession();
+
+  if (loading) return <div>Checking session...</div>;
+  
+  if (isAuthenticated) {
+    return <Dashboard user={user} />;
+  }
+  
+  return <LoginPage />;
+}
+```
+
+### Best Practices for Cross-App SSO
+
+1. **Always check for shared session first** before redirecting to OAuth:
+   ```typescript
+   const session = await checkSharedSession();
+   if (!session) {
+     // Only start OAuth if no shared session exists
+     startOAuthFlow();
+   }
+   ```
+
+2. **Handle session expiry gracefully**:
+   ```typescript
+   // Add an interceptor to detect expired sessions
+   api.interceptors.response.use(
+     (response) => response,
+     async (error) => {
+       if (error.response?.status === 401) {
+         // Session expired - check if there's a new shared session
+         const session = await checkSharedSession();
+         if (session) {
+           // Retry the request
+           return api.request(error.config);
+         }
+         // No session - redirect to login
+         window.location.href = '/login';
+       }
+       return Promise.reject(error);
+     }
+   );
+   ```
+
+3. **Use `credentials: 'include'`** for all cross-origin requests to the Portal API
+
+4. **Configure CORS correctly** - The Portal already allows all origins, but ensure your app sends the correct headers
+
+### Logout Behavior
+
+When a user logs out from any Teamified app, the shared cookie is cleared across all subdomains:
+
+```typescript
+// The logout endpoint clears the shared cookie
+await fetch(`${PORTAL_URL}/api/v1/auth/logout`, {
+  method: 'POST',
+  credentials: 'include',
+});
+
+// User is now logged out of ALL Teamified apps
+```
+
+### Migration Guide for Existing Apps
+
+If your app already uses the `@teamified/sso` SDK:
+
+**Before (OAuth flow only):**
+```typescript
+const auth = createTeamifiedAuth({
+  supabaseUrl: '...',
+  supabaseAnonKey: '...',
+  portalApiUrl: '...',
+  tokenStorage: new SessionStorageStrategy(),
+});
+```
+
+**After (With cross-app SSO):**
+```typescript
+const auth = createTeamifiedAuth({
+  supabaseUrl: '...',
+  supabaseAnonKey: '...',
+  portalApiUrl: '...',
+  tokenStorage: new SessionStorageStrategy(), // Still works!
+  enableCookieSSO: true, // Add this line
+});
+
+// Add session check before OAuth flow
+async function initialize() {
+  const session = await auth.checkSharedSession();
+  if (session) {
+    // Already authenticated via shared cookie
+    return session.user;
+  }
+  // Fall back to normal OAuth flow
+  return null;
+}
+```
+
+**Note:** The `checkSharedSession()` method works with any custom storage strategy - it always uses the Portal's session endpoint regardless of your local token storage configuration.
+
+### Troubleshooting
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Session check returns 401 | Cookies not being sent | Add `credentials: 'include'` to fetch |
+| CORS errors | Missing headers | Ensure app domain is allowed (Portal allows all) |
+| Cookie not set after login | Wrong domain in production | Verify `BASE_URL` environment variable |
+| Session works on portal but not client apps | Cookie domain mismatch | Ensure all apps are on `*.teamified.com` subdomains |
 
 ## Intent Parameter (User Type Filtering)
 

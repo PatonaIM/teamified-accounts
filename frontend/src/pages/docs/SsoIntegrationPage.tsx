@@ -383,6 +383,76 @@ curl -X GET ${userInfoUrl} \\
         </Stack>
       </Paper>
 
+      {/* Cross-App SSO */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+          Cross-App SSO (Shared Sessions)
+        </Typography>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          Teamified supports true cross-app SSO using shared httpOnly cookies. When a user logs into one Teamified app,
+          they're automatically authenticated across all Teamified apps without re-entering credentials.
+        </Typography>
+        
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              How It Works
+            </Typography>
+            <Stack spacing={1}>
+              <Typography variant="body2">
+                1. When a user authenticates, the server sets an httpOnly cookie on <code>.teamified.com</code>
+              </Typography>
+              <Typography variant="body2">
+                2. This cookie is shared across all subdomains (hris.teamified.com, teamconnect.teamified.com, etc.)
+              </Typography>
+              <Typography variant="body2">
+                3. Client apps can check for an existing session before initiating the OAuth flow
+              </Typography>
+            </Stack>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Checking for Shared Session
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Before redirecting to the authorization endpoint, check if the user already has a session:
+            </Typography>
+            <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1 }}>
+              <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', fontSize: '0.8rem', m: 0 }}>
+{`// Check for existing shared session
+const response = await fetch('${apiUrl}/api/v1/sso/session', {
+  credentials: 'include', // Important: send cookies
+});
+
+if (response.ok) {
+  const session = await response.json();
+  // User is already authenticated
+  console.log('Shared session found:', session.user);
+} else {
+  // No session, redirect to authorization
+  window.location.href = authorizationUrl;
+}`}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Alert severity="info">
+            <Typography variant="body2">
+              <strong>SDK Support:</strong> If using the teamified-sso package, enable cookie SSO with{' '}
+              <code>enableCookieSSO: true</code> in your config, then call <code>checkSharedSession()</code>.
+            </Typography>
+          </Alert>
+
+          <Alert severity="success">
+            <Typography variant="body2">
+              <strong>Seamless Experience:</strong> Users only need to log in once. Other Teamified apps detect
+              the shared session automatically and can skip the OAuth flow entirely.
+            </Typography>
+          </Alert>
+        </Stack>
+      </Paper>
+
       {/* Security Best Practices */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>

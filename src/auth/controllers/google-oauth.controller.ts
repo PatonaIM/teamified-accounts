@@ -17,6 +17,7 @@ import { GoogleOAuthService } from '../services/google-oauth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../entities/user.entity';
+import { getAccessTokenCookieOptions, getRefreshTokenCookieOptions } from '../../common/utils/cookie.utils';
 
 @ApiTags('Google OAuth')
 @Controller('v1/auth/google')
@@ -103,21 +104,10 @@ export class GoogleOAuthController {
 
       const tempCode = await this.googleOAuthService.storeTemporaryAuthResult(result);
 
-      res.cookie('access_token', result.accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/', // Ensure cookie is sent on all routes
-        maxAge: 15 * 60 * 1000,
-      });
-
-      res.cookie('refresh_token', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/api/v1/auth',
-      });
+      // Set httpOnly cookies for cross-app SSO
+      // Cookie is set on shared domain (.teamified.com in production)
+      res.cookie('access_token', result.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
+      res.cookie('refresh_token', result.refreshToken, getRefreshTokenCookieOptions());
 
       const isProduction = process.env.NODE_ENV === 'production';
       let frontendUrl: string;
