@@ -141,6 +141,13 @@ export class OAuthClientsService {
       };
     }
 
+    if (updateDto.allow_client_credentials !== undefined) {
+      client.allow_client_credentials = updateDto.allow_client_credentials;
+    }
+    if (updateDto.allowed_scopes !== undefined) {
+      client.allowed_scopes = updateDto.allowed_scopes;
+    }
+
     return this.oauthClientsRepository.save(client);
   }
 
