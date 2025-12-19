@@ -689,12 +689,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   />
                 }
                 label={
-                  <Box>
-                    <Typography variant="body2">Enable Client Credentials Grant</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Allow this application to request access tokens for service-to-service API calls
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2">Enable Client Credentials Grant</Typography>
                 }
                 sx={{ alignItems: 'flex-start', mb: 2 }}
               />
