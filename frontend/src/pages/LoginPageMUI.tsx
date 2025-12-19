@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -26,11 +26,14 @@ import { preserveMarketingSourceFromUrl, isMarketingSource } from '../services/m
 const LoginPageMUI: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshUser, user, loading } = useAuth();
+  const { refreshUser, clearUser, user, loading } = useAuth();
   
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   const sourceParam = searchParams.get('source');
+  
+  // Ref to prevent multiple cookie verification attempts (prevents infinite loop)
+  const cookieVerificationAttempted = useRef(false);
 
   useEffect(() => {
     if (isMarketingSource(sourceParam)) {
@@ -58,6 +61,13 @@ const LoginPageMUI: React.FC = () => {
   console.log('[LoginPageMUI] Is SSO authorize URL?:', returnUrl.includes('/api/v1/sso/authorize'));
   console.log('[LoginPageMUI] Extracted intent:', intent);
   
+  // Reset verification flag when user is cleared
+  useEffect(() => {
+    if (!user && !loading) {
+      cookieVerificationAttempted.current = false;
+    }
+  }, [user, loading]);
+  
   useEffect(() => {
     const checkAndRedirect = async () => {
       if (loading) return;
@@ -69,6 +79,13 @@ const LoginPageMUI: React.FC = () => {
         console.log('[LoginPageMUI] User already authenticated, redirecting...');
         
         if (isSsoAuthorizeUrl) {
+          // Prevent infinite loop - only verify cookie once
+          if (cookieVerificationAttempted.current) {
+            console.log('[LoginPageMUI] Cookie verification already attempted, showing login form');
+            return;
+          }
+          cookieVerificationAttempted.current = true;
+          
           // For SSO authorize URLs, verify the COOKIE is still valid on the server
           // before redirecting, to prevent redirect loops when cookie is expired.
           // IMPORTANT: We use credentials: 'include' WITHOUT Authorization header
@@ -83,18 +100,18 @@ const LoginPageMUI: React.FC = () => {
               window.location.href = targetUrl;
             } else {
               console.log('[LoginPageMUI] Cookie expired on server, clearing stale auth state');
-              // Clear stale auth state to prevent loop
+              // Clear stale auth state - use clearUser instead of refreshUser to prevent loop
               localStorage.removeItem('access_token');
               localStorage.removeItem('refresh_token');
               localStorage.removeItem('user_cache');
-              await refreshUser();
+              clearUser();
             }
           } catch (error) {
             console.log('[LoginPageMUI] Cookie verification failed, clearing stale auth state');
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user_cache');
-            await refreshUser();
+            clearUser();
           }
         } else {
           navigate(targetUrl, { replace: true });
@@ -126,7 +143,7 @@ const LoginPageMUI: React.FC = () => {
     };
     
     checkAndRedirect();
-  }, [user, loading, navigate, returnUrl, refreshUser]);
+  }, [user, loading, navigate, returnUrl, refreshUser, clearUser]);
   
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [step, setStep] = useState<'email' | 'password'>('email');
