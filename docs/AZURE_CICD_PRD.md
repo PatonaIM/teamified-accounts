@@ -316,72 +316,31 @@ az containerapp update \
 
 ---
 
-## Rate Limiting & Caching Strategy
+## Azure Cache for Redis
 
-### Current Approach: In-Memory Throttling
+### Purpose
 
-For the initial Azure deployment, we're using **in-memory throttling** for simplicity. This eliminates the need for Azure Cache for Redis setup while still providing rate limiting protection.
-
-**Decision Rationale:**
-- Simpler deployment (fewer Azure resources)
-- Lower cost (no Redis instance needed)
-- Sufficient for current traffic levels
-- Can be upgraded to Redis later without code changes
-
-### Abstraction Layer for Future Redis
-
-The throttling implementation is abstracted to allow seamless switching to Redis later:
-
-```typescript
-// src/config/throttler.config.ts (abstracted)
-export const getThrottlerConfig = () => {
-  const redisUrl = process.env.REDIS_URL;
-  
-  if (redisUrl) {
-    // Use Redis storage when REDIS_URL is configured
-    return {
-      ttl: 60,
-      limit: 10,
-      storage: new ThrottlerStorageRedisService(redisUrl),
-    };
-  }
-  
-  // Default: In-memory storage (no external dependency)
-  return {
-    ttl: 60,
-    limit: 10,
-    // No storage = in-memory
-  };
-};
-```
-
-**To switch to Redis later:** Simply set the `REDIS_URL` environment variable. No code deployment needed.
+Redis is used for **rate limiting** via NestJS ThrottlerModule. Using Azure Cache for Redis ensures:
+- Shared rate limit counters across all container instances
+- Persistence across container restarts
+- Correct behavior when scaling to multiple replicas
 
 ### Current Usage in Codebase
 
-- `src/config/redis.config.ts` - Redis configuration (conditional)
+- `src/config/redis.config.ts` - Redis configuration
 - `src/app.module.ts` - ThrottlerModule integration
 - `src/auth/auth.module.ts` - Rate limiting on auth endpoints
 
-### Limitations of In-Memory Throttling
+### Why Redis Over In-Memory?
 
 | Aspect | In-Memory | Redis |
 |--------|-----------|-------|
 | **Multi-instance** | Each container has own counter | Shared counter across instances |
 | **Restart persistence** | Counters reset on restart | Counters persist |
 | **Scaling** | Less effective with many replicas | Works correctly with scaling |
-| **Cost** | Free | ~$16-50/month |
+| **Cost** | Free | ~$16/month (Basic C0) |
 
-**Recommendation:** In-memory is fine for initial deployment with 1-3 replicas. Consider Redis when:
-- Scaling beyond 3 replicas
-- Need strict rate limiting across all instances
-- High-traffic scenarios
-
----
-
-## Future: Azure Cache for Redis Setup
-
-> **Note:** This section is for future reference when upgrading from in-memory to Redis.
+**Decision:** Use Azure Cache for Redis from the start for production-ready rate limiting.
 
 ### Step 1: Create the Resource
 
@@ -423,20 +382,11 @@ az containerapp update \
   --set-env-vars "REDIS_URL=rediss://:YOUR_PASSWORD@teamified-redis.redis.cache.windows.net:6380"
 ```
 
-The abstraction layer will automatically detect `REDIS_URL` and switch to Redis storage. No code changes or redeployment needed.
+The application will automatically use the Redis storage for rate limiting when `REDIS_URL` is configured.
 
-### In-Memory Throttling Code Reference
+### Fallback: In-Memory Throttling
 
-Current ThrottlerModule config (in-memory):
-
-```typescript
-// In ThrottlerModule config
-ThrottlerModule.forRoot({
-  ttl: 60,
-  limit: 10,
-  // No storage specified = in-memory
-})
-```
+If `REDIS_URL` is not set, the app falls back to in-memory throttling. This is useful for local development but not recommended for production with multiple replicas.
 
 ---
 
@@ -456,7 +406,7 @@ Both environments use identical environment variable names with different values
 | `DATABASE_URL` | Supabase connection string | Same or different Supabase project |
 | `JWT_SECRET` | DEV value | Different PROD value |
 | `JWT_REFRESH_SECRET` | DEV value | Different PROD value |
-| `REDIS_URL` | Not set (in-memory throttling) | Optional: Azure Cache for Redis |
+| `REDIS_URL` | Replit Redis (if configured) | Azure Cache for Redis |
 | `SESSION_SECRET` | DEV value | Different PROD value |
 
 ### Secrets in Replit (DEV)
@@ -666,20 +616,10 @@ az containerapp revision restart --name teamified-accounts --resource-group YOUR
 
 ### Cost Estimates (Monthly)
 
-**Initial Deployment (In-Memory Throttling):**
-
 | Resource | Tier | Estimated Cost |
 |----------|------|----------------|
 | Container Apps | Consumption (1 vCPU, 2GB) | ~$20-40 |
-| Container Registry | Basic | ~$5 |
-| **Total** | | **~$25-45/month** |
-
-**With Azure Cache for Redis (Future):**
-
-| Resource | Tier | Estimated Cost |
-|----------|------|----------------|
-| Container Apps | Consumption (1 vCPU, 2GB) | ~$20-40 |
-| Azure Cache for Redis | Basic C0 (optional) | ~$16 |
+| Azure Cache for Redis | Basic C0 | ~$16 |
 | Container Registry | Basic | ~$5 |
 | **Total** | | **~$40-60/month** |
 
