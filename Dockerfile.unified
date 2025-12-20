@@ -8,12 +8,21 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
+# Build args for Vite (needed at build time)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
 # Copy package files first for better caching
 COPY frontend/package*.json ./
 RUN npm ci
 
 # Copy frontend source and build
 COPY frontend/ ./
+
+# Pass build args as env vars for Vite build
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 RUN npm run build
 
 # =============================================================================
