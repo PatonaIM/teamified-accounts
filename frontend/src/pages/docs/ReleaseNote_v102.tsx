@@ -21,7 +21,6 @@ import {
   Business,
   People,
 } from '@mui/icons-material';
-import myAppsScreenshot from '@assets/image_1764774888284.png';
 import { useNavigate } from 'react-router-dom';
 
 export default function ReleaseNote_v102() {
@@ -62,19 +61,6 @@ export default function ReleaseNote_v102() {
               A Google Workspace-style app launcher in the sidebar for quick access to connected applications.
             </Typography>
 
-            <Box sx={{ my: 2, textAlign: 'center' }}>
-              <Box
-                component="img"
-                src={myAppsScreenshot}
-                alt="My Apps Dropdown"
-                sx={{
-                  maxWidth: '450px',
-                  borderRadius: 2,
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                }}
-              />
-            </Box>
-            
             <List dense>
               <ListItem>
                 <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
