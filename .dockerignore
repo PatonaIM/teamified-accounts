@@ -1,0 +1,54 @@
+# Ignore these files/folders during Docker build
+
+# Dependencies (will be installed fresh in container)
+node_modules
+frontend/node_modules
+
+# Build outputs (will be built in container)
+dist
+frontend/dist
+
+# Git
+.git
+.gitignore
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# Test files
+coverage
+test-results
+playwright-report
+*.lcov
+
+# Replit specific
+attached_assets/
+.replit
+replit.nix
+replit.md
+
+# Documentation (not needed in production image)
+docs/
+*.md
+!README.md
+
+# Development files
+docker-compose*.yml
+Dockerfile.backend*
+*.sql
+
+# Temporary files
+tmp/
+temp/
+*.tsbuildinfo

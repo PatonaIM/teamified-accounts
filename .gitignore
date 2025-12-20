@@ -47,6 +47,9 @@ temp/
 # Sample/test files
 sample-cv-*.pdf
 
+# Replit attached assets (temporary uploads)
+attached_assets/
+
 # Local storage directory (allow .gitkeep and README.md)
 storage/*
 !storage/.gitkeep
