@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.11',
+    date: 'December 20, 2025',
+    title: 'Azure CI/CD Pipeline',
+    summary: 'Automated CI/CD pipeline for Azure Container Apps deployment. GitHub Actions workflow builds multi-stage Docker image, pushes to Azure Container Registry, and deploys to production on every push to main.',
+    path: '/docs/release-notes/v1.0.11',
+    isLatest: true,
+  },
+  {
     version: '1.0.10',
     date: 'December 19, 2025',
     title: 'Unified API Endpoints & S2S Security Improvements',
     summary: 'S2S authentication now uses unified API endpoints (same as user auth). Removed separate /api/v1/s2s/* paths. Enhanced security blocks S2S on write endpoints by default with proper scope validation.',
     path: '/docs/release-notes/v1.0.10',
-    isLatest: true,
   },
   {
     version: '1.0.9',
