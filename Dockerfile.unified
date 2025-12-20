@@ -1,0 +1,82 @@
+# Dockerfile.unified - Multi-stage build for Teamified Accounts SSO
+# Builds frontend (Vite) and backend (NestJS) into a single production image
+
+# =============================================================================
+# Stage 1: Build Frontend
+# =============================================================================
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy package files first for better caching
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy frontend source and build
+COPY frontend/ ./
+RUN npm run build
+
+# =============================================================================
+# Stage 2: Build Backend
+# =============================================================================
+FROM node:20-alpine AS backend-builder
+
+# Install build dependencies for native modules (argon2, bcrypt)
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY nest-cli.json ./
+
+# Install all dependencies (including dev for building)
+RUN npm ci
+
+# Copy backend source and build
+COPY src/ ./src/
+RUN npm run build
+
+# =============================================================================
+# Stage 3: Production Image
+# =============================================================================
+FROM node:20-alpine AS production
+
+# Install dumb-init for proper signal handling and build deps for native modules
+RUN apk add --no-cache dumb-init python3 make g++
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
+
+WORKDIR /app
+
+# Copy package files and install production dependencies only
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Remove build dependencies after npm install to reduce image size
+RUN apk del python3 make g++
+
+# Copy backend build output from builder stage
+COPY --from=backend-builder --chown=nestjs:nodejs /app/dist ./dist
+
+# IMPORTANT: Frontend must go to dist/public
+# The runtime reads from path.join(__dirname, 'public') where __dirname is the dist folder
+COPY --from=frontend-builder --chown=nestjs:nodejs /app/frontend/dist ./dist/public
+
+# Switch to non-root user
+USER nestjs
+
+# Expose port 8080 (Azure Container Apps expects this)
+EXPOSE 8080
+
+# Health check - hits the /api/health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8080/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+
+# Use dumb-init to handle signals properly (important for graceful shutdown)
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the NestJS application
+CMD ["node", "dist/main.js"]

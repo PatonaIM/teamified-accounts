@@ -549,10 +549,10 @@ Add these secrets:
 
 ### Step 4: Create Workflow File
 
-Create `.github/workflows/deploy-azure.yml`:
+Create `.github/workflows/teamified-accounts-build-and-deploy.yml`:
 
 ```yaml
-name: Deploy to Azure Container Apps
+name: Teamified Accounts - Build & Deploy - PROD
 
 on:
   push:
@@ -731,7 +731,7 @@ az containerapp update \
 - [ ] Configure custom domain (separate team handling)
 
 ### Phase 4: CI/CD Pipeline
-- [ ] Create GitHub Actions workflow (`.github/workflows/deploy-azure.yml`)
+- [ ] Create GitHub Actions workflow (`.github/workflows/teamified-accounts-build-and-deploy.yml`)
 - [ ] Configure Azure credentials in GitHub secrets
 - [ ] Test automated deployment
 - [ ] Set up branch protection rules (optional)
