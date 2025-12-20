@@ -1,0 +1,145 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: "[Prod] Build & Deploy - Teamified AI API"
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  # Azure Configuration
+  AZURE_APP_NAME: 'teamified-ai'
+  AZURE_SUBSCRIPTION: 'dfb37851-3ee5-4299-ade5-3c73a50506e0'
+  RESOURCE_GROUP: 'rg-tmf-prd-ausest'
+  # Taken from here: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/17e8db29-5b12-42ea-b7ec-8cc2c7cb2450/isMSAApp~/false
+  AZURE_CLIENT_ID: '17e8db29-5b12-42ea-b7ec-8cc2c7cb2450'
+  AZURE_CLIENT_SECRET: 'aaJ8Q~VlaZupz~PjNMflXhX~6472alIpEn8xgaq2'
+  AZURE_TENANT_ID: '96cdd530-9baa-46bc-ad82-acd57b506df2'
+  # Google Chat Configuration
+  GOOGLE_CHAT_WEBHOOK: 'https://chat.googleapis.com/v1/spaces/AAQASpuzbUQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=R6GT2qH-jMwmHGqlir70r23ZLCGucNBICeRdIe8N7uQ'
+  GOOGLE_CHAT_WEBHOOK_TEAMIFIED: 'https://chat.googleapis.com/v1/spaces/AAAA0nhWi1Y/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=vweukDpYvOi75LWRjb7KQuy036r0XtKXYtgIxacCusc'
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        
+      # - name: Run tests
+      #   run: |
+      #     pip install -r requirements-dev.txt
+      #     python -m pytest tests/ -v --tb=short
+      
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: teamified-ai-api-prod
+          path: |
+            teamified_ai_api/
+            configurations/
+            data_access/
+            data_analyzers/
+            data_embedders/
+            data_retrievers/
+            data_utils/
+            exceptions/
+            performance_optimization/
+            teamified_ai_api_app.py
+            startup.txt
+            app.py
+            web.config
+            requirements.txt
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+    
+    steps:
+      - name: Get tag name
+        id: get_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: teamified-ai-api-prod
+
+      - name: Prepare Main API deployment
+        run: |
+          cp teamified_ai_api_app.py app.py
+          echo "Copied teamified_ai_api_app.py to app.py for Main API deployment"
+      
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'teamified-ai'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_PROD }}
+
+      - name: Login to Azure for App Settings
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId": "${{ env.AZURE_CLIENT_ID }}", "clientSecret": "${{ env.AZURE_CLIENT_SECRET }}", "subscriptionId": "${{ env.AZURE_SUBSCRIPTION }}", "tenantId": "${{ env.AZURE_TENANT_ID }}"}'
+
+      - name: 'Set Azure App Service Environment Variables'
+        run: |
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --subscription ${{ env.AZURE_SUBSCRIPTION }} \
+            --settings \
+              DB_USERNAME="${{ secrets.PROD_DB_USERNAME }}" \
+              DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
+              DB_SERVER="${{ secrets.PROD_DB_SERVER }}" \
+              DB_PORT="${{ secrets.PROD_DB_PORT }}" \
+              DB_NAME="${{ secrets.PROD_DB_NAME }}" \
+              DB_DRIVER="${{ secrets.PROD_DB_DRIVER }}" \
+              OPENAI_API_KEY="${{ secrets.PROD_OPENAI_API_KEY }}" \
+              PINECONE_API_KEY="${{ secrets.PROD_PINECONE_API_KEY }}" \
+              FIREFLIES_API_URL="${{ secrets.PROD_FIREFLIES_API_URL }}" \
+              FIREFLIES_WEBHOOK_SECRET="${{ secrets.PROD_FIREFLIES_WEBHOOK_SECRET }}" \
+              FIREFLIES_API_KEY="${{ secrets.PROD_FIREFLIES_API_KEY }}" \
+              FIREFLIES_ACC_EMAIL="${{ secrets.PROD_FIREFLIES_ACC_EMAIL }}" \
+              TMF_ADMIN_EMAIL="${{ secrets.PROD_TMF_ADMIN_EMAIL }}" \
+              INTERVIEW_API_SERVICE_NAME="${{ secrets.PROD_INTERVIEW_API_SERVICE_NAME }}" \
+              INTERVIEW_API_URL="${{ secrets.PROD_INTERVIEW_API_URL }}" \
+              INTERVIEW_API_KEY="${{ secrets.PROD_INTERVIEW_API_KEY }}" \
+              VECTOR_RELEVANCE_THRESHOLD="0.55" \
+              ENVIRONMENT="production"
+
+      - name: Google Chat notification
+        uses: teknatha136/actions-google-chat-text-message@main
+        with:
+          google-chat-webhook: ${{ env.GOOGLE_CHAT_WEBHOOK }}
+          text-message: 'Teamified AI API has been deployed to PRODUCTION'
+
+      - name: Create GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+          generate_release_notes: true
+
+      - name: Google Chat notification (release)
+        uses: andrewbrereton/announce-release-to-google-chat@v2.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          webhook-url: ${{ env.GOOGLE_CHAT_WEBHOOK_TEAMIFIED }}
+

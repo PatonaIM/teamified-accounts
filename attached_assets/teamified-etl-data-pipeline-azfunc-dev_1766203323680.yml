@@ -1,0 +1,163 @@
+# Docs for Azure Container Apps: https://docs.microsoft.com/azure/container-apps/
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure Container Apps: https://docs.microsoft.com/azure/container-apps/github-actions
+
+name: "[Dev] Build & Deploy - Teamified ETL Data Pipeline (Azure Container Apps)"
+
+on:
+  push:
+    branches:
+      - development
+
+env:
+  PYTHON_VERSION: '3.12'
+  AZURE_SUBSCRIPTION: '3e9972e0-9143-449c-bd71-00383c54db80'
+  # Taken from here: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/17e8db29-5b12-42ea-b7ec-8cc2c7cb2450/isMSAApp~/false
+  AZURE_CLIENT_ID: '17e8db29-5b12-42ea-b7ec-8cc2c7cb2450'
+  AZURE_CLIENT_SECRET: 'aaJ8Q~VlaZupz~PjNMflXhX~6472alIpEn8xgaq2'
+  AZURE_TENANT_ID: '96cdd530-9baa-46bc-ad82-acd57b506df2'
+  # Container App Configuration
+  CONTAINER_APP_NAME: 'tmf-etl-data-pipeline-dev'
+  CONTAINER_REGISTRY: 'tmfregistrydev-gketcpdub4aphbej.azurecr.io'
+  RESOURCE_GROUP: 'rg-tmf-dev-ausest'
+  # Azure Storage Configuration
+  AZURE_STORAGE_CONNECTION_STRING: 'DefaultEndpointsProtocol=https;AccountName=tmffilestorage;AccountKey=Z80mYcvBMNJ7ALbIo4Ch1VYidFJ2b41i4IgqgA/7D48lj2xt9Z9ccMCAG/Y89ovyefuqgo96UTiL+AStuJjNIg==;BlobEndpoint=https://tmffilestorage.blob.core.windows.net/;QueueEndpoint=https://tmffilestorage.queue.core.windows.net/;TableEndpoint=https://tmffilestorage.table.core.windows.net/;FileEndpoint=https://tmffilestorage.file.core.windows.net/'
+  # Google Chat Configuration
+  GOOGLE_CHAT_WEBHOOK: 'https://chat.googleapis.com/v1/spaces/AAQASpuzbUQ/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=R6GT2qH-jMwmHGqlir70r23ZLCGucNBICeRdIe8N7uQ'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --no-cache-dir -r etl_data_pipeline/orchestration/requirements.txt
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.CONTAINER_REGISTRY }}
+          username: ${{ env.AZURE_CLIENT_ID }}
+          password: ${{ env.AZURE_CLIENT_SECRET }}
+
+      - name: Generate date tag for backup
+        id: date
+        run: echo "date_tag=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Backup current development image
+        run: |
+          # Pull the current development image if it exists
+          docker pull ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:development || echo "No existing development image to backup"
+          
+          # Tag it with date backup and push
+          if docker image inspect ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:development > /dev/null 2>&1; then
+            docker tag ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:development ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:development-${{ steps.date.outputs.date_tag }}
+            docker push ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:development-${{ steps.date.outputs.date_tag }}
+            echo "Backed up current development image to: development-${{ steps.date.outputs.date_tag }}"
+          else
+            echo "No existing development image found to backup"
+          fi
+
+      - name: Build and push new development Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./etl_data_pipeline/Dockerfile
+          push: true
+          tags: |
+            ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:development
+            ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:dev-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+          
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId": "${{ env.AZURE_CLIENT_ID }}", "clientSecret": "${{ env.AZURE_CLIENT_SECRET }}", "subscriptionId": "${{ env.AZURE_SUBSCRIPTION }}", "tenantId": "${{ env.AZURE_TENANT_ID }}"}'
+      
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.CONTAINER_REGISTRY }}
+      
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.CONTAINER_REGISTRY }}/teamified-etl-pipeline:dev-${{ github.sha }} \
+            --subscription ${{ env.AZURE_SUBSCRIPTION }} \
+            --set-env-vars \
+              AzureWebJobsStorage="${{ env.AZURE_STORAGE_CONNECTION_STRING }}" \
+              AZURE_CONNECTION_STRING="${{ env.AZURE_STORAGE_CONNECTION_STRING }}" \
+              FUNCTIONS_WORKER_RUNTIME="python" \
+              FUNCTIONS_EXTENSION_VERSION="~4" \
+              PYTHON_ENABLE_WORKER_EXTENSIONS="1" \
+              AzureWebJobsFeatureFlags="EnableWorkerIndexing" \
+              FUNCTIONS_CORE_TOOLS_TELEMETRY_OPTOUT="1" \
+              AzureFunctionsJobHost__Logging__Console__IsEnabled="true" \
+              AzureFunctionsJobHost__logging__logLevel__Host="Information" \
+              AzureFunctionsJobHost__logging__logLevel__Function="Information" \
+              AzureFunctionsJobHost__logging__logLevel__default="Information" \
+              AzureFunctionsJobHost__logging__logLevel__Host.Triggers.Queues="Information" \
+              AZURE_FUNCTIONS_ENVIRONMENT="Development" \
+              AZURE_LOG_LEVEL="WARNING" \
+              AZURE_CORE_DIAGNOSTICS_LOGGING_ENABLED="false" \
+              DB_USERNAME="${{ secrets.DEV_DB_USERNAME }}" \
+              DB_PASSWORD="${{ secrets.DEV_DB_PASSWORD }}" \
+              DB_SERVER="${{ secrets.DEV_DB_SERVER }}" \
+              DB_PORT="${{ secrets.DEV_DB_PORT }}" \
+              DB_NAME="${{ secrets.DEV_DB_NAME }}" \
+              DB_DRIVER="${{ secrets.DEV_DB_DRIVER }}" \
+              OPENAI_API_KEY="${{ secrets.DEV_OPENAI_API_KEY }}" \
+              PINECONE_API_KEY="${{ secrets.DEV_PINECONE_API_KEY }}" \
+              FIREFLIES_API_URL="${{ secrets.DEV_FIREFLIES_API_URL }}" \
+              FIREFLIES_WEBHOOK_SECRET="${{ secrets.DEV_FIREFLIES_WEBHOOK_SECRET }}" \
+              FIREFLIES_API_KEY="${{ secrets.DEV_FIREFLIES_API_KEY }}" \
+              FIREFLIES_ACC_EMAIL="${{ secrets.DEV_FIREFLIES_ACC_EMAIL }}" \
+              INTERVIEW_API_SERVICE_NAME="${{ secrets.DEV_INTERVIEW_API_SERVICE_NAME }}" \
+              INTERVIEW_API_URL="${{ secrets.DEV_INTERVIEW_API_URL }}" \
+              INTERVIEW_API_KEY="${{ secrets.DEV_INTERVIEW_API_KEY }}" \
+              TMF_ADMIN_EMAIL="${{ secrets.DEV_TMF_ADMIN_EMAIL }}" \
+              PYTHONPATH="/app" \
+              PYTHONUNBUFFERED="1" \
+              WEBSITE_HOSTNAME="0.0.0.0" \
+              WEBSITE_SITE_NAME="${{ env.CONTAINER_APP_NAME }}" \
+              ASPNETCORE_URLS="http://+:8080"
+
+      # - name: Google Chat notification
+      #   uses: teknatha136/actions-google-chat-text-message@main
+      #   with:
+      #     google-chat-webhook: ${{ env.GOOGLE_CHAT_WEBHOOK }}
+      #     text-message: 'Teamified ETL Data Pipeline has been deployed to DEV Container Apps'
