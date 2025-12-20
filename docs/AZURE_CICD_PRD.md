@@ -464,18 +464,82 @@ const databaseUrl = this.configService.get('DATABASE_URL');
 
 ## CI/CD Pipeline
 
-### Recommended: GitHub Actions
+### GitHub Actions (Automated Deployment)
+
+Automatically deploy to Azure Container Apps when pushing to `main` branch.
 
 #### Workflow Overview
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Push to    │ ──▶ │  Build &     │ ──▶ │   Deploy     │
-│   main/prod  │     │  Test        │     │   to Azure   │
-└──────────────┘     └──────────────┘     └──────────────┘
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Push to    │ ──▶ │  Build       │ ──▶ │  Push to     │ ──▶ │  Deploy to   │
+│   main       │     │  Docker      │     │  ACR         │     │  Container   │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
-#### Sample Workflow (.github/workflows/deploy.yml)
+---
+
+### Step 1: Create Azure Service Principal
+
+The Service Principal allows GitHub Actions to authenticate with Azure.
+
+Run this command in Azure CLI (replace placeholders):
+
+```bash
+az ad sp create-for-rbac \
+  --name "github-actions-teamified" \
+  --role contributor \
+  --scopes /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP \
+  --json-auth \
+  --output json
+```
+
+**Output example:**
+```json
+{
+  "clientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "clientSecret": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "subscriptionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "tenantId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  ...
+}
+```
+
+**Copy the entire JSON output** - you'll need it for the `AZURE_CREDENTIALS` secret.
+
+---
+
+### Step 2: Get ACR Credentials
+
+1. Go to Azure Portal → Your Container Registry → **Settings** → **Access keys**
+2. Enable **Admin user** if not already enabled
+3. Copy:
+   - **Login server** (e.g., `yourregistry.azurecr.io`)
+   - **Username**
+   - **Password**
+
+---
+
+### Step 3: Configure GitHub Secrets
+
+Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+Add these secrets:
+
+| Secret Name | Value |
+|-------------|-------|
+| `AZURE_CREDENTIALS` | Entire JSON output from Step 1 |
+| `ACR_LOGIN_SERVER` | e.g., `teamifiedacr.azurecr.io` |
+| `ACR_USERNAME` | From ACR Access keys |
+| `ACR_PASSWORD` | From ACR Access keys |
+| `AZURE_RESOURCE_GROUP` | e.g., `rg-tmf-prd-ausest` |
+| `CONTAINER_APP_NAME` | e.g., `teamified-accounts` |
+
+---
+
+### Step 4: Create Workflow File
+
+Create `.github/workflows/deploy-azure.yml`:
 
 ```yaml
 name: Deploy to Azure Container Apps
@@ -483,80 +547,156 @@ name: Deploy to Azure Container Apps
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual trigger
 
 env:
-  AZURE_CONTAINER_REGISTRY: YOUR_ACR.azurecr.io
   IMAGE_NAME: teamified-accounts
-  RESOURCE_GROUP: YOUR_RESOURCE_GROUP
-  CONTAINER_APP_NAME: teamified-accounts
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
       
+      # 2. Login to Azure
       - name: Login to Azure
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
+      # 3. Login to Azure Container Registry
       - name: Login to ACR
-        run: az acr login --name YOUR_ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
       
+      # 4. Build and push Docker image
       - name: Build and push image
         run: |
-          docker build -f Dockerfile.unified -t ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-          docker push ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker build -f Dockerfile.unified \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest \
+            .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
       
+      # 5. Deploy to Azure Container Apps
       - name: Deploy to Container App
-        run: |
-          az containerapp update \
-            --name ${{ env.CONTAINER_APP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ secrets.CONTAINER_APP_NAME }}
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 ```
+
+---
+
+### Workflow Triggers
+
+| Trigger | Description |
+|---------|-------------|
+| `push: branches: [main]` | Auto-deploy on every push to main |
+| `workflow_dispatch` | Manual trigger from GitHub Actions tab |
+
+---
+
+### Deployment Flow
+
+1. Developer pushes to `main` branch
+2. GitHub Actions triggers
+3. Builds unified Docker image (backend + frontend)
+4. Pushes image to Azure Container Registry with commit SHA tag
+5. Updates Container App to use new image
+6. Container App pulls new image and restarts
+
+---
+
+### Monitoring Deployments
+
+- **GitHub:** Actions tab → View workflow runs
+- **Azure Portal:** Container App → Revisions and replicas
+- **Logs:** Container App → Log stream
 
 ---
 
 ## Domain & SSL Configuration
 
-### Default Domain
+### Default Domain (Auto-Generated)
 
-Azure Container Apps provides:
+Azure Container Apps generates URLs with this pattern:
 ```
-https://YOUR_APP_NAME.azurecontainerapps.io
+https://YOUR_APP_NAME.RANDOM_STRING.REGION.azurecontainerapps.io
 ```
+
+Example:
+```
+https://teamified-accounts.delightfulocean-ab8e789f.australiaeast.azurecontainerapps.io
+```
+
+**The random string** (e.g., `delightfulocean-ab8e789f`) is generated by the Container Apps Environment and **cannot be removed or customized** from the default URL.
 
 > Note: `*.azurewebsites.net` is for Azure App Service only, not Container Apps
 
-### Custom Domain Setup
+### Solution: Add a Custom Domain
+
+To get a clean URL like `accounts.teamified.com`, you need to add a custom domain.
 
 #### Step 1: Add Custom Domain
 
+**Via Azure Portal:**
+1. Go to Container App → **Settings** → **Custom domains**
+2. Click **Add custom domain**
+3. Enter your domain (e.g., `accounts.teamified.com`)
+
+**Via CLI:**
 ```bash
 az containerapp hostname add \
   --name teamified-accounts \
   --resource-group YOUR_RESOURCE_GROUP \
-  --hostname your-domain.com
+  --hostname accounts.teamified.com
 ```
 
-#### Step 2: Configure DNS
+#### Step 2: Configure DNS Records
 
-Add CNAME or A record pointing to the Container App:
-- **CNAME:** `your-domain.com` → `YOUR_APP_NAME.azurecontainerapps.io`
+Add these records at your domain provider (e.g., Cloudflare, GoDaddy):
 
-#### Step 3: Enable Managed Certificate (Free SSL)
+| Type | Name | Value |
+|------|------|-------|
+| **CNAME** | `accounts` | `teamified-accounts.delightfulocean-ab8e789f.australiaeast.azurecontainerapps.io` |
+| **TXT** | `asuid.accounts` | (Validation code from Azure Portal) |
 
+#### Step 3: Bind Managed Certificate (Free SSL)
+
+Azure provides free SSL certificates:
+
+**Via Portal:**
+1. After DNS validation, click **Bind**
+2. Select **Managed certificate**
+3. Azure will provision the certificate automatically
+
+**Via CLI:**
 ```bash
 az containerapp hostname bind \
   --name teamified-accounts \
   --resource-group YOUR_RESOURCE_GROUP \
-  --hostname your-domain.com \
-  --environment teamified-env \
+  --hostname accounts.teamified.com \
+  --environment YOUR_ENVIRONMENT_NAME \
   --validation-method CNAME
+```
+
+#### Step 4: Update BASE_URL
+
+After custom domain is active, update the `BASE_URL` environment variable:
+```bash
+az containerapp update \
+  --name teamified-accounts \
+  --resource-group YOUR_RESOURCE_GROUP \
+  --set-env-vars "BASE_URL=https://accounts.teamified.com"
 ```
 
 ---
