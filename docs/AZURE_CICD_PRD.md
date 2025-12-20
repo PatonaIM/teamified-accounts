@@ -117,6 +117,40 @@ If migrating to Azure SQL Server in the future:
 
 We're using a **single container** approach where the NestJS backend serves both the API and frontend static files.
 
+#### No Backend Code Changes Required
+
+The NestJS backend **already supports** serving the frontend in production mode. This is the same pattern used by Replit's Published App. The existing code in `src/main.ts` handles:
+
+1. **Static file serving** (lines 158-180):
+   ```typescript
+   if (isProduction) {
+     frontendPath = path.join(__dirname, 'public');
+     expressApp.use(express.static(frontendPath, { ... }));
+   }
+   ```
+
+2. **SPA fallback routing** (lines 339-355):
+   ```typescript
+   // All non-API routes serve index.html for client-side routing
+   expressApp.get(/^(?!\/api).*$/, (req, res) => {
+     res.sendFile(indexPath);
+   });
+   ```
+
+3. **Frontend API configuration** (`frontend/src/services/authService.ts`):
+   ```typescript
+   // Uses relative path, works on any domain
+   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+   ```
+
+**What triggers production mode:**
+- Set `NODE_ENV=production`
+- Frontend files exist in `dist/public/` (relative to the compiled backend)
+
+**Critical Path Detail:** The runtime code uses `path.join(__dirname, 'public')` where `__dirname` is the `dist/` folder containing `main.js`. Therefore, frontend files **must** be placed in `dist/public/`, not `/app/public/`.
+
+This means the only build requirement is copying the frontend build output to `dist/public/`.
+
 #### Why Single Container?
 
 | Factor | Decision |
@@ -125,6 +159,25 @@ We're using a **single container** approach where the NestJS backend serves both
 | API Path | Client apps integrate via same base URL |
 | Scaling | Sufficient for current traffic |
 | Cost | Lower than multi-container |
+| **No code changes** | Backend already supports this pattern |
+
+#### Replit vs Azure: Same Pattern
+
+Both Replit Published Apps and Azure Container Apps achieve the same result using the identical backend code:
+
+| Aspect | Replit (DEV) | Azure (PROD) |
+|--------|--------------|--------------|
+| **Development Mode** | 2 workflows: Backend (3000), Frontend (5000) | N/A - uses container |
+| **Production Mode** | Single process on port 5000 | Single container on port 8080 |
+| **Static Files Location** | `dist/public/` | `dist/public/` |
+| **API Routing** | `/api/*` → NestJS controllers | `/api/*` → NestJS controllers |
+| **SPA Fallback** | `/*` → `index.html` | `/*` → `index.html` |
+| **Trigger** | `NODE_ENV=production` | `NODE_ENV=production` |
+| **Build Process** | Replit handles automatically | Dockerfile multi-stage build |
+
+**Key Insight:** The Replit Published App and Azure deployment use the exact same backend code path. The only difference is how the build artifacts are assembled:
+- **Replit**: Handles the frontend build and places files in `dist/public/` automatically
+- **Azure**: The Dockerfile explicitly builds frontend and copies to `dist/public/`
 
 ### Container Architecture
 
@@ -184,8 +237,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
+# Copy backend build output
 COPY --from=backend-builder --chown=nestjs:nodejs /app/dist ./dist
-COPY --from=frontend-builder --chown=nestjs:nodejs /app/frontend/dist ./public
+# IMPORTANT: Frontend must go to dist/public (runtime reads from path.join(__dirname, 'public'))
+COPY --from=frontend-builder --chown=nestjs:nodejs /app/frontend/dist ./dist/public
 
 USER nestjs
 EXPOSE 8080
