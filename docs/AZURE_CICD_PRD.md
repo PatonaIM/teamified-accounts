@@ -268,14 +268,14 @@ You can create the Container App first with a quickstart image:
 # Create Container Apps Environment (if needed)
 az containerapp env create \
   --name teamified-env \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --location australiaeast
 
 # Create Container App with quickstart image
 # Note: Quickstart image uses port 80, we'll update to 8080 when deploying our image
 az containerapp create \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --environment teamified-env \
   --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
   --target-port 80 \
@@ -290,27 +290,27 @@ az containerapp create \
 
 ```bash
 # Build and push your image
-docker build -f Dockerfile.unified -t YOUR_ACR.azurecr.io/teamified-accounts:latest .
-docker push YOUR_ACR.azurecr.io/teamified-accounts:latest
+docker build -f Dockerfile.unified -t tmfregistryprod.azurecr.io/teamified-accounts:latest .
+docker push tmfregistryprod.azurecr.io/teamified-accounts:latest
 
 # Update Container App with new image AND correct port (8080)
 az containerapp ingress update \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --target-port 8080
 
 az containerapp update \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
-  --image YOUR_ACR.azurecr.io/teamified-accounts:latest
+  --resource-group rg-tmf-prd-ausest \
+  --image tmfregistryprod.azurecr.io/teamified-accounts:latest
 ```
 
 Alternatively, update both in a single command:
 ```bash
 az containerapp update \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
-  --image YOUR_ACR.azurecr.io/teamified-accounts:latest \
+  --resource-group rg-tmf-prd-ausest \
+  --image tmfregistryprod.azurecr.io/teamified-accounts:latest \
   --set-env-vars "PORT=8080"
 ```
 
@@ -346,11 +346,11 @@ Redis is used for **rate limiting** via NestJS ThrottlerModule. Using Azure Cach
 
 1. Azure Portal → Create a resource → "Azure Cache for Redis"
 2. Configuration:
-   - **Name:** `teamified-redis`
-   - **Resource Group:** Your existing resource group
-   - **Location:** Same region as Container App
-   - **Cache type:** Basic C0 (~$16/month) or Standard C0 (~$50/month for HA)
-   - **Connectivity:** Public endpoint (simpler setup)
+   - **Name:** `teamified-accounts-redis`
+   - **Resource Group:** `rg-tmf-prd-ausest`
+   - **Location:** Australia East (same region as Container App)
+   - **Cache type:** Standard C1 (with HA) ✅ Already created
+   - **Connectivity:** Public endpoint
 
 ### Step 2: Get Connection Details
 
@@ -360,27 +360,31 @@ After creation:
 
 ### Step 3: Format Connection String
 
-Azure provides:
+Azure provides (from Access keys):
 ```
-teamified-redis.redis.cache.windows.net:6380,password=xxxxx,ssl=True,abortConnect=False
+teamified-accounts-redis.redis.cache.windows.net:6380,password=xxxxx,ssl=True,abortConnect=False
 ```
 
-Convert to standard Redis URL:
+Convert to standard Redis URL format:
 ```
-rediss://:YOUR_PASSWORD@teamified-redis.redis.cache.windows.net:6380
+rediss://:YOUR_PASSWORD@teamified-accounts-redis.redis.cache.windows.net:6380
 ```
+
+> **Note:** Get YOUR_PASSWORD from Azure Portal → Redis → Settings → Access keys
 
 > Note: `rediss://` (with double 's') indicates SSL/TLS connection
 
 ### Step 4: Configure Environment Variable
 
-Add to Azure Container App (plug-and-play activation):
+Add to Azure Container App:
 ```bash
 az containerapp update \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
-  --set-env-vars "REDIS_URL=rediss://:YOUR_PASSWORD@teamified-redis.redis.cache.windows.net:6380"
+  --resource-group rg-tmf-prd-ausest \
+  --set-env-vars "REDIS_URL=rediss://:YOUR_PASSWORD@teamified-accounts-redis.redis.cache.windows.net:6380"
 ```
+
+> **Note:** Replace YOUR_PASSWORD with the actual password from Azure Portal → Redis → Access keys
 
 The application will automatically use the Redis storage for rate limiting when `REDIS_URL` is configured.
 
@@ -402,12 +406,12 @@ Both environments use identical environment variable names with different values
 |----------|--------------|--------------|
 | `NODE_ENV` | `development` | `production` |
 | `PORT` | `5000` | `8080` |
-| `BASE_URL` | `https://teamified-accounts.replit.app` | `https://your-domain.com` |
-| `DATABASE_URL` | Supabase connection string | Same or different Supabase project |
-| `JWT_SECRET` | DEV value | Different PROD value |
-| `JWT_REFRESH_SECRET` | DEV value | Different PROD value |
-| `REDIS_URL` | Replit Redis (if configured) | Azure Cache for Redis |
-| `SESSION_SECRET` | DEV value | Different PROD value |
+| `BASE_URL` | `https://teamified-accounts.replit.app` | `https://teamified-accounts.delightfulocean-ab8e789f.australiaeast.azurecontainerapps.io` (or custom domain) |
+| `DATABASE_URL` | Supabase connection string | Same Supabase project |
+| `JWT_SECRET` | DEV value | **Generate new value for PROD** |
+| `JWT_REFRESH_SECRET` | DEV value | **Generate new value for PROD** |
+| `REDIS_URL` | Replit Redis (if configured) | Azure Cache for Redis (`teamified-accounts-redis`) |
+| `SESSION_SECRET` | DEV value | **Generate new value for PROD** |
 
 ### Secrets in Replit (DEV)
 
@@ -435,14 +439,16 @@ Two options:
 ```bash
 az containerapp secret set \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --secrets "jwt-secret=YOUR_VALUE" "db-url=YOUR_VALUE"
 
 az containerapp update \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --set-env-vars "JWT_SECRET=secretref:jwt-secret" "DATABASE_URL=secretref:db-url"
 ```
+
+> **Note:** Replace YOUR_VALUE with actual secret values. Generate new JWT secrets for production.
 
 #### Option B: Azure Key Vault (Enterprise)
 
@@ -483,16 +489,18 @@ Automatically deploy to Azure Container Apps when pushing to `main` branch.
 
 The Service Principal allows GitHub Actions to authenticate with Azure.
 
-Run this command in Azure CLI (replace placeholders):
+Run this command in Azure CLI:
 
 ```bash
 az ad sp create-for-rbac \
   --name "github-actions-teamified" \
   --role contributor \
-  --scopes /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_RESOURCE_GROUP \
+  --scopes /subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/rg-tmf-prd-ausest \
   --json-auth \
   --output json
 ```
+
+> **Note:** Get YOUR_SUBSCRIPTION_ID from Azure Portal → Subscriptions
 
 **Output example:**
 ```json
@@ -511,12 +519,12 @@ az ad sp create-for-rbac \
 
 ### Step 2: Get ACR Credentials
 
-1. Go to Azure Portal → Your Container Registry → **Settings** → **Access keys**
+1. Go to Azure Portal → `tmfregistryprod` → **Settings** → **Access keys**
 2. Enable **Admin user** if not already enabled
 3. Copy:
-   - **Login server** (e.g., `yourregistry.azurecr.io`)
-   - **Username**
-   - **Password**
+   - **Login server:** `tmfregistryprod.azurecr.io`
+   - **Username:** (from Access keys page)
+   - **Password:** (from Access keys page)
 
 ---
 
@@ -529,11 +537,13 @@ Add these secrets:
 | Secret Name | Value |
 |-------------|-------|
 | `AZURE_CREDENTIALS` | Entire JSON output from Step 1 |
-| `ACR_LOGIN_SERVER` | e.g., `teamifiedacr.azurecr.io` |
+| `ACR_LOGIN_SERVER` | `tmfregistryprod.azurecr.io` |
 | `ACR_USERNAME` | From ACR Access keys |
 | `ACR_PASSWORD` | From ACR Access keys |
-| `AZURE_RESOURCE_GROUP` | e.g., `rg-tmf-prd-ausest` |
-| `CONTAINER_APP_NAME` | e.g., `teamified-accounts` |
+| `AZURE_RESOURCE_GROUP` | `rg-tmf-prd-ausest` |
+| `CONTAINER_APP_NAME` | `teamified-accounts` |
+
+**GitHub Repository:** [PatonaIM/teamified-accounts](https://github.com/PatonaIM/teamified-accounts)
 
 ---
 
@@ -657,7 +667,7 @@ To get a clean URL like `accounts.teamified.com`, you need to add a custom domai
 ```bash
 az containerapp hostname add \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --hostname accounts.teamified.com
 ```
 
@@ -683,9 +693,9 @@ Azure provides free SSL certificates:
 ```bash
 az containerapp hostname bind \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --hostname accounts.teamified.com \
-  --environment YOUR_ENVIRONMENT_NAME \
+  --environment teamified-env \
   --validation-method CNAME
 ```
 
@@ -695,7 +705,7 @@ After custom domain is active, update the `BASE_URL` environment variable:
 ```bash
 az containerapp update \
   --name teamified-accounts \
-  --resource-group YOUR_RESOURCE_GROUP \
+  --resource-group rg-tmf-prd-ausest \
   --set-env-vars "BASE_URL=https://accounts.teamified.com"
 ```
 
@@ -705,26 +715,26 @@ az containerapp update \
 
 ### Phase 1: Prepare Unified Dockerfile
 - [ ] Create `Dockerfile.unified` combining frontend and backend
-- [ ] Configure NestJS to serve static files from `/public`
+- [x] Configure NestJS to serve static files from `/public` (already done in codebase)
 - [ ] Test locally with `docker build` and `docker run`
 
 ### Phase 2: Azure Resources Setup
-- [ ] Create Container Apps Environment
-- [ ] Create Container App with quickstart image
-- [ ] Set up Azure Cache for Redis
-- [ ] Configure secrets/environment variables
+- [x] Create Container Apps Environment ✅
+- [x] Create Container App (`teamified-accounts`) ✅
+- [x] Set up Azure Cache for Redis (`teamified-accounts-redis`) ✅
+- [x] Configure secrets/environment variables ✅
 
 ### Phase 3: Initial Deployment
-- [ ] Push unified image to ACR
+- [ ] Push unified image to ACR (`tmfregistryprod.azurecr.io`)
 - [ ] Update Container App with your image
 - [ ] Verify application functionality
-- [ ] Configure custom domain (optional)
+- [ ] Configure custom domain (separate team handling)
 
 ### Phase 4: CI/CD Pipeline
-- [ ] Create GitHub Actions workflow
+- [ ] Create GitHub Actions workflow (`.github/workflows/deploy-azure.yml`)
 - [ ] Configure Azure credentials in GitHub secrets
 - [ ] Test automated deployment
-- [ ] Set up branch protection rules
+- [ ] Set up branch protection rules (optional)
 
 ### Phase 5: Monitoring & Operations
 - [ ] Configure Azure Monitor alerts
@@ -739,19 +749,19 @@ az containerapp update \
 
 ```bash
 # List Container Apps
-az containerapp list --resource-group YOUR_RESOURCE_GROUP
+az containerapp list --resource-group rg-tmf-prd-ausest
 
 # View logs
-az containerapp logs show --name teamified-accounts --resource-group YOUR_RESOURCE_GROUP
+az containerapp logs show --name teamified-accounts --resource-group rg-tmf-prd-ausest
 
 # Scale replicas
-az containerapp update --name teamified-accounts --resource-group YOUR_RESOURCE_GROUP --min-replicas 2 --max-replicas 5
+az containerapp update --name teamified-accounts --resource-group rg-tmf-prd-ausest --min-replicas 2 --max-replicas 5
 
 # View secrets
-az containerapp secret list --name teamified-accounts --resource-group YOUR_RESOURCE_GROUP
+az containerapp secret list --name teamified-accounts --resource-group rg-tmf-prd-ausest
 
-# Restart Container App
-az containerapp revision restart --name teamified-accounts --resource-group YOUR_RESOURCE_GROUP --revision REVISION_NAME
+# Restart Container App (replace REVISION_NAME with actual revision)
+az containerapp revision restart --name teamified-accounts --resource-group rg-tmf-prd-ausest --revision REVISION_NAME
 ```
 
 ### Cost Estimates (Monthly)
@@ -759,9 +769,9 @@ az containerapp revision restart --name teamified-accounts --resource-group YOUR
 | Resource | Tier | Estimated Cost |
 |----------|------|----------------|
 | Container Apps | Consumption (1 vCPU, 2GB) | ~$20-40 |
-| Azure Cache for Redis | Basic C0 | ~$16 |
+| Azure Cache for Redis | Standard C1 | ~$50 |
 | Container Registry | Basic | ~$5 |
-| **Total** | | **~$40-60/month** |
+| **Total** | | **~$75-95/month** |
 
 ---
 
