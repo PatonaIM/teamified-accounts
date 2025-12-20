@@ -44,7 +44,8 @@ RUN npm run build
 FROM node:20-alpine AS production
 
 # Install dumb-init for proper signal handling and build deps for native modules
-RUN apk add --no-cache dumb-init python3 make g++
+# libstdc++ must remain installed as argon2/bcrypt native modules need it at runtime
+RUN apk add --no-cache dumb-init python3 make g++ libstdc++
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
@@ -55,8 +56,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Remove build dependencies after npm install to reduce image size
-RUN apk del python3 make g++
+# Remove build tools after npm install to reduce image size, but keep libstdc++ for native modules
+RUN apk del python3 make g++ && apk add --no-cache libstdc++
 
 # Copy backend build output from builder stage
 COPY --from=backend-builder --chown=nestjs:nodejs /app/dist ./dist
