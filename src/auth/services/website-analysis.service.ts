@@ -13,16 +13,32 @@ interface WebsiteAnalysisResult {
 @Injectable()
 export class WebsiteAnalysisService {
   private readonly logger = new Logger(WebsiteAnalysisService.name);
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
 
   constructor() {
-    this.openai = new OpenAI({
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-    });
+    // Support both Replit AI Integrations and standard OpenAI API key
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
+    if (apiKey) {
+      this.openai = new OpenAI({
+        ...(baseURL && { baseURL }),
+        apiKey,
+      });
+      this.logger.log('WebsiteAnalysisService initialized with OpenAI');
+    } else {
+      this.logger.warn('WebsiteAnalysisService: No OpenAI API key found. Website analysis will be disabled.');
+    }
   }
 
   async analyzeWebsite(websiteUrl: string): Promise<WebsiteAnalysisResult> {
+    if (!this.openai) {
+      return {
+        success: false,
+        error: 'Website analysis is not available (OpenAI not configured)',
+      };
+    }
+
     try {
       let url = websiteUrl.trim();
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
