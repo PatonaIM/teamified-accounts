@@ -8,6 +8,8 @@ import * as crypto from 'crypto';
 export interface JwtPayload {
   sub: string;
   email: string;
+  firstName: string;
+  lastName: string;
   roles: string[];
   clientId?: string;
   clientName?: string;
@@ -47,6 +49,8 @@ export class JwtTokenService {
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
       sub: user.id,
       email: user.email,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
       roles: userRoles, // Use actual roles from database - empty array for new users pending role selection
       ...(clientName && { clientName }), // Include clientName for multi-organization apps
       ...(user.mustChangePassword && { mustChangePassword: true }), // Include forced password change flag
