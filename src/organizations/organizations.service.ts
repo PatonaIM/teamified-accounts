@@ -1734,4 +1734,298 @@ Welcome to the ${organization.name} team!
 
     return this.mapToResponseDto(organization);
   }
+
+  /**
+   * S2S: Get organization members (no user context required)
+   * For service-to-service API access with read:organizations scope
+   */
+  async getMembersS2S(organizationId: string): Promise<OrganizationMemberResponseDto[]> {
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId, deletedAt: null },
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const members = await this.memberRepository
+      .createQueryBuilder('member')
+      .leftJoinAndSelect('member.user', 'user')
+      .leftJoinAndSelect('user.userRoles', 'userRole')
+      .where('member.organizationId = :organizationId', { organizationId })
+      .andWhere('user.deletedAt IS NULL')
+      .andWhere('user.status != :archived', { archived: 'archived' })
+      .getMany();
+
+    return members.map(member => this.mapMemberToResponseDto(member));
+  }
+
+  /**
+   * S2S: Add member to organization (no user context required)
+   * For service-to-service API access with write:organizations scope
+   * 
+   * Security Note: This method grants write access to any organization when
+   * the service client has write:organizations scope. For enhanced security,
+   * consider implementing organization-level bindings in service tokens to
+   * restrict access to specific organizations.
+   */
+  async addMemberS2S(
+    organizationId: string,
+    addMemberDto: AddMemberDto,
+    ip: string,
+    userAgent: string,
+  ): Promise<OrganizationMemberResponseDto> {
+    // Validate organization exists and is not deleted
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId, deletedAt: null },
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with ID ${organizationId} not found`);
+    }
+
+    this.logger.log(`S2S: Adding member to organization ${organizationId} (${organization.name})`);
+
+
+    const user = await this.userRepository.findOne({
+      where: { id: addMemberDto.userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${addMemberDto.userId} not found`);
+    }
+
+    const existingMember = await this.memberRepository.findOne({
+      where: {
+        organizationId,
+        userId: addMemberDto.userId,
+      },
+    });
+
+    if (existingMember) {
+      throw new ConflictException('User is already a member of this organization');
+    }
+
+    // Validate role type - only allow client roles for S2S
+    const allowedRoles = [
+      'client_admin',
+      'client_hr',
+      'client_finance',
+      'client_recruiter',
+      'client_employee',
+    ];
+
+    if (!allowedRoles.includes(addMemberDto.roleType)) {
+      throw new BadRequestException(
+        `Invalid role type. Allowed roles: ${allowedRoles.join(', ')}`
+      );
+    }
+
+    const member = this.memberRepository.create({
+      organizationId,
+      userId: addMemberDto.userId,
+      status: 'active',
+      joinedAt: new Date(),
+    });
+
+    await this.memberRepository.save(member);
+
+    const userRole = this.userRoleRepository.create({
+      userId: addMemberDto.userId,
+      roleType: addMemberDto.roleType,
+      scope: 'organization',
+      scopeEntityId: organizationId,
+    });
+
+    await this.userRoleRepository.save(userRole);
+
+    await this.auditService.log({
+      action: 'organization.member.add.s2s',
+      entityType: 'organization_member',
+      entityId: member.id,
+      actorUserId: null,
+      actorRole: 'service_client',
+      changes: {
+        organizationId,
+        userId: addMemberDto.userId,
+        roleType: addMemberDto.roleType,
+      },
+      ip,
+      userAgent,
+    });
+
+    const memberWithUser = await this.memberRepository.findOne({
+      where: { id: member.id },
+      relations: ['user', 'user.userRoles'],
+    });
+
+    return this.mapMemberToResponseDto(memberWithUser);
+  }
+
+  /**
+   * S2S: Update member role (no user context required)
+   * For service-to-service API access with write:organizations scope
+   * 
+   * Security Note: This method grants write access to any organization when
+   * the service client has write:organizations scope. For enhanced security,
+   * consider implementing organization-level bindings in service tokens.
+   */
+  async updateMemberRoleS2S(
+    organizationId: string,
+    userId: string,
+    updateRoleDto: UpdateMemberRoleDto,
+    ip: string,
+    userAgent: string,
+  ): Promise<OrganizationMemberResponseDto> {
+    // Validate organization exists and is not deleted
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId, deletedAt: null },
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with ID ${organizationId} not found`);
+    }
+
+    this.logger.log(`S2S: Updating member role in organization ${organizationId} (${organization.name})`);
+
+
+    const member = await this.memberRepository.findOne({
+      where: {
+        organizationId,
+        userId,
+      },
+      relations: ['user', 'user.userRoles'],
+    });
+
+    if (!member) {
+      throw new NotFoundException(`Member not found in organization`);
+    }
+
+    // Validate role type - only allow client roles for S2S
+    const allowedRoles = [
+      'client_admin',
+      'client_hr',
+      'client_finance',
+      'client_recruiter',
+      'client_employee',
+    ];
+
+    if (!allowedRoles.includes(updateRoleDto.roleType)) {
+      throw new BadRequestException(
+        `Invalid role type. Allowed roles: ${allowedRoles.join(', ')}`
+      );
+    }
+
+    const existingRole = await this.userRoleRepository.findOne({
+      where: {
+        userId,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      },
+    });
+
+    const oldRoleType = existingRole?.roleType;
+
+    if (existingRole) {
+      existingRole.roleType = updateRoleDto.roleType;
+      await this.userRoleRepository.save(existingRole);
+    } else {
+      const newRole = this.userRoleRepository.create({
+        userId,
+        roleType: updateRoleDto.roleType,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      });
+      await this.userRoleRepository.save(newRole);
+    }
+
+    await this.auditService.log({
+      action: 'organization.member.role.update.s2s',
+      entityType: 'organization_member',
+      entityId: member.id,
+      actorUserId: null,
+      actorRole: 'service_client',
+      changes: {
+        organizationId,
+        userId,
+        oldRoleType,
+        newRoleType: updateRoleDto.roleType,
+      },
+      ip,
+      userAgent,
+    });
+
+    const updatedMember = await this.memberRepository.findOne({
+      where: { id: member.id },
+      relations: ['user', 'user.userRoles'],
+    });
+
+    return this.mapMemberToResponseDto(updatedMember);
+  }
+
+  /**
+   * S2S: Remove member from organization (no user context required)
+   * For service-to-service API access with write:organizations scope
+   * 
+   * Security Note: This method grants write access to any organization when
+   * the service client has write:organizations scope. For enhanced security,
+   * consider implementing organization-level bindings in service tokens.
+   */
+  async removeMemberS2S(
+    organizationId: string,
+    userId: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<void> {
+    // Validate organization exists and is not deleted
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId, deletedAt: null },
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization with ID ${organizationId} not found`);
+    }
+
+    const member = await this.memberRepository.findOne({
+      where: {
+        organizationId,
+        userId,
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException(`Member not found in organization`);
+    }
+
+    this.logger.log(`S2S: Removing member from organization ${organizationId} (${organization.name})`);
+
+
+    const userRole = await this.userRoleRepository.findOne({
+      where: {
+        userId,
+        scope: 'organization',
+        scopeEntityId: organizationId,
+      },
+    });
+
+    if (userRole) {
+      await this.userRoleRepository.remove(userRole);
+    }
+
+    await this.memberRepository.remove(member);
+
+    await this.auditService.log({
+      action: 'organization.member.remove.s2s',
+      entityType: 'organization_member',
+      entityId: member.id,
+      actorUserId: null,
+      actorRole: 'service_client',
+      changes: {
+        organizationId,
+        userId,
+      },
+      ip,
+      userAgent,
+    });
+  }
 }
