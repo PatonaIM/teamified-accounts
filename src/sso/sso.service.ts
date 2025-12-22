@@ -307,14 +307,10 @@ export class SsoService {
       clientId: client.client_id,
       clientName: client.name,
       scopes: grantedScopes,
-      allowedOrgIds: client.allowed_organization_ids,
     });
 
     this.logger.log(
-      `Client credentials token issued for client ${client_id} with scopes: ${grantedScopes.join(', ')}` +
-      (client.allowed_organization_ids?.length 
-        ? ` (restricted to ${client.allowed_organization_ids.length} organizations)` 
-        : ' (global access)'),
+      `Client credentials token issued for client ${client_id} with scopes: ${grantedScopes.join(', ')}`,
     );
 
     return {

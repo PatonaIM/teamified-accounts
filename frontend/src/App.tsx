@@ -35,7 +35,6 @@ import SessionManagementPage from './pages/docs/developer/SessionManagementPage'
 import TestAccountsPage from './pages/docs/developer/TestAccountsPage';
 import ProfilePicturesApiPage from './pages/docs/developer/ProfilePicturesApiPage';
 import OrganizationApiPage from './pages/docs/developer/OrganizationApiPage';
-import InvitationsApiPage from './pages/docs/developer/InvitationsApiPage';
 import SsoIntegrationPage from './pages/docs/SsoIntegrationPage';
 import MultiOrganizationIntegrationPage from './pages/docs/MultiOrganizationIntegrationPage';
 import DeepLinkingGuidePage from './pages/docs/DeepLinkingGuidePage';
@@ -356,7 +355,6 @@ function App() {
                   <Route path="developer/oauth" element={<OAuthPage />} />
                   <Route path="developer/user-management" element={<UserManagementApiPage />} />
                   <Route path="developer/organization-api" element={<OrganizationApiPage />} />
-                  <Route path="developer/invitations-api" element={<InvitationsApiPage />} />
                   <Route path="developer/profile-pictures" element={<ProfilePicturesApiPage />} />
                   <Route path="developer/user-activity" element={<UserActivityApiPage />} />
                   <Route path="developer/user-emails" element={<UserEmailsApiPage />} />

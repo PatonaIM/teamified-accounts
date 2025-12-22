@@ -30,7 +30,6 @@ export interface ServiceTokenPayload {
   clientId: string;
   clientName: string;
   scopes: string[];
-  allowedOrgIds: string[] | null;
   iat: number;
   exp: number;
   jti: string;
@@ -162,14 +161,12 @@ export class JwtTokenService {
     clientId: string;
     clientName: string;
     scopes: string[];
-    allowedOrgIds?: string[] | null;
   }): string {
     const payload = {
       type: 'service',
       clientId: params.clientId,
       clientName: params.clientName,
       scopes: params.scopes,
-      allowedOrgIds: params.allowedOrgIds ?? null,
       jti: crypto.randomUUID(),
     };
 

@@ -362,7 +362,6 @@ export class OrganizationsController {
 
   @Get('by-slug/:slug')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee')
-  @RequiredScopes('read:organizations')
   @ApiOperation({ 
     summary: 'Get organization by slug',
     description: `
@@ -372,7 +371,6 @@ export class OrganizationsController {
       - super_admin: Access any organization
       - internal_*: Access any organization
       - client_*: Access only organizations they are a member of
-      - S2S: Requires read:organizations scope (restricted by allowed_organization_ids binding)
     `
   })
   @ApiParam({
@@ -399,11 +397,7 @@ export class OrganizationsController {
   async findBySlug(
     @Param('slug') slug: string,
     @CurrentUser() user: User,
-    @Request() req: any,
   ): Promise<OrganizationResponseDto> {
-    if (req.serviceClient) {
-      return this.organizationsService.findBySlugS2S(slug, req.serviceClient.allowedOrgIds);
-    }
     return this.organizationsService.findBySlugWithAccess(slug, user);
   }
 
@@ -455,7 +449,7 @@ export class OrganizationsController {
     @Request() req: any,
   ): Promise<OrganizationResponseDto> {
     if (req.serviceClient) {
-      return this.organizationsService.findOneS2S(id, req.serviceClient.allowedOrgIds);
+      return this.organizationsService.findOneS2S(id);
     }
     return this.organizationsService.findOne(id, user);
   }
@@ -681,7 +675,6 @@ export class OrganizationsController {
 
   @Get(':id/members')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr')
-  @RequiredScopes('read:organizations')
   @ApiOperation({ 
     summary: 'Get organization members',
     description: `
@@ -691,7 +684,6 @@ export class OrganizationsController {
       - super_admin: Access any organization's members
       - internal_*: Access any organization's members
       - client_admin/client_hr: Access only their own organization's members (organization scope validated)
-      - S2S: Requires read:organizations scope
       
       ## Response:
       - List of members with user details and roles
@@ -722,17 +714,12 @@ export class OrganizationsController {
   async getMembers(
     @Param('id') id: string,
     @CurrentUser() user: User,
-    @Request() req: any,
   ): Promise<OrganizationMemberResponseDto[]> {
-    if (req.serviceClient) {
-      return this.organizationsService.getMembersS2S(id, req.serviceClient.allowedOrgIds);
-    }
     return this.organizationsService.getMembers(id, user);
   }
 
   @Post(':id/members')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
-  @RequiredScopes('write:organizations')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 
     summary: 'Add member to organization',
@@ -742,7 +729,6 @@ export class OrganizationsController {
       ## Authorization:
       - super_admin, internal_hr, internal_account_manager: Can add members to any organization
       - client_admin: Can add members only to their own organization (organization scope validated)
-      - S2S: Requires write:organizations scope
       
       ## Process:
       1. Validate user exists and organization exists
@@ -797,21 +783,11 @@ export class OrganizationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<OrganizationMemberResponseDto> {
-    if (req.serviceClient) {
-      return this.organizationsService.addMemberS2S(
-        id, 
-        addMemberDto, 
-        req.ip, 
-        req.headers['user-agent'],
-        req.serviceClient.allowedOrgIds,
-      );
-    }
     return this.organizationsService.addMember(id, addMemberDto, user, req.ip, req.headers['user-agent']);
   }
 
   @Put(':id/members/:userId/role')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
-  @RequiredScopes('write:organizations')
   @ApiOperation({ 
     summary: 'Update member role',
     description: `
@@ -820,7 +796,6 @@ export class OrganizationsController {
       ## Authorization:
       - super_admin, internal_hr, internal_account_manager: Can update roles in any organization
       - client_admin: Can update roles only in their own organization (organization scope validated)
-      - S2S: Requires write:organizations scope
       
       ## Role Restrictions:
       - Only client_* roles allowed
@@ -871,22 +846,11 @@ export class OrganizationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<OrganizationMemberResponseDto> {
-    if (req.serviceClient) {
-      return this.organizationsService.updateMemberRoleS2S(
-        id, 
-        userId, 
-        updateRoleDto, 
-        req.ip, 
-        req.headers['user-agent'],
-        req.serviceClient.allowedOrgIds,
-      );
-    }
     return this.organizationsService.updateMemberRole(id, userId, updateRoleDto, user, req.ip, req.headers['user-agent']);
   }
 
   @Delete(':id/members/:userId')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
-  @RequiredScopes('write:organizations')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ 
     summary: 'Remove member from organization',
@@ -896,7 +860,6 @@ export class OrganizationsController {
       ## Authorization:
       - super_admin, internal_hr, internal_account_manager: Can remove members from any organization
       - client_admin: Can remove members only from their own organization (organization scope validated)
-      - S2S: Requires write:organizations scope
       
       ## Process:
       1. Remove organization_member record
@@ -944,15 +907,6 @@ export class OrganizationsController {
     @CurrentUser() user: User,
     @Request() req: any,
   ): Promise<void> {
-    if (req.serviceClient) {
-      return this.organizationsService.removeMemberS2S(
-        id, 
-        userId, 
-        req.ip, 
-        req.headers['user-agent'],
-        req.serviceClient.allowedOrgIds,
-      );
-    }
     return this.organizationsService.removeMember(id, userId, user, req.ip, req.headers['user-agent']);
   }
 
