@@ -14,7 +14,7 @@ import {
   Divider,
   Alert,
 } from '@mui/material';
-import { Email, Link as LinkIcon, PersonAdd, Security } from '@mui/icons-material';
+import { Email, Link as LinkIcon, PersonAdd, Security, AdminPanelSettings } from '@mui/icons-material';
 import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
 
 const markdownContent = `# Invitations API
@@ -29,6 +29,19 @@ The Invitations API provides two primary methods for inviting users to join orga
 2. **Shareable Links** - Generate reusable invitation URLs for distribution via any channel
 
 Both methods support role assignment and configurable expiration.
+
+## Who Can Send Invitations
+
+Invitation permissions are role-based. Only users with administrative access to an organization can invite new members to join.
+
+| Role | Can Invite To | Allowed Invitee Roles |
+|------|---------------|----------------------|
+| Super Admin | Any organization | All roles including client_admin |
+| Client Admin | Their own organization only | client_hr, client_finance, client_recruiter, client_employee, candidate |
+| Client HR | Their own organization only | client_employee, candidate |
+| S2S Token | Bound organizations (or all if no binding) | client_* roles only (no super_admin/internal_staff) |
+
+> **Security Note:** Users cannot invite someone with a higher privilege level than themselves. For example, a Client HR cannot invite a Client Admin.
 
 ## Invitation Endpoints
 
@@ -391,6 +404,56 @@ const InvitationsApiPage: React.FC = () => {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+          <AdminPanelSettings color="primary" />
+          <Typography variant="h6">Who Can Send Invitations</Typography>
+        </Stack>
+        <Typography variant="body2" color="text.secondary" paragraph>
+          Invitation permissions are role-based. Only users with administrative access to an organization 
+          can invite new members to join.
+        </Typography>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Role</strong></TableCell>
+                <TableCell><strong>Can Invite To</strong></TableCell>
+                <TableCell><strong>Allowed Invitee Roles</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow>
+                <TableCell><Chip label="Super Admin" size="small" color="secondary" /></TableCell>
+                <TableCell>Any organization</TableCell>
+                <TableCell>All roles including client_admin</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><Chip label="Client Admin" size="small" color="primary" /></TableCell>
+                <TableCell>Their own organization only</TableCell>
+                <TableCell>client_hr, client_finance, client_recruiter, client_employee, candidate</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><Chip label="Client HR" size="small" color="info" /></TableCell>
+                <TableCell>Their own organization only</TableCell>
+                <TableCell>client_employee, candidate</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell><Chip label="S2S Token" size="small" color="warning" /></TableCell>
+                <TableCell>Bound organizations (or all if no binding)</TableCell>
+                <TableCell>client_* roles only (no super_admin/internal_staff)</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          <Typography variant="body2">
+            <strong>Security Note:</strong> Users cannot invite someone with a higher privilege level than themselves. 
+            For example, a Client HR cannot invite a Client Admin.
+          </Typography>
+        </Alert>
+      </Paper>
+
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
           <PersonAdd color="primary" />
           <Typography variant="h6">Invitation Endpoints</Typography>
         </Stack>
@@ -459,7 +522,7 @@ const InvitationsApiPage: React.FC = () => {
         </Typography>
 
         <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Request Example</Typography>
-        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
           <pre style={{ margin: 0, overflow: 'auto', fontSize: '0.85rem' }}>
 {`POST /v1/invitations/send-email
 Authorization: Bearer ACCESS_TOKEN
@@ -495,7 +558,7 @@ Content-Type: application/json
         </Typography>
 
         <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Request Example</Typography>
-        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
           <pre style={{ margin: 0, overflow: 'auto', fontSize: '0.85rem' }}>
 {`POST /v1/invitations/generate-link
 Authorization: Bearer ACCESS_TOKEN
