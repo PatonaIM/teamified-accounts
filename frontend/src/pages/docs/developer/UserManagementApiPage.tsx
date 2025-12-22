@@ -51,6 +51,34 @@ Content-Type: application/json
 }
 \`\`\`
 
+## Update User Request
+
+Use the PUT or PATCH endpoint to update user details like first name, last name, phone number, or other profile fields.
+
+\`\`\`http
+PUT /users/:id
+Authorization: Bearer ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "+1987654321"
+}
+\`\`\`
+
+### Updatable Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| \`firstName\` | string | User's first name |
+| \`lastName\` | string | User's last name |
+| \`phone\` | string | Phone number |
+| \`dateOfBirth\` | string | Date of birth (YYYY-MM-DD) |
+| \`status\` | string | User status: active, inactive |
+
+> **Note:** Users can also update their own profile (firstName, lastName) through the self-service profile page at \`/account/profile\`.
+
 ## User Response Object
 
 \`\`\`json
@@ -204,6 +232,75 @@ Content-Type: application/json
 }`}
             </pre>
           </Paper>
+        </Box>
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            Update User Request
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Use the PUT or PATCH endpoint to update user details like first name, last name, 
+            phone number, or other profile fields.
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`PUT ${apiUrl}/users/:id
+Authorization: Bearer ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "phone": "+1987654321"
+}`}
+            </pre>
+          </Paper>
+          
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Updatable Fields
+          </Typography>
+          <TableContainer component={Paper} sx={{ mb: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Field</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><code>firstName</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>User's first name</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>lastName</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>User's last name</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>phone</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>Phone number</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>dateOfBirth</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>Date of birth (YYYY-MM-DD)</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>status</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>User status: active, inactive</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Typography variant="body2" color="text.secondary">
+            <strong>Note:</strong> Users can also update their own profile (firstName, lastName) 
+            through the self-service profile page at <code>/account/profile</code>.
+          </Typography>
         </Box>
 
         <Box>

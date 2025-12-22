@@ -190,6 +190,12 @@ export default function UserDetailPage() {
   const [showLastAdminError, setShowLastAdminError] = useState(false);
   const [removingFromOrg, setRemovingFromOrg] = useState(false);
 
+  // User name editing state
+  const [editingUserName, setEditingUserName] = useState(false);
+  const [userFirstName, setUserFirstName] = useState('');
+  const [userLastName, setUserLastName] = useState('');
+  const [savingUserName, setSavingUserName] = useState(false);
+
   const navigationState = location.state as { 
     organizationId?: string; 
     organizationName?: string;
@@ -592,6 +598,41 @@ export default function UserDetailPage() {
       }
     } finally {
       setRemovingFromOrg(false);
+    }
+  };
+
+  const handleStartEditUserName = () => {
+    setUserFirstName(user?.firstName || '');
+    setUserLastName(user?.lastName || '');
+    setEditingUserName(true);
+  };
+
+  const handleCancelEditUserName = () => {
+    setEditingUserName(false);
+    setUserFirstName('');
+    setUserLastName('');
+  };
+
+  const handleSaveUserName = async () => {
+    if (!userId) return;
+    
+    setSavingUserName(true);
+    try {
+      await api.patch(`/api/v1/users/${userId}`, { 
+        firstName: userFirstName.trim(), 
+        lastName: userLastName.trim() 
+      });
+      setSnackbar({ open: true, message: 'User name updated successfully', severity: 'success' });
+      setEditingUserName(false);
+      fetchUserDetails();
+    } catch (err: any) {
+      setSnackbar({ 
+        open: true, 
+        message: err.response?.data?.message || 'Failed to update user name', 
+        severity: 'error' 
+      });
+    } finally {
+      setSavingUserName(false);
     }
   };
 
@@ -1540,9 +1581,64 @@ export default function UserDetailPage() {
                 )}
               </Box>
             </Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-              {user.firstName || 'Unknown'} {user.lastName || 'User'}
-            </Typography>
+            
+            {editingUserName ? (
+              <Box sx={{ width: '100%', mt: 1 }}>
+                <Stack spacing={1.5}>
+                  <TextField
+                    size="small"
+                    label="First Name"
+                    value={userFirstName}
+                    onChange={(e) => setUserFirstName(e.target.value)}
+                    fullWidth
+                    autoFocus
+                  />
+                  <TextField
+                    size="small"
+                    label="Last Name"
+                    value={userLastName}
+                    onChange={(e) => setUserLastName(e.target.value)}
+                    fullWidth
+                  />
+                  <Stack direction="row" spacing={1} justifyContent="center">
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={handleSaveUserName}
+                      disabled={savingUserName || (!userFirstName.trim() && !userLastName.trim())}
+                      sx={{ textTransform: 'none', minWidth: 70 }}
+                    >
+                      {savingUserName ? <CircularProgress size={16} /> : 'Save'}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleCancelEditUserName}
+                      disabled={savingUserName}
+                      sx={{ textTransform: 'none', minWidth: 70 }}
+                    >
+                      Cancel
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Box>
+            ) : (
+              <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  {user.firstName || 'Unknown'} {user.lastName || 'User'}
+                </Typography>
+                <Tooltip title="Edit name">
+                  <IconButton
+                    size="small"
+                    onClick={handleStartEditUserName}
+                    sx={{ ml: 0.5, opacity: 0.7, '&:hover': { opacity: 1 } }}
+                  >
+                    <Edit sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            )}
+            
             <Typography variant="body2" color="text.secondary">
               {user.email}
             </Typography>

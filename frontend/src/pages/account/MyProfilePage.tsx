@@ -164,6 +164,11 @@ export default function MyProfilePage() {
   const [loginHistoryExpanded, setLoginHistoryExpanded] = useState(false);
   const [recentActivityExpanded, setRecentActivityExpanded] = useState(false);
 
+  const [editingName, setEditingName] = useState(false);
+  const [firstNameValue, setFirstNameValue] = useState('');
+  const [lastNameValue, setLastNameValue] = useState('');
+  const [savingName, setSavingName] = useState(false);
+
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -466,6 +471,37 @@ export default function MyProfilePage() {
     }
   };
 
+  const handleStartEditName = () => {
+    setFirstNameValue(profileData?.firstName || '');
+    setLastNameValue(profileData?.lastName || '');
+    setEditingName(true);
+  };
+
+  const handleCancelEditName = () => {
+    setFirstNameValue('');
+    setLastNameValue('');
+    setEditingName(false);
+  };
+
+  const handleSaveNameChange = async () => {
+    if (!profileData?.id) return;
+    
+    try {
+      setSavingName(true);
+      await api.patch(`/api/v1/users/${profileData.id}`, {
+        firstName: firstNameValue,
+        lastName: lastNameValue,
+      });
+      showSnackbar('Name updated successfully', 'success');
+      setEditingName(false);
+      await loadProfile();
+    } catch (err: any) {
+      showSnackbar(err.response?.data?.message || 'Failed to update name', 'error');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -680,13 +716,63 @@ export default function MyProfilePage() {
                 {!profilePicture && getInitials()}
               </Avatar>
             </Badge>
-            <Box sx={{ ml: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                {displayName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {profileData.emailAddress}
-              </Typography>
+            <Box sx={{ ml: 2, flex: 1 }}>
+              {editingName ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      size="small"
+                      label="First Name"
+                      value={firstNameValue}
+                      onChange={(e) => setFirstNameValue(e.target.value)}
+                      autoFocus
+                      sx={{ minWidth: 150 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Last Name"
+                      value={lastNameValue}
+                      onChange={(e) => setLastNameValue(e.target.value)}
+                      sx={{ minWidth: 150 }}
+                    />
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleSaveNameChange}
+                      disabled={savingName}
+                      sx={{ minWidth: 80 }}
+                    >
+                      {savingName ? <CircularProgress size={20} /> : 'Save'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleCancelEditName}
+                      disabled={savingName}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      {displayName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {profileData.emailAddress}
+                    </Typography>
+                  </Box>
+                  <Tooltip title="Edit name">
+                    <IconButton size="small" onClick={handleStartEditName}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
             </Box>
           </Box>
         </Box>
