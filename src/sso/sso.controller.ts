@@ -225,12 +225,18 @@ export class SsoController {
   async getUserInfo(@Req() req: any) {
     const userId = req.user.sub;
     
-    // Return user information from JWT payload
+    // Return user information from JWT payload including profile fields
     return {
       id: userId,
       email: req.user.email,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
+      fullName: req.user.fullName || null,
+      initials: req.user.initials || null,
+      profilePicture: req.user.profilePicture || null,
+      phoneNumber: req.user.phoneNumber || null,
+      emailVerified: req.user.emailVerified ?? false,
+      isActive: req.user.isActive ?? true,
       roles: req.user.roles || [],
     };
   }
@@ -274,6 +280,12 @@ export class SsoController {
           email: payload.email,
           firstName: payload.firstName,
           lastName: payload.lastName,
+          fullName: payload.fullName || null,
+          initials: payload.initials || null,
+          profilePicture: payload.profilePicture || null,
+          phoneNumber: payload.phoneNumber || null,
+          emailVerified: payload.emailVerified ?? false,
+          isActive: payload.isActive ?? true,
           roles: payload.roles || [],
         },
         expiresAt: new Date(payload.exp * 1000).toISOString(),
