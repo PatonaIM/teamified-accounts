@@ -49,12 +49,12 @@ export class OrganizationsController {
   ) {}
 
   @Post()
-  @Roles('super_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 
     summary: 'Create a new organization',
     description: `
-      Create a new organization (super_admin only).
+      Create a new organization.
       
       ## Process:
       1. Validate organization data and slug uniqueness
@@ -63,8 +63,8 @@ export class OrganizationsController {
       4. Members can be added via the add member endpoint
       
       ## Authorization:
-      - Only super_admin users can create organizations
-      - super_admin creates the org but does NOT become a member
+      - super_admin, internal_hr, internal_account_manager can create organizations
+      - Creator does NOT become a member of the organization
       
       ## Result:
       - Organization created with free tier and active status
@@ -88,7 +88,7 @@ export class OrganizationsController {
   })
   @ApiResponse({ 
     status: 403, 
-    description: 'Forbidden - Insufficient permissions (requires super_admin)',
+    description: 'Forbidden - Insufficient permissions (requires super_admin, internal_hr, or internal_account_manager)',
     type: AuthErrorResponseDto
   })
   @ApiResponse({ 
@@ -455,14 +455,14 @@ export class OrganizationsController {
   }
 
   @Put(':id')
-  @Roles('super_admin', 'client_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @ApiOperation({ 
     summary: 'Update organization',
     description: `
       Update organization details (name, slug, industry, etc.).
       
       ## Authorization:
-      - super_admin: Can update any organization
+      - super_admin, internal_hr, internal_account_manager: Can update any organization
       - client_admin: Can update only their own organization (organization scope validated)
       
       ## Validation:
@@ -516,7 +516,7 @@ export class OrganizationsController {
   }
 
   @Post(':id/logo/upload-url')
-  @Roles('super_admin', 'client_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @ApiOperation({ summary: 'Get presigned URL for organization logo upload' })
   @ApiParam({
     name: 'id',
@@ -545,7 +545,7 @@ export class OrganizationsController {
   }
 
   @Post(':id/logo')
-  @Roles('super_admin', 'client_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload organization logo directly to Azure Blob Storage' })
   @ApiParam({
@@ -621,7 +621,7 @@ export class OrganizationsController {
   }
 
   @Delete(':id')
-  @Roles('super_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ 
     summary: 'Delete organization',
@@ -629,7 +629,7 @@ export class OrganizationsController {
       Delete an organization and all associated data.
       
       ## Authorization:
-      - Only super_admin users can delete organizations
+      - super_admin, internal_hr, internal_account_manager can delete organizations
       
       ## Cascade:
       - All organization members are removed
@@ -657,7 +657,7 @@ export class OrganizationsController {
   })
   @ApiResponse({ 
     status: 403, 
-    description: 'Forbidden - Insufficient permissions (requires super_admin)',
+    description: 'Forbidden - Insufficient permissions (requires super_admin, internal_hr, or internal_account_manager)',
     type: AuthErrorResponseDto
   })
   @ApiResponse({ 
@@ -719,7 +719,7 @@ export class OrganizationsController {
   }
 
   @Post(':id/members')
-  @Roles('super_admin', 'client_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ 
     summary: 'Add member to organization',
@@ -727,7 +727,7 @@ export class OrganizationsController {
       Add a user as a member of an organization with a specific role.
       
       ## Authorization:
-      - super_admin: Can add members to any organization
+      - super_admin, internal_hr, internal_account_manager: Can add members to any organization
       - client_admin: Can add members only to their own organization (organization scope validated)
       
       ## Process:
@@ -787,14 +787,14 @@ export class OrganizationsController {
   }
 
   @Put(':id/members/:userId/role')
-  @Roles('super_admin', 'client_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @ApiOperation({ 
     summary: 'Update member role',
     description: `
       Update the role of an existing organization member.
       
       ## Authorization:
-      - super_admin: Can update roles in any organization
+      - super_admin, internal_hr, internal_account_manager: Can update roles in any organization
       - client_admin: Can update roles only in their own organization (organization scope validated)
       
       ## Role Restrictions:
@@ -850,7 +850,7 @@ export class OrganizationsController {
   }
 
   @Delete(':id/members/:userId')
-  @Roles('super_admin', 'client_admin')
+  @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ 
     summary: 'Remove member from organization',
@@ -858,7 +858,7 @@ export class OrganizationsController {
       Remove a user from an organization.
       
       ## Authorization:
-      - super_admin: Can remove members from any organization
+      - super_admin, internal_hr, internal_account_manager: Can remove members from any organization
       - client_admin: Can remove members only from their own organization (organization scope validated)
       
       ## Process:
