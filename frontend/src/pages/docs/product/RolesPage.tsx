@@ -50,7 +50,7 @@ export default function RolesPage() {
                 <TableCell><Chip label="Internal HR" color="primary" size="small" /></TableCell>
                 <TableCell>Internal</TableCell>
                 <TableCell>Global</TableCell>
-                <TableCell>HR operations across all organizations with access to HRIS and Team Connect</TableCell>
+                <TableCell>HR operations across all organizations with access to HRIS and Team Connect. Can create, update, and delete organizations and manage organization members.</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell><Chip label="Internal Recruiter" color="primary" size="small" /></TableCell>
@@ -62,7 +62,7 @@ export default function RolesPage() {
                 <TableCell><Chip label="Internal Account Manager" color="primary" size="small" /></TableCell>
                 <TableCell>Internal</TableCell>
                 <TableCell>Global</TableCell>
-                <TableCell>Manage client organizations, view organization data, support operations</TableCell>
+                <TableCell>Manage client organizations including create, update, and delete. Can manage organization members, view data, and support operations.</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell><Chip label="Internal Finance" color="primary" size="small" /></TableCell>
@@ -161,8 +161,13 @@ export default function RolesPage() {
                 </TableRow>
                 <TableRow>
                   <TableCell><code>organizations:write</code></TableCell>
-                  <TableCell>Create and update organizations</TableCell>
-                  <TableCell>Super Admin, Internal Account Manager</TableCell>
+                  <TableCell>Create, update, and delete organizations</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>organizations:members</code></TableCell>
+                  <TableCell>Add, update, and remove organization members</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><code>invitations:send</code></TableCell>
@@ -187,6 +192,228 @@ export default function RolesPage() {
               </TableBody>
             </Table>
           </TableContainer>
+        </Box>
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <People color="primary" />
+            Capability Comparison: Internal vs Client Users
+          </Typography>
+
+          <Typography variant="body1" paragraph>
+            This table compares the capabilities between internal Teamified staff roles and external client organization roles.
+          </Typography>
+
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Capability</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Super Admin</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Internal HR</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Internal Acct Mgr</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Internal Recruiter</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Client Admin</TableCell>
+                  <TableCell sx={{ fontWeight: 600, textAlign: 'center' }}>Client HR</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ bgcolor: 'action.hover', fontWeight: 600 }}>Organization Management</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Create organizations</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Update organizations</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Delete organizations</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>View all organizations</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Upload organization logo</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ bgcolor: 'action.hover', fontWeight: 600 }}>Member Management</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>View organization members</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Add members to organization</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Update member roles</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Remove members from organization</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ bgcolor: 'action.hover', fontWeight: 600 }}>User Management</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>View all users</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Create users</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Update users</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Delete/archive users</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ bgcolor: 'action.hover', fontWeight: 600 }}>Invitations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Send organization invitations</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ All</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅ Own</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Send internal staff invitations</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ bgcolor: 'action.hover', fontWeight: 600 }}>System Administration</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Manage OAuth clients</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>View audit logs</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Manage API keys</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Access platform analytics</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>✅</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                  <TableCell sx={{ textAlign: 'center' }}>❌</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Scope Legend:</strong> "All" means access to all organizations across the platform. 
+              "Own" means access is limited to the user's assigned organization only.
+            </Typography>
+          </Alert>
         </Box>
       </Stack>
     </Box>

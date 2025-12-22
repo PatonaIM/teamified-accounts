@@ -25,16 +25,16 @@ API reference for managing organizations, including creation with optional admin
 
 | Method | Endpoint | Description | Required Role |
 |--------|----------|-------------|---------------|
-| POST | \`/v1/organizations\` | Create new organization | Super Admin |
+| POST | \`/v1/organizations\` | Create new organization | Super Admin, Internal HR, Internal Account Manager |
 | GET | \`/v1/organizations\` | List all organizations (paginated) | Super Admin, Internal roles |
 | GET | \`/v1/organizations/:id\` | Get organization by ID | Super Admin, Internal roles, Client Admin (own org) |
 | GET | \`/v1/organizations/me\` | Get my organization | Client roles |
-| PUT | \`/v1/organizations/:id\` | Update organization | Super Admin, Client Admin (own org) |
-| DELETE | \`/v1/organizations/:id\` | Delete organization | Super Admin |
+| PUT | \`/v1/organizations/:id\` | Update organization | Super Admin, Internal HR, Internal Account Manager, Client Admin (own org) |
+| DELETE | \`/v1/organizations/:id\` | Delete organization | Super Admin, Internal HR, Internal Account Manager |
 
 ## Create Organization
 
-Create a new organization. Only Super Admins can create organizations.
+Create a new organization. Super Admin, Internal HR, and Internal Account Manager roles can create organizations.
 
 ### Request Body Parameters
 
@@ -111,10 +111,10 @@ The invited user will receive an email with a link to set up their account and b
 
 | Method | Endpoint | Description | Required Role |
 |--------|----------|-------------|---------------|
-| GET | \`/v1/organizations/:id/members\` | List organization members | Super Admin, Client Admin (own org) |
-| POST | \`/v1/organizations/:id/members\` | Add member to organization | Super Admin, Client Admin (own org) |
-| PUT | \`/v1/organizations/:id/members/:userId\` | Update member role | Super Admin, Client Admin (own org) |
-| DELETE | \`/v1/organizations/:id/members/:userId\` | Remove member from organization | Super Admin, Client Admin (own org) |
+| GET | \`/v1/organizations/:id/members\` | List organization members | Super Admin, Internal HR, Internal Account Manager, Client Admin (own org) |
+| POST | \`/v1/organizations/:id/members\` | Add member to organization | Super Admin, Internal HR, Internal Account Manager, Client Admin (own org) |
+| PUT | \`/v1/organizations/:id/members/:userId\` | Update member role | Super Admin, Internal HR, Internal Account Manager, Client Admin (own org) |
+| DELETE | \`/v1/organizations/:id/members/:userId\` | Remove member from organization | Super Admin, Internal HR, Internal Account Manager, Client Admin (own org) |
 
 ## Organization Response Object
 
@@ -178,7 +178,7 @@ export default function OrganizationApiPage() {
                   <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations</code></TableCell>
                   <TableCell>Create new organization</TableCell>
-                  <TableCell>Super Admin</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="GET" color="success" size="small" /></TableCell>
@@ -202,13 +202,13 @@ export default function OrganizationApiPage() {
                   <TableCell><Chip label="PUT" color="warning" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id</code></TableCell>
                   <TableCell>Update organization</TableCell>
-                  <TableCell>Super Admin, Client Admin (own org)</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="DELETE" color="error" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id</code></TableCell>
                   <TableCell>Delete organization</TableCell>
-                  <TableCell>Super Admin</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -224,7 +224,7 @@ export default function OrganizationApiPage() {
           </Typography>
           
           <Typography variant="body1" paragraph>
-            Create a new organization. Only Super Admins can create organizations.
+            Create a new organization. Super Admin, Internal HR, and Internal Account Manager roles can create organizations.
           </Typography>
 
           <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
@@ -421,25 +421,25 @@ Content-Type: application/json
                   <TableCell><Chip label="GET" color="success" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id/members</code></TableCell>
                   <TableCell>List organization members</TableCell>
-                  <TableCell>Super Admin, Client Admin (own org)</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id/members</code></TableCell>
                   <TableCell>Add member to organization</TableCell>
-                  <TableCell>Super Admin, Client Admin (own org)</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="PUT" color="warning" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id/members/:userId</code></TableCell>
                   <TableCell>Update member role</TableCell>
-                  <TableCell>Super Admin, Client Admin (own org)</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="DELETE" color="error" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id/members/:userId</code></TableCell>
                   <TableCell>Remove member from organization</TableCell>
-                  <TableCell>Super Admin, Client Admin (own org)</TableCell>
+                  <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
