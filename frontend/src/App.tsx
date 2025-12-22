@@ -54,6 +54,7 @@ import ReleaseNote_v1011 from './pages/docs/release-notes/ReleaseNote_v1011';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import S2SAuthenticationPage from './pages/docs/developer/S2SAuthenticationPage';
+import SsoMeApiPage from './pages/docs/developer/SsoMeApiPage';
 import OAuthConfigurationPage from './pages/OAuthConfigurationPage';
 import UserManagement from './pages/UserManagement';
 import UserDetailPage from './pages/UserDetailPage';
@@ -362,6 +363,7 @@ function App() {
                   <Route path="developer/session-management" element={<SessionManagementPage />} />
                   <Route path="developer/test-accounts" element={<TestAccountsPage />} />
                   <Route path="developer/sso-integration" element={<SsoIntegrationPage />} />
+                  <Route path="developer/sso-me" element={<SsoMeApiPage />} />
                   <Route path="developer/multi-organization" element={<MultiOrganizationIntegrationPage />} />
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}

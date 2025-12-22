@@ -32,6 +32,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'Quick Start', path: '/docs/developer/quickstart' },
       { title: 'OAuth 2.0 Configuration', path: '/docs/developer/oauth' },
       { title: 'SSO Integration', path: '/docs/developer/sso-integration' },
+      { title: 'SSO User Info API', path: '/docs/developer/sso-me' },
       { title: 'User Management API', path: '/docs/developer/user-management' },
       { title: 'Organization API', path: '/docs/developer/organization-api' },
       { title: 'Profile Pictures API', path: '/docs/developer/profile-pictures' },
