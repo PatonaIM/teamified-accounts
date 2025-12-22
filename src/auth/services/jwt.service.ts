@@ -10,6 +10,12 @@ export interface JwtPayload {
   email: string;
   firstName: string;
   lastName: string;
+  fullName: string;
+  initials: string;
+  profilePicture: string | null;
+  phoneNumber: string | null;
+  emailVerified: boolean;
+  isActive: boolean;
   roles: string[];
   clientId?: string;
   clientName?: string;
@@ -46,11 +52,25 @@ export class JwtTokenService {
     // Load user roles from database
     const userRoles = await this.userRolesService.getUserRoles(user.id);
     
+    const firstName = user.firstName || '';
+    const lastName = user.lastName || '';
+    const fullName = [firstName, lastName].filter(Boolean).join(' ') || user.email.split('@')[0];
+    const initials = [firstName, lastName]
+      .filter(Boolean)
+      .map(n => n.charAt(0).toUpperCase())
+      .join('') || user.email.charAt(0).toUpperCase();
+
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
       sub: user.id,
       email: user.email,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
+      firstName,
+      lastName,
+      fullName,
+      initials,
+      profilePicture: user.profilePictureUrl || null,
+      phoneNumber: user.phone || null,
+      emailVerified: user.emailVerified ?? false,
+      isActive: user.isActive ?? false,
       roles: userRoles, // Use actual roles from database - empty array for new users pending role selection
       ...(clientName && { clientName }), // Include clientName for multi-organization apps
       ...(user.mustChangePassword && { mustChangePassword: true }), // Include forced password change flag
