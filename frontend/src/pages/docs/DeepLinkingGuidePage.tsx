@@ -20,6 +20,7 @@ import {
 import { ContentCopy, CheckCircle, Devices, Timer, Security, Link as LinkIcon } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import DownloadMarkdownButton from '../../components/docs/DownloadMarkdownButton';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -225,12 +226,253 @@ export function useAuth() {
   return context;
 }`;
 
+  const markdownContent = `# Deep Linking & Session Persistence Guide
+
+Implement seamless authentication that persists across page refreshes and direct URL access. With proper deep linking implementation, users can bookmark any page in your app and return to it later without re-authenticating, as long as their session is still valid.
+
+## Session Timeouts
+
+| Token Type | Duration | Behavior |
+|------------|----------|----------|
+| Access Token | 15 minutes | Must refresh using refresh token when expired |
+| Refresh Token | 30 days | Must re-authenticate after absolute expiry |
+| Inactivity Timeout | 48 hours | Session expires if no API activity for 48 hours |
+
+## Multi-Device & Browser Behavior
+
+| Scenario | Session Behavior |
+|----------|------------------|
+| Same browser, multiple tabs | Shared Session - All tabs share the same localStorage tokens |
+| Same browser, multiple windows | Shared Session - All windows share the same session |
+| Different devices | Independent Sessions - Each device requires login, sessions are independent |
+| Different browsers (Chrome/Firefox) | Separate Login Required - Browsers don't share storage |
+| Incognito/Private mode | Isolated Session - No access to regular tokens |
+
+**Multi-Device Support:** Users can be logged in on multiple devices simultaneously. Each device has independent session timeouts and token expiry.
+
+**Logout Scope:** Logging out on one device does NOT log out other devices. Each session is completely independent.
+
+## Key API Endpoints
+
+- **Validate Session:** \`GET /api/v1/sso/me\`
+- **Refresh Token:** \`POST /api/v1/auth/refresh\`
+- **SSO Authorize:** \`GET /api/v1/sso/authorize\`
+
+## Session Persistence Flow
+
+When a user accesses a deep link (e.g., \`/dashboard/reports\`), your app should:
+
+1. **Check for stored access token** - Look in localStorage for an existing access token
+2. **Validate token with /api/v1/sso/me** - If token exists, verify it's still valid by calling the user info endpoint
+3. **Handle 401 by refreshing token** - If access token is expired, use refresh token to get a new one
+4. **Redirect to login if refresh fails** - Pass the current URL as returnUrl so user returns to the same page after login
+
+## Implementation Examples
+
+### Token Storage
+
+\`\`\`typescript
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
+class TokenStorage {
+  private static readonly ACCESS_TOKEN_KEY = 'teamified_access_token';
+  private static readonly REFRESH_TOKEN_KEY = 'teamified_refresh_token';
+  private static readonly EXPIRES_AT_KEY = 'teamified_expires_at';
+
+  static saveTokens(tokens: AuthTokens): void {
+    localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
+    localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
+    localStorage.setItem(this.EXPIRES_AT_KEY, tokens.expiresAt.toString());
+  }
+
+  static getAccessToken(): string | null {
+    return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+  }
+
+  static getRefreshToken(): string | null {
+    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
+  static isTokenExpired(): boolean {
+    const expiresAt = localStorage.getItem(this.EXPIRES_AT_KEY);
+    if (!expiresAt) return true;
+    return Date.now() >= parseInt(expiresAt, 10);
+  }
+
+  static clearTokens(): void {
+    localStorage.removeItem(this.ACCESS_TOKEN_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    localStorage.removeItem(this.EXPIRES_AT_KEY);
+  }
+}
+\`\`\`
+
+### Session Validation
+
+\`\`\`typescript
+class AuthService {
+  private readonly baseUrl: string;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  async validateSession(): Promise<UserInfo | null> {
+    const accessToken = TokenStorage.getAccessToken();
+    
+    if (!accessToken) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(\`\${this.baseUrl}/api/v1/sso/me\`, {
+        method: 'GET',
+        headers: {
+          'Authorization': \`Bearer \${accessToken}\`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+
+      if (response.status === 401) {
+        return await this.tryRefreshToken();
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Session validation failed:', error);
+      return null;
+    }
+  }
+
+  private async tryRefreshToken(): Promise<UserInfo | null> {
+    const refreshToken = TokenStorage.getRefreshToken();
+    
+    if (!refreshToken) {
+      TokenStorage.clearTokens();
+      return null;
+    }
+
+    try {
+      const response = await fetch(\`\${this.baseUrl}/api/v1/auth/refresh\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        TokenStorage.clearTokens();
+        return null;
+      }
+
+      const data = await response.json();
+      
+      TokenStorage.saveTokens({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      });
+
+      return await this.validateSession();
+    } catch (error) {
+      TokenStorage.clearTokens();
+      return null;
+    }
+  }
+}
+\`\`\`
+
+### React Auth Context
+
+\`\`\`typescript
+import React, { createContext, useContext, useEffect, useState } from 'react';
+
+interface AuthContextType {
+  user: UserInfo | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const authService = new AuthService(import.meta.env.VITE_API_URL);
+    
+    async function checkSession() {
+      const userInfo = await authService.validateSession();
+      setUser(userInfo);
+      setIsLoading(false);
+      
+      if (!userInfo) {
+        const currentPath = window.location.pathname + window.location.search;
+        authService.redirectToLogin(currentPath);
+      }
+    }
+    
+    checkSession();
+  }, []);
+
+  const logout = () => {
+    TokenStorage.clearTokens();
+    setUser(null);
+    window.location.href = '/';
+  };
+
   return (
-    <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <LinkIcon color="primary" />
-        Deep Linking & Session Persistence Guide
-      </Typography>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      isAuthenticated: !!user,
+      logout 
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+}
+\`\`\`
+
+## Security Best Practices
+
+- **Token Rotation:** Refresh tokens are single-use. Each refresh gives you a new refresh token. The old one is immediately invalidated.
+- Store tokens in localStorage for web apps, secure storage for mobile apps
+- Always use HTTPS - never transmit tokens over unencrypted connections
+- Clear all tokens on logout to prevent session fixation attacks
+- Handle "token reuse" errors by clearing tokens and redirecting to login
+- Implement proper error handling for network failures during token refresh
+`;
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LinkIcon color="primary" />
+          Deep Linking Guide
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="deep-linking-guide" 
+          content={markdownContent} 
+        />
+      </Box>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Implement seamless authentication that persists across page refreshes and direct URL access
       </Typography>

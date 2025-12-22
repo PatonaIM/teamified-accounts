@@ -11,6 +11,145 @@ import {
 import { ContentCopy, CheckCircle } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import DownloadMarkdownButton from '../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Multi-Organization Integration Guide
+
+Understanding Teamified's multi-organization architecture and client scoping.
+
+> **Multi-Organization Architecture:** Teamified implements a multi-organization architecture where each client organization has isolated data with automatic scoping based on JWT claims.
+
+## Architecture Overview
+
+The platform uses a **shared database with row-level isolation** approach where:
+
+### Client Identification
+Each user is associated with a client organization via \`clientId\` in their JWT token.
+
+### Automatic Data Scoping
+Backend services automatically filter queries by \`clientId\` to ensure data isolation.
+
+### Role-Based Access Control
+Roles determine whether users have global access (super_admin) or client-scoped access (hr_manager_client, eor).
+
+## JWT Token Structure
+
+Access tokens include client information for automatic scoping:
+
+\`\`\`json
+{
+  "sub": "user-uuid",
+  "email": "user@example.com",
+  "clientId": "client-organization-uuid",
+  "roles": ["eor", "hr_manager_client"],
+  "iat": 1234567890,
+  "exp": 1234571490
+}
+\`\`\`
+
+## Role Permissions Matrix
+
+### Internal Roles (Global Scope - 6 roles)
+Can access data across all client organizations:
+
+| Role | Permissions |
+|------|-------------|
+| \`super_admin\` | Full platform access, system configuration |
+| \`internal_hr\` | HR operations across all organizations |
+| \`internal_recruiter\` | Recruiting operations with ATS access |
+| \`internal_account_manager\` | Client organization management |
+| \`internal_finance\` | Financial operations across all organizations |
+| \`internal_marketing\` | Marketing with view-only dashboard access |
+
+### Client Roles (Organization Scope - 5 roles)
+Can only access data for their assigned client organization:
+
+| Role | Permissions |
+|------|-------------|
+| \`client_admin\` | Full organization access, manage team members |
+| \`client_recruiter\` | Recruitment management for their organization |
+| \`client_hr\` | HR operations for their organization |
+| \`client_finance\` | Limited HR data access for finance |
+| \`client_employee\` | Team collaboration, view own data |
+
+### Public Access (1 role)
+| Role | Permissions |
+|------|-------------|
+| \`candidate\` | Job applications and interview participation only |
+
+## API Request Scoping
+
+When making API requests with a valid access token, the backend automatically scopes data by the client:
+
+\`\`\`javascript
+// All API requests automatically scope to user's client
+const response = await fetch('/api/v1/employment-records', {
+  headers: {
+    'Authorization': \\\`Bearer \\\${accessToken}\\\`
+  }
+});
+
+// Backend automatically filters by clientId from JWT
+// Returns only employment records for user's organization
+\`\`\`
+
+## Multi-Tenant Architecture
+
+### Backend Implementation (NestJS)
+
+\`\`\`typescript
+@Injectable()
+export class EmploymentRecordsService {
+  async findAll(userId: string, clientId: string) {
+    // Automatically scope queries by clientId from JWT
+    const query = this.repository
+      .createQueryBuilder('record')
+      .where('record.clientId = :clientId', { clientId });
+
+    // Super admins can optionally view all clients
+    const user = await this.userService.findOne(userId);
+    if (user.roles.includes('super_admin')) {
+      // Allow cross-client access for admins
+      query.orWhere('1=1');
+    }
+
+    return query.getMany();
+  }
+}
+\`\`\`
+
+### Frontend Integration
+
+Frontend applications don't need to handle scoping manually:
+
+\`\`\`typescript
+const MyComponent = () => {
+  const { user } = useAuth();
+  
+  // user.clientId is available from JWT
+  // API calls automatically filtered by backend
+  
+  useEffect(() => {
+    fetchEmployees(); // Only returns employees from user's org
+  }, []);
+
+  return (
+    <div>
+      <h1>Employees for {user.organizationName}</h1>
+    </div>
+  );
+};
+\`\`\`
+
+## Best Practices
+
+1. **Automatic Scoping** - Let the backend handle data isolation. Don't manually filter by clientId in frontend code.
+2. Never expose data across clients in API responses
+3. Always validate \`clientId\` from JWT, never from request parameters
+4. Implement row-level security at the database query level
+5. Use role-based guards to enforce access control
+6. Test cross-client data isolation thoroughly before deploying
+`;
 
 export default function MultiOrganizationIntegrationPage() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -160,10 +299,16 @@ const MyComponent = () => {
   };
 
   return (
-    <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-        Multi-Organization Integration Guide
-      </Typography>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          Multi-Organization Integration
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="multi-organization-integration" 
+          content={markdownContent} 
+        />
+      </Box>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Understanding Teamified's multi-organization architecture and client scoping
       </Typography>

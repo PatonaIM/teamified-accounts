@@ -9,14 +9,43 @@ import {
   ListItemText,
 } from '@mui/material';
 import { Security } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Platform Overview
+
+Teamified Accounts is a centralized authentication and user management platform that provides secure Single Sign-On (SSO), multi-organization support, and comprehensive role-based access control. The platform enables seamless authentication across multiple applications using industry-standard OAuth 2.0 protocol.
+
+> **Key Value Proposition:** One account, multiple applications. Users can securely access all connected applications without re-entering credentials, while organizations maintain complete control over their team members' access and permissions.
+
+## Core Capabilities
+
+- **Single Sign-On (SSO):** Authenticate once and access all connected applications without re-login
+- **Multi-Organization Support:** Manage multiple client organizations with complete data isolation and security
+- **Centralized User Management:** Create, update, and manage user accounts, roles, and permissions from one platform
+- **Role-Based Access Control (RBAC):** Granular permissions system with internal, client, and candidate role hierarchies
+- **Audit Logging:** Complete audit trail of all user activities and administrative actions
+- **Invitation System:** Streamlined onboarding with email invitations and organization assignment
+
+## Who Uses Teamified Accounts?
+
+- **Internal Team Members:** HR, Recruiters, Account Managers, Finance, and Marketing staff who need cross-organization access
+- **Client Organizations:** Client Admins and employees who manage their organization's users and access connected applications
+- **Candidates:** Job applicants who access the Candidate Portal for applications and interviews
+`;
 
 export default function OverviewPage() {
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Security color="primary" />
-        Platform Overview
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Security color="primary" />
+          Platform Overview
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="platform-overview" 
+          content={markdownContent} 
+        />
+      </Box>
       
       <Typography variant="body1" paragraph>
         Teamified Accounts is a centralized authentication and user management platform that provides secure Single Sign-On (SSO), 

@@ -12,14 +12,75 @@ import {
   Divider,
 } from '@mui/material';
 import { Google, CheckCircle, Security, Speed, Lock } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Google Sign-In
+
+Teamified Accounts supports signing in with Google, providing users a fast and secure way to authenticate using their existing Google account. This feature works alongside traditional email and password login.
+
+> **One Account, Multiple Sign-In Options:** Users can sign in with Google or email/password. If you sign in with Google using an email that already has an account, your accounts are automatically linked.
+
+## How Google Sign-In Works
+
+1. **Click 'Continue with Google':** On the login page, click the Google sign-in button
+2. **Choose your Google account:** Select which Google account you want to use (if you have multiple)
+3. **Grant permission:** Allow Teamified to access your basic profile information (name, email, profile picture)
+4. **Choose your account type (new users only):** Select whether you're a Candidate looking for jobs, or an Employer hiring talent
+5. **You're signed in!** You're automatically logged in and receive a welcome email with next steps
+
+## New User Experience
+
+If you're new to Teamified and sign in with Google for the first time, you'll be asked to choose your account type:
+
+- **Candidate:** For job seekers looking for opportunities. Just click and you're ready to browse jobs!
+- **Employer:** For businesses hiring talent. Enter your organization name to get started.
+
+After choosing your account type, you'll receive a personalized welcome email with relevant actions - whether that's browsing jobs as a candidate or posting your first job as an employer.
+
+## Benefits of Google Sign-In
+
+- **Faster login:** No need to remember or type your password - just one click
+- **Automatic profile setup:** Your name and profile picture are imported from your Google account
+- **No new password to create:** Use your existing Google account security instead of creating another password
+- **Works with Google Workspace:** Sign in with your company Google account if your organization uses Google Workspace
+
+## Security & Privacy
+
+- **We never see your Google password:** Authentication happens directly with Google - we only receive a secure token
+- **Limited data access:** We only request your name, email, and profile picture - nothing else
+- **Revoke access anytime:** You can disconnect Google from your account in your Google account settings
+- **Two-factor authentication supported:** If you have 2FA enabled on your Google account, it works with our sign-in too
+
+## Frequently Asked Questions
+
+**Can I use both Google and email/password to sign in?**
+Yes! If your email address is the same, both methods will log you into the same account. You can use whichever is more convenient at the time.
+
+**What if I already have an account with my email?**
+When you sign in with Google using an email that already has an account, we automatically link your Google account to your existing account. All your data and settings are preserved.
+
+**Can I disconnect Google from my account later?**
+Yes, you can revoke Teamified's access from your Google Account settings at any time. You'll still be able to sign in using email and password.
+
+**Is Google Sign-In available for work accounts?**
+Yes! If your organization uses Google Workspace (formerly G Suite), you can sign in with your work Google account. Your administrator may have additional security policies that apply.
+
+> **Tip:** For the fastest login experience, use Google Sign-In with a Google account that stays logged in on your browser. You'll be signed in with just one click!
+`;
 
 export default function GoogleOAuthPage() {
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Google color="primary" />
-        Google Sign-In
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Google color="primary" />
+          Google Sign-In
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="google-sign-in" 
+          content={markdownContent} 
+        />
+      </Box>
       
       <Typography variant="body1" paragraph>
         Teamified Accounts supports signing in with Google, providing users a fast and secure way to 

@@ -10,14 +10,56 @@ import {
   ListItemText,
 } from '@mui/material';
 import { VpnKey } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Single Sign-On (SSO) Service
+
+The SSO service implements OAuth 2.0 Authorization Code Flow with PKCE (Proof Key for Code Exchange), providing enterprise-grade security for authentication across multiple applications.
+
+## How SSO Works
+
+1. **User logs into Teamified Accounts:** One-time authentication with email and password
+2. **User accesses connected application:** Click on application link or navigate directly to the app
+3. **Automatic authentication:** User is logged in automatically without re-entering credentials
+4. **Secure token exchange:** Application receives user profile and permissions via encrypted token
+
+> **Security Features:** 60-second auth code expiry, single-use codes, PKCE protection, state parameter for CSRF prevention, and comprehensive audit logging.
+
+## Session Management
+
+- **72-hour inactivity timeout:** Sessions expire after 72 hours of inactivity for security
+- **30-day absolute expiry:** Maximum session duration of 30 days regardless of activity
+- **Dual-token strategy:** Bearer token + httpOnly cookie for enhanced security
+- **Redis-backed storage:** Secure, scalable session storage with fast retrieval
+
+## Cross-App SSO by Environment
+
+SSO behavior varies based on the deployment environment due to browser cookie security policies.
+
+- **Production (.teamified.com):** True seamless SSO - cookies are shared across all subdomains (hris.teamified.com, teamconnect.teamified.com, etc.). Log in once and access all apps instantly.
+- **Staging (.replit.app):** OAuth redirect-based SSO - each app redirects to Teamified Accounts for authentication. If already logged in, the flow completes instantly without showing the login form.
+
+> **Why the difference?** The .replit.app domain is on the Public Suffix List (PSL), which prevents browsers from sharing cookies across subdomains for security reasons. Production deployments on .teamified.com don't have this restriction.
+
+## Supported OAuth Flows
+
+- **Authorization Code Flow with PKCE:** Recommended for web and native applications - most secure option
+- **Client Credentials Flow:** For server-to-server communication without user context
+`;
 
 export default function SsoPage() {
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <VpnKey color="primary" />
-        Single Sign-On (SSO) Service
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <VpnKey color="primary" />
+          Single Sign-On (SSO) Service
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="sso-service" 
+          content={markdownContent} 
+        />
+      </Box>
       
       <Typography variant="body1" paragraph>
         The SSO service implements OAuth 2.0 Authorization Code Flow with PKCE (Proof Key for Code Exchange), 

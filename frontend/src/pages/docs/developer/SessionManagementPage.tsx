@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Stack,
   Divider,
   Alert,
@@ -10,6 +9,7 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Paper,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -267,28 +267,26 @@ async function refreshTokens() {
 
 export default function SessionManagementPage() {
   return (
-    <Box sx={{ p: 4, maxWidth: 900, mx: 'auto' }}>
-      <Paper sx={{ p: 4 }}>
-        <Stack spacing={4}>
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Storage color="primary" />
-                Session Management Guide
-              </Typography>
-              <DownloadMarkdownButton 
-                filename="session-management-guide" 
-                content={markdownContent} 
-              />
-            </Box>
-            <Typography variant="body1" color="text.secondary">
-              This guide covers how to manage user sessions in your OAuth 2.0 client application,
-              including login flows, session persistence, checking active sessions, and properly
-              implementing logout.
-            </Typography>
-          </Box>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Storage color="primary" />
+          Session Management Guide
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="session-management-guide" 
+          content={markdownContent} 
+        />
+      </Box>
 
-          <Divider />
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        This guide covers how to manage user sessions in your OAuth 2.0 client application,
+        including login flows, session persistence, checking active sessions, and properly
+        implementing logout.
+      </Typography>
+
+      <Stack spacing={4}>
+        <Divider />
 
           {/* Session Overview */}
           <Box>
@@ -720,7 +718,6 @@ async function validateSession() {
           </Box>
 
         </Stack>
-      </Paper>
     </Box>
   );
 }

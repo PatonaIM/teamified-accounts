@@ -27,14 +27,131 @@ import {
   Person,
   Verified,
 } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Signup Flow
+
+Teamified Accounts offers multiple ways for users to create an account. The signup process is tailored based on user type (Candidate or Employer) and authentication method (Email or Google).
+
+> **Two User Types:** Candidates are job seekers looking for opportunities. Employers (Client Users) are businesses looking to hire talent through Teamified's platform.
+
+## Candidate Signup
+
+Candidates can sign up quickly with minimal information to start browsing jobs immediately.
+
+### Email Signup (Recommended)
+
+1. **Enter email on login page:** Click 'Create New Account' and enter your personal or work email
+2. **Choose 'Candidate' path:** Select 'Looking for a job' option on the path selection screen
+3. **Complete signup form:** Enter your name and create a password
+4. **Verify your email:** Click the verification link sent to your email
+5. **Start browsing jobs:** You're ready to explore opportunities on the Jobseeker Portal
+
+### Google Signup (Fastest)
+
+1. **Click 'Continue with Google':** On the login page, click the Google sign-in button
+2. **Select your Google account:** Choose which Google account to use for authentication
+3. **Choose 'Candidate' role:** Click the Candidate option - no additional form required
+4. **You're done!** Account created instantly with your Google profile info - start browsing jobs
+
+> **No email verification needed:** Google accounts are already verified, so you can start using Teamified immediately.
+
+## Employer (Client) Signup
+
+Employers complete a more detailed signup process to set up their organization and hiring needs.
+
+### Email Signup (2-Step Wizard)
+
+The employer signup uses a 2-step wizard to collect account and business information.
+
+**Step 1: Account Details**
+- First and last name
+- Email address
+- Password
+- Mobile phone with country selector
+- Country selection
+
+**Step 2: Business Information**
+- Company/organization name
+- Company website (triggers AI analysis)
+- Company phone number
+- Company size
+- Business description (AI-generated or manual)
+- Roles you're looking to hire
+- How can Teamified help you
+- Terms & Privacy acceptance
+- Service Agreement acceptance (country-specific)
+
+Additional features:
+- **AI-Powered Website Analysis:** When you enter your company website, AI automatically analyzes it and suggests a business description
+- **HubSpot CRM Sync:** Your information is automatically synced to HubSpot for sales follow-up
+- **Email Verification:** Verify your email to complete account activation
+
+### Google Signup (Quick Start)
+
+1. **Click 'Continue with Google':** On the login page, authenticate with your Google account
+2. **Choose 'Employer' role:** Select the business/employer option
+3. **Enter organization name:** Provide your company name to create your organization
+4. **Start hiring:** Access ATS Portal to post jobs and HRIS Portal to manage your team
+
+> **Simplified Flow:** Google signup for employers only requires the organization name. Additional business details can be added later in the organization settings.
+
+## Email Invitation Signup
+
+Users can also join Teamified through email invitations sent by organizations or team members.
+
+### Organization Invitation (Work Email)
+
+Employers can invite team members to join their organization with specific roles.
+
+1. **Receive invitation email:** Your employer sends an invitation to your work email address
+2. **Click the invitation link:** Opens the invitation acceptance page with pre-filled details
+3. **Create your account:** Enter your name and create a password for your work account
+4. **Optional: Link existing account:** If you already have a personal Teamified account, you can link it to use one password for both
+5. **Join the organization:** Access granted with the role assigned by your employer (Admin, HR, Manager, etc.)
+
+### Account Linking
+
+Teamified supports linking multiple emails to a single user identity (Multi-Identity SSO).
+
+- **One password for all emails:** Link your personal and work emails to use the same login credentials
+- **Sign in with any linked email:** Use any of your linked email addresses to log in to your account
+- **Unified profile:** View all your linked emails and organization memberships in one place
+
+> **Work Email Control:** Work emails can only be added through employer invitations - you cannot self-add work emails. This ensures proper organizational control.
+
+## After Signup
+
+### Welcome Email
+
+All new users receive a personalized welcome email with role-specific actions:
+
+- **Candidates:** 'Browse Jobs' button linking to the Jobseeker Portal
+- **Employers:** 'Post Your First Job' (ATS Portal) and 'Set Up Your Organization' (HRIS Portal) buttons
+
+### Available Applications
+
+Based on your role, you'll have access to different Teamified applications:
+- Jobseeker Portal
+- ATS Portal
+- HRIS Portal
+- Team Connect
+- Alexia AI
+`;
 
 export default function SignupFlowPage() {
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <PersonAdd color="primary" />
-        Signup Flow
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PersonAdd color="primary" />
+          Signup Flow
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="signup-flow" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         Teamified Accounts offers multiple ways for users to create an account. The signup process 

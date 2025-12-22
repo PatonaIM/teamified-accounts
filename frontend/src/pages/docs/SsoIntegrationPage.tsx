@@ -15,6 +15,243 @@ import {
 import { ContentCopy, CheckCircle, OpenInNew } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import DownloadMarkdownButton from '../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# SSO Integration Guide
+
+Integrate Teamified's OAuth 2.0 SSO into your application.
+
+> **Note:** Before integrating, make sure you have registered your OAuth client in the **OAuth Configuration** admin panel to get your Client ID and Client Secret.
+
+## Overview
+
+Teamified implements OAuth 2.0 Authorization Code flow with PKCE support. This allows users to authenticate with their Teamified accounts and authorize your application to access their data.
+
+### Endpoints
+
+| Endpoint | URL |
+|----------|-----|
+| Authorization | \`/api/v1/sso/authorize\` |
+| Token | \`/api/v1/sso/token\` |
+| UserInfo | \`/api/v1/sso/me\` |
+
+## Integration Flow
+
+1. **Register Your Application** - Go to OAuth Configuration and register your application to obtain your Client ID and Client Secret.
+2. **Redirect User to Authorization Endpoint** - Send users to the authorization URL with your client_id, redirect_uri, and scope parameters.
+3. **Handle Callback** - Receive the authorization code in your callback URL and verify the state parameter.
+4. **Exchange Code for Token** - Make a POST request to the token endpoint with the authorization code to get an access token.
+5. **Access User Data** - Use the access token to make authenticated requests to the UserInfo endpoint.
+
+## Code Examples
+
+### JavaScript
+
+\`\`\`javascript
+// Step 1: Redirect user to authorization endpoint
+const authParams = new URLSearchParams({
+  client_id: 'YOUR_CLIENT_ID',
+  redirect_uri: 'https://your-app.com/callback',
+  response_type: 'code',
+  scope: 'openid profile email',
+  state: 'random_state_string' // CSRF protection
+});
+
+window.location.href = \`/api/v1/sso/authorize?\${authParams}\`;
+
+// Step 2: Handle callback and exchange code for token
+const callbackUrl = new URL(window.location.href);
+const code = callbackUrl.searchParams.get('code');
+const state = callbackUrl.searchParams.get('state');
+
+// Verify state matches to prevent CSRF attacks
+if (state !== savedState) {
+  throw new Error('Invalid state parameter');
+}
+
+// Exchange authorization code for access token
+const tokenResponse = await fetch('/api/v1/sso/token', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    grant_type: 'authorization_code',
+    code: code,
+    client_id: 'YOUR_CLIENT_ID',
+    client_secret: 'YOUR_CLIENT_SECRET',
+    redirect_uri: 'https://your-app.com/callback'
+  })
+});
+
+const { access_token, refresh_token } = await tokenResponse.json();
+
+// Step 3: Get user information
+const userResponse = await fetch('/api/v1/sso/me', {
+  headers: {
+    'Authorization': \`Bearer \${access_token}\`
+  }
+});
+
+const userData = await userResponse.json();
+console.log('User:', userData);
+\`\`\`
+
+### Python
+
+\`\`\`python
+import requests
+from urllib.parse import urlencode
+
+# Step 1: Build authorization URL
+auth_params = {
+    'client_id': 'YOUR_CLIENT_ID',
+    'redirect_uri': 'https://your-app.com/callback',
+    'response_type': 'code',
+    'scope': 'openid profile email',
+    'state': 'random_state_string'
+}
+
+auth_url = f"/api/v1/sso/authorize?{urlencode(auth_params)}"
+# Redirect user to auth_url
+
+# Step 2: Exchange code for token (in callback handler)
+def handle_callback(code, state):
+    # Verify state parameter
+    if state != saved_state:
+        raise ValueError('Invalid state parameter')
+    
+    token_response = requests.post(
+        '/api/v1/sso/token',
+        json={
+            'grant_type': 'authorization_code',
+            'code': code,
+            'client_id': 'YOUR_CLIENT_ID',
+            'client_secret': 'YOUR_CLIENT_SECRET',
+            'redirect_uri': 'https://your-app.com/callback'
+        }
+    )
+    
+    token_data = token_response.json()
+    access_token = token_data['access_token']
+    
+    # Step 3: Get user info
+    user_response = requests.get(
+        '/api/v1/sso/me',
+        headers={'Authorization': f'Bearer {access_token}'}
+    )
+    
+    return user_response.json()
+\`\`\`
+
+### cURL
+
+\`\`\`bash
+# Step 1: User visits this URL in browser
+/api/v1/sso/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=https://your-app.com/callback&response_type=code&scope=openid%20profile%20email&state=random_state
+
+# Step 2: Exchange authorization code for token
+curl -X POST /api/v1/sso/token \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "grant_type": "authorization_code",
+    "code": "AUTHORIZATION_CODE_FROM_CALLBACK",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://your-app.com/callback"
+  }'
+
+# Step 3: Get user information
+curl -X GET /api/v1/sso/me \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+\`\`\`
+
+## Intent Parameter (User Type Filtering)
+
+The authorization endpoint supports an optional \`intent\` parameter to restrict which type of users can authenticate through your application.
+
+### Available Intent Values
+
+| Value | Description |
+|-------|-------------|
+| \`client\` | Only users associated with client organizations can authenticate |
+| \`candidate\` | Only candidate users can authenticate |
+| \`both\` | All authenticated users (default if omitted) |
+
+### Example: Client-Only Authorization
+
+\`\`\`
+/api/v1/sso/authorize?client_id=xxx&redirect_uri=xxx&state=xxx&intent=client
+\`\`\`
+
+> **Security Note:** The runtime \`intent\` parameter can only narrow access, never widen it. If your OAuth client has a \`default_intent\` of \`client\`, passing \`intent=both\` will be ignored.
+
+> **Internal User Bypass:** Users with \`super_admin\` or \`internal_*\` roles bypass all intent restrictions and can access any application regardless of the configured intent.
+
+### Handling Intent Errors
+
+When a user's type doesn't match the intent, the callback receives an OAuth error:
+
+\`\`\`
+?error=access_denied&error_description=This+application+is+for+client+organizations+only...
+\`\`\`
+
+## Cross-App SSO (Shared Sessions)
+
+Teamified supports cross-app SSO using shared httpOnly cookies. When a user logs into Teamified Accounts, they can access other Teamified apps without re-entering credentials.
+
+### How It Works
+
+1. When a user authenticates, the server sets an httpOnly cookie on \`.teamified.com\`
+2. This cookie is shared across all subdomains (hris.teamified.com, teamconnect.teamified.com, etc.)
+3. Client apps can check for an existing session before initiating the OAuth flow
+
+### Environment-Specific Behavior
+
+| Environment | Cookie Domain | SSO Type |
+|-------------|---------------|----------|
+| .teamified.com | domain=.teamified.com | Seamless (shared) |
+| .replit.app | Host-only (no domain) | OAuth redirect |
+| Custom domain | SSO_SHARED_COOKIE_DOMAIN | Configurable |
+
+**Production (.teamified.com):** True seamless SSO - cookies are shared across all subdomains. Log in once and all apps recognize you instantly.
+
+**Staging (.replit.app):** OAuth redirect-based SSO only. The \`.replit.app\` domain is on the Public Suffix List (PSL), which prevents browsers from sharing cookies across subdomains. Each app will redirect to Teamified Accounts, but if you're already logged in there, the OAuth flow completes instantly without showing the login form.
+
+### Checking for Existing Session
+
+\`\`\`javascript
+// Check for existing session before initiating OAuth
+const TEAMIFIED_ACCOUNTS_URL = 'https://accounts.teamified.com'; // or staging URL
+
+const response = await fetch(\`\${TEAMIFIED_ACCOUNTS_URL}/api/v1/sso/session\`, {
+  credentials: 'include', // Required: send cookies cross-origin
+});
+
+if (response.ok) {
+  const session = await response.json();
+  // User is already authenticated - no OAuth flow needed
+  console.log('Session found:', session.user);
+  // Use session.user data directly
+} else {
+  // No session - redirect to OAuth authorization
+  window.location.href = \`\${TEAMIFIED_ACCOUNTS_URL}/api/v1/sso/authorize?...\`;
+}
+\`\`\`
+
+## Security Best Practices
+
+- **Never expose your Client Secret** - Keep it secure on your server. Never include it in client-side code or version control.
+- Always use the \`state\` parameter to prevent CSRF attacks
+- Implement PKCE (Proof Key for Code Exchange) for additional security
+- Store access tokens securely (HttpOnly cookies or secure storage)
+- Use HTTPS for all redirect URIs in production
+- Implement token refresh logic for long-lived sessions
+
+## Testing Your Integration
+
+Use the integrated test suite to verify your OAuth implementation without writing any code. Access it at \`/test\` in your Teamified instance.
+`;
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -166,10 +403,17 @@ curl -X GET ${userInfoUrl} \\
   };
 
   return (
-    <Box sx={{ p: 4, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-        SSO Integration Guide
-      </Typography>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          SSO Integration Guide
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="sso-integration-guide" 
+          content={markdownContent} 
+        />
+      </Box>
+
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Integrate Teamified's OAuth 2.0 SSO into your application
       </Typography>
@@ -181,8 +425,9 @@ curl -X GET ${userInfoUrl} \\
         </Typography>
       </Alert>
 
-      {/* Overview */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Stack spacing={4}>
+        {/* Overview */}
+        <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Overview
         </Typography>
@@ -213,10 +458,10 @@ curl -X GET ${userInfoUrl} \\
             </IconButton>
           </Typography>
         </Stack>
-      </Paper>
+      </Box>
 
       {/* Integration Flow */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Integration Flow
         </Typography>
@@ -262,10 +507,10 @@ curl -X GET ${userInfoUrl} \\
             </Typography>
           </Box>
         </Stack>
-      </Paper>
+      </Box>
 
       {/* Code Examples */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Code Examples
         </Typography>
@@ -317,10 +562,10 @@ curl -X GET ${userInfoUrl} \\
             </SyntaxHighlighter>
           </Box>
         </TabPanel>
-      </Paper>
+      </Box>
 
       {/* Intent Parameter */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Intent Parameter (User Type Filtering)
         </Typography>
@@ -381,10 +626,10 @@ curl -X GET ${userInfoUrl} \\
             </Typography>
           </Box>
         </Stack>
-      </Paper>
+      </Box>
 
       {/* Cross-App SSO */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Cross-App SSO (Shared Sessions)
         </Typography>
@@ -497,10 +742,10 @@ if (response.ok) {
             </Typography>
           </Alert>
         </Stack>
-      </Paper>
+      </Box>
 
       {/* Security Best Practices */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Security Best Practices
         </Typography>
@@ -527,10 +772,10 @@ if (response.ok) {
             • Implement token refresh logic for long-lived sessions
           </Typography>
         </Stack>
-      </Paper>
+      </Box>
 
       {/* Testing */}
-      <Paper sx={{ p: 3 }}>
+      <Box>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Testing Your Integration
         </Typography>
@@ -550,7 +795,8 @@ if (response.ok) {
         >
           Open Test Suite
         </Button>
-      </Paper>
+      </Box>
+      </Stack>
     </Box>
   );
 }
