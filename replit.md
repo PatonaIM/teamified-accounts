@@ -36,6 +36,13 @@ Core features include:
   - **Security**: Write operations (POST/PUT/DELETE) blocked for S2S by default unless explicitly enabled with `@RequiredScopes`
   - Response sanitization ensures sensitive fields (password hashes, tokens) never exposed in S2S responses
   - Database fields: `allow_client_credentials` (boolean) and `allowed_scopes` (simple-array)
+  - **Organization Member Management (S2S)**:
+    - `GET /api/v1/organizations/:id/members` - List members (requires read:organizations scope)
+    - `POST /api/v1/organizations/:id/members` - Add member (requires write:organizations scope, restricted to client_* roles)
+    - `PUT /api/v1/organizations/:id/members/:userId/role` - Update member role (requires write:organizations scope)
+    - `DELETE /api/v1/organizations/:id/members/:userId` - Remove member (requires write:organizations scope)
+    - S2S audit logging with actorUserId: null and actorRole: 'service_client'
+    - **Security Note**: Current design grants scope-level access (global when scope granted). Future enhancement recommended: add organization-level bindings to service tokens for tenant-scoped access control.
 - **Intent-Aware SSO**: Routes users based on predefined 'client' or 'candidate' intents, preventing privilege escalation and guiding signup flows.
 - **Documentation Portal**: Sidebar-based documentation system with nested routes under `/docs`, featuring Product Guide, Developer Guide, and Release Notes sections as individual pages.
 - **My Apps Dropdown**: Google Workspace-style app launcher in the header showing role-based accessible applications. Clicking an app opens it in a new tab via OAuth authorize flow for seamless single sign-on. Apps include: Jobseeker Portal, ATS Portal, HRIS Portal, Team Connect, and Alexia AI.

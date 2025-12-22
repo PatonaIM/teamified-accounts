@@ -94,6 +94,7 @@ export class JwtOrServiceGuard implements CanActivate {
       clientId: payload.clientId,
       clientName: payload.clientName,
       scopes: payload.scopes,
+      allowedOrgIds: payload.allowedOrgIds ?? null,
     };
 
     request.user = null;

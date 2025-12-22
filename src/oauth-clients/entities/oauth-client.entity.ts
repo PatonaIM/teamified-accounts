@@ -71,4 +71,7 @@ export class OAuthClient {
 
   @Column({ type: 'simple-array', nullable: true })
   allowed_scopes: string[];
+
+  @Column({ type: 'jsonb', nullable: true, default: null })
+  allowed_organization_ids: string[] | null;
 }

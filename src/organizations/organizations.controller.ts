@@ -362,6 +362,7 @@ export class OrganizationsController {
 
   @Get('by-slug/:slug')
   @Roles('super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee')
+  @RequiredScopes('read:organizations')
   @ApiOperation({ 
     summary: 'Get organization by slug',
     description: `
@@ -371,6 +372,7 @@ export class OrganizationsController {
       - super_admin: Access any organization
       - internal_*: Access any organization
       - client_*: Access only organizations they are a member of
+      - S2S: Requires read:organizations scope (restricted by allowed_organization_ids binding)
     `
   })
   @ApiParam({
@@ -397,7 +399,11 @@ export class OrganizationsController {
   async findBySlug(
     @Param('slug') slug: string,
     @CurrentUser() user: User,
+    @Request() req: any,
   ): Promise<OrganizationResponseDto> {
+    if (req.serviceClient) {
+      return this.organizationsService.findBySlugS2S(slug, req.serviceClient.allowedOrgIds);
+    }
     return this.organizationsService.findBySlugWithAccess(slug, user);
   }
 
@@ -449,7 +455,7 @@ export class OrganizationsController {
     @Request() req: any,
   ): Promise<OrganizationResponseDto> {
     if (req.serviceClient) {
-      return this.organizationsService.findOneS2S(id);
+      return this.organizationsService.findOneS2S(id, req.serviceClient.allowedOrgIds);
     }
     return this.organizationsService.findOne(id, user);
   }
@@ -719,7 +725,7 @@ export class OrganizationsController {
     @Request() req: any,
   ): Promise<OrganizationMemberResponseDto[]> {
     if (req.serviceClient) {
-      return this.organizationsService.getMembersS2S(id);
+      return this.organizationsService.getMembersS2S(id, req.serviceClient.allowedOrgIds);
     }
     return this.organizationsService.getMembers(id, user);
   }
@@ -792,7 +798,13 @@ export class OrganizationsController {
     @Request() req: any,
   ): Promise<OrganizationMemberResponseDto> {
     if (req.serviceClient) {
-      return this.organizationsService.addMemberS2S(id, addMemberDto, req.ip, req.headers['user-agent']);
+      return this.organizationsService.addMemberS2S(
+        id, 
+        addMemberDto, 
+        req.ip, 
+        req.headers['user-agent'],
+        req.serviceClient.allowedOrgIds,
+      );
     }
     return this.organizationsService.addMember(id, addMemberDto, user, req.ip, req.headers['user-agent']);
   }
@@ -860,7 +872,14 @@ export class OrganizationsController {
     @Request() req: any,
   ): Promise<OrganizationMemberResponseDto> {
     if (req.serviceClient) {
-      return this.organizationsService.updateMemberRoleS2S(id, userId, updateRoleDto, req.ip, req.headers['user-agent']);
+      return this.organizationsService.updateMemberRoleS2S(
+        id, 
+        userId, 
+        updateRoleDto, 
+        req.ip, 
+        req.headers['user-agent'],
+        req.serviceClient.allowedOrgIds,
+      );
     }
     return this.organizationsService.updateMemberRole(id, userId, updateRoleDto, user, req.ip, req.headers['user-agent']);
   }
@@ -926,7 +945,13 @@ export class OrganizationsController {
     @Request() req: any,
   ): Promise<void> {
     if (req.serviceClient) {
-      return this.organizationsService.removeMemberS2S(id, userId, req.ip, req.headers['user-agent']);
+      return this.organizationsService.removeMemberS2S(
+        id, 
+        userId, 
+        req.ip, 
+        req.headers['user-agent'],
+        req.serviceClient.allowedOrgIds,
+      );
     }
     return this.organizationsService.removeMember(id, userId, user, req.ip, req.headers['user-agent']);
   }

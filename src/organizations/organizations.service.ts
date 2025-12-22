@@ -1702,10 +1702,49 @@ Welcome to the ${organization.name} team!
   }
 
   /**
+   * Validates that the organization ID is within the service client's allowed organizations.
+   * For S2S operations, this enforces organization-level access control.
+   * 
+   * @param organizationId - The organization being accessed
+   * @param allowedOrgIds - The list of allowed org IDs from the service token (null = global access)
+   * @throws ForbiddenException if the organization is not in the allowed list
+   */
+  private validateOrgBinding(organizationId: string, allowedOrgIds?: string[] | null): void {
+    // If allowedOrgIds is null or undefined, global access is permitted
+    // This maintains backwards compatibility with existing S2S clients
+    if (allowedOrgIds === null || allowedOrgIds === undefined) {
+      this.logger.debug(`S2S: Global access for organization ${organizationId}`);
+      return;
+    }
+
+    // If allowedOrgIds is an empty array, no organizations are accessible
+    if (allowedOrgIds.length === 0) {
+      this.logger.warn(`S2S: Access denied - service client has no organization bindings`);
+      throw new ForbiddenException(
+        'Service client has no organization bindings. Contact administrator to configure allowed organizations.'
+      );
+    }
+
+    // Check if the target organization is in the allowed list
+    if (!allowedOrgIds.includes(organizationId)) {
+      this.logger.warn(`S2S: Access denied - organization ${organizationId} not in allowed list`);
+      throw new ForbiddenException(
+        'Service client is not authorized to access this organization'
+      );
+    }
+
+    this.logger.debug(`S2S: Access granted for organization ${organizationId} (in allowed list)`);
+  }
+
+  /**
    * S2S: Get organization by ID (no user context required)
    * For service-to-service API access with read:organizations scope
+   * Enforces organization-level bindings from service token when configured
    */
-  async findOneS2S(id: string): Promise<OrganizationResponseDto> {
+  async findOneS2S(id: string, allowedOrgIds?: string[] | null): Promise<OrganizationResponseDto> {
+    // Enforce organization-level bindings if configured
+    this.validateOrgBinding(id, allowedOrgIds);
+
     const organization = await this.organizationRepository.findOne({
       where: { id, deletedAt: null },
     });
@@ -1720,8 +1759,9 @@ Welcome to the ${organization.name} team!
   /**
    * S2S: Get organization by slug (no user context required)
    * For service-to-service API access with read:organizations scope
+   * Enforces organization-level bindings from service token when configured
    */
-  async findBySlugS2S(slug: string): Promise<OrganizationResponseDto> {
+  async findBySlugS2S(slug: string, allowedOrgIds?: string[] | null): Promise<OrganizationResponseDto> {
     const normalizedSlug = this.normalizeSlug(slug);
     
     const organization = await this.organizationRepository.findOne({
@@ -1732,14 +1772,21 @@ Welcome to the ${organization.name} team!
       throw new NotFoundException('Organization not found');
     }
 
+    // Enforce organization-level bindings if configured (validate after lookup)
+    this.validateOrgBinding(organization.id, allowedOrgIds);
+
     return this.mapToResponseDto(organization);
   }
 
   /**
    * S2S: Get organization members (no user context required)
    * For service-to-service API access with read:organizations scope
+   * Enforces organization-level bindings from service token when configured
    */
-  async getMembersS2S(organizationId: string): Promise<OrganizationMemberResponseDto[]> {
+  async getMembersS2S(organizationId: string, allowedOrgIds?: string[] | null): Promise<OrganizationMemberResponseDto[]> {
+    // Enforce organization-level bindings if configured
+    this.validateOrgBinding(organizationId, allowedOrgIds);
+
     const organization = await this.organizationRepository.findOne({
       where: { id: organizationId, deletedAt: null },
     });
@@ -1763,18 +1810,18 @@ Welcome to the ${organization.name} team!
   /**
    * S2S: Add member to organization (no user context required)
    * For service-to-service API access with write:organizations scope
-   * 
-   * Security Note: This method grants write access to any organization when
-   * the service client has write:organizations scope. For enhanced security,
-   * consider implementing organization-level bindings in service tokens to
-   * restrict access to specific organizations.
+   * Enforces organization-level bindings from service token when configured
    */
   async addMemberS2S(
     organizationId: string,
     addMemberDto: AddMemberDto,
     ip: string,
     userAgent: string,
+    allowedOrgIds?: string[] | null,
   ): Promise<OrganizationMemberResponseDto> {
+    // Enforce organization-level bindings if configured
+    this.validateOrgBinding(organizationId, allowedOrgIds);
+
     // Validate organization exists and is not deleted
     const organization = await this.organizationRepository.findOne({
       where: { id: organizationId, deletedAt: null },
@@ -1865,10 +1912,7 @@ Welcome to the ${organization.name} team!
   /**
    * S2S: Update member role (no user context required)
    * For service-to-service API access with write:organizations scope
-   * 
-   * Security Note: This method grants write access to any organization when
-   * the service client has write:organizations scope. For enhanced security,
-   * consider implementing organization-level bindings in service tokens.
+   * Enforces organization-level bindings from service token when configured
    */
   async updateMemberRoleS2S(
     organizationId: string,
@@ -1876,7 +1920,11 @@ Welcome to the ${organization.name} team!
     updateRoleDto: UpdateMemberRoleDto,
     ip: string,
     userAgent: string,
+    allowedOrgIds?: string[] | null,
   ): Promise<OrganizationMemberResponseDto> {
+    // Enforce organization-level bindings if configured
+    this.validateOrgBinding(organizationId, allowedOrgIds);
+
     // Validate organization exists and is not deleted
     const organization = await this.organizationRepository.findOne({
       where: { id: organizationId, deletedAt: null },
@@ -1966,17 +2014,18 @@ Welcome to the ${organization.name} team!
   /**
    * S2S: Remove member from organization (no user context required)
    * For service-to-service API access with write:organizations scope
-   * 
-   * Security Note: This method grants write access to any organization when
-   * the service client has write:organizations scope. For enhanced security,
-   * consider implementing organization-level bindings in service tokens.
+   * Enforces organization-level bindings from service token when configured
    */
   async removeMemberS2S(
     organizationId: string,
     userId: string,
     ip: string,
     userAgent: string,
+    allowedOrgIds?: string[] | null,
   ): Promise<void> {
+    // Enforce organization-level bindings if configured
+    this.validateOrgBinding(organizationId, allowedOrgIds);
+
     // Validate organization exists and is not deleted
     const organization = await this.organizationRepository.findOne({
       where: { id: organizationId, deletedAt: null },
