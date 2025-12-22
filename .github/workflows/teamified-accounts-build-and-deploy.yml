@@ -11,11 +11,10 @@ on:
 
 env:
   # Azure Configuration
-  AZURE_SUBSCRIPTION: 'dfb37851-3ee5-4299-ade5-3c73a50506e0'
-  # Taken from here: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/17e8db29-5b12-42ea-b7ec-8cc2c7cb2450/isMSAApp~/false
-  AZURE_CLIENT_ID: '17e8db29-5b12-42ea-b7ec-8cc2c7cb2450'
+  AZURE_SUBSCRIPTION: ${{ secrets.AZURE_SUBSCRIPTION }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-  AZURE_TENANT_ID: '96cdd530-9baa-46bc-ad82-acd57b506df2'
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   # Container App Configuration
   CONTAINER_APP_NAME: 'teamified-accounts'
   CONTAINER_REGISTRY: 'tmfregistryprod.azurecr.io'
