@@ -8,16 +8,88 @@ import {
   Divider,
 } from '@mui/material';
 import { RocketLaunch, ContentCopy } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Quick Start Guide
+
+Get started integrating Teamified Accounts SSO into your application in just a few steps.
+
+## Prerequisites
+
+- OAuth Client ID and Secret (obtain from your Super Admin)
+- Authorized redirect URI configured for your application
+- Understanding of OAuth 2.0 Authorization Code Flow
+
+## Step 1: Request OAuth Credentials
+
+Contact your Super Admin to create an OAuth client application. You'll receive:
+
+\`\`\`
+CLIENT_ID: your-client-id
+CLIENT_SECRET: your-client-secret
+REDIRECT_URI: https://yourapp.com/callback
+\`\`\`
+
+## Step 2: Initiate Authorization
+
+Redirect users to the authorization endpoint:
+
+\`\`\`
+GET /sso/authorize?
+  response_type=code&
+  client_id=YOUR_CLIENT_ID&
+  redirect_uri=YOUR_REDIRECT_URI&
+  scope=openid profile email&
+  state=RANDOM_STATE_VALUE&
+  code_challenge=YOUR_PKCE_CHALLENGE&
+  code_challenge_method=S256
+\`\`\`
+
+## Step 3: Exchange Code for Tokens
+
+After user authorizes, exchange the code for access tokens:
+
+\`\`\`
+POST /sso/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&
+code=AUTHORIZATION_CODE&
+client_id=YOUR_CLIENT_ID&
+client_secret=YOUR_CLIENT_SECRET&
+redirect_uri=YOUR_REDIRECT_URI&
+code_verifier=YOUR_PKCE_VERIFIER
+\`\`\`
+
+## Step 4: Get User Information
+
+Use the access token to retrieve user profile:
+
+\`\`\`
+GET /sso/userinfo
+Authorization: Bearer ACCESS_TOKEN
+\`\`\`
+
+## Next Steps
+
+See the OAuth 2.0 Configuration guide for detailed endpoint documentation and the SSO Integration guide for framework-specific examples.
+`;
 
 export default function QuickstartPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <RocketLaunch color="primary" />
-        Quick Start Guide
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RocketLaunch color="primary" />
+          Quick Start Guide
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="quickstart-guide" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         Get started integrating Teamified Accounts SSO into your application in just a few steps.

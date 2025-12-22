@@ -15,16 +15,143 @@ import {
   Alert,
 } from '@mui/material';
 import { Business, Email, Add } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Organization API
+
+API reference for managing organizations, including creation with optional admin invitation, member management, and organization settings.
+
+## Organization Endpoints
+
+| Method | Endpoint | Description | Required Role |
+|--------|----------|-------------|---------------|
+| POST | \`/v1/organizations\` | Create new organization | Super Admin |
+| GET | \`/v1/organizations\` | List all organizations (paginated) | Super Admin, Internal roles |
+| GET | \`/v1/organizations/:id\` | Get organization by ID | Super Admin, Internal roles, Client Admin (own org) |
+| GET | \`/v1/organizations/me\` | Get my organization | Client roles |
+| PUT | \`/v1/organizations/:id\` | Update organization | Super Admin, Client Admin (own org) |
+| DELETE | \`/v1/organizations/:id\` | Delete organization | Super Admin |
+
+## Create Organization
+
+Create a new organization. Only Super Admins can create organizations.
+
+### Request Body Parameters
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`name\` | string | Required | Organization name (2-255 characters) |
+| \`slug\` | string | Required | URL-friendly identifier (lowercase, alphanumeric, hyphens only) |
+| \`industry\` | string | Optional | Industry of the organization |
+| \`companySize\` | string | Optional | Size range (e.g., "1-10", "11-50", "51-200") |
+| \`logoUrl\` | string | Optional | URL to organization logo |
+| \`website\` | string | Optional | Organization website URL |
+| \`subscriptionTier\` | enum | Optional | Subscription tier: free, basic, professional, enterprise, internal |
+
+### Example Request
+
+\`\`\`http
+POST /v1/organizations
+Authorization: Bearer ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Acme Corporation",
+  "slug": "acme-corp",
+  "industry": "Technology",
+  "companySize": "51-200",
+  "website": "https://acme.com",
+  "subscriptionTier": "professional"
+}
+\`\`\`
+
+> **Note:** Organizations are created empty (no members). Use the Add Member endpoint or the Invitations API to add team members after creation.
+
+## Create Organization with Admin Invitation
+
+You can streamline onboarding by creating an organization and sending a Client Admin invitation in a single flow. After creating the organization, immediately send an invitation using the Invitations API.
+
+### Recommended Workflow
+
+1. **Step 1: Create the Organization** - POST to \`/v1/organizations\` with organization details
+2. **Step 2: Send Admin Invitation** - POST to \`/v1/invitations\` with the organization ID and admin email
+
+### Example: Complete Onboarding Flow
+
+\`\`\`javascript
+// Step 1: Create Organization
+POST /v1/organizations
+Authorization: Bearer ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "name": "New Client Corp",
+  "slug": "new-client-corp",
+  "industry": "Finance"
+}
+
+// Response: { "id": "org-uuid-123", "name": "New Client Corp", ... }
+
+// Step 2: Send Client Admin Invitation
+POST /v1/invitations
+Authorization: Bearer ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "email": "admin@newclientcorp.com",
+  "organizationId": "org-uuid-123",
+  "roleType": "client_admin",
+  "sendEmail": true
+}
+\`\`\`
+
+The invited user will receive an email with a link to set up their account and become the Client Admin for the new organization.
+
+## Member Management Endpoints
+
+| Method | Endpoint | Description | Required Role |
+|--------|----------|-------------|---------------|
+| GET | \`/v1/organizations/:id/members\` | List organization members | Super Admin, Client Admin (own org) |
+| POST | \`/v1/organizations/:id/members\` | Add member to organization | Super Admin, Client Admin (own org) |
+| PUT | \`/v1/organizations/:id/members/:userId\` | Update member role | Super Admin, Client Admin (own org) |
+| DELETE | \`/v1/organizations/:id/members/:userId\` | Remove member from organization | Super Admin, Client Admin (own org) |
+
+## Organization Response Object
+
+\`\`\`json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "Acme Corporation",
+  "slug": "acme-corp",
+  "logoUrl": "https://storage.example.com/logos/acme.png",
+  "industry": "Technology",
+  "companySize": "51-200",
+  "website": "https://acme.com",
+  "settings": {},
+  "subscriptionTier": "professional",
+  "subscriptionStatus": "active",
+  "memberCount": 25,
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-11-20T14:45:00Z"
+}
+\`\`\`
+`;
 
 export default function OrganizationApiPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Business color="primary" />
-        Organization API
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Business color="primary" />
+          Organization API
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="organization-api" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         API reference for managing organizations, including creation with optional admin invitation, 

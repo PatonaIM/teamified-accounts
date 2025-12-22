@@ -23,16 +23,217 @@ import {
   Security,
   CheckCircle,
 } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# User Emails API
+
+The User Emails API enables the **Candidate + Employee Model** - allowing users to link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Users can log in with any linked email using a single password.
+
+> **Employer-Driven Work Emails:** Work emails are provisioned exclusively through employer invitations during onboarding - users cannot self-add work emails. This ensures proper organizational control and identity verification.
+
+## API Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | \`/api/user-emails\` | Get all emails linked to the current user | Bearer Token |
+| POST | \`/api/user-emails\` | Add a new email to the current user account | Bearer Token |
+| DELETE | \`/api/user-emails/:id\` | Remove an email from the current user account | Bearer Token |
+| PUT | \`/api/user-emails/:id/set-primary\` | Set an email as the primary email | Bearer Token |
+| POST | \`/api/user-emails/verify\` | Verify an email using verification token | None |
+| POST | \`/api/user-emails/:id/resend-verification\` | Resend verification email | Bearer Token |
+
+## Add Email
+
+Add a new email address to the authenticated user's account. The email will require verification before it can be used for login.
+
+\`\`\`
+POST /api/user-emails
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\`\`\`
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`email\` | string | Yes | Email address to add (e.g., "john.doe@company.com") |
+| \`emailType\` | string | No | Type of email: \`"personal"\` (default) or \`"work"\` |
+| \`organizationId\` | uuid | No | Organization ID to link work emails (required for work emails) |
+
+### Example Request
+
+\`\`\`json
+{
+  "email": "john.doe@acmecorp.com",
+  "emailType": "work",
+  "organizationId": "123e4567-e89b-12d3-a456-426614174000"
+}
+\`\`\`
+
+### Response (201 Created)
+
+\`\`\`json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "email": "john.doe@acmecorp.com",
+  "emailType": "work",
+  "organizationId": "123e4567-e89b-12d3-a456-426614174000",
+  "organizationName": "Acme Corporation",
+  "isPrimary": false,
+  "isVerified": false,
+  "verifiedAt": null,
+  "addedAt": "2025-12-13T10:30:00.000Z"
+}
+\`\`\`
+
+## Response Schema
+
+All email endpoints return or work with the following UserEmail object structure:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| \`id\` | uuid | Unique identifier for the email record |
+| \`email\` | string | The email address |
+| \`emailType\` | enum | \`"personal"\` or \`"work"\` |
+| \`organizationId\` | uuid \\| null | Associated organization ID for work emails |
+| \`organizationName\` | string \\| null | Organization name (populated for work emails) |
+| \`isPrimary\` | boolean | Whether this is the user's primary email |
+| \`isVerified\` | boolean | Whether the email has been verified |
+| \`verifiedAt\` | datetime \\| null | When the email was verified |
+| \`addedAt\` | datetime | When the email was added to the account |
+
+## Candidate + Employee Model
+
+The Multi-Identity system enables users to have both a **Candidate** identity (personal email) and an **Employee** identity (work email linked to an organization) while maintaining a single account with one password.
+
+### How It Works
+
+1. **Single Password:** Users maintain one password that works with any of their linked email addresses
+2. **Smart Identity Resolution:** When a user logs in, the system automatically resolves any linked email to the correct user account
+3. **Email Types:** Personal emails are for individual/candidate use; work emails are linked to organizations
+4. **Employer-Driven Work Emails:** Work emails are provisioned only via employer invitations, ensuring organizational control
+5. **Account Linking:** When accepting a work email invitation, users can link to an existing personal account by providing their personal email and verifying with their password
+
+## Enforcing the Candidate + Employee Model
+
+### Step 1: Understand Email Types
+
+\`\`\`typescript
+type EmailType = "personal" | "work";
+
+// Personal email: Used for candidate/individual identity
+// Work email: Linked to an organization for employee identity
+\`\`\`
+
+### Step 2: Provision Work Email via Employer Invitation
+
+Work emails are provisioned through the invitation acceptance flow:
+
+\`\`\`json
+// Employer sends invitation to work email
+POST /api/v1/invitations
+{
+  "email": "john.doe@company.com",
+  "organizationId": "org-uuid",
+  "roleType": "employee"
+}
+
+// Employee accepts invitation - can optionally link existing account
+POST /api/v1/invitations/accept
+{
+  "inviteCode": "abc123",
+  "email": "john.doe@company.com",
+  "password": "existingPassword123!",
+  "confirmPassword": "existingPassword123!",
+  "firstName": "John",
+  "lastName": "Doe",
+  "personalEmail": "john.doe@gmail.com"
+}
+\`\`\`
+
+### Step 3: Determine User Context Based on Login Email
+
+\`\`\`typescript
+const determineUserContext = async (accessToken: string) => {
+  const emailsResponse = await fetch('/api/user-emails', {
+    headers: { 'Authorization': \`Bearer \${accessToken}\` },
+  });
+  const emails = await emailsResponse.json();
+
+  const userinfoResponse = await fetch('/sso/userinfo', {
+    headers: { 'Authorization': \`Bearer \${accessToken}\` },
+  });
+  const userinfo = await userinfoResponse.json();
+  const loginEmail = userinfo.email;
+
+  const loginEmailRecord = emails.find(e => e.email === loginEmail);
+
+  if (loginEmailRecord?.emailType === 'work') {
+    return {
+      context: 'employee',
+      organizationId: loginEmailRecord.organizationId,
+      organizationName: loginEmailRecord.organizationName,
+    };
+  } else {
+    return {
+      context: 'candidate',
+      organizationId: null,
+      organizationName: null,
+    };
+  }
+};
+\`\`\`
+
+### Step 4: Route Users Based on Identity Context
+
+\`\`\`typescript
+const handlePostAuth = async (accessToken: string) => {
+  const context = await determineUserContext(accessToken);
+
+  switch (context.context) {
+    case 'employee':
+      window.location.href = \`/org/\${context.organizationId}/dashboard\`;
+      break;
+    case 'candidate':
+      window.location.href = '/jobs';
+      break;
+  }
+};
+\`\`\`
+
+## Security Considerations
+
+- **Email Verification Required:** Newly added emails must be verified before they can be used for login or set as primary
+- **Primary Email Protection:** The primary email cannot be removed until another verified email is set as primary
+- **Organization Ownership:** Work emails should only be provisioned by organization administrators during onboarding
+- **Single Password Policy:** Users maintain one password for all linked emails, simplifying credential management
+- **Audit Trail:** All email additions, removals, and primary changes are logged for security auditing
+
+## Error Responses
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 400 | Cannot remove primary email | Set another email as primary before removing |
+| 400 | Email not verified | Only verified emails can be set as primary |
+| 400 | Email already exists | Email is already linked to an account |
+| 404 | Email not found | The specified email ID doesn't exist |
+`;
 
 export default function UserEmailsApiPage() {
   const apiUrl = window.location.origin;
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Email color="primary" />
-        User Emails API
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Email color="primary" />
+          User Emails API
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="user-emails-api" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         The User Emails API enables the <strong>Candidate + Employee Model</strong> - allowing users to link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Users can log in with any linked email using a single password.
@@ -524,28 +725,13 @@ const IdentitySwitcher = ({ emails, currentContext, onSwitch }) => {
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="400" color="warning" size="small" /></TableCell>
-                  <TableCell>Email already verified</TableCell>
-                  <TableCell>Cannot resend verification for already verified email</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell><Chip label="400" color="warning" size="small" /></TableCell>
-                  <TableCell>Token expired</TableCell>
-                  <TableCell>Verification token has expired, request a new one</TableCell>
+                  <TableCell>Email already exists</TableCell>
+                  <TableCell>Email is already linked to an account</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="404" color="error" size="small" /></TableCell>
                   <TableCell>Email not found</TableCell>
-                  <TableCell>The specified email ID does not exist or belong to the user</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell><Chip label="404" color="error" size="small" /></TableCell>
-                  <TableCell>Invalid token</TableCell>
-                  <TableCell>Verification token is invalid or not found</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell><Chip label="409" color="error" size="small" /></TableCell>
-                  <TableCell>Email already exists</TableCell>
-                  <TableCell>This email is already linked to a user account</TableCell>
+                  <TableCell>The specified email ID doesn't exist</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

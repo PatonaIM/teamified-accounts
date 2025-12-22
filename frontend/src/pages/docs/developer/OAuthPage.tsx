@@ -16,6 +16,71 @@ import {
   Divider,
 } from '@mui/material';
 import { Settings, OpenInNew } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# OAuth 2.0 Configuration
+
+Complete reference for OAuth 2.0 endpoints, scopes, and configuration options.
+
+> **Interactive API Documentation:** See the Swagger/OpenAPI Reference at \`/api/docs\`
+
+## OAuth Endpoints
+
+| Endpoint | URL | Description |
+|----------|-----|-------------|
+| Authorization | \`/sso/authorize\` | Initiate OAuth flow, get authorization code |
+| Token | \`/sso/token\` | Exchange code for access/refresh tokens |
+| UserInfo | \`/sso/userinfo\` | Get authenticated user profile data |
+| Token Refresh | \`/sso/token\` | Refresh access token using refresh token |
+| Revoke | \`/sso/revoke\` | Revoke refresh token and end session |
+
+## Available Scopes
+
+| Scope | Description | Data Returned |
+|-------|-------------|---------------|
+| \`openid\` | Required for OIDC compliance | User ID (sub claim) |
+| \`profile\` | Basic profile information | name, profile picture, job title |
+| \`email\` | Email address access | email, email_verified |
+| \`roles\` | User roles and permissions | roles array, permissions |
+| \`organizations\` | Organization membership | organization IDs, names, roles per org |
+
+## Token Response
+
+\`\`\`json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
+  "scope": "openid profile email"
+}
+\`\`\`
+
+## UserInfo Response
+
+\`\`\`json
+{
+  "sub": "user-uuid-here",
+  "email": "user@example.com",
+  "email_verified": true,
+  "name": "John Doe",
+  "picture": "https://example.com/avatar.jpg",
+  "roles": ["client_admin"],
+  "permissions": ["users:read", "users:write"],
+  "organizations": [
+    {
+      "id": "org-uuid",
+      "name": "Acme Corp",
+      "role": "client_admin"
+    }
+  ]
+}
+\`\`\`
+
+## Security Note
+
+Access tokens expire in 1 hour. Use refresh tokens to obtain new access tokens. Never expose client secrets in client-side code.
+`;
 
 export default function OAuthPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -23,10 +88,16 @@ export default function OAuthPage() {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Settings color="primary" />
-        OAuth 2.0 Configuration
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Settings color="primary" />
+          OAuth 2.0 Configuration
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="oauth-configuration" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         Complete reference for OAuth 2.0 endpoints, scopes, and configuration options.

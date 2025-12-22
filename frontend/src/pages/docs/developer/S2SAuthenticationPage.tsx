@@ -27,6 +27,177 @@ import {
   Code,
   Warning,
 } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Service-to-Service Authentication
+
+Enable backend systems like HRIS, payroll integrations, and automated services to access Teamified Accounts APIs without user sessions using OAuth 2.0 Client Credentials Grant.
+
+> **Unified Endpoints:** S2S authentication uses the same API endpoints as user authentication. Simply use your S2S token on standard endpoints like \`/api/v1/users\` and \`/api/v1/organizations\`.
+
+## Overview
+
+Service-to-Service (S2S) authentication allows backend applications to authenticate directly with Teamified Accounts without requiring a user to be logged in. This is ideal for:
+
+- HRIS integrations syncing employee data
+- Automated user provisioning and deprovisioning
+- Background jobs that need API access
+- System integrations between internal services
+
+## How It Works
+
+S2S uses the OAuth 2.0 Client Credentials Grant flow:
+
+1. Your backend sends a token request with \`client_id\`, \`client_secret\`, and requested \`scope\`
+2. Teamified Accounts validates the credentials and checks if the client is enabled for S2S
+3. If valid, an access token is returned with the granted scopes
+4. Use the access token in API requests as a Bearer token
+
+## Enabling S2S for an OAuth Client
+
+To enable S2S authentication for an application:
+
+1. **Navigate to OAuth Configuration** - Go to Admin > Tools > OAuth Configuration
+2. **Edit the OAuth Client** - Click the edit icon on the client you want to enable S2S for
+3. **Enable Client Credentials Grant** - Toggle on 'Enable Service-to-Service (S2S)' in the dialog
+4. **Select Allowed Scopes** - Choose which API scopes this client can request
+5. **Save Changes** - The client will now show an 'S2S' badge in the OAuth clients table
+
+## Available Scopes
+
+| Scope | Description | Permissions |
+|-------|-------------|-------------|
+| \`read:users\` | Read user data | View user profiles, list users, get user details |
+| \`write:users\` | Modify user data | Create users, update profiles, change status |
+| \`read:organizations\` | Read organization data | View organizations, list members |
+| \`write:organizations\` | Modify organization data | Create/update organizations, manage members |
+| \`read:invitations\` | Read invitation data | View pending invitations |
+| \`write:invitations\` | Manage invitations | Send invitations, revoke invitations |
+
+## Token Request
+
+Request an access token using the Client Credentials Grant:
+
+\`\`\`
+POST /api/v1/sso/token
+Content-Type: application/json
+
+{
+  "grant_type": "client_credentials",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "scope": ["read:users", "read:organizations"]
+}
+\`\`\`
+
+## Token Response
+
+\`\`\`json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": ["read:users", "read:organizations"]
+}
+\`\`\`
+
+> **Note:** Client Credentials Grant does not return a refresh token. Request a new access token when the current one expires.
+
+## Using the Access Token
+
+Include the access token in API requests as a Bearer token. S2S tokens work on the same unified endpoints as user authentication:
+
+\`\`\`bash
+# List users (unified endpoint - works with both user JWT and S2S tokens)
+GET /api/v1/users
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+# List organizations
+GET /api/v1/organizations
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+# List invitations
+GET /api/v1/invitations
+Authorization: Bearer YOUR_ACCESS_TOKEN
+\`\`\`
+
+> **Security Note:** Write operations (POST, PUT, DELETE) are blocked for S2S clients by default. S2S authentication is designed for read-only data access. Contact support if you need write access for specific use cases.
+
+## Code Examples
+
+### Node.js / TypeScript
+
+\`\`\`javascript
+async function getS2SToken() {
+  const response = await fetch('https://accounts.teamified.com/api/v1/sso/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      grant_type: 'client_credentials',
+      client_id: process.env.TEAMIFIED_CLIENT_ID,
+      client_secret: process.env.TEAMIFIED_CLIENT_SECRET,
+      scope: ['read:users', 'read:organizations'],
+    }),
+  });
+  
+  const data = await response.json();
+  return data.access_token;
+}
+
+async function getUsers() {
+  const token = await getS2SToken();
+  
+  const response = await fetch('https://accounts.teamified.com/api/v1/users', {
+    headers: {
+      'Authorization': \\\`Bearer \\\${token}\\\`,
+    },
+  });
+  
+  return response.json();
+}
+\`\`\`
+
+### Python
+
+\`\`\`python
+import requests
+import os
+
+def get_s2s_token():
+    response = requests.post(
+        'https://accounts.teamified.com/api/v1/sso/token',
+        json={
+            'grant_type': 'client_credentials',
+            'client_id': os.environ['TEAMIFIED_CLIENT_ID'],
+            'client_secret': os.environ['TEAMIFIED_CLIENT_SECRET'],
+            'scope': ['read:users', 'read:organizations'],
+        }
+    )
+    return response.json()['access_token']
+
+def get_users():
+    token = get_s2s_token()
+    
+    response = requests.get(
+        'https://accounts.teamified.com/api/v1/users',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+    
+    return response.json()
+\`\`\`
+
+## Security Best Practices
+
+- **Never expose client secrets in frontend code** - Client credentials should only be used in secure backend environments
+- **Use environment variables for credentials** - Never hardcode client_id or client_secret in source code
+- **Request minimal scopes** - Only request the scopes your integration actually needs
+- **Rotate client secrets regularly** - Use the 'Regenerate Secret' feature in OAuth Configuration periodically
+- **Monitor API usage** - Check audit logs for unusual access patterns from S2S clients
+
+> **Important:** S2S tokens have full programmatic access based on their granted scopes. Treat client secrets with the same security as passwords and API keys.
+`;
 
 export default function S2SAuthenticationPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -34,10 +205,16 @@ export default function S2SAuthenticationPage() {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <SyncAlt color="primary" />
-        Service-to-Service Authentication
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SyncAlt color="primary" />
+          Service-to-Service Authentication
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="s2s-authentication" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         Enable backend systems like HRIS, payroll integrations, and automated services to access Teamified Accounts 

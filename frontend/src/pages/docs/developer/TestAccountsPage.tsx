@@ -14,14 +14,66 @@ import {
   Chip,
 } from '@mui/material';
 import { Science, ContactSupport } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Test Accounts
+
+Use these pre-configured test accounts to explore the platform's features during development and testing. These accounts are available in non-production environments only.
+
+> **Credentials:** Contact Admin for test account credentials. All test accounts use a shared password that is provided separately for security purposes.
+
+## Internal Test Accounts
+
+These accounts have internal Teamified roles with varying access levels.
+
+| Name | Email | Role | Access Level |
+|------|-------|------|--------------|
+| Admin User | \`admin@teamified.com\` | Super Admin | Full platform access |
+| Sarah Chen | \`sarah.chen@teamified.com\` | Internal HR | Global HR operations |
+| Marcus Johnson | \`marcus.johnson@teamified.com\` | Internal Recruiter | Global recruiting |
+| Elena Rodriguez | \`elena.rodriguez@teamified.com\` | Account Manager | Client management |
+
+## Client Test Accounts
+
+These accounts demonstrate client organization roles and permissions.
+
+| Name | Email | Role | Access Level |
+|------|-------|------|--------------|
+| Amit Sharma | \`user1@teamified.com\` | Client Admin | Organization admin |
+| Sneha Patel | \`user2@teamified.com\` | Client Admin | Organization admin |
+| Deepa Singh | \`user3@teamified.com\` | Client HR | Organization HR |
+| Anita Gupta | \`user5@teamified.com\` | Client Recruiter | Organization recruiting |
+
+## Candidate Test Accounts
+
+These accounts represent job candidates in the system.
+
+| Name | Email | Role | Access Level |
+|------|-------|------|--------------|
+| Vikram Singh | \`user13@teamified.com\` | Candidate | Candidate Portal only |
+| Meera Kumar | \`user14@teamified.com\` | Candidate | Candidate Portal only |
+| Anita Gupta | \`user15@teamified.com\` | Candidate | Candidate Portal only |
+
+## OAuth Test Client
+
+To test SSO integration, use:
+- **client_id:** \`test-client\`
+- **redirect_uri:** \`http://localhost:3000/callback\`
+`;
 
 export default function TestAccountsPage() {
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Science color="primary" />
-        Test Accounts
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Science color="primary" />
+          Test Accounts
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="test-accounts" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         Use these pre-configured test accounts to explore the platform's features during development 

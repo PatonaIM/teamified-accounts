@@ -17,6 +17,133 @@ import {
 import { Person, Key, Security, CheckCircle } from '@mui/icons-material';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# SSO User Info API (/api/v1/sso/me)
+
+The \`/api/v1/sso/me\` endpoint returns the authenticated user's profile information from their JWT access token. This is the primary endpoint for client applications to retrieve user details after SSO authentication.
+
+> **Token-Based Response:** This endpoint decodes the JWT access token and returns all user profile fields directly from the token payload, making it extremely fast with no database lookups required.
+
+## Endpoint
+
+\`\`\`
+GET /api/v1/sso/me
+Authorization: Bearer <access_token>
+\`\`\`
+
+### Authentication
+
+Requires a valid JWT access token obtained from the OAuth 2.0 token exchange. Pass the token in the \`Authorization\` header with the \`Bearer\` scheme.
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| \`sub\` | string | User's unique identifier (UUID) |
+| \`email\` | string | User's primary email address |
+| \`firstName\` | string | User's first name |
+| \`lastName\` | string | User's last name |
+| \`fullName\` | string | Pre-formatted full name ("FirstName LastName"). Falls back to email username if name is empty. |
+| \`initials\` | string | User's initials (e.g., "JD" for John Doe). Useful for avatar fallbacks. |
+| \`profilePicture\` | string \\| null | URL to the user's profile picture, or null if not set |
+| \`phoneNumber\` | string \\| null | User's phone number, or null if not set |
+| \`emailVerified\` | boolean | Whether the user's email has been verified |
+| \`isActive\` | boolean | Whether the user's account is active |
+| \`roles\` | string[] | Array of user's roles (e.g., ["candidate", "employee", "client_admin"]) |
+| \`clientName\` | string | Name of the OAuth client that issued the token (optional) |
+| \`mustChangePassword\` | boolean | If true, user must change password before accessing protected resources |
+| \`iat\` | number | Token issued-at timestamp (Unix epoch seconds) |
+| \`exp\` | number | Token expiration timestamp (Unix epoch seconds) |
+| \`jti\` | string | Unique token identifier (JWT ID) |
+
+## Example Response
+
+\`\`\`json
+{
+  "sub": "650e8400-e29b-41d4-a716-446655440001",
+  "email": "john.doe@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "fullName": "John Doe",
+  "initials": "JD",
+  "profilePicture": "https://storage.example.com/avatars/john.jpg",
+  "phoneNumber": "+1234567890",
+  "emailVerified": true,
+  "isActive": true,
+  "roles": ["candidate", "employee"],
+  "clientName": "HRIS Portal",
+  "mustChangePassword": false,
+  "iat": 1703206800,
+  "exp": 1703466000,
+  "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+\`\`\`
+
+## Usage Examples
+
+### cURL
+
+\`\`\`bash
+curl -X GET "https://accounts.teamified.com/api/v1/sso/me" \\
+  -H "Authorization: Bearer <access_token>"
+\`\`\`
+
+### JavaScript / Fetch
+
+\`\`\`javascript
+const response = await fetch('/api/v1/sso/me', {
+  method: 'GET',
+  headers: {
+    'Authorization': \`Bearer \${accessToken}\`
+  }
+});
+
+const user = await response.json();
+console.log(user.fullName); // "John Doe"
+console.log(user.initials); // "JD"
+\`\`\`
+
+### Teamified SDK
+
+\`\`\`javascript
+import { TeamifiedSDK } from '@teamified/sso-sdk';
+
+const sdk = new TeamifiedSDK({
+  clientId: 'your-client-id',
+  redirectUri: 'https://your-app.com/callback'
+});
+
+// After OAuth flow completes
+const user = await sdk.getCurrentUser();
+console.log(user.email);      // john.doe@example.com
+console.log(user.fullName);   // John Doe
+console.log(user.roles);      // ['candidate', 'employee']
+\`\`\`
+
+## Common Use Cases
+
+### Display User Profile in Header
+Use \`fullName\`, \`initials\`, and \`profilePicture\` to render user avatars and names in your application header or navigation.
+
+### Role-Based UI Rendering
+Check the \`roles\` array to conditionally show/hide features based on user permissions.
+
+### Email Verification Prompts
+Use \`emailVerified\` to prompt users to verify their email if not yet confirmed.
+
+### Forced Password Change
+Check \`mustChangePassword\` and redirect users to a password change page if required.
+
+## Error Responses
+
+| Status Code | Error | Description |
+|-------------|-------|-------------|
+| 401 | Unauthorized | Missing or invalid access token |
+| 401 | Token Expired | Access token has expired - use refresh token to get a new one |
+
+> **Token Refresh:** If you receive a 401 error, use your refresh token to obtain a new access token via \`POST /api/v1/sso/token\` with \`grant_type=refresh_token\`.
+`;
 
 export default function SsoMeApiPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -69,10 +196,16 @@ console.log(user.roles);      // ['candidate', 'employee']`;
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Person color="primary" />
-        SSO User Info API (/sso/me)
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Person color="primary" />
+          SSO User Info API (/sso/me)
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="sso-me-api" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         The <code>/api/v1/sso/me</code> endpoint returns the authenticated user's profile information 

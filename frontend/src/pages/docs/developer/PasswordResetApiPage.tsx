@@ -15,16 +15,107 @@ import {
   Divider,
 } from '@mui/material';
 import { VpnKey } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Password Reset API
+
+API reference for password reset operations, including self-service reset, administrative reset, and forced password change handling.
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | \`/auth/forgot-password\` | Request password reset email (self-service) |
+| POST | \`/auth/reset-password\` | Reset password using token from email |
+| POST | \`/users/:id/password-reset\` | Admin: send password reset link |
+| PUT | \`/users/:id/password\` | Admin: set password directly |
+| POST | \`/auth/force-change-password\` | User: change forced temporary password |
+
+## Self-Service Reset Request
+
+\`\`\`
+POST /auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+\`\`\`
+
+Returns 200 OK regardless of whether the email exists (prevents user enumeration).
+
+## Complete Password Reset
+
+\`\`\`
+POST /auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "newPassword": "NewSecureP@ssw0rd!"
+}
+\`\`\`
+
+## Admin: Send Reset Link
+
+\`\`\`
+POST /users/:userId/password-reset
+Authorization: Bearer ADMIN_ACCESS_TOKEN
+
+{
+  "sendEmail": true
+}
+\`\`\`
+
+**Allowed Roles:** Super Admin, Internal HR, Internal Account Manager, Internal Recruiter, Internal Finance, Internal Marketing, Client Admin, Client HR, Client Finance, Client Recruiter
+
+## Admin: Set Password Directly
+
+\`\`\`
+PUT /users/:userId/password
+Authorization: Bearer ADMIN_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "password": "TemporaryP@ss123!"
+}
+\`\`\`
+
+> **Restricted:** Only Super Admin, Internal HR, and Internal Account Manager. Sets \`mustChangePassword: true\` on the user account.
+
+## Forced Password Change
+
+When \`mustChangePassword\` is true, the user receives 403 on all protected endpoints. They must call this endpoint to change their password:
+
+\`\`\`
+POST /auth/force-change-password
+Authorization: Bearer USER_ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "currentPassword": "TemporaryP@ss123!",
+  "newPassword": "MyNewSecureP@ss!"
+}
+\`\`\`
+
+Upon successful password change, new tokens are issued and \`mustChangePassword\` is set to false.
+`;
 
 export default function PasswordResetApiPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <VpnKey color="primary" />
-        Password Reset API
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <VpnKey color="primary" />
+          Password Reset API
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="password-reset-api" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         API reference for password reset operations, including self-service reset, 

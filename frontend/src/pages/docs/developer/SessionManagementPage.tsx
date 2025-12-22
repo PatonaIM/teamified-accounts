@@ -22,6 +22,248 @@ import {
 } from '@mui/icons-material';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# Session Management Guide
+
+This guide covers how to manage user sessions in your OAuth 2.0 client application, including login flows, session persistence, checking active sessions, and properly implementing logout.
+
+## Session Overview
+
+Teamified Accounts uses a dual-token authentication system:
+
+- **Access Token (72 hours)** - JWT token used for API authentication. Stored in localStorage on the client.
+- **Refresh Token (30 days)** - Used to obtain new access tokens. Tracked server-side with token family rotation.
+- **httpOnly Cookie** - Secure cookie set during SSO login for seamless re-authentication.
+
+> **Session Timeout:** Sessions expire after 72 hours of inactivity or 30 days absolute maximum.
+
+## Login Flow (OAuth 2.0 + PKCE)
+
+Client applications authenticate users through the SSO authorization flow:
+
+### 1. Initiate Authorization
+
+\`\`\`javascript
+// Generate PKCE code verifier and challenge
+const codeVerifier = generateCodeVerifier();
+const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+// Store verifier for later use
+sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+
+// Redirect to SSO authorize endpoint
+const authorizeUrl = new URL('https://accounts.teamified.com/api/v1/sso/authorize');
+authorizeUrl.searchParams.set('client_id', 'your-client-id');
+authorizeUrl.searchParams.set('redirect_uri', 'https://yourapp.com/callback');
+authorizeUrl.searchParams.set('code_challenge', codeChallenge);
+authorizeUrl.searchParams.set('code_challenge_method', 'S256');
+authorizeUrl.searchParams.set('state', generateRandomState());
+
+window.location.href = authorizeUrl.toString();
+\`\`\`
+
+### 2. Handle Callback & Exchange Code for Tokens
+
+\`\`\`javascript
+// On callback page, extract code and exchange for tokens
+const urlParams = new URLSearchParams(window.location.search);
+const code = urlParams.get('code');
+const codeVerifier = sessionStorage.getItem('pkce_code_verifier');
+
+const response = await fetch('https://accounts.teamified.com/api/v1/sso/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    grant_type: 'authorization_code',
+    code: code,
+    client_id: 'your-client-id',
+    client_secret: 'your-client-secret',
+    redirect_uri: 'https://yourapp.com/callback',
+    code_verifier: codeVerifier
+  })
+});
+
+const tokens = await response.json();
+// tokens = { access_token, refresh_token, expires_in, token_type }
+\`\`\`
+
+### 3. Store Tokens (Client-Side)
+
+\`\`\`javascript
+// Store tokens securely in localStorage
+localStorage.setItem('access_token', tokens.access_token);
+localStorage.setItem('refresh_token', tokens.refresh_token);
+
+// Optionally store user data for quick access
+const userInfo = await fetch('https://accounts.teamified.com/api/v1/sso/me', {
+  headers: { 'Authorization': \\\`Bearer \\\${tokens.access_token}\\\` }
+});
+localStorage.setItem('user_data', JSON.stringify(await userInfo.json()));
+\`\`\`
+
+## Checking Active Sessions
+
+Before requiring a user to log in, check if they have an active session:
+
+### Client-Side Session Check
+
+\`\`\`javascript
+function isSessionActive() {
+  const accessToken = localStorage.getItem('access_token');
+  
+  if (!accessToken) {
+    return false;
+  }
+  
+  // Optionally decode JWT to check expiration
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const expiresAt = payload.exp * 1000; // Convert to milliseconds
+    return Date.now() < expiresAt;
+  } catch {
+    return false;
+  }
+}
+
+// On app initialization
+if (isSessionActive()) {
+  // User has valid session, load app
+  loadUserData();
+} else {
+  // No valid session, redirect to SSO login
+  redirectToSsoLogin();
+}
+\`\`\`
+
+### Server-Side Session Validation
+
+\`\`\`javascript
+// Validate session by calling the /me endpoint
+async function validateSession() {
+  const accessToken = localStorage.getItem('access_token');
+  
+  if (!accessToken) {
+    return null;
+  }
+  
+  try {
+    const response = await fetch('https://accounts.teamified.com/api/v1/sso/me', {
+      headers: { 'Authorization': \\\`Bearer \\\${accessToken}\\\` }
+    });
+    
+    if (!response.ok) {
+      // Token invalid or expired
+      clearLocalSession();
+      return null;
+    }
+    
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
+}
+\`\`\`
+
+> **Important:** Always validate tokens server-side for sensitive operations. Client-side checks are for UX optimization only.
+
+## Logout Implementation
+
+Proper logout requires clearing both client-side storage AND server-side sessions. Use the unified SSO logout endpoint for complete session termination.
+
+### Step 1: Clear Client-Side Storage
+
+\`\`\`javascript
+function clearLocalSession() {
+  // Clear access and refresh tokens
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  
+  // Clear cached user data
+  localStorage.removeItem('user_data');
+  
+  // Clear any session storage items
+  sessionStorage.removeItem('pkce_code_verifier');
+  sessionStorage.removeItem('oauth_state');
+}
+\`\`\`
+
+### Step 2: Call SSO Logout Endpoint
+
+\`\`\`javascript
+async function logout() {
+  // 1. Clear local tokens first
+  clearLocalSession();
+  
+  // 2. Build logout URL with redirect
+  const logoutUrl = new URL('https://accounts.teamified.com/api/v1/sso/logout');
+  logoutUrl.searchParams.set('post_logout_redirect_uri', 'https://yourapp.com/logged-out');
+  logoutUrl.searchParams.set('client_id', 'your-client-id'); // Optional: for redirect validation
+  
+  // 3. Redirect to SSO logout (clears httpOnly cookies & revokes sessions)
+  window.location.href = logoutUrl.toString();
+}
+\`\`\`
+
+### SSO Logout Endpoint Reference
+
+\`GET /api/v1/sso/logout\`
+
+Centralized logout endpoint that clears all user sessions and redirects back to the client.
+
+**Query Parameters:**
+- \`post_logout_redirect_uri\` - URL to redirect after logout (optional)
+- \`client_id\` - OAuth client ID for redirect validation (optional)
+- \`state\` - State parameter passed back to client (optional)
+
+**What the logout endpoint does:**
+- Clears httpOnly authentication cookies
+- Revokes all user sessions in the database
+- Invalidates all refresh token families
+- Redirects to post_logout_redirect_uri (if provided)
+
+## Security Best Practices
+
+- Always clear local storage before redirecting to SSO logout (prevents login loops caused by cached user data)
+- Use PKCE for all authorization flows (prevents authorization code interception attacks)
+- Validate tokens server-side for sensitive operations (don't rely solely on client-side token validation)
+- Implement proper error handling for expired tokens (redirect to login gracefully when tokens are invalid)
+
+## Token Refresh Flow
+
+When access tokens expire, use the refresh token to obtain new tokens:
+
+\`\`\`javascript
+async function refreshTokens() {
+  const refreshToken = localStorage.getItem('refresh_token');
+  
+  if (!refreshToken) {
+    throw new Error('No refresh token available');
+  }
+  
+  const response = await fetch('https://accounts.teamified.com/api/v1/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+  
+  if (!response.ok) {
+    // Refresh failed - user must log in again
+    clearLocalSession();
+    redirectToSsoLogin();
+    return;
+  }
+  
+  const tokens = await response.json();
+  localStorage.setItem('access_token', tokens.accessToken);
+  localStorage.setItem('refresh_token', tokens.refreshToken);
+  
+  return tokens;
+}
+\`\`\`
+
+> **Token Rotation:** Each refresh request returns a new refresh token. The old refresh token is invalidated to prevent token reuse attacks.
+`;
 
 export default function SessionManagementPage() {
   return (
@@ -29,9 +271,16 @@ export default function SessionManagementPage() {
       <Paper sx={{ p: 4 }}>
         <Stack spacing={4}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
-              Session Management Guide
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Storage color="primary" />
+                Session Management Guide
+              </Typography>
+              <DownloadMarkdownButton 
+                filename="session-management-guide" 
+                content={markdownContent} 
+              />
+            </Box>
             <Typography variant="body1" color="text.secondary">
               This guide covers how to manage user sessions in your OAuth 2.0 client application,
               including login flows, session persistence, checking active sessions, and properly

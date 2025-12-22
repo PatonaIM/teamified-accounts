@@ -14,16 +14,103 @@ import {
   Divider,
 } from '@mui/material';
 import { ManageAccounts } from '@mui/icons-material';
+import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
+
+const markdownContent = `# User Management API
+
+API reference for managing users programmatically, including CRUD operations, role assignments, and organization management.
+
+## User Endpoints
+
+| Method | Endpoint | Description | Required Role |
+|--------|----------|-------------|---------------|
+| GET | \`/users\` | List all users (paginated) | Super Admin, Internal HR |
+| GET | \`/users/:id\` | Get user by ID | Super Admin, Internal HR, Client Admin (own org) |
+| POST | \`/users\` | Create new user | Super Admin |
+| PUT | \`/users/:id\` | Update user | Super Admin, Internal HR |
+| DELETE | \`/users/:id\` | Deactivate user | Super Admin |
+| POST | \`/users/:id/roles\` | Assign role to user | Super Admin, Client Admin (client roles only) |
+| DELETE | \`/users/:id/roles/:roleId\` | Remove role from user | Super Admin, Client Admin (client roles only) |
+
+## Create User Request
+
+\`\`\`http
+POST /users
+Authorization: Bearer ACCESS_TOKEN
+Content-Type: application/json
+
+{
+  "email": "newuser@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "+1234567890",
+  "dateOfBirth": "1990-01-15",
+  "roleId": "client_admin",
+  "organizationId": "org-uuid-here",
+  "sendInvitation": true
+}
+\`\`\`
+
+## User Response Object
+
+\`\`\`json
+{
+  "id": "user-uuid",
+  "email": "user@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "status": "active",
+  "emailVerified": true,
+  "createdAt": "2025-01-15T10:30:00Z",
+  "lastLoginAt": "2025-12-01T08:45:00Z",
+  "roles": [
+    {
+      "id": "role-uuid",
+      "name": "client_admin",
+      "organizationId": "org-uuid"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org-uuid",
+      "name": "Acme Corp"
+    }
+  ],
+  "profile": {
+    "phone": "+1234567890",
+    "dateOfBirth": "1990-01-15",
+    "profilePicture": "https://..."
+  }
+}
+\`\`\`
+
+## Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| \`page\` | number | Page number (default: 1) |
+| \`limit\` | number | Items per page (default: 20, max: 100) |
+| \`search\` | string | Search by name or email |
+| \`status\` | string | Filter by status: active, inactive, pending |
+| \`organizationId\` | string | Filter by organization |
+| \`role\` | string | Filter by role name |
+`;
 
 export default function UserManagementApiPage() {
   const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <ManageAccounts color="primary" />
-        User Management API
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ManageAccounts color="primary" />
+          User Management API
+        </Typography>
+        <DownloadMarkdownButton 
+          filename="user-management-api" 
+          content={markdownContent} 
+        />
+      </Box>
 
       <Typography variant="body1" paragraph>
         API reference for managing users programmatically, including CRUD operations, 
