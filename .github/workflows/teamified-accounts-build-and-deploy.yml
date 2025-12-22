@@ -18,7 +18,7 @@ env:
   # Container App Configuration
   CONTAINER_APP_NAME: 'teamified-accounts'
   CONTAINER_REGISTRY: 'tmfregistryprod.azurecr.io'
-  RESOURCE_GROUP: 'rg-tmf-prd-ausest'
+  RESOURCE_GROUP: 'rg-teamified-prod'
   IMAGE_NAME: 'teamified-accounts'
 
 jobs:
