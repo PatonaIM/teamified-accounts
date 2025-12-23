@@ -383,6 +383,7 @@ const SignupPathSelectionPage: React.FC = () => {
               ))}
             </Box>
 
+            {/* TODO: Bring back client testimonial once we get a better one
             <Box
               sx={{
                 textAlign: 'center',
@@ -426,6 +427,7 @@ const SignupPathSelectionPage: React.FC = () => {
                 </Box>
               </Box>
             </Box>
+            */}
 
             <Box
               sx={{
