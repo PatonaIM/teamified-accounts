@@ -29,6 +29,7 @@ import { clientAdminSignup, analyzeWebsite } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
+import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
 import { checkAndHandleMarketingRedirect, preserveMarketingSourceFromUrl, getMarketingSource, isMarketingSource } from '../services/marketingRedirectService';
 
 const COMPANY_SIZES = [
@@ -197,8 +198,8 @@ const ClientAdminSignupPage: React.FC = () => {
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (!isPasswordValid(formData.password)) {
+      newErrors.password = 'Password does not meet all requirements';
     }
 
     if (!formData.confirmPassword) {
@@ -428,7 +429,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   error={!!errors.password}
-                  helperText={errors.password || 'At least 8 characters'}
+                  helperText={errors.password}
                   margin="normal"
                   required
                   disabled={isLoading}
@@ -449,6 +450,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     ),
                   }}
                 />
+                <PasswordRequirements password={formData.password} />
 
                 <TextField
                   fullWidth

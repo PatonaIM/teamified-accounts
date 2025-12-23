@@ -20,6 +20,7 @@ import {
   VisibilityOff,
   ArrowBack,
 } from '@mui/icons-material';
+import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { candidateSignup } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
@@ -86,8 +87,8 @@ const CandidateSignupPage: React.FC = () => {
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (!isPasswordValid(formData.password)) {
+      newErrors.password = 'Password does not meet all requirements';
     }
 
     if (!formData.confirmPassword) {
@@ -257,7 +258,7 @@ const CandidateSignupPage: React.FC = () => {
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 error={!!errors.password}
-                helperText={errors.password || 'At least 8 characters'}
+                helperText={errors.password}
                 margin="normal"
                 required
                 disabled={isLoading}
@@ -278,6 +279,7 @@ const CandidateSignupPage: React.FC = () => {
                   ),
                 }}
               />
+              <PasswordRequirements password={formData.password} />
 
               <TextField
                 fullWidth
