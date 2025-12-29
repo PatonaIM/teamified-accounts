@@ -27,10 +27,49 @@ API reference for managing organizations, including creation with optional admin
 |--------|----------|-------------|---------------|
 | POST | \`/v1/organizations\` | Create new organization | Super Admin, Internal HR, Internal Account Manager |
 | GET | \`/v1/organizations\` | List all organizations (paginated) | Super Admin, Internal roles |
+| GET | \`/v1/organizations/check-slug/:slug\` | Check if slug is available | Any authenticated user |
+| GET | \`/v1/organizations/by-slug/:slug\` | Get organization by slug | Super Admin, Internal roles, Client roles (own org) |
 | GET | \`/v1/organizations/:id\` | Get organization by ID | Super Admin, Internal roles, Client Admin (own org) |
 | GET | \`/v1/organizations/me\` | Get my organization | Client roles |
 | PUT | \`/v1/organizations/:id\` | Update organization | Super Admin, Internal HR, Internal Account Manager, Client Admin (own org) |
 | DELETE | \`/v1/organizations/:id\` | Delete organization | Super Admin, Internal HR, Internal Account Manager |
+
+## Check Slug Availability
+
+Check if an organization slug is available for use. This is useful for real-time validation during organization creation or client admin signup flows.
+
+### Request
+
+\`\`\`http
+GET /v1/organizations/check-slug/:slug
+Authorization: Bearer ACCESS_TOKEN
+\`\`\`
+
+### Response
+
+\`\`\`json
+{
+  "available": true,
+  "slug": "acme-corp"
+}
+\`\`\`
+
+If the slug is already taken, \`available\` will be \`false\`.
+
+## Get Organization by Slug
+
+Retrieve organization details using the URL-friendly slug instead of the UUID.
+
+### Request
+
+\`\`\`http
+GET /v1/organizations/by-slug/:slug
+Authorization: Bearer ACCESS_TOKEN
+\`\`\`
+
+### Response
+
+Returns the full organization response object (see below).
 
 ## Create Organization
 
@@ -188,6 +227,18 @@ export default function OrganizationApiPage() {
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="GET" color="success" size="small" /></TableCell>
+                  <TableCell><code>/v1/organizations/check-slug/:slug</code></TableCell>
+                  <TableCell>Check if slug is available</TableCell>
+                  <TableCell>Any authenticated user</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="GET" color="success" size="small" /></TableCell>
+                  <TableCell><code>/v1/organizations/by-slug/:slug</code></TableCell>
+                  <TableCell>Get organization by slug</TableCell>
+                  <TableCell>Super Admin, Internal roles, Client roles (own org)</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="GET" color="success" size="small" /></TableCell>
                   <TableCell><code>/v1/organizations/:id</code></TableCell>
                   <TableCell>Get organization by ID</TableCell>
                   <TableCell>Super Admin, Internal roles, Client Admin (own org)</TableCell>
@@ -213,6 +264,76 @@ export default function OrganizationApiPage() {
               </TableBody>
             </Table>
           </TableContainer>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            Check Slug Availability
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Check if an organization slug is available for use. This is useful for real-time validation 
+            during organization creation or client admin signup flows.
+          </Typography>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Request
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`GET ${apiUrl}/v1/organizations/check-slug/acme-corp
+Authorization: Bearer ACCESS_TOKEN`}
+            </pre>
+          </Paper>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Response
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`{
+  "available": true,
+  "slug": "acme-corp"
+}`}
+            </pre>
+          </Paper>
+
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              If the slug is already taken, <code>available</code> will be <code>false</code>.
+            </Typography>
+          </Alert>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            Get Organization by Slug
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Retrieve organization details using the URL-friendly slug instead of the UUID. 
+            Useful for building user-friendly URLs in client applications.
+          </Typography>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Request
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`GET ${apiUrl}/v1/organizations/by-slug/acme-corp
+Authorization: Bearer ACCESS_TOKEN`}
+            </pre>
+          </Paper>
+
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              Returns the full organization response object. Client roles can only access organizations they are a member of.
+            </Typography>
+          </Alert>
         </Box>
 
         <Divider />
