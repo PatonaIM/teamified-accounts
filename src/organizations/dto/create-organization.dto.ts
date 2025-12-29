@@ -9,6 +9,13 @@ export enum SubscriptionTier {
   INTERNAL = 'internal',
 }
 
+export enum SubscriptionStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
+  CANCELLED = 'cancelled',
+}
+
 export class CreateOrganizationDto {
   @ApiProperty({ 
     description: 'Organization name',
@@ -83,4 +90,15 @@ export class CreateOrganizationDto {
   @IsOptional()
   @IsEnum(SubscriptionTier)
   subscriptionTier?: SubscriptionTier;
+
+  @ApiProperty({ 
+    description: 'Subscription status (active, inactive, suspended, cancelled)',
+    enum: SubscriptionStatus,
+    example: 'active',
+    required: false,
+    default: 'active'
+  })
+  @IsOptional()
+  @IsEnum(SubscriptionStatus)
+  subscriptionStatus?: SubscriptionStatus;
 }

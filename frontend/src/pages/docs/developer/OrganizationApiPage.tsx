@@ -86,6 +86,7 @@ Create a new organization. Super Admin, Internal HR, and Internal Account Manage
 | \`logoUrl\` | string | Optional | URL to organization logo |
 | \`website\` | string | Optional | Organization website URL |
 | \`subscriptionTier\` | enum | Optional | Subscription tier: free, basic, professional, enterprise, internal |
+| \`subscriptionStatus\` | enum | Optional | Subscription status: active, inactive, suspended, cancelled |
 
 ### Example Request
 
@@ -404,6 +405,12 @@ Authorization: Bearer ACCESS_TOKEN`}
                   <TableCell>enum</TableCell>
                   <TableCell><Chip label="Optional" size="small" /></TableCell>
                   <TableCell>Subscription tier: free, basic, professional, enterprise, internal</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>subscriptionStatus</code></TableCell>
+                  <TableCell>enum</TableCell>
+                  <TableCell><Chip label="Optional" size="small" /></TableCell>
+                  <TableCell>Subscription status: active, inactive, suspended, cancelled</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
