@@ -126,6 +126,8 @@ class DatabaseSeeder {
       leaveBalances: [],
       payslips: [],
       taxDocuments: [],
+      organizations: [],
+      organizationMembers: [],
     };
     this.userCredentials = {};
   }
@@ -162,6 +164,8 @@ class DatabaseSeeder {
       'statutory_components',
       'countries',
       'currencies',
+      'organization_members',
+      'organizations',
       'clients',
       'users'
     ];
@@ -498,7 +502,180 @@ class DatabaseSeeder {
     this.generatePayslipData();
     this.generateTaxDocumentData();
 
+    // Generate organizations and members (F.R.I.E.N.D.S., Stark Industries, etc.)
+    await this.generateOrganizationsData();
+
     console.log(`${colors.green}✓${colors.reset} Generated seed data`);
+  }
+
+  async generateOrganizationsData() {
+    console.log(`${colors.yellow}🏢${colors.reset} Generating organizations and members...`);
+
+    const defaultPassword = 'Admin123!';
+    const hashedPassword = await argon2.hash(defaultPassword, {
+      type: argon2.argon2id,
+      memoryCost: 2 ** 16,
+      timeCost: 3,
+      parallelism: 1,
+    });
+
+    // F.R.I.E.N.D.S. Inc. organization
+    const friendsOrgId = '650e8400-e29b-41d4-a716-ee934041b3e9';
+    this.seedData.organizations.push({
+      id: friendsOrgId,
+      name: 'F.R.I.E.N.D.S. Inc.',
+      slug: 'friends-inc',
+      industry: 'Entertainment',
+      company_size: '1-10',
+      logo_url: null,
+      settings: JSON.stringify({}),
+      subscription_tier: 'professional',
+      subscription_status: 'active',
+      website: 'https://friends.example.com',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null
+    });
+
+    // Stark Industries organization  
+    const starkOrgId = '650e8400-e29b-41d4-a716-ee934041b3e8';
+    this.seedData.organizations.push({
+      id: starkOrgId,
+      name: 'Stark Industries',
+      slug: 'stark-industries',
+      industry: 'Technology',
+      company_size: '201-500',
+      logo_url: null,
+      settings: JSON.stringify({}),
+      subscription_tier: 'enterprise',
+      subscription_status: 'active',
+      website: 'https://starkindustries.example.com',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null
+    });
+
+    // F.R.I.E.N.D.S. members
+    const friendsMembers = [
+      { id: '650e8400-e29b-41d4-a716-ccfb89d578ef', email: 'monica.geller@friends.com', firstName: 'Monica', lastName: 'Geller', roles: ['client_admin', 'client_employee'] },
+      { id: '650e8400-e29b-41d4-a716-84c3495377d7', email: 'joey.tribbiani@friends.com', firstName: 'Joey', lastName: 'Tribbiani', roles: ['client_employee', 'client_finance'] },
+      { id: '650e8400-e29b-41d4-a716-ef6d8d708e90', email: 'phoebe.buffay@friends.com', firstName: 'Phoebe', lastName: 'Buffay', roles: ['client_employee', 'client_recruiter'] },
+      { id: '650e8400-e29b-41d4-a716-b57c09c868b5', email: 'ross.geller@friends.com', firstName: 'Ross', lastName: 'Geller', roles: ['client_admin'] },
+      { id: '650e8400-e29b-41d4-a716-5936915fcac6', email: 'rachel.green@friends.com', firstName: 'Rachel', lastName: 'Green', roles: ['client_hr', 'client_employee'] },
+      { id: '650e8400-e29b-41d4-a716-c0eef7ba3230', email: 'chandler.bing@friends.com', firstName: 'Chandler', lastName: 'Bing', roles: ['client_employee', 'client_hr'] }
+    ];
+
+    for (const member of friendsMembers) {
+      // Add user
+      this.seedData.users.push({
+        id: member.id,
+        email: member.email,
+        password_hash: hashedPassword,
+        first_name: member.firstName,
+        last_name: member.lastName,
+        phone: '+1-555-' + Math.floor(1000000 + Math.random() * 9000000),
+        address: JSON.stringify({ city: 'New York', state: 'NY', country: 'US' }),
+        profile_data: JSON.stringify({ employment: { department: 'Central Perk' } }),
+        status: 'active',
+        is_active: true,
+        email_verified: true,
+        email_verification_token: null,
+        email_verification_token_expiry: null,
+        password_reset_token: null,
+        migrated_from_zoho: false,
+        zoho_user_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Add organization membership
+      this.seedData.organizationMembers.push({
+        id: this.generateId(),
+        organization_id: friendsOrgId,
+        user_id: member.id,
+        status: 'active',
+        joined_at: new Date().toISOString(),
+        invited_by: friendsMembers[0].id, // Monica invited everyone
+        created_at: new Date().toISOString()
+      });
+
+      // Add user roles
+      for (const roleType of member.roles) {
+        this.seedData.userRoles.push({
+          id: this.generateRoleId(),
+          user_id: member.id,
+          role_type: roleType,
+          scope: 'organization',
+          scope_entity_id: friendsOrgId,
+          granted_by: this.seedData.users[0]?.id || member.id,
+          expires_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+
+    // Stark Industries members
+    const starkMembers = [
+      { id: '650e8400-e29b-41d4-a716-aaa111111111', email: 'tony.stark@starkindustries.com', firstName: 'Tony', lastName: 'Stark', roles: ['client_admin'] },
+      { id: '650e8400-e29b-41d4-a716-11d190fecb57', email: 'natasha.romanoff@starkindustries.com', firstName: 'Natasha', lastName: 'Romanoff', roles: ['client_hr'] },
+      { id: '650e8400-e29b-41d4-a716-0ef557c0be77', email: 'bruce.banner@starkindustries.com', firstName: 'Bruce', lastName: 'Banner', roles: ['client_employee'] },
+      { id: '650e8400-e29b-41d4-a716-0578998d9203', email: 'thor.odinson@starkindustries.com', firstName: 'Thor', lastName: 'Odinson', roles: ['client_employee'] },
+      { id: '650e8400-e29b-41d4-a716-f0a561ff0092', email: 'clint.barton@starkindustries.com', firstName: 'Clint', lastName: 'Barton', roles: ['client_employee'] },
+      { id: '650e8400-e29b-41d4-a716-d1aaeb6ce802', email: 'wanda.maximoff@starkindustries.com', firstName: 'Wanda', lastName: 'Maximoff', roles: ['client_employee'] }
+    ];
+
+    for (const member of starkMembers) {
+      // Add user
+      this.seedData.users.push({
+        id: member.id,
+        email: member.email,
+        password_hash: hashedPassword,
+        first_name: member.firstName,
+        last_name: member.lastName,
+        phone: '+1-555-' + Math.floor(1000000 + Math.random() * 9000000),
+        address: JSON.stringify({ city: 'Los Angeles', state: 'CA', country: 'US' }),
+        profile_data: JSON.stringify({ employment: { department: 'Avengers Initiative' } }),
+        status: 'active',
+        is_active: true,
+        email_verified: true,
+        email_verification_token: null,
+        email_verification_token_expiry: null,
+        password_reset_token: null,
+        migrated_from_zoho: false,
+        zoho_user_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Add organization membership
+      this.seedData.organizationMembers.push({
+        id: this.generateId(),
+        organization_id: starkOrgId,
+        user_id: member.id,
+        status: 'active',
+        joined_at: new Date().toISOString(),
+        invited_by: starkMembers[0].id, // Tony invited everyone
+        created_at: new Date().toISOString()
+      });
+
+      // Add user roles
+      for (const roleType of member.roles) {
+        this.seedData.userRoles.push({
+          id: this.generateRoleId(),
+          user_id: member.id,
+          role_type: roleType,
+          scope: 'organization',
+          scope_entity_id: starkOrgId,
+          granted_by: this.seedData.users[0]?.id || member.id,
+          expires_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+
+    console.log(`${colors.green}✓${colors.reset} Generated ${this.seedData.organizations.length} organizations with ${this.seedData.organizationMembers.length} members`);
   }
 
   async generatePayrollData() {
@@ -1903,6 +2080,46 @@ class DatabaseSeeder {
       }
       console.log(`${colors.green}✓${colors.reset} Inserted ${this.seedData.userRoles.length} user roles`);
 
+      // Insert organizations
+      for (const org of this.seedData.organizations) {
+        await this.pool.query(`
+          INSERT INTO organizations (id, name, slug, industry, company_size, logo_url, settings, subscription_tier, subscription_status, website, created_at, updated_at, deleted_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        `, [
+          org.id,
+          org.name,
+          org.slug,
+          org.industry,
+          org.company_size,
+          org.logo_url,
+          org.settings,
+          org.subscription_tier,
+          org.subscription_status,
+          org.website,
+          org.created_at,
+          org.updated_at,
+          org.deleted_at
+        ]);
+      }
+      console.log(`${colors.green}✓${colors.reset} Inserted ${this.seedData.organizations.length} organizations`);
+
+      // Insert organization members
+      for (const member of this.seedData.organizationMembers) {
+        await this.pool.query(`
+          INSERT INTO organization_members (id, organization_id, user_id, status, joined_at, invited_by, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+          member.id,
+          member.organization_id,
+          member.user_id,
+          member.status,
+          member.joined_at,
+          member.invited_by,
+          member.created_at
+        ]);
+      }
+      console.log(`${colors.green}✓${colors.reset} Inserted ${this.seedData.organizationMembers.length} organization members`);
+
       // Insert payroll data
       await this.insertPayrollData();
 
@@ -2418,6 +2635,16 @@ class DatabaseSeeder {
           'Payslips' as table_name, 
           COUNT(*) as record_count 
         FROM payslips
+        UNION ALL
+        SELECT 
+          'Organizations' as table_name, 
+          COUNT(*) as record_count 
+        FROM organizations
+        UNION ALL
+        SELECT 
+          'Organization Members' as table_name, 
+          COUNT(*) as record_count 
+        FROM organization_members
         -- UNION ALL
         -- SELECT 
         --   'Tax Documents' as table_name, 
@@ -2489,11 +2716,11 @@ if (require.main === module) {
     process.exit(1);
   });
   
-  // Force exit after 30 seconds if the script doesn't exit naturally
+  // Force exit after 120 seconds if the script doesn't exit naturally
   setTimeout(() => {
     console.log('Force exiting after timeout...');
     process.exit(0);
-  }, 30000);
+  }, 120000);
 }
 
 module.exports = DatabaseSeeder;
