@@ -20,39 +20,39 @@ const markdownContent = `# Test Accounts
 
 Use these pre-configured test accounts to explore the platform's features during development and testing. These accounts are available in non-production environments only.
 
-> **Credentials:** Contact Admin for test account credentials. All test accounts use a shared password that is provided separately for security purposes.
+> **Credentials:** All test accounts use the password \`Admin123!\`
 
-## Internal Test Accounts
+## Internal Test Accounts (Teamified Internal)
 
 These accounts have internal Teamified roles with varying access levels.
 
 | Name | Email | Role | Access Level |
 |------|-------|------|--------------|
 | Admin User | \`admin@teamified.com\` | Super Admin | Full platform access |
-| Sarah Chen | \`sarah.chen@teamified.com\` | Internal HR | Global HR operations |
-| Marcus Johnson | \`marcus.johnson@teamified.com\` | Internal Recruiter | Global recruiting |
-| Elena Rodriguez | \`elena.rodriguez@teamified.com\` | Account Manager | Client management |
+| Sarah Chen | \`wagtest.internalhr@teamified.com\` | Internal HR | Global HR operations |
+| Marcus Johnson | \`wagtest.internalrecruiter@teamified.com\` | Internal Recruiter | Global recruiting |
+| Elena Rodriguez | \`wagtest.internalaccountmanager@teamified.com\` | Internal Account Manager | Client management |
+| Jennifer Liu | \`wagtest.internalfinance@teamified.com\` | Internal Finance | Financial operations |
+| Kevin Park | \`wagtest.internalmarketing@teamified.com\` | Internal Marketing | Marketing operations |
+| Amanda Torres | \`wagtest.internalmember@teamified.com\` | Internal Member | Basic internal access |
 
-## Client Test Accounts
+## Client Test Accounts (Stark Industries)
 
-These accounts demonstrate client organization roles and permissions.
-
-| Name | Email | Role | Access Level |
-|------|-------|------|--------------|
-| Amit Sharma | \`user1@teamified.com\` | Client Admin | Organization admin |
-| Sneha Patel | \`user2@teamified.com\` | Client Admin | Organization admin |
-| Deepa Singh | \`user3@teamified.com\` | Client HR | Organization HR |
-| Anita Gupta | \`user5@teamified.com\` | Client Recruiter | Organization recruiting |
-
-## Candidate Test Accounts
-
-These accounts represent job candidates in the system.
+These accounts demonstrate client organization roles and permissions using Marvel Avengers heroes.
 
 | Name | Email | Role | Access Level |
 |------|-------|------|--------------|
-| Vikram Singh | \`user13@teamified.com\` | Candidate | Candidate Portal only |
-| Meera Kumar | \`user14@teamified.com\` | Candidate | Candidate Portal only |
-| Anita Gupta | \`user15@teamified.com\` | Candidate | Candidate Portal only |
+| Tony Stark | \`wagtest.clientadmin@teamified.com\` | Client Admin | Organization admin |
+| Natasha Romanoff | \`wagtest.clienthr@teamified.com\` | Client HR | Organization HR |
+| Bruce Banner | \`wagtest.clientfinance@teamified.com\` | Client Finance | Organization finance |
+| Clint Barton | \`wagtest.clientrecruiter@teamified.com\` | Client Recruiter | Organization recruiting |
+| Thor Odinson | \`wagtest.clientemployee@teamified.com\` | Client Employee | Basic organization access |
+
+## Candidate Test Account
+
+| Name | Email | Role | Access Level |
+|------|-------|------|--------------|
+| Vikram Singh | \`wagtest.candidate@teamified.com\` | Candidate | Candidate Portal only |
 
 ## OAuth Test Client
 
@@ -82,15 +82,14 @@ export default function TestAccountsPage() {
 
       <Alert severity="info" icon={<ContactSupport />} sx={{ mb: 3 }}>
         <Typography variant="body2">
-          <strong>Credentials:</strong> Contact Admin for test account credentials. 
-          All test accounts use a shared password that is provided separately for security purposes.
+          <strong>Credentials:</strong> All test accounts use the password <code>Admin123!</code>
         </Typography>
       </Alert>
 
       <Stack spacing={4}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-            Internal Test Accounts
+            Internal Test Accounts (Teamified Internal)
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             These accounts have internal Teamified roles with varying access levels.
@@ -114,21 +113,39 @@ export default function TestAccountsPage() {
                 </TableRow>
                 <TableRow>
                   <TableCell>Sarah Chen</TableCell>
-                  <TableCell><code>sarah.chen@teamified.com</code></TableCell>
+                  <TableCell><code>wagtest.internalhr@teamified.com</code></TableCell>
                   <TableCell><Chip label="Internal HR" color="primary" size="small" /></TableCell>
                   <TableCell>Global HR operations</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>Marcus Johnson</TableCell>
-                  <TableCell><code>marcus.johnson@teamified.com</code></TableCell>
+                  <TableCell><code>wagtest.internalrecruiter@teamified.com</code></TableCell>
                   <TableCell><Chip label="Internal Recruiter" color="primary" size="small" /></TableCell>
                   <TableCell>Global recruiting</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>Elena Rodriguez</TableCell>
-                  <TableCell><code>elena.rodriguez@teamified.com</code></TableCell>
-                  <TableCell><Chip label="Account Manager" color="primary" size="small" /></TableCell>
+                  <TableCell><code>wagtest.internalaccountmanager@teamified.com</code></TableCell>
+                  <TableCell><Chip label="Internal Account Manager" color="primary" size="small" /></TableCell>
                   <TableCell>Client management</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Jennifer Liu</TableCell>
+                  <TableCell><code>wagtest.internalfinance@teamified.com</code></TableCell>
+                  <TableCell><Chip label="Internal Finance" color="primary" size="small" /></TableCell>
+                  <TableCell>Financial operations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Kevin Park</TableCell>
+                  <TableCell><code>wagtest.internalmarketing@teamified.com</code></TableCell>
+                  <TableCell><Chip label="Internal Marketing" color="primary" size="small" /></TableCell>
+                  <TableCell>Marketing operations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Amanda Torres</TableCell>
+                  <TableCell><code>wagtest.internalmember@teamified.com</code></TableCell>
+                  <TableCell><Chip label="Internal Member" color="primary" size="small" /></TableCell>
+                  <TableCell>Basic internal access</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -137,10 +154,10 @@ export default function TestAccountsPage() {
 
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-            Client Test Accounts
+            Client Test Accounts (Stark Industries)
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            These accounts demonstrate client organization roles and permissions.
+            These accounts demonstrate client organization roles and permissions using Marvel Avengers heroes.
           </Typography>
           <TableContainer component={Paper}>
             <Table>
@@ -154,28 +171,34 @@ export default function TestAccountsPage() {
               </TableHead>
               <TableBody>
                 <TableRow>
-                  <TableCell>Amit Sharma</TableCell>
-                  <TableCell><code>user1@teamified.com</code></TableCell>
+                  <TableCell>Tony Stark</TableCell>
+                  <TableCell><code>wagtest.clientadmin@teamified.com</code></TableCell>
                   <TableCell><Chip label="Client Admin" color="secondary" size="small" /></TableCell>
                   <TableCell>Organization admin</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Sneha Patel</TableCell>
-                  <TableCell><code>user2@teamified.com</code></TableCell>
-                  <TableCell><Chip label="Client Admin" color="secondary" size="small" /></TableCell>
-                  <TableCell>Organization admin</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Deepa Singh</TableCell>
-                  <TableCell><code>user3@teamified.com</code></TableCell>
+                  <TableCell>Natasha Romanoff</TableCell>
+                  <TableCell><code>wagtest.clienthr@teamified.com</code></TableCell>
                   <TableCell><Chip label="Client HR" color="secondary" size="small" /></TableCell>
                   <TableCell>Organization HR</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Anita Gupta</TableCell>
-                  <TableCell><code>user5@teamified.com</code></TableCell>
+                  <TableCell>Bruce Banner</TableCell>
+                  <TableCell><code>wagtest.clientfinance@teamified.com</code></TableCell>
+                  <TableCell><Chip label="Client Finance" color="secondary" size="small" /></TableCell>
+                  <TableCell>Organization finance</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Clint Barton</TableCell>
+                  <TableCell><code>wagtest.clientrecruiter@teamified.com</code></TableCell>
                   <TableCell><Chip label="Client Recruiter" color="secondary" size="small" /></TableCell>
                   <TableCell>Organization recruiting</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Thor Odinson</TableCell>
+                  <TableCell><code>wagtest.clientemployee@teamified.com</code></TableCell>
+                  <TableCell><Chip label="Client Employee" color="secondary" size="small" /></TableCell>
+                  <TableCell>Basic organization access</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -184,10 +207,10 @@ export default function TestAccountsPage() {
 
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-            Candidate Test Accounts
+            Candidate Test Account
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            These accounts represent job candidates in the system.
+            This account represents a job candidate in the system.
           </Typography>
           <TableContainer component={Paper}>
             <Table>
@@ -202,19 +225,7 @@ export default function TestAccountsPage() {
               <TableBody>
                 <TableRow>
                   <TableCell>Vikram Singh</TableCell>
-                  <TableCell><code>user13@teamified.com</code></TableCell>
-                  <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
-                  <TableCell>Candidate Portal only</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Meera Kumar</TableCell>
-                  <TableCell><code>user14@teamified.com</code></TableCell>
-                  <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
-                  <TableCell>Candidate Portal only</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Anita Gupta</TableCell>
-                  <TableCell><code>user15@teamified.com</code></TableCell>
+                  <TableCell><code>wagtest.candidate@teamified.com</code></TableCell>
                   <TableCell><Chip label="Candidate" color="info" size="small" /></TableCell>
                   <TableCell>Candidate Portal only</TableCell>
                 </TableRow>
