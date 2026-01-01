@@ -35,6 +35,7 @@ export const docsNavConfig: NavSection[] = [
       { title: 'SSO User Info API', path: '/docs/developer/sso-me' },
       { title: 'User Management API', path: '/docs/developer/user-management' },
       { title: 'Organization API', path: '/docs/developer/organization-api' },
+      { title: 'Invitations API', path: '/docs/developer/invitations-api' },
       { title: 'Profile Pictures API', path: '/docs/developer/profile-pictures' },
       { title: 'User Activity API', path: '/docs/developer/user-activity' },
       { title: 'User Emails API', path: '/docs/developer/user-emails' },
