@@ -1483,9 +1483,20 @@ Welcome to the ${organization.name} team!
   }
 
   private mapMemberToResponseDto(member: OrganizationMember): OrganizationMemberResponseDto {
-    const userRole = member.user?.userRoles?.find(
+    // First try to find organization-scoped role
+    let userRole = member.user?.userRoles?.find(
       role => role.scope === 'organization' && role.scopeEntityId === member.organizationId
     );
+    
+    // If no organization-scoped role, check for global-scoped internal roles
+    if (!userRole) {
+      userRole = member.user?.userRoles?.find(
+        role => role.scope === 'global' && (
+          role.roleType === 'super_admin' ||
+          role.roleType.startsWith('internal_')
+        )
+      );
+    }
 
     // Derive status: if user is inactive, they're NLWF; otherwise use member status
     let derivedStatus: 'active' | 'invited' | 'nlwf' = 'active';
