@@ -175,6 +175,73 @@ The invited user will receive an email with a link to set up their account and b
   "updatedAt": "2024-11-20T14:45:00Z"
 }
 \`\`\`
+
+## List Organization Members
+
+Retrieve all members of an organization, including their role within the organization.
+
+### Request
+
+\`\`\`http
+GET /v1/organizations/:id/members
+Authorization: Bearer ACCESS_TOKEN
+\`\`\`
+
+### Response
+
+\`\`\`json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "organizationId": "123e4567-e89b-12d3-a456-426614174000",
+    "userId": "a0000000-0000-0000-0000-000000000001",
+    "userEmail": "john.doe@acme.com",
+    "userName": "John Doe",
+    "profilePicture": "/objects/images/users/123_456.jpg",
+    "roleType": "client_admin",
+    "status": "active",
+    "joinedAt": "2024-01-15T10:30:00Z",
+    "invitedBy": "a0000000-0000-0000-0000-000000000002",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+]
+\`\`\`
+
+## Member Response Object
+
+Each member object in the response contains the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| \`id\` | uuid | Member record unique identifier |
+| \`organizationId\` | uuid | Organization ID this member belongs to |
+| \`userId\` | uuid | User's unique identifier |
+| \`userEmail\` | string | User's email address |
+| \`userName\` | string | User's full name |
+| \`profilePicture\` | string/null | URL to user's profile picture |
+| \`roleType\` | enum | User's role in this organization (see Role Types below) |
+| \`status\` | enum | Membership status: active, invited, or nlwf (no longer with firm) |
+| \`joinedAt\` | datetime | When the user joined the organization |
+| \`invitedBy\` | uuid/null | User ID of who invited this member |
+| \`createdAt\` | datetime | Member record creation timestamp |
+
+### Role Types
+
+**Internal Roles** (Teamified organization):
+- \`super_admin\` - Full system access
+- \`internal_hr\` - HR management
+- \`internal_finance\` - Finance operations
+- \`internal_account_manager\` - Client relationship management
+- \`internal_recruiter\` - Recruitment operations
+- \`internal_marketing\` - Marketing operations
+- \`internal_member\` - Basic internal access
+
+**Client Roles** (Client organizations):
+- \`client_admin\` - Organization administrator
+- \`client_hr\` - HR management within organization
+- \`client_finance\` - Finance operations within organization
+- \`client_recruiter\` - Recruitment operations
+- \`client_employee\` - Basic employee access
 `;
 
 export default function OrganizationApiPage() {
@@ -568,6 +635,204 @@ Content-Type: application/json
                   <TableCell><code>/v1/organizations/:id/members/:userId</code></TableCell>
                   <TableCell>Remove member from organization</TableCell>
                   <TableCell>Super Admin, Internal HR, Internal Account Manager, Client Admin (own org)</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            List Organization Members
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Retrieve all members of an organization, including their role within the organization.
+          </Typography>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Request
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`GET ${apiUrl}/v1/organizations/:id/members
+Authorization: Bearer ACCESS_TOKEN`}
+            </pre>
+          </Paper>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Response
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "organizationId": "123e4567-e89b-12d3-a456-426614174000",
+    "userId": "a0000000-0000-0000-0000-000000000001",
+    "userEmail": "john.doe@acme.com",
+    "userName": "John Doe",
+    "profilePicture": "/objects/images/users/123_456.jpg",
+    "roleType": "client_admin",
+    "status": "active",
+    "joinedAt": "2024-01-15T10:30:00Z",
+    "invitedBy": "a0000000-0000-0000-0000-000000000002",
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+]`}
+            </pre>
+          </Paper>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            Member Response Object
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Each member object in the response contains the following fields:
+          </Typography>
+
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Field</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><code>id</code></TableCell>
+                  <TableCell>uuid</TableCell>
+                  <TableCell>Member record unique identifier</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>organizationId</code></TableCell>
+                  <TableCell>uuid</TableCell>
+                  <TableCell>Organization ID this member belongs to</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>userId</code></TableCell>
+                  <TableCell>uuid</TableCell>
+                  <TableCell>User's unique identifier</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>userEmail</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>User's email address</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>userName</code></TableCell>
+                  <TableCell>string</TableCell>
+                  <TableCell>User's full name</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>profilePicture</code></TableCell>
+                  <TableCell>string/null</TableCell>
+                  <TableCell>URL to user's profile picture</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>roleType</code></TableCell>
+                  <TableCell>enum</TableCell>
+                  <TableCell>User's role in this organization (see Role Types below)</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>status</code></TableCell>
+                  <TableCell>enum</TableCell>
+                  <TableCell>Membership status: active, invited, or nlwf (no longer with firm)</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>joinedAt</code></TableCell>
+                  <TableCell>datetime</TableCell>
+                  <TableCell>When the user joined the organization</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>invitedBy</code></TableCell>
+                  <TableCell>uuid/null</TableCell>
+                  <TableCell>User ID of who invited this member</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>createdAt</code></TableCell>
+                  <TableCell>datetime</TableCell>
+                  <TableCell>Member record creation timestamp</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Role Types
+          </Typography>
+          
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mt: 2, mb: 1 }}>
+            Internal Roles (Teamified organization)
+          </Typography>
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell><code>super_admin</code></TableCell>
+                  <TableCell>Full system access</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>internal_hr</code></TableCell>
+                  <TableCell>HR management</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>internal_finance</code></TableCell>
+                  <TableCell>Finance operations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>internal_account_manager</code></TableCell>
+                  <TableCell>Client relationship management</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>internal_recruiter</code></TableCell>
+                  <TableCell>Recruitment operations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>internal_marketing</code></TableCell>
+                  <TableCell>Marketing operations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>internal_member</code></TableCell>
+                  <TableCell>Basic internal access</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+            Client Roles (Client organizations)
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell><code>client_admin</code></TableCell>
+                  <TableCell>Organization administrator</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>client_hr</code></TableCell>
+                  <TableCell>HR management within organization</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>client_finance</code></TableCell>
+                  <TableCell>Finance operations within organization</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>client_recruiter</code></TableCell>
+                  <TableCell>Recruitment operations</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>client_employee</code></TableCell>
+                  <TableCell>Basic employee access</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
