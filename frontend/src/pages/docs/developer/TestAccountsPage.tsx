@@ -31,7 +31,7 @@ These accounts have internal Teamified roles with varying access levels.
 | Admin User | \`admin@teamified.com\` | Super Admin | Full platform access |
 | Sarah Chen | \`wagtest.internalhr@teamified.com\` | Internal HR | Global HR operations |
 | Marcus Johnson | \`wagtest.internalrecruiter@teamified.com\` | Internal Recruiter | Global recruiting |
-| Elena Rodriguez | \`wagtest.internalaccountmanager@teamified.com\` | Internal Account Manager | Client management |
+| Elena Rodriguez | \`wagtest.internalam@teamified.com\` | Internal Account Manager | Client management |
 | Jennifer Liu | \`wagtest.internalfinance@teamified.com\` | Internal Finance | Financial operations |
 | Kevin Park | \`wagtest.internalmarketing@teamified.com\` | Internal Marketing | Marketing operations |
 | Amanda Torres | \`wagtest.internalmember@teamified.com\` | Internal Member | Basic internal access |
@@ -125,7 +125,7 @@ export default function TestAccountsPage() {
                 </TableRow>
                 <TableRow>
                   <TableCell>Elena Rodriguez</TableCell>
-                  <TableCell><code>wagtest.internalaccountmanager@teamified.com</code></TableCell>
+                  <TableCell><code>wagtest.internalam@teamified.com</code></TableCell>
                   <TableCell><Chip label="Internal Account Manager" color="primary" size="small" /></TableCell>
                   <TableCell>Client management</TableCell>
                 </TableRow>
