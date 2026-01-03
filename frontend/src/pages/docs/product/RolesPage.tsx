@@ -77,6 +77,12 @@ export default function RolesPage() {
                 <TableCell>Marketing operations with view-only access to data dashboard across organizations</TableCell>
               </TableRow>
               <TableRow>
+                <TableCell><Chip label="Internal Member" color="primary" size="small" /></TableCell>
+                <TableCell>Internal</TableCell>
+                <TableCell>Global</TableCell>
+                <TableCell>Basic internal access for Teamified staff with read-only visibility across organizations</TableCell>
+              </TableRow>
+              <TableRow>
                 <TableCell><Chip label="Client Admin" color="secondary" size="small" /></TableCell>
                 <TableCell>Client</TableCell>
                 <TableCell>Organization-Scoped</TableCell>
