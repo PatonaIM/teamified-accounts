@@ -8,6 +8,13 @@ export enum OrgInvitationRoleType {
   CLIENT_FINANCE = 'client_finance',
   CLIENT_RECRUITER = 'client_recruiter',
   CLIENT_EMPLOYEE = 'client_employee',
+  SUPER_ADMIN = 'super_admin',
+  INTERNAL_HR = 'internal_hr',
+  INTERNAL_RECRUITER = 'internal_recruiter',
+  INTERNAL_ACCOUNT_MANAGER = 'internal_account_manager',
+  INTERNAL_FINANCE = 'internal_finance',
+  INTERNAL_MARKETING = 'internal_marketing',
+  INTERNAL_MEMBER = 'internal_member',
 }
 
 // Custom validator to allow -1 for unlimited uses or positive integers

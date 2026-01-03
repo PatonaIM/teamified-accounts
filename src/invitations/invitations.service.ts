@@ -508,7 +508,14 @@ export class InvitationsService {
       | 'client_hr'
       | 'client_finance'
       | 'client_recruiter'
-      | 'client_employee',
+      | 'client_employee'
+      | 'super_admin'
+      | 'internal_hr'
+      | 'internal_recruiter'
+      | 'internal_account_manager'
+      | 'internal_finance'
+      | 'internal_marketing'
+      | 'internal_member',
     maxUses: number,
     currentUser: User,
     baseUrl: string,
@@ -592,7 +599,14 @@ export class InvitationsService {
       | 'client_hr'
       | 'client_finance'
       | 'client_recruiter'
-      | 'client_employee',
+      | 'client_employee'
+      | 'super_admin'
+      | 'internal_hr'
+      | 'internal_recruiter'
+      | 'internal_account_manager'
+      | 'internal_finance'
+      | 'internal_marketing'
+      | 'internal_member',
     firstName: string | undefined,
     lastName: string | undefined,
     currentUser: User,
