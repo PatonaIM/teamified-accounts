@@ -4,7 +4,6 @@ import { UserService } from '../users/services/user.service';
 import { randomUUID } from 'crypto';
 
 export type MarketingSource = 'marketing' | 'marketing-dev';
-export type MarketingEnvironment = 'production' | 'staging';
 
 export interface MarketingRedirectResult {
   shouldRedirect: boolean;
@@ -26,17 +25,6 @@ export class MarketingRedirectService {
     return source === 'marketing' || source === 'marketing-dev';
   }
 
-  getEnvironmentFromSource(source: MarketingSource): MarketingEnvironment {
-    switch (source) {
-      case 'marketing':
-        return 'production';
-      case 'marketing-dev':
-        return 'staging';
-      default:
-        return 'production';
-    }
-  }
-
   /**
    * Get the configured portal client ID for the given intent
    * Uses environment variables: JOBSEEKER_PORTAL_CLIENT_ID, ATS_PORTAL_CLIENT_ID
@@ -50,24 +38,15 @@ export class MarketingRedirectService {
   }
 
   /**
-   * Get the configured signup redirect URL for the given intent and environment
-   * Production uses: JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL, ATS_PORTAL_SIGNUP_REDIRECT_URL
-   * Staging uses: JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL_STAGING, ATS_PORTAL_SIGNUP_REDIRECT_URL_STAGING
+   * Get the configured signup redirect URL for the given intent
+   * Uses environment variables: JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL, ATS_PORTAL_SIGNUP_REDIRECT_URL
    */
-  private getSignupRedirectUrl(intent: 'client' | 'candidate', environment: MarketingEnvironment): string | null {
-    const suffix = environment === 'staging' ? '_STAGING' : '';
+  private getSignupRedirectUrl(intent: 'client' | 'candidate'): string | null {
     if (intent === 'candidate') {
-      return this.configService.get<string>(`JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL${suffix}`) || null;
+      return this.configService.get<string>('JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL') || null;
     } else {
-      return this.configService.get<string>(`ATS_PORTAL_SIGNUP_REDIRECT_URL${suffix}`) || null;
+      return this.configService.get<string>('ATS_PORTAL_SIGNUP_REDIRECT_URL') || null;
     }
-  }
-
-  private getEnvVarName(intent: 'client' | 'candidate', environment: MarketingEnvironment): string {
-    const suffix = environment === 'staging' ? '_STAGING' : '';
-    return intent === 'candidate' 
-      ? `JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL${suffix}` 
-      : `ATS_PORTAL_SIGNUP_REDIRECT_URL${suffix}`;
   }
 
   async getRedirectForUser(
@@ -85,10 +64,9 @@ export class MarketingRedirectService {
 
       const userType = this.userService.classifyUserType(user);
       const intent = userType === 'client' ? 'client' : 'candidate';
-      const environment = this.getEnvironmentFromSource(source);
 
       this.logger.log(
-        `Marketing redirect: user=${userId}, userType=${userType}, intent=${intent}, source=${source}, environment=${environment}`,
+        `Marketing redirect: user=${userId}, userType=${userType}, intent=${intent}, source=${source}`,
       );
 
       const clientId = this.getPortalClientId(intent);
@@ -102,11 +80,10 @@ export class MarketingRedirectService {
         };
       }
 
-      const redirectUri = this.getSignupRedirectUrl(intent, environment);
+      const redirectUri = this.getSignupRedirectUrl(intent);
       if (!redirectUri) {
-        const envVarName = this.getEnvVarName(intent, environment);
         this.logger.warn(
-          `No signup redirect URL configured for intent=${intent}, environment=${environment}. Missing ${envVarName} environment variable.`,
+          `No signup redirect URL configured for intent=${intent}. Missing ${intent === 'candidate' ? 'JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL' : 'ATS_PORTAL_SIGNUP_REDIRECT_URL'} environment variable.`,
         );
         return {
           shouldRedirect: false,
@@ -123,7 +100,7 @@ export class MarketingRedirectService {
       );
 
       this.logger.log(
-        `Marketing redirect: Redirecting user ${userId} to portal (${clientId}) via ${redirectUri} [${environment}]`,
+        `Marketing redirect: Redirecting user ${userId} to portal (${clientId}) via ${redirectUri}`,
       );
 
       return {
