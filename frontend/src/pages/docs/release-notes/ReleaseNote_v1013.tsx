@@ -19,7 +19,6 @@ import {
   CheckCircle,
   AutoAwesome,
   Menu,
-  ExpandMore,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -50,8 +49,8 @@ export default function ReleaseNote_v1013() {
 
           <Alert severity="info" icon={<AutoAwesome />}>
             <Typography variant="body2">
-              <strong>What's New:</strong> Streamlined navigation with promoted admin tools and 
-              a collapsible section for deprecated pages to prepare for future cleanup.
+              <strong>What's New:</strong> Streamlined navigation with promoted admin tools 
+              for quicker access to key platform features.
             </Typography>
           </Alert>
 
@@ -62,11 +61,11 @@ export default function ReleaseNote_v1013() {
             <List dense disablePadding>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="OAuth Configuration and Analytics & Reports promoted to main navigation" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
+                <ListItemText primary="OAuth Configuration promoted to main navigation for quick access" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Deprecated pages moved to collapsible section for future removal" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
+                <ListItemText primary="Analytics & Reports promoted to main navigation" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
@@ -86,7 +85,7 @@ export default function ReleaseNote_v1013() {
             </Stack>
             <Typography variant="body1" color="text.secondary" paragraph>
               The sidebar navigation has been reorganized to highlight the most-used admin tools 
-              while preparing deprecated pages for future removal.
+              for improved workflow efficiency.
             </Typography>
             
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
@@ -110,47 +109,6 @@ export default function ReleaseNote_v1013() {
                 <ListItemText primary="Analytics & Reports" secondary="Super admin only - platform analytics" />
               </ListItem>
             </List>
-          </Box>
-
-          <Divider />
-
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <ExpandMore color="primary" />
-              <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                Deprecated Tabs Section
-              </Typography>
-            </Stack>
-            <Typography variant="body1" color="text.secondary" paragraph>
-              Pages scheduled for deprecation have been moved to a collapsible section at the 
-              bottom of the navigation. This section is only visible to designated administrators 
-              for maintenance purposes.
-            </Typography>
-            
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              Deprecated Pages:
-            </Typography>
-            <List dense>
-              <ListItem>
-                <ListItemText primary="My Organization" secondary="Will be replaced with enhanced organization features" />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Admin Tools" secondary="Features migrated to dedicated navigation items" />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Organization Management" secondary="Consolidating into improved workflows" />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary="Candidate Users" secondary="Moving to integrated user management" />
-              </ListItem>
-            </List>
-
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                These deprecated pages remain functional but will be removed in a future release. 
-                Please transition to the new navigation structure.
-              </Typography>
-            </Alert>
           </Box>
 
           <Divider />

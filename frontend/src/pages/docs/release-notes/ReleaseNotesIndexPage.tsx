@@ -26,7 +26,7 @@ const releaseNotes: ReleaseNote[] = [
     version: '1.0.13',
     date: 'January 5, 2026',
     title: 'Navigation Bar Reorganization',
-    summary: 'Streamlined navigation with OAuth Configuration and Analytics & Reports promoted to main nav. Deprecated pages moved to collapsible section for future cleanup.',
+    summary: 'Streamlined navigation with OAuth Configuration and Analytics & Reports promoted to main nav for quicker access to key platform features.',
     path: '/docs/release-notes/v1.0.13',
     isLatest: true,
   },
