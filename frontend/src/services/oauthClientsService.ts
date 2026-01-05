@@ -14,6 +14,8 @@ export const AVAILABLE_SCOPES = [
   { value: 'write:organizations', label: 'Write Organizations', description: 'Create and update organizations' },
   { value: 'read:invitations', label: 'Read Invitations', description: 'View invitation data' },
   { value: 'write:invitations', label: 'Write Invitations', description: 'Create and manage invitations' },
+  { value: 'read:user-emails', label: 'Read User Emails', description: 'View user linked email addresses' },
+  { value: 'write:user-emails', label: 'Write User Emails', description: 'Manage user linked email addresses' },
 ] as const;
 
 export type ScopeValue = typeof AVAILABLE_SCOPES[number]['value'];
