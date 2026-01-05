@@ -59,6 +59,12 @@ PORT = "5000"
 NODE_ENV = "production"
 BASE_URL = "https://teamified-accounts.replit.app"
 
+[userenv.shared]
+JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL = "https://teamified-jobseeker.replit.app/api/auth/callback/teamified-sso"
+ATS_PORTAL_SIGNUP_REDIRECT_URL = "https://teamified-ats.replit.app/auth/callback"
+JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL_STAGING = "https://270a25ac-5fe3-4516-878e-ca92be1342f6-00-3t6zo5hw1y0g6.pike.replit.dev/api/auth/callback/teamified-sso"
+ATS_PORTAL_SIGNUP_REDIRECT_URL_STAGING = "https://db354511-74f8-438f-8db4-97485f438054-00-37mnsckallheh.sisko.replit.dev/auth/callback"
+
 [[ports]]
 localPort = 3000
 externalPort = 3000

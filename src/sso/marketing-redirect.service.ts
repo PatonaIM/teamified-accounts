@@ -1,12 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OAuthClientsService } from '../oauth-clients/oauth-clients.service';
 import { UserService } from '../users/services/user.service';
-import { EnvironmentType } from '../oauth-clients/entities/oauth-client.entity';
-import { getUrisByEnvironment } from '../oauth-clients/oauth-client.utils';
 import { randomUUID } from 'crypto';
 
 export type MarketingSource = 'marketing' | 'marketing-dev';
+export type MarketingEnvironment = 'production' | 'staging';
 
 export interface MarketingRedirectResult {
   shouldRedirect: boolean;
@@ -21,7 +19,6 @@ export class MarketingRedirectService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly oauthClientsService: OAuthClientsService,
     private readonly userService: UserService,
   ) {}
 
@@ -29,7 +26,7 @@ export class MarketingRedirectService {
     return source === 'marketing' || source === 'marketing-dev';
   }
 
-  getEnvironmentFromSource(source: MarketingSource): EnvironmentType {
+  getEnvironmentFromSource(source: MarketingSource): MarketingEnvironment {
     switch (source) {
       case 'marketing':
         return 'production';
@@ -53,18 +50,24 @@ export class MarketingRedirectService {
   }
 
   /**
-   * Find the first *.replit.app redirect URI for the given environment
+   * Get the configured signup redirect URL for the given intent and environment
+   * Production uses: JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL, ATS_PORTAL_SIGNUP_REDIRECT_URL
+   * Staging uses: JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL_STAGING, ATS_PORTAL_SIGNUP_REDIRECT_URL_STAGING
    */
-  private findReplitAppRedirectUri(
-    client: any,
-    environment: EnvironmentType,
-  ): string | null {
-    const uris = getUrisByEnvironment(client, environment);
-    if (uris.length === 0) return null;
+  private getSignupRedirectUrl(intent: 'client' | 'candidate', environment: MarketingEnvironment): string | null {
+    const suffix = environment === 'staging' ? '_STAGING' : '';
+    if (intent === 'candidate') {
+      return this.configService.get<string>(`JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL${suffix}`) || null;
+    } else {
+      return this.configService.get<string>(`ATS_PORTAL_SIGNUP_REDIRECT_URL${suffix}`) || null;
+    }
+  }
 
-    // Find the first *.replit.app URI
-    const replitUri = uris.find(uri => uri.includes('.replit.app'));
-    return replitUri || null;
+  private getEnvVarName(intent: 'client' | 'candidate', environment: MarketingEnvironment): string {
+    const suffix = environment === 'staging' ? '_STAGING' : '';
+    return intent === 'candidate' 
+      ? `JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL${suffix}` 
+      : `ATS_PORTAL_SIGNUP_REDIRECT_URL${suffix}`;
   }
 
   async getRedirectForUser(
@@ -85,10 +88,9 @@ export class MarketingRedirectService {
       const environment = this.getEnvironmentFromSource(source);
 
       this.logger.log(
-        `Marketing redirect: user=${userId}, userType=${userType}, intent=${intent}, environment=${environment}`,
+        `Marketing redirect: user=${userId}, userType=${userType}, intent=${intent}, source=${source}, environment=${environment}`,
       );
 
-      // Get the configured portal client ID from environment variables
       const clientId = this.getPortalClientId(intent);
       if (!clientId) {
         this.logger.warn(
@@ -100,37 +102,15 @@ export class MarketingRedirectService {
         };
       }
 
-      // Fetch the OAuth client by client_id
-      const client = await this.oauthClientsService.findByClientId(clientId);
-      if (!client) {
-        this.logger.warn(
-          `OAuth client not found for client_id=${clientId}`,
-        );
-        return {
-          shouldRedirect: false,
-          error: 'Portal not found',
-        };
-      }
-
-      if (!client.is_active) {
-        this.logger.warn(
-          `OAuth client ${client.name} (${clientId}) is not active`,
-        );
-        return {
-          shouldRedirect: false,
-          error: 'Portal is not active',
-        };
-      }
-
-      // Find the first *.replit.app redirect URI for the environment
-      const redirectUri = this.findReplitAppRedirectUri(client, environment);
+      const redirectUri = this.getSignupRedirectUrl(intent, environment);
       if (!redirectUri) {
+        const envVarName = this.getEnvVarName(intent, environment);
         this.logger.warn(
-          `No *.replit.app redirect URI found for ${client.name} in ${environment} environment. Falling back to profile.`,
+          `No signup redirect URL configured for intent=${intent}, environment=${environment}. Missing ${envVarName} environment variable.`,
         );
         return {
           shouldRedirect: false,
-          error: `No ${environment} redirect URI configured for portal`,
+          error: 'Signup redirect URL not configured',
         };
       }
 
@@ -143,7 +123,7 @@ export class MarketingRedirectService {
       );
 
       this.logger.log(
-        `Marketing redirect: Redirecting user ${userId} to ${client.name} (${clientId}) via ${redirectUri}`,
+        `Marketing redirect: Redirecting user ${userId} to portal (${clientId}) via ${redirectUri} [${environment}]`,
       );
 
       return {
