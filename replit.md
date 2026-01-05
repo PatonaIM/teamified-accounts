@@ -95,6 +95,14 @@ Core features include:
     - Work emails section is display-only (no self-service add button)
   - Invitation acceptance page at `/invitations/accept/:code` includes optional account linking flow
 
+- **Analytics Dashboard Redesign**: Card-based selection interface for analytics reports at `/admin/analytics`. Features:
+  - Index page with 11 report type cards featuring icons, descriptions, and navigation
+  - Individual report pages with consistent breadcrumb-style header navigation
+  - Reports include: AI Search, App Usage, Login Traffic, Engagement, Adoption, Org Health, Sessions, Security, Invitations, Stickiness, Time-to-Value
+  - Shared components in `AnalyticsShared.tsx`: ReportPageLayout, DateRangeFilter, StatCard, DynamicChart
+  - Routes: `/admin/analytics` (index), `/admin/analytics/{report-type}` (individual reports)
+  - Super admin only access with proper route protection
+
 ### Documentation Architecture
 
 The documentation system uses a sidebar navigation layout:
