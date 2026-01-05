@@ -12,6 +12,7 @@ import {
   AppBar,
   Typography,
   Divider,
+  Collapse,
 } from '@mui/material';
 import {
   Apps,
@@ -19,6 +20,11 @@ import {
   AdminPanelSettings,
   Logout,
   Business,
+  VpnKey,
+  Analytics,
+  ExpandMore,
+  ExpandLess,
+  PersonAdd,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/authService';
@@ -34,6 +40,7 @@ const AccountLayout: React.FC = () => {
   const { currentTheme, setTheme } = useTheme();
   
   const [appsAnchorEl, setAppsAnchorEl] = useState<HTMLElement | null>(null);
+  const [deprecatedOpen, setDeprecatedOpen] = useState(false);
   const appsDropdownOpen = Boolean(appsAnchorEl);
 
   const isDarkMode = currentTheme === 'dark';
@@ -52,6 +59,10 @@ const AccountLayout: React.FC = () => {
 
   const hasOrganizationAccess = isClientUser || isInternalUser;
 
+  const isCzarSuperAdmin = user?.roles?.some((role: string) =>
+    role.toLowerCase() === 'super_admin'
+  ) && user?.email === 'czar.dy@teamified.com';
+
   const handleThemeToggle = () => {
     setTheme(isDarkMode ? 'light' : 'dark');
   };
@@ -69,9 +80,61 @@ const AccountLayout: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    // Use the centralized logout function that clears local storage AND calls SSO logout
     await logout();
     window.location.href = '/login';
+  };
+
+  const handleDeprecatedToggle = () => {
+    setDeprecatedOpen(!deprecatedOpen);
+  };
+
+  const navButtonStyles = {
+    mx: 2,
+    my: 0.5,
+    borderRadius: '12px',
+    py: 1.5,
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    '&.Mui-selected': {
+      background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+      color: '#FFFFFF',
+      boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+      '&:hover': {
+        background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
+        transform: 'translateX(4px)',
+      },
+      '& .MuiListItemIcon-root': {
+        color: '#FFFFFF',
+      },
+    },
+    '&:not(.Mui-selected):hover': {
+      bgcolor: 'rgba(161, 106, 232, 0.08)',
+      transform: 'translateX(4px)',
+    },
+  };
+
+  const deprecatedNavButtonStyles = {
+    mx: 2,
+    ml: 4,
+    my: 0.25,
+    borderRadius: '12px',
+    py: 1,
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    '&.Mui-selected': {
+      background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+      color: '#FFFFFF',
+      boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
+      '&:hover': {
+        background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
+        transform: 'translateX(4px)',
+      },
+      '& .MuiListItemIcon-root': {
+        color: '#FFFFFF',
+      },
+    },
+    '&:not(.Mui-selected):hover': {
+      bgcolor: 'rgba(161, 106, 232, 0.08)',
+      transform: 'translateX(4px)',
+    },
   };
 
   return (
@@ -134,29 +197,7 @@ const AccountLayout: React.FC = () => {
               <ListItemButton
                 selected={!appsDropdownOpen && location.pathname === '/account/profile'}
                 onClick={() => navigate('/account/profile')}
-                sx={{
-                  mx: 2,
-                  my: 0.5,
-                  borderRadius: '12px',
-                  py: 1.5,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&.Mui-selected': {
-                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                    color: '#FFFFFF',
-                    boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                      transform: 'translateX(4px)',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: '#FFFFFF',
-                    },
-                  },
-                  '&:not(.Mui-selected):hover': {
-                    bgcolor: 'rgba(161, 106, 232, 0.08)',
-                    transform: 'translateX(4px)',
-                  },
-                }}
+                sx={navButtonStyles}
               >
                 <ListItemIcon
                   sx={{
@@ -174,29 +215,7 @@ const AccountLayout: React.FC = () => {
               <ListItemButton
                 onClick={handleAppsClick}
                 selected={appsDropdownOpen}
-                sx={{
-                  mx: 2,
-                  my: 0.5,
-                  borderRadius: '12px',
-                  py: 1.5,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&.Mui-selected': {
-                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                    color: '#FFFFFF',
-                    boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                      transform: 'translateX(4px)',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: '#FFFFFF',
-                    },
-                  },
-                  '&:not(.Mui-selected):hover': {
-                    bgcolor: 'rgba(161, 106, 232, 0.08)',
-                    transform: 'translateX(4px)',
-                  },
-                }}
+                sx={navButtonStyles}
               >
                 <ListItemIcon
                   sx={{
@@ -210,44 +229,22 @@ const AccountLayout: React.FC = () => {
               </ListItemButton>
             </ListItem>
 
-            {hasOrganizationAccess && (
+            {isSuperAdmin && (
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={!appsDropdownOpen && location.pathname.startsWith('/organization/')}
-                  onClick={() => navigate('/organization')}
-                  sx={{
-                    mx: 2,
-                    my: 0.5,
-                    borderRadius: '12px',
-                    py: 1.5,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&.Mui-selected': {
-                      background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                      color: '#FFFFFF',
-                      boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                        transform: 'translateX(4px)',
-                      },
-                      '& .MuiListItemIcon-root': {
-                        color: '#FFFFFF',
-                      },
-                    },
-                    '&:not(.Mui-selected):hover': {
-                      bgcolor: 'rgba(161, 106, 232, 0.08)',
-                      transform: 'translateX(4px)',
-                    },
-                  }}
+                  selected={!appsDropdownOpen && location.pathname === '/admin/tools/oauth-configuration'}
+                  onClick={() => navigate('/admin/tools/oauth-configuration')}
+                  sx={navButtonStyles}
                 >
                   <ListItemIcon
                     sx={{
-                      color: (!appsDropdownOpen && location.pathname.startsWith('/organization/')) ? 'inherit' : 'text.secondary',
+                      color: (!appsDropdownOpen && location.pathname === '/admin/tools/oauth-configuration') ? 'inherit' : 'text.secondary',
                       minWidth: 40,
                     }}
                   >
-                    <Business />
+                    <VpnKey />
                   </ListItemIcon>
-                  <ListItemText primary={isInternalUser ? "My Organizations" : "My Organization"} />
+                  <ListItemText primary="OAuth Configuration" />
                 </ListItemButton>
               </ListItem>
             )}
@@ -255,45 +252,159 @@ const AccountLayout: React.FC = () => {
             {isSuperAdmin && (
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={!appsDropdownOpen && location.pathname.startsWith('/admin')}
-                  onClick={() => navigate('/admin/tools')}
-                  sx={{
-                    mx: 2,
-                    my: 0.5,
-                    borderRadius: '12px',
-                    py: 1.5,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&.Mui-selected': {
-                      background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                      color: '#FFFFFF',
-                      boxShadow: '0 4px 12px rgba(161, 106, 232, 0.3)',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                        transform: 'translateX(4px)',
-                      },
-                      '& .MuiListItemIcon-root': {
-                        color: '#FFFFFF',
-                      },
-                    },
-                    '&:not(.Mui-selected):hover': {
-                      bgcolor: 'rgba(161, 106, 232, 0.08)',
-                      transform: 'translateX(4px)',
-                    },
-                  }}
+                  selected={!appsDropdownOpen && location.pathname === '/admin/analytics'}
+                  onClick={() => navigate('/admin/analytics')}
+                  sx={navButtonStyles}
                 >
                   <ListItemIcon
                     sx={{
-                      color: (!appsDropdownOpen && location.pathname.startsWith('/admin')) ? 'inherit' : 'text.secondary',
+                      color: (!appsDropdownOpen && location.pathname === '/admin/analytics') ? 'inherit' : 'text.secondary',
                       minWidth: 40,
                     }}
                   >
-                    <AdminPanelSettings />
+                    <Analytics />
                   </ListItemIcon>
-                  <ListItemText primary="Admin Tools" />
+                  <ListItemText primary="Analytics & Reports" />
                 </ListItemButton>
               </ListItem>
             )}
           </List>
+
+          {isCzarSuperAdmin && (
+            <>
+              <Divider sx={{ my: 2, mx: 2 }} />
+              
+              <List>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={handleDeprecatedToggle}
+                    sx={{
+                      mx: 2,
+                      my: 0.5,
+                      borderRadius: '12px',
+                      py: 1.5,
+                      bgcolor: 'rgba(255, 152, 0, 0.08)',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 152, 0, 0.15)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        color: 'warning.main',
+                        minWidth: 40,
+                      }}
+                    >
+                      <AdminPanelSettings />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary="Deprecated Tabs"
+                      secondary="For Czar only"
+                      primaryTypographyProps={{
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                      }}
+                      secondaryTypographyProps={{
+                        fontSize: '0.7rem',
+                        color: 'warning.main',
+                      }}
+                    />
+                    {deprecatedOpen ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+                
+                <Collapse in={deprecatedOpen} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {hasOrganizationAccess && (
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          selected={!appsDropdownOpen && location.pathname.startsWith('/organization/')}
+                          onClick={() => navigate('/organization')}
+                          sx={deprecatedNavButtonStyles}
+                        >
+                          <ListItemIcon
+                            sx={{
+                              color: (!appsDropdownOpen && location.pathname.startsWith('/organization/')) ? 'inherit' : 'text.secondary',
+                              minWidth: 36,
+                            }}
+                          >
+                            <Business fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary="My Organization"
+                            primaryTypographyProps={{ fontSize: '0.875rem' }}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    )}
+
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        selected={!appsDropdownOpen && location.pathname === '/admin/tools'}
+                        onClick={() => navigate('/admin/tools')}
+                        sx={deprecatedNavButtonStyles}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            color: (!appsDropdownOpen && location.pathname === '/admin/tools') ? 'inherit' : 'text.secondary',
+                            minWidth: 36,
+                          }}
+                        >
+                          <AdminPanelSettings fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary="Admin Tools"
+                          primaryTypographyProps={{ fontSize: '0.875rem' }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        selected={!appsDropdownOpen && location.pathname === '/admin/organizations'}
+                        onClick={() => navigate('/admin/organizations')}
+                        sx={deprecatedNavButtonStyles}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            color: (!appsDropdownOpen && location.pathname === '/admin/organizations') ? 'inherit' : 'text.secondary',
+                            minWidth: 36,
+                          }}
+                        >
+                          <Business fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary="Organization Management"
+                          primaryTypographyProps={{ fontSize: '0.875rem' }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        selected={!appsDropdownOpen && location.pathname === '/admin/tools/candidate-users'}
+                        onClick={() => navigate('/admin/tools/candidate-users')}
+                        sx={deprecatedNavButtonStyles}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            color: (!appsDropdownOpen && location.pathname === '/admin/tools/candidate-users') ? 'inherit' : 'text.secondary',
+                            minWidth: 36,
+                          }}
+                        >
+                          <PersonAdd fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary="Candidate Users"
+                          primaryTypographyProps={{ fontSize: '0.875rem' }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  </List>
+                </Collapse>
+              </List>
+            </>
+          )}
         </Box>
         
         <Divider />
