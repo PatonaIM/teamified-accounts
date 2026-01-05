@@ -50,8 +50,10 @@ Core features include:
   - `source=marketing-dev` parameter triggers staging environment redirect
   - User role detection: Candidates → Jobseeker Portal, Employers → ATS Portal
   - Portal client IDs configured via secrets: `JOBSEEKER_PORTAL_CLIENT_ID` and `ATS_PORTAL_CLIENT_ID`
-  - Looks for first `*.replit.app` redirect URI in the target environment (production/staging)
-  - Fallback to `/account/profile` if no matching portal or redirect URI found
+  - Signup redirect URLs configured via environment variables (not dynamically from OAuth configurations):
+    - Production: `JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL` and `ATS_PORTAL_SIGNUP_REDIRECT_URL`
+    - Staging: `JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL_STAGING` and `ATS_PORTAL_SIGNUP_REDIRECT_URL_STAGING`
+  - Fallback to `/account/profile` if redirect URL not configured
   - API endpoint: `GET /api/v1/sso/marketing-redirect`
   - Frontend service: `marketingRedirectService.ts` preserves source across signup flow
   - Marketing site links: `/signup/candidate?source=marketing` (candidates), `/signup/client?source=marketing` (employers)
