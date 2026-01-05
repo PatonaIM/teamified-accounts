@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.13',
+    date: 'January 5, 2026',
+    title: 'Navigation Bar Reorganization',
+    summary: 'Streamlined navigation with OAuth Configuration and Analytics & Reports promoted to main nav. Deprecated pages moved to collapsible section for future cleanup.',
+    path: '/docs/release-notes/v1.0.13',
+    isLatest: true,
+  },
+  {
     version: '1.0.12',
     date: 'January 5, 2026',
     title: 'Admin User Emails API',
     summary: 'New REST API endpoints for administrators to manage user email addresses. Supports JWT and S2S authentication with role-based access control for super_admin, internal_hr, internal_account_manager, client_admin, and client_hr roles.',
     path: '/docs/release-notes/v1.0.12',
-    isLatest: true,
   },
   {
     version: '1.0.11',

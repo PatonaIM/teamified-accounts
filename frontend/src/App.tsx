@@ -53,6 +53,7 @@ import ReleaseNote_v109 from './pages/docs/ReleaseNote_v109';
 import ReleaseNote_v1010 from './pages/docs/release-notes/ReleaseNote_v1010';
 import ReleaseNote_v1011 from './pages/docs/release-notes/ReleaseNote_v1011';
 import ReleaseNote_v1012 from './pages/docs/release-notes/ReleaseNote_v1012';
+import ReleaseNote_v1013 from './pages/docs/release-notes/ReleaseNote_v1013';
 import UserActivityApiPage from './pages/docs/developer/UserActivityApiPage';
 import UserEmailsApiPage from './pages/docs/developer/UserEmailsApiPage';
 import S2SAuthenticationPage from './pages/docs/developer/S2SAuthenticationPage';
@@ -371,6 +372,7 @@ function App() {
                   <Route path="developer/deep-linking-guide" element={<DeepLinkingGuidePage />} />
                   {/* Release Notes */}
                   <Route path="release-notes" element={<ReleaseNotesIndexPage />} />
+                  <Route path="release-notes/v1.0.13" element={<ReleaseNote_v1013 />} />
                   <Route path="release-notes/v1.0.12" element={<ReleaseNote_v1012 />} />
                   <Route path="release-notes/v1.0.11" element={<ReleaseNote_v1011 />} />
                   <Route path="release-notes/v1.0.10" element={<ReleaseNote_v1010 />} />
