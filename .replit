@@ -60,5 +60,9 @@ NODE_ENV = "production"
 BASE_URL = "https://teamified-accounts.replit.app"
 
 [[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
 localPort = 5000
 externalPort = 80
