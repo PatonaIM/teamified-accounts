@@ -569,7 +569,19 @@ const LoginPageMUI: React.FC = () => {
                     fontSize: '0.875rem',
                   }}
                 >
-                  Need help? Send us an email at hello@teamified.com
+                  Need help? Send us an email at{' '}
+                  <Link
+                    href="mailto:hello@teamified.com"
+                    sx={{
+                      color: '#A16AE8',
+                      textDecoration: 'none',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    hello@teamified.com
+                  </Link>
                 </Typography>
               </Box>
             </form>
