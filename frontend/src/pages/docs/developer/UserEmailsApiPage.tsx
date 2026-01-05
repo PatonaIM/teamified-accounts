@@ -22,6 +22,7 @@ import {
   OpenInNew,
   Security,
   CheckCircle,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
 
@@ -309,6 +310,287 @@ export default function UserEmailsApiPage() {
               </TableBody>
             </Table>
           </TableContainer>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AdminPanelSettings color="primary" fontSize="small" />
+            Admin API Endpoints
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Admin endpoints allow authorized roles to manage email addresses for other users. These endpoints support both JWT authentication and Service-to-Service (S2S) authentication for programmatic access.
+          </Typography>
+
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Authorized Roles:</strong> super_admin, internal_hr, internal_account_manager, client_admin, client_hr
+            </Typography>
+          </Alert>
+
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>S2S Scopes Required:</strong> <code>read:user-emails</code> for GET operations, <code>write:user-emails</code> for POST/PUT/DELETE operations
+            </Typography>
+          </Alert>
+
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Endpoint</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>S2S Scope</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><Chip label="GET" color="success" size="small" /></TableCell>
+                  <TableCell><code>/api/v1/users/:userId/emails</code></TableCell>
+                  <TableCell>Get all emails for a specific user</TableCell>
+                  <TableCell><code>read:user-emails</code></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
+                  <TableCell><code>/api/v1/users/:userId/emails</code></TableCell>
+                  <TableCell>Add an email to a specific user</TableCell>
+                  <TableCell><code>write:user-emails</code></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="PUT" color="warning" size="small" /></TableCell>
+                  <TableCell><code>/api/v1/users/:userId/emails/:emailId</code></TableCell>
+                  <TableCell>Update an email for a specific user</TableCell>
+                  <TableCell><code>write:user-emails</code></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="DELETE" color="error" size="small" /></TableCell>
+                  <TableCell><code>/api/v1/users/:userId/emails/:emailId</code></TableCell>
+                  <TableCell>Remove an email from a specific user</TableCell>
+                  <TableCell><code>write:user-emails</code></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="PUT" color="warning" size="small" /></TableCell>
+                  <TableCell><code>/api/v1/users/:userId/emails/:emailId/set-primary</code></TableCell>
+                  <TableCell>Set an email as primary for a specific user</TableCell>
+                  <TableCell><code>write:user-emails</code></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="PUT" color="warning" size="small" /></TableCell>
+                  <TableCell><code>/api/v1/users/:userId/emails/:emailId/verify</code></TableCell>
+                  <TableCell>Manually verify an email (Admin bypass)</TableCell>
+                  <TableCell><code>write:user-emails</code></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AdminPanelSettings color="primary" fontSize="small" />
+            Admin Add Email
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Add an email address to any user's account. Admins can optionally skip verification to immediately activate the email.
+          </Typography>
+
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`POST /api/v1/users/:userId/emails
+Authorization: Bearer <access_token or service_token>
+Content-Type: application/json`}
+            </pre>
+          </Paper>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Request Body
+          </Typography>
+          
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Field</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Required</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><code>email</code></TableCell>
+                  <TableCell><Chip label="string" size="small" /></TableCell>
+                  <TableCell><Chip label="Yes" color="error" size="small" /></TableCell>
+                  <TableCell>Email address to add</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>emailType</code></TableCell>
+                  <TableCell><Chip label="string" size="small" /></TableCell>
+                  <TableCell><Chip label="No" color="default" size="small" /></TableCell>
+                  <TableCell><code>"personal"</code> (default) or <code>"work"</code></TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>organizationId</code></TableCell>
+                  <TableCell><Chip label="uuid" size="small" /></TableCell>
+                  <TableCell><Chip label="No" color="default" size="small" /></TableCell>
+                  <TableCell>Organization ID for work emails</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>isPrimary</code></TableCell>
+                  <TableCell><Chip label="boolean" size="small" /></TableCell>
+                  <TableCell><Chip label="No" color="default" size="small" /></TableCell>
+                  <TableCell>Set as primary email (default: false)</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>skipVerification</code></TableCell>
+                  <TableCell><Chip label="boolean" size="small" /></TableCell>
+                  <TableCell><Chip label="No" color="default" size="small" /></TableCell>
+                  <TableCell>Skip email verification (default: false)</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Example: Add Pre-Verified Work Email
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`{
+  "email": "john.doe@company.com",
+  "emailType": "work",
+  "organizationId": "650e8400-e29b-41d4-a716-ee934041b3e8",
+  "skipVerification": true
+}`}
+            </pre>
+          </Paper>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AdminPanelSettings color="primary" fontSize="small" />
+            Admin Update Email
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Update an existing email address for any user. Unlike self-service, admins can update work emails and optionally skip re-verification.
+          </Typography>
+
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`PUT /api/v1/users/:userId/emails/:emailId
+Authorization: Bearer <access_token or service_token>
+Content-Type: application/json`}
+            </pre>
+          </Paper>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Request Body
+          </Typography>
+          
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Field</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Required</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><code>email</code></TableCell>
+                  <TableCell><Chip label="string" size="small" /></TableCell>
+                  <TableCell><Chip label="Yes" color="error" size="small" /></TableCell>
+                  <TableCell>New email address</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><code>skipVerification</code></TableCell>
+                  <TableCell><Chip label="boolean" size="small" /></TableCell>
+                  <TableCell><Chip label="No" color="default" size="small" /></TableCell>
+                  <TableCell>Skip email verification (default: false)</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Example Request
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`{
+  "email": "jane.smith@newdomain.com",
+  "skipVerification": true
+}`}
+            </pre>
+          </Paper>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AdminPanelSettings color="primary" fontSize="small" />
+            S2S Authentication Example
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Service-to-Service (S2S) authentication allows backend systems to manage user emails programmatically using OAuth 2.0 Client Credentials Grant.
+          </Typography>
+
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Step 1: Obtain S2S Token
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`POST /api/v1/sso/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+&client_id=YOUR_CLIENT_ID
+&client_secret=YOUR_CLIENT_SECRET
+&scope=read:user-emails write:user-emails`}
+            </pre>
+          </Paper>
+
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            Step 2: Use S2S Token for Admin Operations
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`// Get user emails
+GET /api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/emails
+Authorization: Bearer <s2s_access_token>
+
+// Add email to user
+POST /api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/emails
+Authorization: Bearer <s2s_access_token>
+Content-Type: application/json
+
+{
+  "email": "new.email@company.com",
+  "emailType": "work",
+  "organizationId": "650e8400-e29b-41d4-a716-ee934041b3e8",
+  "skipVerification": true
+}`}
+            </pre>
+          </Paper>
+
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>OAuth Client Setup:</strong> Enable "Client Credentials Grant" and add the <code>read:user-emails</code> and <code>write:user-emails</code> scopes in your OAuth Client configuration.
+            </Typography>
+          </Alert>
         </Box>
 
         <Divider />

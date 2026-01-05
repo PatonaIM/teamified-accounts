@@ -338,6 +338,195 @@ export class UserEmailsService {
     });
   }
 
+  async adminAddEmail(
+    userId: string,
+    dto: {
+      email: string;
+      emailType?: EmailType;
+      organizationId?: string;
+      isPrimary?: boolean;
+      skipVerification?: boolean;
+    },
+  ): Promise<UserEmailResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const normalizedEmail = dto.email.toLowerCase().trim();
+
+    const existingEmail = await this.userEmailRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingEmail) {
+      if (existingEmail.userId === userId) {
+        throw new ConflictException('This email is already linked to this user');
+      }
+      throw new ConflictException('This email is already associated with another account');
+    }
+
+    if (dto.emailType === EmailType.WORK && dto.organizationId) {
+      const organization = await this.organizationRepository.findOne({
+        where: { id: dto.organizationId },
+      });
+      if (!organization) {
+        throw new NotFoundException('Organization not found');
+      }
+    }
+
+    const existingUserEmails = await this.userEmailRepository.find({
+      where: { userId },
+    });
+
+    const isPrimary = dto.isPrimary || existingUserEmails.length === 0;
+
+    if (isPrimary && existingUserEmails.length > 0) {
+      await this.userEmailRepository.update({ userId }, { isPrimary: false });
+    }
+
+    const isVerified = dto.skipVerification || false;
+    const verificationToken = isVerified ? null : this.generateVerificationToken();
+    const verificationTokenExpiry = isVerified ? null : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const userEmail = this.userEmailRepository.create({
+      userId,
+      email: normalizedEmail,
+      emailType: dto.emailType || EmailType.PERSONAL,
+      organizationId: dto.organizationId || null,
+      isPrimary,
+      isVerified,
+      verifiedAt: isVerified ? new Date() : null,
+      verificationToken,
+      verificationTokenExpiry,
+    });
+
+    await this.userEmailRepository.save(userEmail);
+
+    if (!isVerified) {
+      await this.sendVerificationEmail(normalizedEmail, user.firstName, verificationToken!);
+    }
+
+    if (isPrimary) {
+      await this.userRepository.update(userId, { email: normalizedEmail, emailVerified: isVerified });
+    }
+
+    this.logger.log(`Admin added email ${normalizedEmail} to user ${userId}`);
+
+    const savedEmail = await this.userEmailRepository.findOne({
+      where: { id: userEmail.id },
+      relations: ['organization'],
+    });
+
+    return this.toResponseDto(savedEmail!);
+  }
+
+  async adminUpdateEmail(
+    userId: string,
+    emailId: string,
+    dto: { email: string; skipVerification?: boolean },
+  ): Promise<UserEmailResponseDto> {
+    const email = await this.userEmailRepository.findOne({
+      where: { id: emailId, userId },
+      relations: ['organization'],
+    });
+
+    if (!email) {
+      throw new NotFoundException('Email not found');
+    }
+
+    const normalizedEmail = dto.email.toLowerCase().trim();
+
+    if (normalizedEmail === email.email) {
+      return this.toResponseDto(email);
+    }
+
+    const existingEmail = await this.userEmailRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingEmail) {
+      if (existingEmail.userId === userId) {
+        throw new ConflictException('This email is already linked to this user');
+      }
+      throw new ConflictException('This email is already associated with another account');
+    }
+
+    const oldEmail = email.email;
+    const isVerified = dto.skipVerification || false;
+
+    email.email = normalizedEmail;
+    email.isVerified = isVerified;
+    email.verifiedAt = isVerified ? new Date() : null;
+    email.verificationToken = isVerified ? null : this.generateVerificationToken();
+    email.verificationTokenExpiry = isVerified ? null : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await this.userEmailRepository.save(email);
+
+    if (!isVerified) {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        await this.sendVerificationEmail(normalizedEmail, user.firstName, email.verificationToken!);
+      }
+    }
+
+    if (email.isPrimary) {
+      await this.userRepository.update(userId, { email: normalizedEmail, emailVerified: isVerified });
+    }
+
+    this.logger.log(`Admin updated email from ${oldEmail} to ${normalizedEmail} for user ${userId}`);
+
+    const updatedEmail = await this.userEmailRepository.findOne({
+      where: { id: emailId },
+      relations: ['organization'],
+    });
+
+    return this.toResponseDto(updatedEmail!);
+  }
+
+  async adminRemoveEmail(userId: string, emailId: string): Promise<void> {
+    const email = await this.userEmailRepository.findOne({
+      where: { id: emailId, userId },
+    });
+
+    if (!email) {
+      throw new NotFoundException('Email not found');
+    }
+
+    if (email.isPrimary) {
+      throw new BadRequestException('Cannot remove primary email. Set another email as primary first.');
+    }
+
+    await this.userEmailRepository.remove(email);
+    this.logger.log(`Admin removed email ${email.email} from user ${userId}`);
+  }
+
+  async adminVerifyEmail(userId: string, emailId: string): Promise<UserEmailResponseDto> {
+    const email = await this.userEmailRepository.findOne({
+      where: { id: emailId, userId },
+      relations: ['organization'],
+    });
+
+    if (!email) {
+      throw new NotFoundException('Email not found');
+    }
+
+    email.isVerified = true;
+    email.verifiedAt = new Date();
+    email.verificationToken = null;
+    email.verificationTokenExpiry = null;
+
+    await this.userEmailRepository.save(email);
+
+    if (email.isPrimary) {
+      await this.userRepository.update(userId, { emailVerified: true });
+    }
+
+    this.logger.log(`Admin verified email ${email.email} for user ${userId}`);
+
+    return this.toResponseDto(email);
+  }
+
   private generateVerificationToken(): string {
     return randomBytes(32).toString('hex');
   }
