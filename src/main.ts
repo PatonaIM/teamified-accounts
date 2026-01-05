@@ -75,6 +75,12 @@ async function bootstrap() {
     
     logger.log(`✅ NestJS application created successfully in ${appCreationTime}ms`);
     
+    // Trust proxy headers to get real client IP addresses
+    // This is required when running behind load balancers, reverse proxies, or cloud platforms like Replit
+    // Without this, req.ip returns 127.0.0.1 instead of the actual client IP
+    app.getHttpAdapter().getInstance().set('trust proxy', true);
+    logger.log('✅ Trust proxy enabled for real client IP detection');
+    
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
 
