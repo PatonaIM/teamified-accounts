@@ -324,7 +324,7 @@ const CandidateSignupPage: React.FC = () => {
                     <Typography variant="body2" color="text.secondary">
                       I accept the{' '}
                       <Link
-                        href="https://teamified.com/legal/term"
+                        href="https://teamified.com/terms"
                         target="_blank"
                         rel="noopener noreferrer"
                         color="primary"
@@ -333,7 +333,7 @@ const CandidateSignupPage: React.FC = () => {
                       </Link>
                       {' '}and{' '}
                       <Link
-                        href="https://teamified.com/legal/privacy"
+                        href="https://teamified.com/privacy"
                         target="_blank"
                         rel="noopener noreferrer"
                         color="primary"

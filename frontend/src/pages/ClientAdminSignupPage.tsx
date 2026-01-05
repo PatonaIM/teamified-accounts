@@ -67,7 +67,7 @@ const getServiceAgreementUrl = (countryCode: string): string => {
     US: 'us',
   };
   const region = regionMap[countryCode] || 'us';
-  return `https://teamified.com/legal/service-agreement?region=${region}`;
+  return `https://teamified.com/service-agreement?region=${region}`;
 };
 
 const isValidUrl = (url: string): boolean => {
@@ -744,7 +744,7 @@ const ClientAdminSignupPage: React.FC = () => {
                         </Link>
                         ,{' '}
                         <Link
-                          href="https://teamified.com/legal/term"
+                          href="https://teamified.com/terms"
                           target="_blank"
                           rel="noopener noreferrer"
                           color="secondary"
@@ -753,7 +753,7 @@ const ClientAdminSignupPage: React.FC = () => {
                         </Link>
                         {' '}and{' '}
                         <Link
-                          href="https://teamified.com/legal/privacy"
+                          href="https://teamified.com/privacy"
                           target="_blank"
                           rel="noopener noreferrer"
                           color="secondary"
