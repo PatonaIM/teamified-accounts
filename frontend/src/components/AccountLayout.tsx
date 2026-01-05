@@ -252,13 +252,13 @@ const AccountLayout: React.FC = () => {
             {isSuperAdmin && (
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={!appsDropdownOpen && location.pathname === '/admin/analytics'}
+                  selected={!appsDropdownOpen && location.pathname.startsWith('/admin/analytics')}
                   onClick={() => navigate('/admin/analytics')}
                   sx={navButtonStyles}
                 >
                   <ListItemIcon
                     sx={{
-                      color: (!appsDropdownOpen && location.pathname === '/admin/analytics') ? 'inherit' : 'text.secondary',
+                      color: (!appsDropdownOpen && location.pathname.startsWith('/admin/analytics')) ? 'inherit' : 'text.secondary',
                       minWidth: 40,
                     }}
                   >

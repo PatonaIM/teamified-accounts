@@ -74,7 +74,18 @@ import MyAppsPage from './pages/account/MyAppsPage';
 import MyProfilePage from './pages/account/MyProfilePage';
 import SuperAdminToolsPage from './pages/account/SuperAdminToolsPage';
 import CandidateUsersPage from './pages/account/CandidateUsersPage';
-import AnalyticsReportsPage from './pages/account/AnalyticsReportsPage';
+import AnalyticsIndexPage from './pages/account/AnalyticsIndexPage';
+import AISearchReportPage from './pages/account/analytics/AISearchReportPage';
+import AppUsageReportPage from './pages/account/analytics/AppUsageReportPage';
+import LoginTrafficReportPage from './pages/account/analytics/LoginTrafficReportPage';
+import EngagementReportPage from './pages/account/analytics/EngagementReportPage';
+import AdoptionReportPage from './pages/account/analytics/AdoptionReportPage';
+import OrgHealthReportPage from './pages/account/analytics/OrgHealthReportPage';
+import SessionsReportPage from './pages/account/analytics/SessionsReportPage';
+import SecurityReportPage from './pages/account/analytics/SecurityReportPage';
+import InvitationsReportPage from './pages/account/analytics/InvitationsReportPage';
+import StickinessReportPage from './pages/account/analytics/StickinessReportPage';
+import TimeToValueReportPage from './pages/account/analytics/TimeToValueReportPage';
 import './App.css';
 
 // Redirect component for old /admin/users/:userId route to new /users/:userId
@@ -305,7 +316,95 @@ function App() {
                     path="analytics" 
                     element={
                       <SuperAdminRoute>
-                        <AnalyticsReportsPage />
+                        <AnalyticsIndexPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/ai-search" 
+                    element={
+                      <SuperAdminRoute>
+                        <AISearchReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/app-usage" 
+                    element={
+                      <SuperAdminRoute>
+                        <AppUsageReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/login-traffic" 
+                    element={
+                      <SuperAdminRoute>
+                        <LoginTrafficReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/engagement" 
+                    element={
+                      <SuperAdminRoute>
+                        <EngagementReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/adoption" 
+                    element={
+                      <SuperAdminRoute>
+                        <AdoptionReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/org-health" 
+                    element={
+                      <SuperAdminRoute>
+                        <OrgHealthReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/sessions" 
+                    element={
+                      <SuperAdminRoute>
+                        <SessionsReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/security" 
+                    element={
+                      <SuperAdminRoute>
+                        <SecurityReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/invitations" 
+                    element={
+                      <SuperAdminRoute>
+                        <InvitationsReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/stickiness" 
+                    element={
+                      <SuperAdminRoute>
+                        <StickinessReportPage />
+                      </SuperAdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="analytics/time-to-value" 
+                    element={
+                      <SuperAdminRoute>
+                        <TimeToValueReportPage />
                       </SuperAdminRoute>
                     } 
                   />
