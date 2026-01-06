@@ -37,6 +37,8 @@ export interface User {
   hasOnboardingRecord?: boolean;
   hasEmploymentRecord?: boolean;
   mustChangePassword?: boolean;
+  preferredPortal?: 'accounts' | 'ats' | 'jobseeker';
+  preferredPortalOrgSlug?: string | null;
 }
 
 // Rate limiting configuration

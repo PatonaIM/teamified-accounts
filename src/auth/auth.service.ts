@@ -434,8 +434,33 @@ This is an automated message from Teamified.
       throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification link.');
     }
 
-    // Update last login timestamp
+    // Determine email type and organization for login redirect BEFORE saving
+    const normalizedEmail = email.toLowerCase().trim();
+    let loginEmailType: 'personal' | 'work' | null = null;
+    let loginEmailOrganizationSlug: string | null = null;
+
+    // Check if the login email is in the user_emails table with organization association
+    const userEmailRecord = await this.userEmailRepository.findOne({
+      where: { email: normalizedEmail, userId: user.id },
+      relations: ['organization'],
+    });
+
+    if (userEmailRecord) {
+      // Explicit user_emails record found - use its type
+      if (userEmailRecord.emailType === 'work' && userEmailRecord.organization) {
+        loginEmailType = 'work';
+        loginEmailOrganizationSlug = userEmailRecord.organization.slug;
+      } else if (userEmailRecord.emailType === 'personal') {
+        loginEmailType = 'personal';
+      }
+      // If no explicit type, leave as null for fallback
+    }
+    // If no user_emails record found, leave as null to trigger fallback in determinePreferredPortal
+
+    // Update last login timestamp and persist login email context
     user.lastLoginAt = new Date();
+    user.lastLoginEmailType = loginEmailType;
+    user.lastLoginEmailOrgSlug = loginEmailOrganizationSlug;
     await this.userRepository.save(user);
 
     // Generate tokens
@@ -470,29 +495,6 @@ This is an automated message from Teamified.
 
     // Extract theme preference from profileData if available
     const themePreference = user.profileData?.themePreference?.themeMode || 'light';
-
-    // Determine email type and organization for login redirect
-    const normalizedEmail = email.toLowerCase().trim();
-    let loginEmailType: 'personal' | 'work' = 'personal';
-    let loginEmailOrganizationSlug: string | null = null;
-
-    // Check if the login email is in the user_emails table with organization association
-    const userEmailRecord = await this.userEmailRepository.findOne({
-      where: { email: normalizedEmail, userId: user.id },
-      relations: ['organization'],
-    });
-
-    if (userEmailRecord && userEmailRecord.emailType === 'work' && userEmailRecord.organization) {
-      loginEmailType = 'work';
-      loginEmailOrganizationSlug = userEmailRecord.organization.slug;
-    } else if (userEmailRecord && userEmailRecord.emailType === 'personal') {
-      loginEmailType = 'personal';
-    } else {
-      // If email is not in user_emails, check if it's the user's primary email
-      // and determine type based on whether user has organization associations
-      // Default to personal for primary email without explicit work designation
-      loginEmailType = 'personal';
-    }
 
     return {
       accessToken: tokens.accessToken,
@@ -618,6 +620,14 @@ This is an automated message from Teamified.
     // Extract profile picture URL from profileData JSONB
     const profilePictureUrl = user.profileData?.profilePictureUrl || null;
 
+    // Determine preferred portal based on stored login email context
+    const { preferredPortal, preferredPortalOrgSlug } = await this.determinePreferredPortal(
+      userId,
+      roles,
+      user.lastLoginEmailType,
+      user.lastLoginEmailOrgSlug,
+    );
+
     return {
       id: user.id,
       email: user.email,
@@ -633,7 +643,60 @@ This is an automated message from Teamified.
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       lastLoginAt: user.lastLoginAt,
+      preferredPortal,
+      preferredPortalOrgSlug,
     };
+  }
+
+  /**
+   * Determines the preferred portal for a user based on their last login email context.
+   * Uses stored lastLoginEmailType and lastLoginEmailOrgSlug from the user record.
+   * - Super admins with Teamified Internal work email → accounts
+   * - Personal email users → jobseeker
+   * - Work email users (any organization) → ats
+   */
+  private async determinePreferredPortal(
+    userId: string, 
+    roles: string[],
+    lastLoginEmailType: 'personal' | 'work' | null,
+    lastLoginEmailOrgSlug: string | null,
+  ): Promise<{ preferredPortal: 'accounts' | 'ats' | 'jobseeker'; preferredPortalOrgSlug: string | null }> {
+    const isSuperAdmin = roles.includes('super_admin');
+    
+    // Use stored login email context if available
+    if (lastLoginEmailType === 'work' && lastLoginEmailOrgSlug) {
+      // Work email with organization
+      if (isSuperAdmin && lastLoginEmailOrgSlug === 'teamified-internal') {
+        // Super admin with Teamified Internal work email stays in accounts
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
+      // Other work email users go to ATS
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: lastLoginEmailOrgSlug };
+    }
+
+    if (lastLoginEmailType === 'personal') {
+      // Personal email users go to jobseeker
+      return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+    }
+
+    // Fallback: if no stored context, check primary email
+    const primaryEmail = await this.userEmailRepository.findOne({
+      where: { userId, isPrimary: true },
+      relations: ['organization'],
+    });
+
+    if (!primaryEmail) {
+      return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+    }
+
+    if (primaryEmail.emailType === 'work' && primaryEmail.organization) {
+      if (isSuperAdmin && primaryEmail.organization.slug === 'teamified-internal') {
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: primaryEmail.organization.slug };
+    }
+
+    return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
   }
 
   async getProfileData(userId: string): Promise<{ profileData: any; passwordUpdatedAt: Date | null }> {

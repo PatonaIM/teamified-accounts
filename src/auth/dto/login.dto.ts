@@ -105,4 +105,14 @@ export class UserProfileDto {
 
   @ApiProperty({ description: 'Last login timestamp', required: false })
   lastLoginAt: Date | null;
+
+  @ApiProperty({ 
+    description: 'Preferred portal for this user based on their primary email type', 
+    enum: ['accounts', 'ats', 'jobseeker'],
+    required: false 
+  })
+  preferredPortal?: 'accounts' | 'ats' | 'jobseeker';
+
+  @ApiProperty({ description: 'Organization slug if user should be redirected to ATS', required: false })
+  preferredPortalOrgSlug?: string | null;
 }

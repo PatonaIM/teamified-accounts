@@ -1,12 +1,37 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
-import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken } from '../services/authService';
+import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken, getCurrentUser } from '../services/authService';
+import type { User } from '../services/authService';
 
 const LAST_PATH_KEY = 'teamified_last_path';
 const LAST_PATH_USER_KEY = 'teamified_last_path_user';
 const DEFAULT_AUTHENTICATED_PATH = '/account/profile';
 const SIGNUP_PATH = '/signup/path';
+
+// Helper function to get external portal URL from preferred portal
+const getPortalUrl = (preferredPortal: 'accounts' | 'ats' | 'jobseeker' | undefined): string | null => {
+  switch (preferredPortal) {
+    case 'ats':
+      return 'https://teamified-ats.replit.app';
+    case 'jobseeker':
+      return 'https://teamified-jobseeker.replit.app';
+    case 'accounts':
+    default:
+      return null; // Stay in accounts
+  }
+};
+
+const getPortalName = (preferredPortal: 'accounts' | 'ats' | 'jobseeker' | undefined): string => {
+  switch (preferredPortal) {
+    case 'ats':
+      return 'ATS Portal';
+    case 'jobseeker':
+      return 'Jobseeker Portal';
+    default:
+      return 'your portal';
+  }
+};
 
 const PUBLIC_PATHS = [
   '/login',
@@ -78,6 +103,9 @@ const SessionAwareRedirect: React.FC = () => {
   const [checking, setChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
+  const [portalRedirect, setPortalRedirect] = useState<{ url: string; name: string } | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
+  const redirectStarted = useRef(false);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -93,6 +121,16 @@ const SessionAwareRedirect: React.FC = () => {
           console.log('[SessionAwareRedirect] User has no roles, needs role selection');
           setNeedsRoleSelection(true);
         }
+        
+        // Fetch user data to check preferred portal
+        try {
+          const user = await getCurrentUser();
+          setUserData(user);
+          console.log('[SessionAwareRedirect] User data fetched, preferred portal:', user.preferredPortal);
+        } catch (err) {
+          console.log('[SessionAwareRedirect] Failed to fetch user data:', err);
+        }
+        
         setIsLoggedIn(true);
         setChecking(false);
         return;
@@ -115,6 +153,16 @@ const SessionAwareRedirect: React.FC = () => {
             console.log('[SessionAwareRedirect] User has no roles after refresh, needs role selection');
             setNeedsRoleSelection(true);
           }
+          
+          // Fetch user data to check preferred portal
+          try {
+            const user = await getCurrentUser();
+            setUserData(user);
+            console.log('[SessionAwareRedirect] User data fetched after refresh, preferred portal:', user.preferredPortal);
+          } catch (err) {
+            console.log('[SessionAwareRedirect] Failed to fetch user data after refresh:', err);
+          }
+          
           setIsLoggedIn(true);
         } catch (error) {
           console.log('[SessionAwareRedirect] Token refresh failed:', error);
@@ -130,6 +178,57 @@ const SessionAwareRedirect: React.FC = () => {
 
     checkSession();
   }, []);
+
+  // Check if user should be redirected to external portal
+  useEffect(() => {
+    if (isLoggedIn && !checking && userData && !needsRoleSelection && !redirectStarted.current) {
+      const portalUrl = getPortalUrl(userData.preferredPortal);
+      if (portalUrl) {
+        console.log('[SessionAwareRedirect] User should be at external portal:', userData.preferredPortal);
+        redirectStarted.current = true;
+        setPortalRedirect({ url: portalUrl, name: getPortalName(userData.preferredPortal) });
+      }
+    }
+  }, [isLoggedIn, checking, userData, needsRoleSelection]);
+
+  // Perform external redirect
+  useEffect(() => {
+    if (portalRedirect) {
+      console.log('[SessionAwareRedirect] Redirecting to external portal:', portalRedirect.url);
+      window.location.replace(portalRedirect.url);
+    }
+  }, [portalRedirect]);
+
+  // Show loading overlay when redirecting to external portal
+  if (portalRedirect) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+        }}
+      >
+        <CircularProgress 
+          size={60} 
+          sx={{ 
+            color: 'white',
+            mb: 3 
+          }} 
+        />
+        <Typography variant="h5" sx={{ fontWeight: 500, mb: 1 }}>
+          Redirecting you to {portalRedirect.name}...
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Please wait a moment
+        </Typography>
+      </Box>
+    );
+  }
 
   if (checking) {
     return (

@@ -83,6 +83,12 @@ export class User {
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
   lastLoginAt: Date | null;
 
+  @Column({ name: 'last_login_email_type', length: 20, nullable: true })
+  lastLoginEmailType: 'personal' | 'work' | null;
+
+  @Column({ name: 'last_login_email_org_slug', length: 100, nullable: true })
+  lastLoginEmailOrgSlug: string | null;
+
   @Column({ name: 'theme_preference', length: 20, nullable: true, default: 'light' })
   themePreference: 'light' | 'dark' | null;
 
