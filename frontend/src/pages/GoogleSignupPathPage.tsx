@@ -18,24 +18,18 @@ import {
   Business,
   ArrowForward,
 } from '@mui/icons-material';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../services/authService';
-import { checkAndHandleMarketingRedirect, preserveMarketingSourceFromUrl, getMarketingSource } from '../services/marketingRedirectService';
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showEmployerForm, setShowEmployerForm] = useState(false);
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    preserveMarketingSourceFromUrl();
-  }, [location.search]);
 
   useEffect(() => {
     if (!user) {
@@ -52,24 +46,16 @@ const GoogleSignupPathPage: React.FC = () => {
     setError(null);
     try {
       const response = await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
-      // Store new tokens and user data with updated roles
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken);
-        // Update cached user data with new roles from response
         if (response.data.user) {
           setUserData(response.data.user);
         }
       }
       await refreshUser();
       
-      const hasMarketingSource = getMarketingSource();
-      if (hasMarketingSource) {
-        const redirected = await checkAndHandleMarketingRedirect();
-        if (redirected) return;
-      }
-      
-      navigate('/account/profile', { replace: true });
+      navigate('/google-signup-success', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
       if (err?.response?.status === 401) {
@@ -100,24 +86,16 @@ const GoogleSignupPathPage: React.FC = () => {
         roleType: 'client_admin',
         organizationName: orgName.trim(),
       });
-      // Store new tokens and user data with updated roles
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken);
-        // Update cached user data with new roles from response
         if (response.data.user) {
           setUserData(response.data.user);
         }
       }
       await refreshUser();
       
-      const hasMarketingSource = getMarketingSource();
-      if (hasMarketingSource) {
-        const redirected = await checkAndHandleMarketingRedirect();
-        if (redirected) return;
-      }
-      
-      navigate('/account/profile', { replace: true });
+      navigate('/google-signup-success', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
       if (err?.response?.status === 401) {

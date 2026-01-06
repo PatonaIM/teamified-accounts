@@ -40,28 +40,17 @@ export class CandidateSignupDto {
 
 export class CandidateSignupResponseDto {
   @ApiProperty({
-    description: 'Authentication access token (JWT)',
-  })
-  accessToken: string;
-
-  @ApiProperty({
-    description: 'Refresh token for obtaining new access tokens',
-  })
-  refreshToken: string;
-
-  @ApiProperty({
-    description: 'User information',
-  })
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    roles: string[];
-  };
-
-  @ApiProperty({
     description: 'Success message',
   })
   message: string;
+
+  @ApiProperty({
+    description: 'Whether email verification is required',
+  })
+  emailVerificationRequired: boolean;
+
+  @ApiProperty({
+    description: 'Email address where verification was sent',
+  })
+  email: string;
 }

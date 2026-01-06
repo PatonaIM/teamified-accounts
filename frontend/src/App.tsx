@@ -14,6 +14,8 @@ import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
 import SignupPathSelectionPage from './pages/SignupPathSelectionPage';
 import CandidateSignupPage from './pages/CandidateSignupPage';
 import ClientAdminSignupPage from './pages/ClientAdminSignupPage';
+import SignupSuccessPage from './pages/SignupSuccessPage';
+import GoogleSignupSuccessPage from './pages/GoogleSignupSuccessPage';
 import InvitationPreviewPage from './pages/InvitationPreviewPage';
 import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
 import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
@@ -211,6 +213,18 @@ function App() {
                 <Route 
                   path="/signup-client-admin" 
                   element={<ClientAdminSignupPage />} 
+                />
+                <Route 
+                  path="/signup-success" 
+                  element={<SignupSuccessPage />} 
+                />
+                <Route 
+                  path="/google-signup-success" 
+                  element={
+                    <ProtectedRoute>
+                      <GoogleSignupSuccessPage />
+                    </ProtectedRoute>
+                  } 
                 />
                 <Route 
                   path="/invitations/preview/:code" 

@@ -26,11 +26,9 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clientAdminSignup, analyzeWebsite } from '../services/authService';
-import { useAuth } from '../hooks/useAuth';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
-import { checkAndHandleMarketingRedirect, preserveMarketingSourceFromUrl, getMarketingSource, isMarketingSource } from '../services/marketingRedirectService';
 
 const COMPANY_SIZES = [
   '1-20 employees',
@@ -79,19 +77,11 @@ const isValidUrl = (url: string): boolean => {
 const ClientAdminSignupPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshUser } = useAuth();
   
   const searchParams = new URLSearchParams(location.search);
   const emailParam = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
-  const sourceParam = searchParams.get('source');
-
-  useEffect(() => {
-    if (isMarketingSource(sourceParam)) {
-      preserveMarketingSourceFromUrl();
-    }
-  }, [sourceParam]);
 
   const [step, setStep] = useState<'basic' | 'details'>('basic');
   const [formData, setFormData] = useState({
@@ -248,7 +238,7 @@ const ClientAdminSignupPage: React.FC = () => {
       const mobileDialCode = countries.find(c => c.code === formData.mobileCountryCode)?.dialCode || '';
       const phoneDialCode = countries.find(c => c.code === formData.phoneCountryCode)?.dialCode || '';
 
-      const result = await clientAdminSignup({
+      await clientAdminSignup({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -269,25 +259,7 @@ const ClientAdminSignupPage: React.FC = () => {
         termsAccepted: formData.termsAccepted,
       });
 
-      try {
-        await refreshUser();
-        
-        const hasMarketingSource = getMarketingSource();
-        if (hasMarketingSource) {
-          const redirected = await checkAndHandleMarketingRedirect();
-          if (redirected) return;
-        }
-        
-        navigate(returnUrl);
-      } catch (refreshError) {
-        console.error('Failed to refresh user after signup:', refreshError);
-        const { removeTokens } = await import('../services/authService');
-        removeTokens();
-        setSuccessMessage('Account and organization created successfully! Redirecting to login...');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      }
+      navigate('/signup-success', { replace: true });
     } catch (error: any) {
       console.error('Client admin signup error:', error);
       setErrors({

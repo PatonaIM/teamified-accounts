@@ -415,6 +415,25 @@ This is an automated message from Teamified.
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      const userRole = await this.getUserPrimaryRole(user.id);
+      await this.auditService.log({
+        actorUserId: user.id,
+        actorRole: userRole,
+        action: 'login_failure',
+        entityType: 'User',
+        entityId: user.id,
+        changes: {
+          email,
+          reason: 'email_not_verified',
+        },
+        ip,
+        userAgent,
+      });
+      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification link.');
+    }
+
     // Update last login timestamp
     user.lastLoginAt = new Date();
     await this.userRepository.save(user);
@@ -1188,6 +1207,8 @@ This is an automated message from Teamified.
       passwordHash: hashedPassword,
       isActive: true,
       emailVerified: false,
+      emailVerificationToken: uuidv4(),
+      emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -1222,14 +1243,12 @@ This is an automated message from Teamified.
 
     await this.organizationMemberRepository.save(orgMember);
 
-    const tokens = await this.jwtService.generateTokenPair(savedUser);
-    
-    const deviceMetadata: DeviceMetadata = {
-      ip: ip || 'unknown',
-      userAgent: userAgent || 'unknown',
-    };
-
-    await this.sessionService.createSession(savedUser, tokens.refreshToken, deviceMetadata);
+    const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
+    try {
+      await this.sendEmailVerification(savedUser, baseUrl);
+    } catch (error) {
+      this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
+    }
 
     await this.auditService.log({
       actorUserId: savedUser.id,
@@ -1280,23 +1299,10 @@ This is an automated message from Teamified.
     }
 
     return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      user: {
-        id: savedUser.id,
-        email: savedUser.email,
-        firstName: savedUser.firstName,
-        lastName: savedUser.lastName,
-        roles: ['client_admin'],
-      },
-      organization: {
-        id: savedOrg.id,
-        name: savedOrg.name,
-        slug: savedOrg.slug,
-        industry: savedOrg.industry,
-        companySize: savedOrg.companySize,
-      },
-      message: 'Account and organization created successfully',
+      message: 'Account created successfully. Please check your email to verify your account.',
+      emailVerificationRequired: true,
+      email: savedUser.email,
+      organizationSlug: savedOrg.slug,
       hubspotContactCreated,
       hubspotContactId,
     };
@@ -1439,6 +1445,8 @@ This is an automated message from Teamified.
       passwordHash: hashedPassword,
       isActive: true,
       emailVerified: false,
+      emailVerificationToken: uuidv4(),
+      emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -1452,14 +1460,12 @@ This is an automated message from Teamified.
 
     await this.userRoleRepository.save(candidateRole);
 
-    const tokens = await this.jwtService.generateTokenPair(savedUser);
-    
-    const deviceMetadata: DeviceMetadata = {
-      ip: ip || 'unknown',
-      userAgent: userAgent || 'unknown',
-    };
-
-    await this.sessionService.createSession(savedUser, tokens.refreshToken, deviceMetadata);
+    const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
+    try {
+      await this.sendEmailVerification(savedUser, baseUrl);
+    } catch (error) {
+      this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
+    }
 
     await this.auditService.log({
       actorUserId: savedUser.id,
@@ -1469,24 +1475,18 @@ This is an automated message from Teamified.
       entityId: savedUser.id,
       changes: {
         email: savedUser.email,
+        emailVerificationRequired: true,
       },
       ip,
       userAgent,
     });
 
-    this.logger.log(`Candidate signup successful: ${savedUser.email}`);
+    this.logger.log(`Candidate signup successful: ${savedUser.email} (email verification required)`);
 
     return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      user: {
-        id: savedUser.id,
-        email: savedUser.email,
-        firstName: savedUser.firstName,
-        lastName: savedUser.lastName,
-        roles: ['candidate'],
-      },
-      message: 'Account created successfully',
+      message: 'Account created successfully. Please check your email to verify your account.',
+      emailVerificationRequired: true,
+      email: savedUser.email,
     };
   }
 }

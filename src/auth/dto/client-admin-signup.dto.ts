@@ -182,41 +182,24 @@ export class ClientAdminSignupDto {
 
 export class ClientAdminSignupResponseDto {
   @ApiProperty({
-    description: 'Authentication access token (JWT)',
-  })
-  accessToken: string;
-
-  @ApiProperty({
-    description: 'Refresh token for obtaining new access tokens',
-  })
-  refreshToken: string;
-
-  @ApiProperty({
-    description: 'User information',
-  })
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    roles: string[];
-  };
-
-  @ApiProperty({
-    description: 'Created organization information',
-  })
-  organization: {
-    id: string;
-    name: string;
-    slug: string;
-    industry: string | null;
-    companySize: string | null;
-  };
-
-  @ApiProperty({
     description: 'Success message',
   })
   message: string;
+
+  @ApiProperty({
+    description: 'Whether email verification is required',
+  })
+  emailVerificationRequired: boolean;
+
+  @ApiProperty({
+    description: 'Email address where verification was sent',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: 'Created organization slug',
+  })
+  organizationSlug: string;
 
   @ApiProperty({
     description: 'HubSpot contact creation result',

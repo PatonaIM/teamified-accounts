@@ -23,25 +23,15 @@ import {
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { candidateSignup } from '../services/authService';
-import { useAuth } from '../hooks/useAuth';
-import { checkAndHandleMarketingRedirect, preserveMarketingSourceFromUrl, getMarketingSource, isMarketingSource } from '../services/marketingRedirectService';
 
 const CandidateSignupPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshUser } = useAuth();
   
   const searchParams = new URLSearchParams(location.search);
   const emailParam = searchParams.get('email') || '';
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
-  const sourceParam = searchParams.get('source');
-
-  React.useEffect(() => {
-    if (isMarketingSource(sourceParam)) {
-      preserveMarketingSourceFromUrl();
-    }
-  }, [sourceParam]);
 
   const [formData, setFormData] = useState({
     email: emailParam,
@@ -116,32 +106,14 @@ const CandidateSignupPage: React.FC = () => {
     setErrors({});
 
     try {
-      const result = await candidateSignup({
+      await candidateSignup({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
       });
 
-      try {
-        await refreshUser();
-        
-        const hasMarketingSource = getMarketingSource();
-        if (hasMarketingSource) {
-          const redirected = await checkAndHandleMarketingRedirect();
-          if (redirected) return;
-        }
-        
-        navigate(returnUrl);
-      } catch (refreshError) {
-        console.error('Failed to refresh user after signup:', refreshError);
-        const { removeTokens } = await import('../services/authService');
-        removeTokens();
-        setSuccessMessage('Account created successfully! Redirecting to login...');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      }
+      navigate('/signup-success', { replace: true });
     } catch (error: any) {
       console.error('Candidate signup error:', error);
       setErrors({

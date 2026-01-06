@@ -470,35 +470,16 @@ export const analyzeWebsite = async (websiteUrl: string): Promise<AnalyzeWebsite
 };
 
 export interface SignupResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    roles: string[];
-  };
-  organization?: {
-    id: string;
-    name: string;
-    slug: string;
-    industry: string | null;
-    companySize: string | null;
-  };
   message: string;
+  emailVerificationRequired: boolean;
+  email: string;
+  organizationSlug?: string;
 }
 
 export const candidateSignup = async (data: CandidateSignupData): Promise<SignupResponse> => {
   try {
     const response = await api.post('/v1/auth/signup/candidate', data);
-    const { accessToken, refreshToken, user, message } = response.data;
-    
-    // Store tokens
-    setAccessToken(accessToken);
-    setRefreshToken(refreshToken);
-    
-    return { accessToken, refreshToken, user, message };
+    return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       const message = error.response.data?.message || 'Signup failed';
@@ -511,13 +492,7 @@ export const candidateSignup = async (data: CandidateSignupData): Promise<Signup
 export const clientAdminSignup = async (data: ClientAdminSignupData): Promise<SignupResponse> => {
   try {
     const response = await api.post('/v1/auth/signup/client-admin', data);
-    const { accessToken, refreshToken, user, organization, message } = response.data;
-    
-    // Store tokens
-    setAccessToken(accessToken);
-    setRefreshToken(refreshToken);
-    
-    return { accessToken, refreshToken, user, organization, message };
+    return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       const message = error.response.data?.message || 'Signup failed';
