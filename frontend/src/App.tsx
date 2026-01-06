@@ -20,6 +20,7 @@ import InvitationPreviewPage from './pages/InvitationPreviewPage';
 import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
 import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
 import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
+import PortalRedirectPage from './pages/PortalRedirectPage';
 import DocsLayout from './components/docs/DocsLayout';
 import OverviewPage from './pages/docs/product/OverviewPage';
 import SsoProductPage from './pages/docs/product/SsoPage';
@@ -453,6 +454,7 @@ function App() {
                   />
                 </Route>
                 <Route path="/test" element={<IntegratedTestSuite />} />
+                <Route path="/portal-redirect" element={<PortalRedirectPage />} />
                 
                 {/* Documentation with sidebar layout */}
                 <Route path="/docs" element={<DocsLayout />}>

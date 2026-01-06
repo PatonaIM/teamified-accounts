@@ -342,6 +342,7 @@ const LoginPageMUI: React.FC = () => {
       
       // Role-based redirect logic based on login email context (only when no specific destination)
       let redirectUrl: string;
+      let portalName: string = '';
       
       if (loginEmailType === 'work' && loginEmailOrganizationSlug === 'teamified-internal' && isSuperAdmin) {
         // Super admin logging in with Teamified Internal work email stays in Teamified Accounts
@@ -350,15 +351,20 @@ const LoginPageMUI: React.FC = () => {
       } else if (loginEmailType === 'personal') {
         // Personal email login - redirect to Jobseeker Portal
         redirectUrl = 'https://teamified-jobseeker.replit.app';
+        portalName = 'Jobseeker Portal';
         console.log('[LoginPageMUI] Personal email - redirecting to Jobseeker Portal');
       } else {
         // Work email login (any organization) - redirect to ATS Portal
         redirectUrl = 'https://teamified-ats.replit.app';
+        portalName = 'ATS Portal';
         console.log('[LoginPageMUI] Work email - redirecting to ATS Portal');
       }
       
       if (redirectUrl.startsWith('http')) {
-        window.location.href = redirectUrl;
+        // Use portal redirect page to show loading screen during external redirect
+        sessionStorage.setItem('portalRedirectTarget', redirectUrl);
+        sessionStorage.setItem('portalRedirectName', portalName);
+        navigate('/portal-redirect', { replace: true });
       } else {
         navigate(redirectUrl);
       }
