@@ -324,6 +324,7 @@ const LoginPageMUI: React.FC = () => {
       console.log('[LoginPageMUI] Login successful');
       console.log('[LoginPageMUI] Email type:', loginEmailType, 'Org:', loginEmailOrganizationSlug);
       console.log('[LoginPageMUI] Is super admin:', isSuperAdmin);
+      console.log('[LoginPageMUI] Return URL:', returnUrl);
       
       // If there's a specific returnUrl (e.g., SSO authorize), honor it
       if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
@@ -332,7 +333,14 @@ const LoginPageMUI: React.FC = () => {
         return;
       }
       
-      // Role-based redirect logic based on login email context
+      // If there's a specific non-default returnUrl, honor it (user was trying to access a specific page)
+      if (returnUrl !== '/account/profile' && returnUrl !== '/') {
+        console.log('[LoginPageMUI] Specific returnUrl requested - honoring it:', returnUrl);
+        navigate(returnUrl);
+        return;
+      }
+      
+      // Role-based redirect logic based on login email context (only when no specific destination)
       let redirectUrl: string;
       
       if (loginEmailType === 'work' && loginEmailOrganizationSlug === 'teamified-internal' && isSuperAdmin) {
