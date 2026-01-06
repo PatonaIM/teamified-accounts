@@ -1,12 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 const PortalRedirectPage = () => {
   const navigate = useNavigate();
   const [redirectTarget, setRedirectTarget] = useState<string | null>(null);
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
+    if (hasProcessed.current) {
+      return;
+    }
+    hasProcessed.current = true;
+
     const target = sessionStorage.getItem('portalRedirectTarget');
     const targetName = sessionStorage.getItem('portalRedirectName');
     
