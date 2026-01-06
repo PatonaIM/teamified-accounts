@@ -362,9 +362,10 @@ const LoginPageMUI: React.FC = () => {
       
       if (redirectUrl.startsWith('http')) {
         // Use portal redirect page to show loading screen during external redirect
+        // Use window.location to avoid LoginPageMUI's authenticated user redirect logic
         sessionStorage.setItem('portalRedirectTarget', redirectUrl);
         sessionStorage.setItem('portalRedirectName', portalName);
-        navigate('/portal-redirect', { replace: true });
+        window.location.href = '/portal-redirect';
       } else {
         navigate(redirectUrl);
       }
