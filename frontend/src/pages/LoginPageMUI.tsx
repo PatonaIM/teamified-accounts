@@ -72,6 +72,13 @@ const LoginPageMUI: React.FC = () => {
     const checkAndRedirect = async () => {
       if (loading) return;
       
+      // Skip authenticated-user redirect if a portal redirect is pending
+      const portalRedirectPending = sessionStorage.getItem('portalRedirectPending') === 'true';
+      if (portalRedirectPending) {
+        console.log('[LoginPageMUI] Portal redirect pending, skipping authenticated user redirect');
+        return;
+      }
+      
       const targetUrl = returnUrl !== '/account/profile' ? returnUrl : (getLastPath() || '/account/profile');
       const isSsoAuthorizeUrl = targetUrl.includes('/api/v1/sso/authorize');
       
@@ -316,8 +323,6 @@ const LoginPageMUI: React.FC = () => {
         rememberMe: false
       });
       
-      await refreshUser();
-      
       const { loginEmailType, loginEmailOrganizationSlug, user } = loginResponse;
       const isSuperAdmin = user?.roles?.includes('super_admin') || false;
       
@@ -326,25 +331,20 @@ const LoginPageMUI: React.FC = () => {
       console.log('[LoginPageMUI] Is super admin:', isSuperAdmin);
       console.log('[LoginPageMUI] Return URL:', returnUrl);
       
-      // If there's a specific returnUrl (e.g., SSO authorize), honor it
-      if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
-        console.log('[LoginPageMUI] SSO flow - redirecting with cookies');
-        window.location.href = returnUrl;
-        return;
-      }
-      
-      // If there's a specific non-default returnUrl, honor it (user was trying to access a specific page)
-      if (returnUrl !== '/account/profile' && returnUrl !== '/') {
-        console.log('[LoginPageMUI] Specific returnUrl requested - honoring it:', returnUrl);
-        navigate(returnUrl);
-        return;
-      }
-      
-      // Role-based redirect logic based on login email context (only when no specific destination)
+      // Determine redirect target BEFORE refreshUser to set pending flag early
       let redirectUrl: string;
       let portalName: string = '';
+      let isExternalRedirect = false;
       
-      if (loginEmailType === 'work' && loginEmailOrganizationSlug === 'teamified-internal' && isSuperAdmin) {
+      // If there's a specific returnUrl (e.g., SSO authorize), honor it
+      if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
+        console.log('[LoginPageMUI] SSO flow - will redirect with cookies');
+        redirectUrl = returnUrl;
+      } else if (returnUrl !== '/account/profile' && returnUrl !== '/') {
+        // If there's a specific non-default returnUrl, honor it
+        console.log('[LoginPageMUI] Specific returnUrl requested:', returnUrl);
+        redirectUrl = returnUrl;
+      } else if (loginEmailType === 'work' && loginEmailOrganizationSlug === 'teamified-internal' && isSuperAdmin) {
         // Super admin logging in with Teamified Internal work email stays in Teamified Accounts
         redirectUrl = '/account/profile';
         console.log('[LoginPageMUI] Super admin with Teamified Internal email - staying in Teamified Accounts');
@@ -352,20 +352,32 @@ const LoginPageMUI: React.FC = () => {
         // Personal email login - redirect to Jobseeker Portal
         redirectUrl = 'https://teamified-jobseeker.replit.app';
         portalName = 'Jobseeker Portal';
+        isExternalRedirect = true;
         console.log('[LoginPageMUI] Personal email - redirecting to Jobseeker Portal');
       } else {
         // Work email login (any organization) - redirect to ATS Portal
         redirectUrl = 'https://teamified-ats.replit.app';
         portalName = 'ATS Portal';
+        isExternalRedirect = true;
         console.log('[LoginPageMUI] Work email - redirecting to ATS Portal');
       }
       
-      if (redirectUrl.startsWith('http')) {
-        // Use portal redirect page to show loading screen during external redirect
-        // Use window.location to avoid LoginPageMUI's authenticated user redirect logic
+      // Set pending flag BEFORE refreshUser to prevent authenticated-user redirect race
+      if (isExternalRedirect) {
         sessionStorage.setItem('portalRedirectTarget', redirectUrl);
         sessionStorage.setItem('portalRedirectName', portalName);
-        window.location.href = '/portal-redirect';
+        sessionStorage.setItem('portalRedirectPending', 'true');
+        console.log('[LoginPageMUI] Set portal redirect pending flag');
+      }
+      
+      await refreshUser();
+      
+      // Now perform the redirect
+      if (isExternalRedirect) {
+        // Navigate to portal redirect page for external redirects
+        navigate('/portal-redirect', { replace: true });
+      } else if (redirectUrl.includes('/api/v1/sso/authorize')) {
+        window.location.href = redirectUrl;
       } else {
         navigate(redirectUrl);
       }

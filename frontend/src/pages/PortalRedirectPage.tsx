@@ -6,6 +6,7 @@ const PortalRedirectPage = () => {
   const navigate = useNavigate();
   const [redirectTarget, setRedirectTarget] = useState<string | null>(null);
   const hasProcessed = useRef(false);
+  const redirectStarted = useRef(false);
 
   useEffect(() => {
     if (hasProcessed.current) {
@@ -18,19 +19,21 @@ const PortalRedirectPage = () => {
     
     console.log('[PortalRedirectPage] Target:', target, 'Name:', targetName);
     
-    if (target) {
+    if (target && !redirectStarted.current) {
+      redirectStarted.current = true;
       setRedirectTarget(targetName || 'your portal');
+      
+      // Clear all portal redirect flags
       sessionStorage.removeItem('portalRedirectTarget');
       sessionStorage.removeItem('portalRedirectName');
+      sessionStorage.removeItem('portalRedirectPending');
       
-      const timer = setTimeout(() => {
-        console.log('[PortalRedirectPage] Redirecting to:', target);
-        window.location.replace(target);
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    } else {
+      // Redirect immediately without setTimeout to avoid React Strict Mode issues
+      console.log('[PortalRedirectPage] Redirecting to:', target);
+      window.location.replace(target);
+    } else if (!target && !redirectStarted.current) {
       console.log('[PortalRedirectPage] No redirect target found, going to profile');
+      sessionStorage.removeItem('portalRedirectPending');
       navigate('/account/profile', { replace: true });
     }
   }, [navigate]);
