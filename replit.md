@@ -53,6 +53,14 @@ Core features include:
   - Google OAuth users bypass email verification (Google already verifies emails)
   - Google signups redirect to `/google-signup-success` with welcome message and 5-second countdown
   - Frontend pages: `SignupSuccessPage.tsx`, `GoogleSignupSuccessPage.tsx`
+- **Role-Based Login Redirects**: After successful login, users are redirected based on the email they used to log in. Features:
+  - Login response includes `loginEmailType` (personal/work) and `loginEmailOrganizationSlug` (org slug if work email)
+  - Redirect logic based on email context (not role precedence):
+    - Work email from "teamified-internal" + super_admin role → stays in Teamified Accounts (`/account/profile`)
+    - Personal email → redirects to Jobseeker Portal
+    - Work email (any other organization) → redirects to ATS Portal
+  - Specific returnUrl destinations are always honored (deep linking preserved)
+  - SSO authorize flows remain intact for OAuth integrations
 - **Direct Google OAuth Integration**: Users can sign in with "Continue with Google" alongside traditional email-password login. Features:
   - Direct OAuth 2.0 flow without third-party vendor dependency (replaces Supabase)
   - Secure temporary code exchange pattern (tokens never exposed in URLs)
