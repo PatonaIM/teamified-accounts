@@ -163,6 +163,7 @@ const LoginPageMUI: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   const [shakeEmail, setShakeEmail] = useState(false);
+  const [portalRedirect, setPortalRedirect] = useState<{ url: string; name: string } | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -364,8 +365,6 @@ const LoginPageMUI: React.FC = () => {
       
       // Set pending flag BEFORE refreshUser to prevent authenticated-user redirect race
       if (isExternalRedirect) {
-        sessionStorage.setItem('portalRedirectTarget', redirectUrl);
-        sessionStorage.setItem('portalRedirectName', portalName);
         sessionStorage.setItem('portalRedirectPending', 'true');
         console.log('[LoginPageMUI] Set portal redirect pending flag');
       }
@@ -374,8 +373,9 @@ const LoginPageMUI: React.FC = () => {
       
       // Now perform the redirect
       if (isExternalRedirect) {
-        // Navigate to portal redirect page for external redirects
-        navigate('/portal-redirect', { replace: true });
+        // Show loading overlay and do external redirect directly from this page
+        // This avoids adding an intermediate route to browser history
+        setPortalRedirect({ url: redirectUrl, name: portalName });
       } else if (redirectUrl.includes('/api/v1/sso/authorize')) {
         window.location.href = redirectUrl;
       } else {
@@ -387,6 +387,49 @@ const LoginPageMUI: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Effect to perform external portal redirect
+  useEffect(() => {
+    if (portalRedirect) {
+      console.log('[LoginPageMUI] Performing external redirect to:', portalRedirect.url);
+      // Clear the pending flag
+      sessionStorage.removeItem('portalRedirectPending');
+      // Use window.location.replace to replace current history entry
+      // This means back button from external portal won't return here
+      window.location.replace(portalRedirect.url);
+    }
+  }, [portalRedirect]);
+
+  // Show loading overlay when redirecting to external portal
+  if (portalRedirect) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+        }}
+      >
+        <CircularProgress 
+          size={60} 
+          sx={{ 
+            color: 'white',
+            mb: 3 
+          }} 
+        />
+        <Typography variant="h5" sx={{ fontWeight: 500, mb: 1 }}>
+          Redirecting you to {portalRedirect.name}...
+        </Typography>
+        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+          Please wait a moment
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
