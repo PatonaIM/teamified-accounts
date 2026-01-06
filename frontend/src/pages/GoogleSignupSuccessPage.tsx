@@ -5,61 +5,47 @@ import {
   Paper,
   Container,
   Fade,
-  CircularProgress,
   LinearProgress,
 } from '@mui/material';
 import {
   CheckCircle,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import api from '../services/api';
 
 const REDIRECT_DELAY_SECONDS = 5;
 
 const GoogleSignupSuccessPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   const [countdown, setCountdown] = useState(REDIRECT_DELAY_SECONDS);
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
-  const [isLoadingRedirect, setIsLoadingRedirect] = useState(true);
+
+  const getRedirectUrl = (): string => {
+    if (!user?.roles || user.roles.length === 0) {
+      return '/account/profile';
+    }
+    
+    const userRoles = user.roles.map(r => typeof r === 'string' ? r : r.roleType);
+    
+    if (userRoles.includes('candidate')) {
+      return '/account/profile';
+    }
+    
+    if (userRoles.some(r => ['client_admin', 'client_hr', 'client_recruiter', 'client_hiring_manager', 'client_employee'].includes(r))) {
+      return '/account/profile';
+    }
+    
+    return '/account/profile';
+  };
+
+  const redirectUrl = getRedirectUrl();
 
   useEffect(() => {
-    const fetchRedirectUrl = async () => {
-      try {
-        const response = await api.get('/v1/sso/marketing-redirect', {
-          params: { source: 'marketing' },
-        });
-
-        if (response.data.shouldRedirect && response.data.redirectUrl) {
-          setRedirectUrl(response.data.redirectUrl);
-        } else {
-          setRedirectUrl('/account/profile');
-        }
-      } catch (error) {
-        console.error('Failed to get redirect URL:', error);
-        setRedirectUrl('/account/profile');
-      } finally {
-        setIsLoadingRedirect(false);
-      }
-    };
-
-    fetchRedirectUrl();
-  }, []);
-
-  useEffect(() => {
-    if (isLoadingRedirect || !redirectUrl) return;
-
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          if (redirectUrl.startsWith('http')) {
-            window.location.href = redirectUrl;
-          } else {
-            navigate(redirectUrl, { replace: true });
-          }
+          navigate(redirectUrl, { replace: true });
           return 0;
         }
         return prev - 1;
@@ -67,7 +53,7 @@ const GoogleSignupSuccessPage: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isLoadingRedirect, redirectUrl, navigate]);
+  }, [redirectUrl, navigate]);
 
   const progress = ((REDIRECT_DELAY_SECONDS - countdown) / REDIRECT_DELAY_SECONDS) * 100;
 
@@ -126,32 +112,24 @@ const GoogleSignupSuccessPage: React.FC = () => {
               Your account has been created successfully. You're all set to get started!
             </Typography>
 
-            {isLoadingRedirect ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <>
-                <Box sx={{ mb: 3 }}>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={progress} 
-                    sx={{ 
-                      height: 8, 
-                      borderRadius: 4,
-                      backgroundColor: 'grey.200',
-                      '& .MuiLinearProgress-bar': {
-                        borderRadius: 4,
-                      },
-                    }} 
-                  />
-                </Box>
+            <Box sx={{ mb: 3 }}>
+              <LinearProgress 
+                variant="determinate" 
+                value={progress} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 4,
+                  backgroundColor: 'grey.200',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 4,
+                  },
+                }} 
+              />
+            </Box>
 
-                <Typography variant="body2" color="text.secondary">
-                  Redirecting you in {countdown} second{countdown !== 1 ? 's' : ''}...
-                </Typography>
-              </>
-            )}
+            <Typography variant="body2" color="text.secondary">
+              Redirecting you in {countdown} second{countdown !== 1 ? 's' : ''}...
+            </Typography>
           </Paper>
         </Fade>
       </Container>

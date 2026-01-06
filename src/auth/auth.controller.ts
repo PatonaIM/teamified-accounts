@@ -1151,20 +1151,12 @@ export class AuthController {
   async clientAdminSignup(
     @Body() signupDto: ClientAdminSignupDto,
     @Request() req: any,
-    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<ClientAdminSignupResponseDto> {
-    const signupResponse = await this.authService.clientAdminSignup(
+    return this.authService.clientAdminSignup(
       signupDto,
       req.ip,
       req.get('user-agent'),
     );
-    
-    // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
-    // This is critical for marketing redirect flow after signup
-    // Cookie is set on shared domain (.teamified.com in production) for cross-app SSO
-    res.cookie('access_token', signupResponse.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
-    
-    return signupResponse;
   }
 
   @Post('signup/candidate')
@@ -1225,20 +1217,12 @@ export class AuthController {
   async candidateSignup(
     @Body() signupDto: CandidateSignupDto,
     @Request() req: any,
-    @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<CandidateSignupResponseDto> {
-    const signupResponse = await this.authService.candidateSignup(
+    return this.authService.candidateSignup(
       signupDto,
       req.ip,
       req.get('user-agent'),
     );
-    
-    // Set httpOnly cookie for SSO authorization redirects (browser navigation to /authorize)
-    // This is critical for marketing redirect flow after signup
-    // Cookie is set on shared domain (.teamified.com in production) for cross-app SSO
-    res.cookie('access_token', signupResponse.accessToken, getAccessTokenCookieOptions(72 * 60 * 60 * 1000));
-    
-    return signupResponse;
   }
 
   @Post('force-change-password')
