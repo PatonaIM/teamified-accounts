@@ -471,6 +471,29 @@ This is an automated message from Teamified.
     // Extract theme preference from profileData if available
     const themePreference = user.profileData?.themePreference?.themeMode || 'light';
 
+    // Determine email type and organization for login redirect
+    const normalizedEmail = email.toLowerCase().trim();
+    let loginEmailType: 'personal' | 'work' = 'personal';
+    let loginEmailOrganizationSlug: string | null = null;
+
+    // Check if the login email is in the user_emails table with organization association
+    const userEmailRecord = await this.userEmailRepository.findOne({
+      where: { email: normalizedEmail, userId: user.id },
+      relations: ['organization'],
+    });
+
+    if (userEmailRecord && userEmailRecord.emailType === 'work' && userEmailRecord.organization) {
+      loginEmailType = 'work';
+      loginEmailOrganizationSlug = userEmailRecord.organization.slug;
+    } else if (userEmailRecord && userEmailRecord.emailType === 'personal') {
+      loginEmailType = 'personal';
+    } else {
+      // If email is not in user_emails, check if it's the user's primary email
+      // and determine type based on whether user has organization associations
+      // Default to personal for primary email without explicit work designation
+      loginEmailType = 'personal';
+    }
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -485,6 +508,8 @@ This is an automated message from Teamified.
         themePreference: themePreference,
         mustChangePassword: user.mustChangePassword || false,
       },
+      loginEmailType,
+      loginEmailOrganizationSlug,
     };
   }
 

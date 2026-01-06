@@ -36,6 +36,12 @@ export class LoginResponseDto {
     themePreference?: 'light' | 'dark' | 'teamified' | 'custom';
     mustChangePassword?: boolean;
   };
+
+  @ApiProperty({ description: 'Type of email used for login', enum: ['personal', 'work'] })
+  loginEmailType: 'personal' | 'work';
+
+  @ApiProperty({ description: 'Organization slug if logged in with work email', nullable: true })
+  loginEmailOrganizationSlug: string | null;
 }
 
 export class RefreshTokenDto {

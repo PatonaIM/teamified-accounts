@@ -310,7 +310,7 @@ const LoginPageMUI: React.FC = () => {
     setIsLoading(true);
     
     try {
-      await login({
+      const loginResponse = await login({
         email: formData.email,
         password: formData.password,
         rememberMe: false
@@ -318,14 +318,41 @@ const LoginPageMUI: React.FC = () => {
       
       await refreshUser();
       
-      console.log('[LoginPageMUI] Login successful, redirecting to:', returnUrl);
+      const { loginEmailType, loginEmailOrganizationSlug, user } = loginResponse;
+      const isSuperAdmin = user?.roles?.includes('super_admin') || false;
       
+      console.log('[LoginPageMUI] Login successful');
+      console.log('[LoginPageMUI] Email type:', loginEmailType, 'Org:', loginEmailOrganizationSlug);
+      console.log('[LoginPageMUI] Is super admin:', isSuperAdmin);
+      
+      // If there's a specific returnUrl (e.g., SSO authorize), honor it
       if (returnUrl !== '/account/profile' && returnUrl.includes('/api/v1/sso/authorize')) {
         console.log('[LoginPageMUI] SSO flow - redirecting with cookies');
         window.location.href = returnUrl;
+        return;
+      }
+      
+      // Role-based redirect logic based on login email context
+      let redirectUrl: string;
+      
+      if (loginEmailType === 'work' && loginEmailOrganizationSlug === 'teamified-internal' && isSuperAdmin) {
+        // Super admin logging in with Teamified Internal work email stays in Teamified Accounts
+        redirectUrl = '/account/profile';
+        console.log('[LoginPageMUI] Super admin with Teamified Internal email - staying in Teamified Accounts');
+      } else if (loginEmailType === 'personal') {
+        // Personal email login - redirect to Jobseeker Portal
+        redirectUrl = 'https://teamified-jobseeker.replit.app';
+        console.log('[LoginPageMUI] Personal email - redirecting to Jobseeker Portal');
       } else {
-        console.log('[LoginPageMUI] Normal redirect');
-        navigate(returnUrl);
+        // Work email login (any organization) - redirect to ATS Portal
+        redirectUrl = 'https://teamified-ats.replit.app';
+        console.log('[LoginPageMUI] Work email - redirecting to ATS Portal');
+      }
+      
+      if (redirectUrl.startsWith('http')) {
+        window.location.href = redirectUrl;
+      } else {
+        navigate(redirectUrl);
       }
     } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';

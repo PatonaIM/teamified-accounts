@@ -13,8 +13,16 @@ export interface AuthResponse {
   user: {
     id: string;
     email: string;
-    role: string;
+    firstName: string;
+    lastName: string;
+    isActive: boolean;
+    emailVerified: boolean;
+    roles: string[];
+    themePreference?: 'light' | 'dark' | 'teamified' | 'custom';
+    mustChangePassword?: boolean;
   };
+  loginEmailType: 'personal' | 'work';
+  loginEmailOrganizationSlug: string | null;
 }
 
 export interface User {
@@ -215,7 +223,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
   
   try {
     const response = await api.post('/v1/auth/login', credentials);
-    const { accessToken, refreshToken, user } = response.data;
+    const { accessToken, refreshToken, user, loginEmailType, loginEmailOrganizationSlug } = response.data;
     
     // Store tokens
     setAccessToken(accessToken);
@@ -238,7 +246,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     // Reset failed attempts on successful login
     resetLoginAttempts();
     
-    return { accessToken, refreshToken, user };
+    return { accessToken, refreshToken, user, loginEmailType, loginEmailOrganizationSlug };
   } catch (error) {
     // Record failed attempt
     recordFailedLoginAttempt();
