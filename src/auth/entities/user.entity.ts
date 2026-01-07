@@ -107,6 +107,9 @@ export class User {
   @Column({ name: 'password_updated_at', type: 'timestamptz', nullable: true })
   passwordUpdatedAt: Date | null;
 
+  @Column({ name: 'global_logout_at', type: 'timestamptz', nullable: true })
+  globalLogoutAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
