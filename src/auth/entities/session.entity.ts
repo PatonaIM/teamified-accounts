@@ -38,6 +38,9 @@ export class Session {
     deviceFingerprint?: string;
   };
 
+  @Column({ name: 'environment', type: 'varchar', length: 20, nullable: true })
+  environment: string | null;
+
   @Column({ name: 'expires_at', type: 'timestamp with time zone' })
   expiresAt: Date;
 
