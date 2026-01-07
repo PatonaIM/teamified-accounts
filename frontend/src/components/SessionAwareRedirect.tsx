@@ -123,16 +123,29 @@ const SessionAwareRedirect: React.FC = () => {
           setNeedsRoleSelection(true);
         }
         
-        // Fetch user data to check preferred portal
+        // Fetch user data to check preferred portal AND verify token is still valid
+        // This catches cases where the user logged out globally (globalLogoutAt set)
         try {
           const user = await getCurrentUser();
           setUserData(user);
           console.log('[SessionAwareRedirect] User data fetched, preferred portal:', user.preferredPortal);
-        } catch (err) {
+          setIsLoggedIn(true);
+        } catch (err: any) {
           console.log('[SessionAwareRedirect] Failed to fetch user data:', err);
+          // If we get 401, the token was invalidated (global logout or expired)
+          // Clear local storage and treat as not logged in
+          if (err?.response?.status === 401) {
+            console.log('[SessionAwareRedirect] Token rejected by server (possibly global logout), clearing session');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            setIsLoggedIn(false);
+            setChecking(false);
+            return;
+          }
+          // For other errors, still consider logged in but without portal redirect
+          setIsLoggedIn(true);
         }
         
-        setIsLoggedIn(true);
         setChecking(false);
         return;
       }
@@ -155,16 +168,26 @@ const SessionAwareRedirect: React.FC = () => {
             setNeedsRoleSelection(true);
           }
           
-          // Fetch user data to check preferred portal
+          // Fetch user data to check preferred portal AND verify token is still valid
           try {
             const user = await getCurrentUser();
             setUserData(user);
             console.log('[SessionAwareRedirect] User data fetched after refresh, preferred portal:', user.preferredPortal);
-          } catch (err) {
+            setIsLoggedIn(true);
+          } catch (err: any) {
             console.log('[SessionAwareRedirect] Failed to fetch user data after refresh:', err);
+            // If we get 401 after refresh, the token was invalidated (global logout)
+            if (err?.response?.status === 401) {
+              console.log('[SessionAwareRedirect] Token rejected after refresh (possibly global logout), clearing session');
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              setIsLoggedIn(false);
+              setChecking(false);
+              return;
+            }
+            // For other errors, still consider logged in but without portal redirect
+            setIsLoggedIn(true);
           }
-          
-          setIsLoggedIn(true);
         } catch (error) {
           console.log('[SessionAwareRedirect] Token refresh failed:', error);
           setIsLoggedIn(false);
