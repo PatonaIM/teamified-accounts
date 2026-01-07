@@ -449,27 +449,21 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             <Divider sx={{ my: 1 }} />
 
             <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Api fontSize="small" color="action" />
-                <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Api fontSize="small" color="action" />
+                  <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
+                </Box>
+                <Switch
+                  checked={allowClientCredentials}
+                  onChange={(e) => setAllowClientCredentials(e.target.checked)}
+                  color="primary"
+                  size="small"
+                />
               </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: allowClientCredentials ? 2 : 0 }}>
                 Enable this to allow backend systems to authenticate directly using client credentials (without a user session).
               </Typography>
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={allowClientCredentials}
-                    onChange={(e) => setAllowClientCredentials(e.target.checked)}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Typography variant="body2">Enable Client Credentials Grant</Typography>
-                }
-                sx={{ alignItems: 'flex-start', mb: 2 }}
-              />
 
               {allowClientCredentials && (
                 <Box sx={{ 
