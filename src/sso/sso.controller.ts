@@ -12,6 +12,7 @@ import {
   HttpCode,
   Headers,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
@@ -154,6 +155,28 @@ export class SsoController {
     });
 
     if (!user || !user.sub) {
+      // If prompt=none, return error instead of redirecting to login (silent SSO check)
+      if (authorizeDto.prompt === 'none') {
+        // Validate client and redirect_uri before returning error (prevent open redirect)
+        const client = await this.ssoService.validateClientAndRedirectUri(
+          authorizeDto.client_id,
+          authorizeDto.redirect_uri,
+        );
+        if (!client) {
+          console.log('[SSO] prompt=none: Invalid client_id or redirect_uri');
+          throw new BadRequestException('Invalid client_id or redirect_uri');
+        }
+
+        const errorUrl = new URL(authorizeDto.redirect_uri);
+        errorUrl.searchParams.set('error', 'login_required');
+        errorUrl.searchParams.set('error_description', 'User is not authenticated');
+        if (authorizeDto.state) {
+          errorUrl.searchParams.set('state', authorizeDto.state);
+        }
+        console.log('[SSO] prompt=none but user not authenticated, returning login_required error');
+        return res.redirect(HttpStatus.FOUND, errorUrl.toString());
+      }
+
       // User not authenticated - redirect to login with return URL
       const returnUrl = encodeURIComponent(
         `/api/v1/sso/authorize?${new URLSearchParams(authorizeDto as any).toString()}`

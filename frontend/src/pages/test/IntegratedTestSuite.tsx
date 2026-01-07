@@ -68,6 +68,8 @@ export default function IntegratedTestSuite() {
         SESSION_STORAGE_KEY,
         JSON.stringify({ token, user, timestamp: Date.now() }),
       );
+      // Clear the SSO check flag on successful login
+      sessionStorage.removeItem('sso_check_attempted');
     } catch (err) {
       console.error('Failed to save session:', err);
     }
@@ -76,9 +78,30 @@ export default function IntegratedTestSuite() {
   const clearStoredSession = () => {
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      // Clear the SSO check flag so next visit will attempt silent SSO again
+      sessionStorage.removeItem('sso_check_attempted');
     } catch (err) {
       console.error('Failed to clear session:', err);
     }
+  };
+
+  const generateCodeChallenge = async (
+    codeVerifier: string,
+  ): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  };
+
+  const generateCodeVerifier = (): string => {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return btoa(String.fromCharCode(...array))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
   };
 
   const restoreSession = async () => {
@@ -86,36 +109,71 @@ export default function IntegratedTestSuite() {
 
     try {
       const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (!stored) return false;
+      if (stored) {
+        const { token, user, timestamp } = JSON.parse(stored);
 
-      const { token, user, timestamp } = JSON.parse(stored);
+        const SESSION_MAX_AGE = 60 * 60 * 1000;
+        if (Date.now() - timestamp > SESSION_MAX_AGE) {
+          clearStoredSession();
+        } else {
+          const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
-      const SESSION_MAX_AGE = 60 * 60 * 1000;
-      if (Date.now() - timestamp > SESSION_MAX_AGE) {
-        clearStoredSession();
+          if (userResponse.ok) {
+            const freshUser = await userResponse.json();
+            setAccessToken(token);
+            setUserInfo(freshUser);
+            saveSession(token, freshUser);
+            return true;
+          }
+          clearStoredSession();
+        }
+      }
+
+      // Check if we've already attempted silent SSO (to prevent infinite loop)
+      const ssoCheckAttempted = sessionStorage.getItem('sso_check_attempted');
+      if (ssoCheckAttempted) {
+        console.log('[SSO Test] Silent SSO already attempted, showing login button');
         return false;
       }
 
-      const userResponse = await fetch(`${apiUrl}/api/v1/sso/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!userResponse.ok) {
-        clearStoredSession();
-        return false;
-      }
-
-      const freshUser = await userResponse.json();
-      setAccessToken(token);
-      setUserInfo(freshUser);
-      saveSession(token, freshUser);
-      return true;
+      console.log('[SSO Test] No local session, checking for active SSO session...');
+      sessionStorage.setItem('sso_check_attempted', 'true');
+      await checkSsoSession();
+      return false;
     } catch (err) {
       console.error('Session restoration failed:', err);
       clearStoredSession();
       return false;
+    }
+  };
+
+  const checkSsoSession = async () => {
+    try {
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      const state = Math.random().toString(36).substring(7);
+
+      sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+      sessionStorage.setItem('pkce_state', state);
+
+      const authParams = new URLSearchParams({
+        client_id: DEVELOPER_SANDBOX_CLIENT_ID,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid profile email',
+        state: state,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+        prompt: 'none',
+      });
+
+      window.location.href = `${apiUrl}/api/v1/sso/authorize?${authParams.toString()}`;
+    } catch (err) {
+      console.log('[SSO Test] Silent SSO check failed:', err);
     }
   };
 
@@ -148,7 +206,12 @@ export default function IntegratedTestSuite() {
 
     if (errorParam) {
       callbackProcessedRef.current = true;
-      setError(`Authentication failed: ${errorParam}`);
+      // login_required means no active SSO session - this is not an error, just show login button
+      if (errorParam === 'login_required') {
+        console.log('[SSO Test] No active SSO session found');
+      } else {
+        setError(`Authentication failed: ${errorParam}`);
+      }
       window.history.replaceState({}, document.title, '/test');
       setSessionRestored(true);
     } else if (code) {
@@ -162,25 +225,6 @@ export default function IntegratedTestSuite() {
       });
     }
   }, []);
-
-  const generateCodeChallenge = async (
-    codeVerifier: string,
-  ): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(codeVerifier);
-    const digest = await crypto.subtle.digest('SHA-256', data);
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  };
-
-  const generateCodeVerifier = (): string => {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return btoa(String.fromCharCode(...array))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-  };
 
   const handleLoginClick = async () => {
     if (typeof window === 'undefined') return;

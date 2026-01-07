@@ -143,6 +143,18 @@ export class SsoService {
   }
 
   /**
+   * Validate client_id and redirect_uri for silent SSO checks
+   * Returns the client if valid, null if invalid
+   */
+  async validateClientAndRedirectUri(clientId: string, redirectUri: string): Promise<boolean> {
+    const client = await this.oauthClientsService.findByClientId(clientId);
+    if (!client || !client.is_active) {
+      return false;
+    }
+    return this.oauthClientsService.validateRedirectUri(client, redirectUri);
+  }
+
+  /**
    * Token Exchange: Exchange auth code or client credentials for JWT
    */
   async exchangeToken(tokenDto: TokenExchangeDto): Promise<TokenResponseDto | ClientCredentialsTokenResponseDto> {
