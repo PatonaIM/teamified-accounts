@@ -664,14 +664,16 @@ This is an automated message from Teamified.
     const isSuperAdmin = roles.includes('super_admin');
     console.log('determinePreferredPortal:', { userId, roles, isSuperAdmin, lastLoginEmailType, lastLoginEmailOrgSlug });
     
+    // Super admins ALWAYS stay in accounts - they manage the platform
+    if (isSuperAdmin) {
+      console.log('determinePreferredPortal: Super admin detected, returning accounts');
+      return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+    }
+    
     // Use stored login email context if available
     if (lastLoginEmailType === 'work' && lastLoginEmailOrgSlug) {
-      // Work email with organization
-      if (isSuperAdmin && lastLoginEmailOrgSlug === 'teamified-internal') {
-        // Super admin with Teamified Internal work email stays in accounts
-        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
-      }
-      // Other work email users go to ATS
+      // Work email users go to ATS
+      console.log('determinePreferredPortal: Work email, returning ats');
       return { preferredPortal: 'ats', preferredPortalOrgSlug: lastLoginEmailOrgSlug };
     }
 
@@ -693,10 +695,6 @@ This is an automated message from Teamified.
     }
 
     if (primaryEmail.emailType === 'work' && primaryEmail.organization) {
-      if (isSuperAdmin && primaryEmail.organization.slug === 'teamified-internal') {
-        console.log('determinePreferredPortal: Work email + super_admin + teamified-internal, returning accounts');
-        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
-      }
       console.log('determinePreferredPortal: Work email, returning ats');
       return { preferredPortal: 'ats', preferredPortalOrgSlug: primaryEmail.organization.slug };
     }
