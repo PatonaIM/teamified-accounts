@@ -474,8 +474,90 @@ const LoginPageMUI: React.FC = () => {
           justifyContent: 'center',
           alignItems: 'center',
           padding: 4,
+          gap: 4,
         }}
       >
+        {/* Marketing Content Box (box1) */}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 400,
+            display: { xs: 'none', md: 'block' },
+          }}
+        >
+          <Typography
+            variant="h4"
+            sx={{
+              color: '#1a1a1a',
+              fontWeight: 700,
+              mb: 4,
+              lineHeight: 1.3,
+            }}
+          >
+            Build high-performing teams faster with AI-powered hiring.
+          </Typography>
+
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: '#A16AE8',
+                  mt: 1,
+                  mr: 2,
+                  flexShrink: 0,
+                }}
+              />
+              <Typography sx={{ color: '#4a4a4a', fontSize: '1rem' }}>
+                Pre-screened candidates matched to your role
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: '#A16AE8',
+                  mt: 1,
+                  mr: 2,
+                  flexShrink: 0,
+                }}
+              />
+              <Typography sx={{ color: '#4a4a4a', fontSize: '1rem' }}>
+                Reduce staffing costs by up to 70%
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: '#A16AE8',
+                  mt: 1,
+                  mr: 2,
+                  flexShrink: 0,
+                }}
+              />
+              <Typography sx={{ color: '#4a4a4a', fontSize: '1rem' }}>
+                Guaranteed quality with recruiter validation
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ borderTop: '1px solid #E5E7EB', pt: 3 }}>
+            <Typography sx={{ color: '#4a4a4a', fontSize: '0.9rem', mb: 1 }}>
+              ✅ No upfront cost · ✅ No credit card required
+            </Typography>
+            <Typography sx={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              Success guarantee — replacement at no extra cost.
+            </Typography>
+          </Box>
+        </Box>
+
         {/* Sign-in Form Container */}
         <Box
           sx={{
