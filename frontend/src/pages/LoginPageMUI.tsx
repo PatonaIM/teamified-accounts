@@ -488,13 +488,13 @@ const LoginPageMUI: React.FC = () => {
           <Typography
             variant="h4"
             sx={{
-              color: '#9333EA',
               fontWeight: 700,
               mb: 4,
               lineHeight: 1.3,
             }}
           >
-            Build high-performing teams faster with AI-powered hiring.
+            <Box component="span" sx={{ color: '#9333EA' }}>Build high-performing teams </Box>
+            <Box component="span" sx={{ color: '#111827' }}>faster with AI-powered hiring.</Box>
           </Typography>
 
           <Box sx={{ mb: 4 }}>
