@@ -625,12 +625,15 @@ const LoginPageMUI: React.FC = () => {
               )}
               <TextField
                 fullWidth
-                placeholder="Personal or Work Email"
+                label="Personal or Work Email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 error={!!errors.email || emailAlreadyRegistered}
                 helperText={errors.email || (emailAlreadyRegistered ? 'This email is already registered.' : '')}
                 disabled={isLoading}
+                InputLabelProps={{
+                  shrink: true,
+                }}
                 sx={{
                   mb: 3,
                   animation: shakeEmail ? 'shake 0.5s ease-in-out' : 'none',
@@ -639,8 +642,17 @@ const LoginPageMUI: React.FC = () => {
                     '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
                     '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
                   },
+                  '& .MuiInputLabel-root': {
+                    color: '#6b7280',
+                    '&.Mui-focused': {
+                      color: '#9333EA',
+                    },
+                    '&.Mui-error': {
+                      color: '#ef4444',
+                    },
+                  },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#F9FAFB',
+                    bgcolor: 'white',
                     borderRadius: 2,
                     '& fieldset': {
                       borderColor: emailAlreadyRegistered ? '#ef4444' : '#E5E7EB',
@@ -656,14 +668,10 @@ const LoginPageMUI: React.FC = () => {
                   '& .MuiInputBase-input': {
                     color: '#1a1a1a',
                     '&:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #F9FAFB inset',
+                      WebkitBoxShadow: '0 0 0 100px white inset',
                       WebkitTextFillColor: '#1a1a1a',
                       caretColor: '#1a1a1a',
                     },
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: '#9CA3AF',
-                    opacity: 1,
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',
@@ -768,13 +776,16 @@ const LoginPageMUI: React.FC = () => {
               <TextField
                 fullWidth
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
+                label="Password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 error={!!errors.password}
                 helperText={errors.password}
                 disabled={isLoading}
                 autoFocus
+                InputLabelProps={{
+                  shrink: true,
+                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -797,8 +808,17 @@ const LoginPageMUI: React.FC = () => {
                 }}
                 sx={{
                   mb: 3,
+                  '& .MuiInputLabel-root': {
+                    color: '#6b7280',
+                    '&.Mui-focused': {
+                      color: '#9333EA',
+                    },
+                    '&.Mui-error': {
+                      color: '#ef4444',
+                    },
+                  },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: '#F9FAFB',
+                    bgcolor: 'white',
                     borderRadius: 2,
                     '& fieldset': {
                       borderColor: '#E5E7EB',
@@ -814,14 +834,10 @@ const LoginPageMUI: React.FC = () => {
                   '& .MuiInputBase-input': {
                     color: '#1a1a1a',
                     '&:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #F9FAFB inset',
+                      WebkitBoxShadow: '0 0 0 100px white inset',
                       WebkitTextFillColor: '#1a1a1a',
                       caretColor: '#1a1a1a',
                     },
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: '#9CA3AF',
-                    opacity: 1,
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',

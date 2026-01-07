@@ -55,24 +55,25 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ returnUrl,
         fullWidth
         variant="outlined"
         size="large"
-        startIcon={isLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <GoogleIcon />}
+        startIcon={isLoading ? <CircularProgress size={20} sx={{ color: '#1a1a1a' }} /> : <GoogleIcon />}
         onClick={handleGoogleLogin}
         disabled={isLoading}
         sx={{
           py: 1.5,
-          borderColor: 'rgba(255, 255, 255, 0.3)',
-          color: 'white',
+          borderColor: '#E5E7EB',
+          color: '#1a1a1a',
           fontWeight: 600,
           textTransform: 'none',
           fontSize: '1rem',
           borderRadius: 2,
+          bgcolor: 'white',
           '&:hover': {
-            borderColor: 'rgba(255, 255, 255, 0.5)',
-            bgcolor: 'rgba(255, 255, 255, 0.05)',
+            borderColor: '#9333EA',
+            bgcolor: 'rgba(147, 51, 234, 0.05)',
           },
           '&:disabled': {
-            color: 'rgba(255, 255, 255, 0.5)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
+            color: '#9CA3AF',
+            borderColor: '#E5E7EB',
           },
         }}
       >
