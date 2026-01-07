@@ -40,14 +40,21 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = this.jwtService.validateAccessToken(token);
       
-      // Check global logout timestamp - if token was issued before user's global logout, reject it
+      // Check user exists and global logout timestamp
+      // If user is deleted or token was issued before global logout, reject it
       // This enables true SSO logout across all clients
       const user = await this.userRepository.findOne({
         where: { id: payload.sub },
         select: ['id', 'globalLogoutAt'],
       });
       
-      if (user?.globalLogoutAt) {
+      // Reject tokens for deleted/non-existent users
+      if (!user) {
+        throw new UnauthorizedException('User account not found. Please log in again.');
+      }
+      
+      // Reject tokens issued before global logout
+      if (user.globalLogoutAt) {
         const tokenIssuedAt = new Date(payload.iat * 1000);
         if (tokenIssuedAt < user.globalLogoutAt) {
           throw new UnauthorizedException('Session has been terminated. Please log in again.');
