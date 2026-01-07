@@ -274,38 +274,21 @@ export default function IntegratedTestSuite() {
     window.open(`${apiUrl}/api/docs`, '_blank');
   };
 
-  const handleClearSession = async () => {
-    // Clear local state first
-    setUserInfo(null);
-    setAccessToken(null);
-    setError(null);
-    setLoading(false);
-
-    // Clear local storage (SSO test session and main app tokens)
+  const handleClearSession = () => {
     clearStoredSession();
     sessionStorage.removeItem('pkce_code_verifier');
+    sessionStorage.removeItem('pkce_state');
     
-    // Also clear main app localStorage tokens to prevent login loop
     localStorage.removeItem('teamified_access_token');
     localStorage.removeItem('teamified_refresh_token');
     localStorage.removeItem('teamified_csrf_token');
     localStorage.removeItem('teamified_user_data');
 
-    // Call the unified SSO logout endpoint to revoke server-side sessions
-    try {
-      await fetch(`${apiUrl}/api/v1/sso/logout`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-    } catch (err) {
-      console.error('SSO logout failed:', err);
-    }
-    sessionStorage.removeItem('pkce_state');
-
-    callbackProcessedRef.current = false;
-    sessionCheckRef.current = false;
-
-    window.history.replaceState({}, document.title, '/test');
+    const logoutUrl = new URL(`${apiUrl}/api/v1/sso/logout`);
+    logoutUrl.searchParams.set('post_logout_redirect_uri', `${window.location.origin}/test`);
+    logoutUrl.searchParams.set('client_id', DEVELOPER_SANDBOX_CLIENT_ID);
+    
+    window.location.href = logoutUrl.toString();
   };
 
   const recordFeatureUsage = async (
