@@ -23,12 +23,19 @@ interface ReleaseNote {
 
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.0.14',
+    date: 'January 7, 2026',
+    title: 'Role-Based Login Redirects',
+    summary: 'Users are now automatically redirected to the appropriate portal (Jobseeker, ATS, or Teamified Accounts) based on the email address they use to log in. Persistent portal routing ensures consistent navigation across sessions.',
+    path: '/docs/release-notes/v1.0.14',
+    isLatest: true,
+  },
+  {
     version: '1.0.13',
     date: 'January 5, 2026',
     title: 'Navigation Bar Reorganization',
     summary: 'Streamlined navigation with OAuth Configuration and Analytics & Reports promoted to main nav for quicker access to key platform features.',
     path: '/docs/release-notes/v1.0.13',
-    isLatest: true,
   },
   {
     version: '1.0.12',
