@@ -24,8 +24,9 @@ import {
   FormControlLabel,
   Checkbox,
   FormGroup,
+  Collapse,
 } from '@mui/material';
-import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -61,6 +62,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [allowedScopes, setAllowedScopes] = useState<string[]>([]);
   const [logoutUri, setLogoutUri] = useState('');
   const [logoutUriError, setLogoutUriError] = useState<string | null>(null);
+  const [redirectUrisExpanded, setRedirectUrisExpanded] = useState(true);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -444,60 +446,153 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
               <MenuItem value="candidate">Candidate Only</MenuItem>
             </TextField>
 
+            <Divider sx={{ my: 1 }} />
+
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2">Redirect URIs</Typography>
-                <Stack direction="row" spacing={0.5}>
-                  <Chip 
-                    label={`${envCounts.production} Prod`} 
-                    size="small"
-                    onClick={() => toggleEnvironmentFilter('production')}
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
-                      color: environmentFilter === 'production' ? 'white' : 'text.secondary',
-                      border: `1px solid ${environmentColors.production}`,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
-                      },
-                    }} 
-                  />
-                  <Chip 
-                    label={`${envCounts.staging} Staging`} 
-                    size="small"
-                    onClick={() => toggleEnvironmentFilter('staging')}
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
-                      color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
-                      border: `1px solid ${environmentColors.staging}`,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
-                      },
-                    }} 
-                  />
-                  <Chip 
-                    label={`${envCounts.development} Dev`} 
-                    size="small"
-                    onClick={() => toggleEnvironmentFilter('development')}
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
-                      color: environmentFilter === 'development' ? 'white' : 'text.secondary',
-                      border: `1px solid ${environmentColors.development}`,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
-                      },
-                    }} 
-                  />
-                </Stack>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Api fontSize="small" color="action" />
+                <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
               </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Enable this to allow backend systems to authenticate directly using client credentials (without a user session).
+              </Typography>
+              
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={allowClientCredentials}
+                    onChange={(e) => setAllowClientCredentials(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2">Enable Client Credentials Grant</Typography>
+                }
+                sx={{ alignItems: 'flex-start', mb: 2 }}
+              />
+
+              {allowClientCredentials && (
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'action.hover', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Allowed API Scopes</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    Select which API operations this application can perform when using service-to-service authentication.
+                  </Typography>
+                  <FormGroup>
+                    {AVAILABLE_SCOPES.map((scope) => (
+                      <FormControlLabel
+                        key={scope.value}
+                        control={
+                          <Checkbox
+                            checked={allowedScopes.includes(scope.value)}
+                            onChange={() => handleScopeToggle(scope.value)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2" component="span">{scope.label}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                              {scope.description}
+                            </Typography>
+                          </Box>
+                        }
+                        sx={{ mb: 0.5 }}
+                      />
+                    ))}
+                  </FormGroup>
+                  {allowedScopes.length === 0 && (
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      Select at least one scope for the application to access APIs.
+                    </Alert>
+                  )}
+                </Box>
+              )}
+            </Box>
+
+            <Divider sx={{ my: 1 }} />
+
+            <Box>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: 1,
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.8 },
+                }}
+                onClick={() => setRedirectUrisExpanded(!redirectUrisExpanded)}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2">Redirect URIs</Typography>
+                  <Chip 
+                    label={`${redirectUris.length} configured`} 
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.65rem' }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Stack direction="row" spacing={0.5}>
+                    <Chip 
+                      label={`${envCounts.production} Prod`} 
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('production'); }}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
+                        color: environmentFilter === 'production' ? 'white' : 'text.secondary',
+                        border: `1px solid ${environmentColors.production}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                        },
+                      }} 
+                    />
+                    <Chip 
+                      label={`${envCounts.staging} Staging`} 
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('staging'); }}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                        color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
+                        border: `1px solid ${environmentColors.staging}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                        },
+                      }} 
+                    />
+                    <Chip 
+                      label={`${envCounts.development} Dev`} 
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('development'); }}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
+                        color: environmentFilter === 'development' ? 'white' : 'text.secondary',
+                        border: `1px solid ${environmentColors.development}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                        },
+                      }} 
+                    />
+                  </Stack>
+                  {redirectUrisExpanded ? <ExpandLess /> : <ExpandMore />}
+                </Box>
+              </Box>
+              
+              <Collapse in={redirectUrisExpanded}>
               
               <Stack spacing={1}>
                 {filteredRedirectUris.map(({ uri: uriObj, originalIndex }) => (
@@ -712,78 +807,10 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   Add
                 </Button>
               </Stack>
+              </Collapse>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
-
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Api fontSize="small" color="action" />
-                <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
-              </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                Enable this to allow backend systems to authenticate directly using client credentials (without a user session).
-              </Typography>
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={allowClientCredentials}
-                    onChange={(e) => setAllowClientCredentials(e.target.checked)}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Typography variant="body2">Enable Client Credentials Grant</Typography>
-                }
-                sx={{ alignItems: 'flex-start', mb: 2 }}
-              />
-
-              {allowClientCredentials && (
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: 'action.hover', 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Allowed API Scopes</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                    Select which API operations this application can perform when using service-to-service authentication.
-                  </Typography>
-                  <FormGroup>
-                    {AVAILABLE_SCOPES.map((scope) => (
-                      <FormControlLabel
-                        key={scope.value}
-                        control={
-                          <Checkbox
-                            checked={allowedScopes.includes(scope.value)}
-                            onChange={() => handleScopeToggle(scope.value)}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body2" component="span">{scope.label}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                              {scope.description}
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ mb: 0.5 }}
-                      />
-                    ))}
-                  </FormGroup>
-                  {allowedScopes.length === 0 && (
-                    <Alert severity="warning" sx={{ mt: 2 }}>
-                      Select at least one scope for the application to access APIs.
-                    </Alert>
-                  )}
-                </Box>
-              )}
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 1 }} />
 
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
