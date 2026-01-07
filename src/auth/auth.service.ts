@@ -454,8 +454,37 @@ This is an automated message from Teamified.
         loginEmailType = 'personal';
       }
       // If no explicit type, leave as null for fallback
+    } else {
+      // No user_emails record - check if login email matches primary email (users.email)
+      // We can only reliably infer type for known domains like @teamified.com
+      // For all other emails, we leave as null to let fallback logic handle it
+      if (normalizedEmail === user.email.toLowerCase().trim()) {
+        console.log('[Login] Email matches primary user email, checking for known domain');
+        
+        // Get the email domain
+        const emailDomain = normalizedEmail.split('@')[1];
+        
+        // Only @teamified.com emails are reliably associated with teamified-internal
+        if (emailDomain === 'teamified.com') {
+          // Check if user is member of teamified-internal
+          const orgMemberships = await this.organizationMemberRepository.find({
+            where: { userId: user.id },
+            relations: ['organization'],
+          });
+          const teamifiedOrg = orgMemberships.find(m => m.organization?.slug === 'teamified-internal');
+          if (teamifiedOrg) {
+            loginEmailType = 'work';
+            loginEmailOrganizationSlug = 'teamified-internal';
+            console.log('[Login] Inferred work email for teamified-internal org (@teamified.com domain)');
+          }
+        }
+        // For all other domains, leave as null - the fallback in determinePreferredPortal
+        // will handle super_admin users appropriately
+        if (!loginEmailType) {
+          console.log('[Login] Unknown domain, leaving email type as null for fallback handling');
+        }
+      }
     }
-    // If no user_emails record found, leave as null to trigger fallback in determinePreferredPortal
 
     // Update last login timestamp and persist login email context
     user.lastLoginAt = new Date();
@@ -664,25 +693,26 @@ This is an automated message from Teamified.
     const isSuperAdmin = roles.includes('super_admin');
     console.log('determinePreferredPortal:', { userId, roles, isSuperAdmin, lastLoginEmailType, lastLoginEmailOrgSlug });
     
-    // Super admins ALWAYS stay in accounts - they manage the platform
-    if (isSuperAdmin) {
-      console.log('determinePreferredPortal: Super admin detected, returning accounts');
-      return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
-    }
-    
-    // Use stored login email context if available
+    // Use stored login email context if available (set during login based on which email was used)
     if (lastLoginEmailType === 'work' && lastLoginEmailOrgSlug) {
-      // Work email users go to ATS
+      // Work email with organization
+      if (isSuperAdmin && lastLoginEmailOrgSlug === 'teamified-internal') {
+        // Super admin logged in with Teamified Internal work email stays in accounts
+        console.log('determinePreferredPortal: Work email + super_admin + teamified-internal, returning accounts');
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
+      // Other work email users go to ATS
       console.log('determinePreferredPortal: Work email, returning ats');
       return { preferredPortal: 'ats', preferredPortalOrgSlug: lastLoginEmailOrgSlug };
     }
 
     if (lastLoginEmailType === 'personal') {
       // Personal email users go to jobseeker
+      console.log('determinePreferredPortal: Personal email, returning jobseeker');
       return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
     }
 
-    // Fallback: if no stored context, check primary email
+    // Fallback: if no stored context, check primary email (for legacy sessions or seed data)
     const primaryEmail = await this.userEmailRepository.findOne({
       where: { userId, isPrimary: true },
       relations: ['organization'],
@@ -690,11 +720,20 @@ This is an automated message from Teamified.
     console.log('determinePreferredPortal fallback - primaryEmail:', primaryEmail ? { email: primaryEmail.email, emailType: primaryEmail.emailType, hasOrg: !!primaryEmail.organization } : null);
 
     if (!primaryEmail) {
+      // No primary email and no stored context - default to accounts for super_admin, jobseeker for others
+      if (isSuperAdmin) {
+        console.log('determinePreferredPortal: No context, super_admin detected, returning accounts');
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
       console.log('determinePreferredPortal: No primary email, returning jobseeker');
       return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
     }
 
     if (primaryEmail.emailType === 'work' && primaryEmail.organization) {
+      if (isSuperAdmin && primaryEmail.organization.slug === 'teamified-internal') {
+        console.log('determinePreferredPortal: Work email + super_admin + teamified-internal, returning accounts');
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
       console.log('determinePreferredPortal: Work email, returning ats');
       return { preferredPortal: 'ats', preferredPortalOrgSlug: primaryEmail.organization.slug };
     }
