@@ -104,11 +104,13 @@ async function bootstrap() {
           
           // Check if origin is in trusted list
           if (trustedOrigins.some(trusted => origin === trusted || origin.endsWith(trusted.replace('https://', '.')))) {
-            callback(null, true);
+            // Must pass the origin string (not boolean) when credentials: true
+            callback(null, origin);
           } else {
             // For staging, also allow any .replit.app origin (all Teamified staging apps)
             if (origin.includes('.replit.app') || origin.includes('.replit.dev')) {
-              callback(null, true);
+              // Must pass the origin string (not boolean) when credentials: true
+              callback(null, origin);
             } else {
               logger.warn(`CORS blocked origin: ${origin}`);
               callback(new Error('Not allowed by CORS'));
