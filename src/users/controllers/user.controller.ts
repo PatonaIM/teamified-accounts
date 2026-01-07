@@ -21,6 +21,8 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { UserService } from '../services/user.service';
 import { CreateUserDto } from '../dto/create-user.dto';
@@ -37,6 +39,7 @@ import { RequiredScopes } from '../../common/guards/service-token.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../auth/entities/user.entity';
+import { UserEmail } from '../../user-emails/entities/user-email.entity';
 import { ObjectStorageService } from '../../blob-storage/object-storage.service';
 import { AzureBlobStorageService } from '../../blob-storage/azure-blob-storage.service';
 import { EmailService } from '../../email/services/email.service';
@@ -56,7 +59,63 @@ export class UserController {
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly organizationsService: OrganizationsService,
+    @InjectRepository(UserEmail)
+    private readonly userEmailRepository: Repository<UserEmail>,
   ) {}
+
+  /**
+   * Determine the preferred portal for a user based on their login context
+   * - Super admins with Teamified Internal work email → accounts
+   * - Personal email users → jobseeker
+   * - Work email users (any organization) → ats
+   */
+  private async determinePreferredPortal(
+    userId: string, 
+    roles: string[],
+    lastLoginEmailType: 'personal' | 'work' | null,
+    lastLoginEmailOrgSlug: string | null,
+  ): Promise<{ preferredPortal: 'accounts' | 'ats' | 'jobseeker'; preferredPortalOrgSlug: string | null }> {
+    const isSuperAdmin = roles.includes('super_admin');
+    console.log('[UserController] determinePreferredPortal:', { userId, roles, isSuperAdmin, lastLoginEmailType, lastLoginEmailOrgSlug });
+    
+    // Use stored login email context if available
+    if (lastLoginEmailType === 'work' && lastLoginEmailOrgSlug) {
+      // Work email with organization
+      if (isSuperAdmin && lastLoginEmailOrgSlug === 'teamified-internal') {
+        // Super admin with Teamified Internal work email stays in accounts
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
+      // Any other work email goes to ATS
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: lastLoginEmailOrgSlug };
+    } else if (lastLoginEmailType === 'personal') {
+      // Personal email users go to jobseeker
+      return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+    }
+
+    // Fallback: if no stored context, check primary email
+    const primaryEmail = await this.userEmailRepository.findOne({
+      where: { userId, isPrimary: true },
+      relations: ['organization'],
+    });
+    console.log('[UserController] determinePreferredPortal fallback - primaryEmail:', primaryEmail ? { email: primaryEmail.email, emailType: primaryEmail.emailType, hasOrg: !!primaryEmail.organization } : null);
+
+    if (!primaryEmail) {
+      console.log('[UserController] determinePreferredPortal: No primary email, returning jobseeker');
+      return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+    }
+
+    if (primaryEmail.emailType === 'work' && primaryEmail.organization) {
+      if (isSuperAdmin && primaryEmail.organization.slug === 'teamified-internal') {
+        console.log('[UserController] determinePreferredPortal: Work email + super_admin + teamified-internal, returning accounts');
+        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+      }
+      console.log('[UserController] determinePreferredPortal: Work email, returning ats');
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: primaryEmail.organization.slug };
+    }
+
+    console.log('[UserController] determinePreferredPortal: Personal email, returning jobseeker');
+    return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+  }
 
   @Post()
   @UseGuards(RolesOrServiceGuard)
@@ -116,7 +175,7 @@ export class UserController {
     status: 401,
     description: 'Unauthorized',
   })
-  async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto }> {
+  async getCurrentUser(@Request() req: any): Promise<{ user: UserResponseDto & { preferredPortal?: string; preferredPortalOrgSlug?: string | null } }> {
     console.log('getCurrentUser: JWT payload:', req.user);
     console.log('getCurrentUser: Looking up user with ID:', req.user.sub);
     const user = await this.userService.findOne(req.user.sub);
@@ -147,11 +206,22 @@ export class UserController {
 
     console.log('getCurrentUser: Transformed organizations:', organizations);
 
+    // Determine preferred portal for role-based login redirects
+    const { preferredPortal, preferredPortalOrgSlug } = await this.determinePreferredPortal(
+      user.id,
+      roles,
+      user.lastLoginEmailType as 'personal' | 'work' | null,
+      user.lastLoginEmailOrgSlug,
+    );
+    console.log('getCurrentUser: preferredPortal:', preferredPortal, 'preferredPortalOrgSlug:', preferredPortalOrgSlug);
+
     return {
       user: {
         ...user,
         roles,
         organizations,
+        preferredPortal,
+        preferredPortalOrgSlug,
       }
     };
   }

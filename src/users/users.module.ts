@@ -4,6 +4,7 @@ import { User } from '../auth/entities/user.entity';
 import { Invitation } from '../invitations/entities/invitation.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { UserRole } from '../user-roles/entities/user-role.entity';
+import { UserEmail } from '../user-emails/entities/user-email.entity';
 import { UserService } from './services/user.service';
 import { UserController } from './controllers/user.controller';
 import { AuthModule } from '../auth/auth.module';
@@ -14,7 +15,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Invitation, OrganizationMember, UserRole]),
+    TypeOrmModule.forFeature([User, Invitation, OrganizationMember, UserRole, UserEmail]),
     forwardRef(() => AuthModule),
     AuditModule,
     BlobStorageModule,
