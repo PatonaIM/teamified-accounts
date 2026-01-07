@@ -121,6 +121,23 @@ export default function IntegratedTestSuite() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'sso_logout_signal') {
+        console.log('[SSO Test] Logout signal received - clearing session');
+        setUserInfo(null);
+        setAccessToken(null);
+        clearStoredSession();
+        localStorage.removeItem('sso_logout_signal');
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (sessionCheckRef.current) return;
     sessionCheckRef.current = true;
 
