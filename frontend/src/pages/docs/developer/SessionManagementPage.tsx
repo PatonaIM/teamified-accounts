@@ -222,6 +222,36 @@ Centralized logout endpoint that clears all user sessions and redirects back to 
 - Invalidates all refresh token families
 - Redirects to post_logout_redirect_uri (if provided)
 
+### Global SSO Logout
+
+When a user logs out from any Teamified application, their session is immediately terminated across **all connected apps** - not just the one they logged out from.
+
+**How it works:**
+- A global logout timestamp is recorded when the user logs out
+- All access tokens issued before this timestamp are immediately rejected
+- This applies to all Teamified apps (Jobseeker Portal, ATS, HRIS, etc.)
+- No code changes required - this happens automatically server-side
+
+**Handling 401 responses:**
+Since tokens may now be rejected mid-session (if the user logs out from another app), your application should gracefully handle 401 Unauthorized responses:
+
+\`\`\`javascript
+// Axios interceptor example
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // Token was rejected - user logged out from another app
+      clearLocalSession();
+      redirectToSsoLogin();
+    }
+    return Promise.reject(error);
+  }
+);
+\`\`\`
+
+> **Note:** This is backward compatible - existing client applications will continue to work without code changes. The 401 handling improvement is recommended but optional.
+
 ## Security Best Practices
 
 - Always clear local storage before redirecting to SSO logout (prevents login loops caused by cached user data)
@@ -622,6 +652,87 @@ async function validateSession() {
                   />
                 </ListItem>
               </List>
+            </Alert>
+
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
+              Global SSO Logout
+            </Typography>
+            <Typography variant="body2" paragraph>
+              When a user logs out from any Teamified application, their session is immediately 
+              terminated across <strong>all connected apps</strong> - not just the one they logged out from.
+            </Typography>
+
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover', mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                How it works:
+              </Typography>
+              <List dense disablePadding>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="A global logout timestamp is recorded when the user logs out"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="All access tokens issued before this timestamp are immediately rejected"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="This applies to all Teamified apps (Jobseeker Portal, ATS, HRIS, etc.)"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="No code changes required - this happens automatically server-side"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+              </List>
+            </Paper>
+
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Handling 401 responses:
+            </Typography>
+            <Typography variant="body2" paragraph>
+              Since tokens may now be rejected mid-session (if the user logs out from another app), 
+              your application should gracefully handle 401 Unauthorized responses:
+            </Typography>
+            <SyntaxHighlighter language="javascript" style={docco}>
+{`// Axios interceptor example
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // Token was rejected - user logged out from another app
+      clearLocalSession();
+      redirectToSsoLogin();
+    }
+    return Promise.reject(error);
+  }
+);`}
+            </SyntaxHighlighter>
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Backward Compatible:</strong> Existing client applications will continue to work 
+                without code changes. The 401 handling improvement is recommended but optional.
+              </Typography>
             </Alert>
           </Box>
 
