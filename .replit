@@ -69,6 +69,7 @@ ATS_PORTAL_REDIRECT_URL = "https://teamified-ats.replit.app/auth/callback"
 [userenv.development]
 VITE_PORTAL_URL_JOBSEEKER = "https://270a25ac-5fe3-4516-878e-ca92be1342f6-00-3t6zo5hw1y0g6.pike.replit.dev"
 VITE_PORTAL_URL_ATS = "https://teamified-ats.replit.app"
+BASE_URL = "https://fca135f3-3e06-45b7-9e80-71c2e3ce4fa3-00-dp0qq5qhxli0.pike.replit.dev"
 
 [[ports]]
 localPort = 3000
