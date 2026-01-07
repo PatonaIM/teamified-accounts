@@ -31,6 +31,7 @@ export interface OAuthClient {
   default_intent: 'client' | 'candidate' | 'both';
   allow_client_credentials: boolean;
   allowed_scopes: string[] | null;
+  logout_uri: string | null;
   metadata: {
     app_url?: string;
     owner?: string;
@@ -50,6 +51,7 @@ export interface CreateOAuthClientDto {
   owner?: string;
   allow_client_credentials?: boolean;
   allowed_scopes?: string[];
+  logout_uri?: string;
 }
 
 export interface UpdateOAuthClientDto {
@@ -62,6 +64,7 @@ export interface UpdateOAuthClientDto {
   is_active?: boolean;
   allow_client_credentials?: boolean;
   allowed_scopes?: string[];
+  logout_uri?: string;
 }
 
 export const oauthClientsService = {

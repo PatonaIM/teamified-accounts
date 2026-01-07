@@ -25,7 +25,7 @@ import {
   Checkbox,
   FormGroup,
 } from '@mui/material';
-import { Add, Delete, ContentCopy, Edit, Check, Close, Api } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -59,6 +59,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [environmentFilter, setEnvironmentFilter] = useState<EnvironmentType | null>(null);
   const [allowClientCredentials, setAllowClientCredentials] = useState(false);
   const [allowedScopes, setAllowedScopes] = useState<string[]>([]);
+  const [logoutUri, setLogoutUri] = useState('');
+  const [logoutUriError, setLogoutUriError] = useState<string | null>(null);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -83,6 +85,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       setOriginalRedirectUris([...validUris]);
       setAllowClientCredentials(client.allow_client_credentials || false);
       setAllowedScopes(client.allowed_scopes || []);
+      setLogoutUri(client.logout_uri || '');
+      setLogoutUriError(null);
     } else {
       resetForm();
     }
@@ -100,6 +104,46 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setEnvironmentFilter(null);
     setAllowClientCredentials(false);
     setAllowedScopes([]);
+    setLogoutUri('');
+    setLogoutUriError(null);
+  };
+
+  const validateLogoutUri = (uri: string): string | null => {
+    if (!uri.trim()) return null;
+    
+    try {
+      const url = new URL(uri);
+      
+      if (url.hostname !== 'localhost' && url.protocol !== 'https:') {
+        return 'Logout URI must use HTTPS (except localhost)';
+      }
+      
+      const allowedDomains = ['.teamified.com', '.teamified.au', '.replit.app', '.replit.dev', 'localhost'];
+      const isAllowed = allowedDomains.some(domain => 
+        url.hostname === domain.replace('.', '') || url.hostname.endsWith(domain)
+      );
+      
+      if (!isAllowed) {
+        return 'Logout URI must be on an approved domain (teamified.com, teamified.au, replit.app, replit.dev, or localhost)';
+      }
+      
+      if (!url.pathname.startsWith('/')) {
+        return 'Logout URI path must start with /';
+      }
+      
+      return null;
+    } catch {
+      return 'Invalid URL format';
+    }
+  };
+
+  const handleLogoutUriChange = (value: string) => {
+    setLogoutUri(value);
+    if (value.trim()) {
+      setLogoutUriError(validateLogoutUri(value));
+    } else {
+      setLogoutUriError(null);
+    }
   };
 
   const toggleEnvironmentFilter = (env: EnvironmentType) => {
@@ -203,6 +247,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       default_intent: defaultIntent,
       allow_client_credentials: allowClientCredentials,
       allowed_scopes: allowClientCredentials ? allowedScopes : [],
+      logout_uri: logoutUri.trim() || undefined,
     };
 
     try {
@@ -737,6 +782,42 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                 </Box>
               )}
             </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Logout fontSize="small" color="action" />
+                <Typography variant="subtitle2">Single Sign-Out (SLO)</Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                Configure a logout callback URL to automatically sign users out of this application when they log out from Teamified Accounts.
+              </Typography>
+              
+              <TextField
+                label="Logout URI (Optional)"
+                value={logoutUri}
+                onChange={(e) => handleLogoutUriChange(e.target.value)}
+                fullWidth
+                placeholder="https://yourapp.teamified.com/auth/logout/callback"
+                error={!!logoutUriError}
+                helperText={logoutUriError || 'Must use HTTPS and be on an approved domain (teamified.com, teamified.au, replit.app, replit.dev, or localhost)'}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+              
+              {logoutUri && !logoutUriError && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    When a user logs out from Teamified Accounts, this URL will be loaded in a hidden iframe to clear the user's session in your application.
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
           </Box>
         )}
       </Box>
@@ -756,7 +837,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={loading || !name}
+            disabled={loading || !name || !!logoutUriError}
             sx={{
               bgcolor: '#4caf50',
               '&:hover': { bgcolor: '#43a047' },
