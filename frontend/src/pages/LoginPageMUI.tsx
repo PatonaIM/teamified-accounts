@@ -441,7 +441,7 @@ const LoginPageMUI: React.FC = () => {
       sx={{ 
         display: 'flex', 
         minHeight: '100vh',
-        bgcolor: '#1E1E1E',
+        bgcolor: '#F5F7F8',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 4,
