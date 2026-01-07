@@ -485,6 +485,17 @@ const LoginPageMUI: React.FC = () => {
             display: { xs: 'none', md: 'block' },
           }}
         >
+          <Box
+            component="img"
+            src="/assets/hero-illustration.png"
+            alt="AI-powered hiring"
+            sx={{
+              width: '100%',
+              height: 'auto',
+              borderRadius: 2,
+              mb: 3,
+            }}
+          />
           <Typography
             variant="h4"
             sx={{
