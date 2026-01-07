@@ -19,6 +19,8 @@ export class SessionService {
   constructor(
     @InjectRepository(Session)
     private readonly sessionRepository: Repository<Session>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtTokenService,
   ) {}
 
@@ -106,10 +108,19 @@ export class SessionService {
   }
 
   async revokeAllUserSessions(userId: string): Promise<void> {
+    const now = new Date();
+    
+    // Revoke all sessions
     await this.sessionRepository.update(
       { userId, revokedAt: null },
-      { revokedAt: new Date() },
+      { revokedAt: now },
     );
+    
+    // Set global logout timestamp to invalidate all access tokens issued before this time
+    // This ensures true SSO logout across all clients
+    await this.userRepository.update(userId, { globalLogoutAt: now });
+    
+    this.logger.log(`Global logout: Revoked all sessions and set globalLogoutAt for user ${userId}`);
   }
 
   async revokeTokenFamily(tokenFamily: string): Promise<void> {
