@@ -73,6 +73,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     HubSpotService,
     JwtAuthGuard,
     JwtModule, // Export JwtModule so other modules can inject JwtService
+    TypeOrmModule, // Export TypeOrmModule so JwtAuthGuard can access User repository in other modules
   ],
 })
 export class AuthModule {}

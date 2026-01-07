@@ -5,17 +5,21 @@ import {
   CanActivate,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtTokenService } from '../../auth/services/jwt.service';
+import { User } from '../../auth/entities/user.entity';
 
-// Updated: Fixed user.id mapping from JWT payload.sub
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private jwtService: JwtTokenService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     
     // Extract token from Authorization header (primary) or cookie (fallback for browser redirects)
@@ -36,6 +40,20 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = this.jwtService.validateAccessToken(token);
       
+      // Check global logout timestamp - if token was issued before user's global logout, reject it
+      // This enables true SSO logout across all clients
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+        select: ['id', 'globalLogoutAt'],
+      });
+      
+      if (user?.globalLogoutAt) {
+        const tokenIssuedAt = new Date(payload.iat * 1000);
+        if (tokenIssuedAt < user.globalLogoutAt) {
+          throw new UnauthorizedException('Session has been terminated. Please log in again.');
+        }
+      }
+      
       // Attach JWT payload to request with userId mapped from sub for convenience
       request.user = {
         ...payload,
@@ -44,6 +62,9 @@ export class JwtAuthGuard implements CanActivate {
       
       return true;
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
