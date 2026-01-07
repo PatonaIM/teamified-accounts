@@ -60,7 +60,7 @@ NODE_ENV = "production"
 BASE_URL = "https://teamified-accounts.replit.app"
 
 [userenv.shared]
-VITE_ENABLE_PORTAL_REDIRECTS = "0"
+VITE_ENABLE_PORTAL_REDIRECTS = "1"
 JOBSEEKER_PORTAL_REDIRECT_URL = "https://teamified-jobseeker.replit.app/api/auth/callback/teamified-sso"
 ATS_PORTAL_REDIRECT_URL = "https://teamified-ats.replit.app/auth/callback"
 
