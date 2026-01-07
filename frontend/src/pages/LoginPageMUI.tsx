@@ -705,14 +705,17 @@ const LoginPageMUI: React.FC = () => {
                   fontWeight: 600,
                   textTransform: 'none',
                   fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                  boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                  bgcolor: '#9333EA',
+                  boxShadow: 'none',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                    boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                    bgcolor: '#A855F7',
+                  },
+                  '&:active': {
+                    bgcolor: '#7E22CE',
                   },
                   '&:disabled': {
-                    background: 'rgba(161, 106, 232, 0.5)',
+                    bgcolor: 'rgba(147, 51, 234, 0.5)',
+                    color: 'white',
                   },
                 }}
               >
@@ -877,11 +880,14 @@ const LoginPageMUI: React.FC = () => {
                     fontWeight: 600,
                     textTransform: 'none',
                     fontSize: '1rem',
-                    borderColor: '#E5E7EB',
-                    color: '#1a1a1a',
+                    borderColor: '#9333EA',
+                    color: '#9333EA',
                     '&:hover': {
+                      bgcolor: 'rgba(147, 51, 234, 0.1)',
                       borderColor: '#9333EA',
-                      bgcolor: 'rgba(147, 51, 234, 0.05)',
+                    },
+                    '&:active': {
+                      bgcolor: 'rgba(147, 51, 234, 0.2)',
                     },
                     '&:disabled': {
                       borderColor: '#E5E7EB',
@@ -903,14 +909,17 @@ const LoginPageMUI: React.FC = () => {
                     fontWeight: 600,
                     textTransform: 'none',
                     fontSize: '1rem',
-                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                    boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                    bgcolor: '#9333EA',
+                    boxShadow: 'none',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                      boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                      bgcolor: '#A855F7',
+                    },
+                    '&:active': {
+                      bgcolor: '#7E22CE',
                     },
                     '&:disabled': {
-                      background: 'rgba(161, 106, 232, 0.5)',
+                      bgcolor: 'rgba(147, 51, 234, 0.5)',
+                      color: 'white',
                     },
                   }}
                 >
