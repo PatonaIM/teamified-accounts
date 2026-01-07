@@ -26,7 +26,7 @@ import {
   FormGroup,
   Collapse,
 } from '@mui/material';
-import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout, ExpandMore, ExpandLess, Link } from '@mui/icons-material';
 import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type LogoutUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
@@ -66,8 +66,8 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [logoutUriEnvironmentFilter, setLogoutUriEnvironmentFilter] = useState<EnvironmentType | null>(null);
   const [editingLogoutUriIndex, setEditingLogoutUriIndex] = useState<number | null>(null);
   const [editingLogoutUriValue, setEditingLogoutUriValue] = useState('');
-  const [logoutUrisExpanded, setLogoutUrisExpanded] = useState(true);
-  const [redirectUrisExpanded, setRedirectUrisExpanded] = useState(true);
+  const [logoutUrisExpanded, setLogoutUrisExpanded] = useState(false);
+  const [redirectUrisExpanded, setRedirectUrisExpanded] = useState(false);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -569,13 +569,14 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center', 
-                  mb: 1,
+                  mb: 0.5,
                   cursor: 'pointer',
                   '&:hover': { opacity: 0.8 },
                 }}
                 onClick={() => setRedirectUrisExpanded(!redirectUrisExpanded)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Link fontSize="small" color="action" />
                   <Typography variant="subtitle2">Redirect URIs</Typography>
                   <Chip 
                     label={`${redirectUris.length} configured`} 
@@ -583,60 +584,58 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                     sx={{ height: 20, fontSize: '0.65rem' }}
                   />
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Stack direction="row" spacing={0.5}>
-                    <Chip 
-                      label={`${envCounts.production} Prod`} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('production'); }}
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.65rem',
-                        bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
-                        color: environmentFilter === 'production' ? 'white' : 'text.secondary',
-                        border: `1px solid ${environmentColors.production}`,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
-                        },
-                      }} 
-                    />
-                    <Chip 
-                      label={`${envCounts.staging} Staging`} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('staging'); }}
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.65rem',
-                        bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
-                        color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
-                        border: `1px solid ${environmentColors.staging}`,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
-                        },
-                      }} 
-                    />
-                    <Chip 
-                      label={`${envCounts.development} Dev`} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('development'); }}
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.65rem',
-                        bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
-                        color: environmentFilter === 'development' ? 'white' : 'text.secondary',
-                        border: `1px solid ${environmentColors.development}`,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
-                        },
-                      }} 
-                    />
-                  </Stack>
-                  {redirectUrisExpanded ? <ExpandLess /> : <ExpandMore />}
-                </Box>
+                {redirectUrisExpanded ? <ExpandLess /> : <ExpandMore />}
               </Box>
+              <Stack direction="row" spacing={0.5} sx={{ mb: 1, ml: 3.5 }}>
+                <Chip 
+                  label={`${envCounts.production} Prod`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('production'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
+                    color: environmentFilter === 'production' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.production}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${envCounts.staging} Staging`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('staging'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                    color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.staging}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${envCounts.development} Dev`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('development'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
+                    color: environmentFilter === 'development' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.development}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                    },
+                  }} 
+                />
+              </Stack>
               
               <Collapse in={redirectUrisExpanded}>
               
@@ -864,7 +863,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center', 
-                  mb: 1,
+                  mb: 0.5,
                   cursor: 'pointer',
                   '&:hover': { opacity: 0.8 },
                 }}
@@ -879,64 +878,58 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                     sx={{ height: 20, fontSize: '0.65rem' }}
                   />
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Stack direction="row" spacing={0.5}>
-                    <Chip 
-                      label={`${logoutUriEnvCounts.production} Prod`} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('production'); }}
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.65rem',
-                        bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'transparent',
-                        color: logoutUriEnvironmentFilter === 'production' ? 'white' : 'text.secondary',
-                        border: `1px solid ${environmentColors.production}`,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
-                        },
-                      }} 
-                    />
-                    <Chip 
-                      label={`${logoutUriEnvCounts.staging} Staging`} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('staging'); }}
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.65rem',
-                        bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'transparent',
-                        color: logoutUriEnvironmentFilter === 'staging' ? 'white' : 'text.secondary',
-                        border: `1px solid ${environmentColors.staging}`,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
-                        },
-                      }} 
-                    />
-                    <Chip 
-                      label={`${logoutUriEnvCounts.development} Dev`} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('development'); }}
-                      sx={{ 
-                        height: 20, 
-                        fontSize: '0.65rem',
-                        bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'transparent',
-                        color: logoutUriEnvironmentFilter === 'development' ? 'white' : 'text.secondary',
-                        border: `1px solid ${environmentColors.development}`,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
-                        },
-                      }} 
-                    />
-                  </Stack>
-                  {logoutUrisExpanded ? <ExpandLess /> : <ExpandMore />}
-                </Box>
+                {logoutUrisExpanded ? <ExpandLess /> : <ExpandMore />}
               </Box>
-              
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                Configure logout callback URLs to automatically sign users out of this application when they log out from Teamified Accounts.
-              </Typography>
+              <Stack direction="row" spacing={0.5} sx={{ mb: 1, ml: 3.5 }}>
+                <Chip 
+                  label={`${logoutUriEnvCounts.production} Prod`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('production'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'transparent',
+                    color: logoutUriEnvironmentFilter === 'production' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.production}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${logoutUriEnvCounts.staging} Staging`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('staging'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                    color: logoutUriEnvironmentFilter === 'staging' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.staging}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${logoutUriEnvCounts.development} Dev`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('development'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'transparent',
+                    color: logoutUriEnvironmentFilter === 'development' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.development}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                    },
+                  }} 
+                />
+              </Stack>
               
               <Collapse in={logoutUrisExpanded}>
               <Stack spacing={1}>
