@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Button, CircularProgress, Box, Alert } from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
 import { googleAuthService } from '../../services/googleAuthService';
 
 interface GoogleLoginButtonProps {
@@ -55,7 +54,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ returnUrl,
         fullWidth
         variant="outlined"
         size="large"
-        startIcon={isLoading ? <CircularProgress size={20} sx={{ color: '#1a1a1a' }} /> : <GoogleIcon />}
+        startIcon={isLoading ? <CircularProgress size={20} sx={{ color: '#1a1a1a' }} /> : <Box component="img" src="/assets/google-logo.png" alt="Google" sx={{ width: 20, height: 20 }} />}
         onClick={handleGoogleLogin}
         disabled={isLoading}
         sx={{

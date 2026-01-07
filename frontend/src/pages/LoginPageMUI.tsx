@@ -631,9 +631,6 @@ const LoginPageMUI: React.FC = () => {
                 error={!!errors.email || emailAlreadyRegistered}
                 helperText={errors.email || (emailAlreadyRegistered ? 'This email is already registered.' : '')}
                 disabled={isLoading}
-                InputLabelProps={{
-                  shrink: true,
-                }}
                 sx={{
                   mb: 3,
                   animation: shakeEmail ? 'shake 0.5s ease-in-out' : 'none',
@@ -643,8 +640,14 @@ const LoginPageMUI: React.FC = () => {
                     '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
                   },
                   '& .MuiInputLabel-root': {
-                    color: '#6b7280',
+                    color: '#9CA3AF',
                     '&.Mui-focused': {
+                      color: '#9333EA',
+                    },
+                    '&.MuiInputLabel-shrink': {
+                      color: '#6b7280',
+                    },
+                    '&.Mui-focused.MuiInputLabel-shrink': {
                       color: '#9333EA',
                     },
                     '&.Mui-error': {
@@ -783,9 +786,6 @@ const LoginPageMUI: React.FC = () => {
                 helperText={errors.password}
                 disabled={isLoading}
                 autoFocus
-                InputLabelProps={{
-                  shrink: true,
-                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -809,8 +809,14 @@ const LoginPageMUI: React.FC = () => {
                 sx={{
                   mb: 3,
                   '& .MuiInputLabel-root': {
-                    color: '#6b7280',
+                    color: '#9CA3AF',
                     '&.Mui-focused': {
+                      color: '#9333EA',
+                    },
+                    '&.MuiInputLabel-shrink': {
+                      color: '#6b7280',
+                    },
+                    '&.Mui-focused.MuiInputLabel-shrink': {
                       color: '#9333EA',
                     },
                     '&.Mui-error': {
