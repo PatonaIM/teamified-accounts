@@ -19,11 +19,72 @@ import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownBut
 
 const markdownContent = `# Profile Pictures API
 
-API reference for retrieving user profile pictures and organization logos. All image URLs are returned in the standard response objects.
+API reference for uploading and retrieving user profile pictures and organization logos. All image URLs are returned in the standard response objects.
 
 > **Note:** Profile pictures and logos are stored in Azure Blob Storage and returned as fully-qualified URLs that can be used directly in \`<img>\` tags.
 
-## User Profile Picture
+## Uploading Profile Pictures
+
+### Upload Current User's Profile Picture
+
+Upload a profile picture for the currently authenticated user.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | \`/v1/users/me/profile-picture\` | Bearer Token | Upload profile picture for current user |
+
+**Request Format:** \`multipart/form-data\`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`file\` | File | Yes | Image file (JPG, PNG, GIF, WebP) - Max size: 5MB |
+
+**Example Request (cURL):**
+\`\`\`bash
+curl -X POST "/v1/users/me/profile-picture" \\
+  -H "Authorization: Bearer <access_token>" \\
+  -F "file=@/path/to/profile.jpg"
+\`\`\`
+
+**Example Response:**
+\`\`\`json
+{
+  "message": "Profile picture uploaded successfully",
+  "profilePictureUrl": "https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts/users/123e4567/profile_1701234567890.jpg"
+}
+\`\`\`
+
+### Upload Profile Picture for Specific User (Admin)
+
+Upload a profile picture for a specific user by their ID. Requires admin permissions.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | \`/objects/users/:userId/profile-picture\` | Bearer Token | Upload profile picture for specific user |
+
+**Request Format:** \`multipart/form-data\`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`file\` | File | Yes | Image file - no size limit enforced at API level |
+
+**Example Request (cURL):**
+\`\`\`bash
+curl -X POST "/objects/users/123e4567-e89b-12d3-a456-426614174000/profile-picture" \\
+  -H "Authorization: Bearer <access_token>" \\
+  -F "file=@/path/to/profile.jpg"
+\`\`\`
+
+**Example Response:**
+\`\`\`json
+{
+  "success": true,
+  "url": "https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts/users/123e4567/profile_1701234567890.jpg",
+  "path": "users/123e4567/profile_1701234567890.jpg"
+}
+\`\`\`
+
+## Retrieving Profile Pictures
 
 User profile pictures are returned in the \`profilePictureUrl\` field of user response objects.
 
@@ -60,7 +121,39 @@ GET /v1/users/123e4567-e89b-12d3-a456-426614174000
 }
 \`\`\`
 
-## Organization Logo
+## Uploading Organization Logos
+
+### Upload Organization Logo (Admin)
+
+Upload a logo for a specific organization by its ID. Requires admin permissions or organization admin role.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | \`/objects/organizations/:organizationId/logo\` | Bearer Token | Upload logo for specific organization |
+
+**Request Format:** \`multipart/form-data\`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| \`file\` | File | Yes | Image file (recommended: PNG or SVG) |
+
+**Example Request (cURL):**
+\`\`\`bash
+curl -X POST "/objects/organizations/456e7890-e89b-12d3-a456-426614174000/logo" \\
+  -H "Authorization: Bearer <access_token>" \\
+  -F "file=@/path/to/logo.png"
+\`\`\`
+
+**Example Response:**
+\`\`\`json
+{
+  "success": true,
+  "url": "https://tmfprdfilestorage.blob.core.windows.net/teamified-accounts/organizations/456e7890/logo_1701234567890.png",
+  "path": "organizations/456e7890/logo_1701234567890.png"
+}
+\`\`\`
+
+## Retrieving Organization Logos
 
 Organization logos are returned in the \`logoUrl\` field of organization response objects.
 
@@ -145,7 +238,7 @@ export default function ProfilePicturesApiPage() {
       </Box>
 
       <Typography variant="body1" paragraph>
-        API reference for retrieving user profile pictures and organization logos. 
+        API reference for uploading and retrieving user profile pictures and organization logos. 
         All image URLs are returned in the standard response objects.
       </Typography>
 
@@ -160,7 +253,107 @@ export default function ProfilePicturesApiPage() {
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Person color="primary" fontSize="small" />
-            User Profile Picture
+            Uploading Profile Pictures
+          </Typography>
+          
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Upload Current User's Profile Picture
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Upload a profile picture for the currently authenticated user.
+          </Typography>
+
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Endpoint</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Auth</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
+                  <TableCell><code>/v1/users/me/profile-picture</code></TableCell>
+                  <TableCell>Bearer Token</TableCell>
+                  <TableCell>Upload profile picture for current user</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Request Format:</strong> <code>multipart/form-data</code> with a <code>file</code> field. 
+              Supported formats: JPG, PNG, GIF, WebP. Max size: 5MB.
+            </Typography>
+          </Alert>
+
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`# Example Request (cURL)
+curl -X POST "${apiUrl}/v1/users/me/profile-picture" \\
+  -H "Authorization: Bearer <access_token>" \\
+  -F "file=@/path/to/profile.jpg"
+
+# Example Response
+{
+  "message": "Profile picture uploaded successfully",
+  "profilePictureUrl": "https://tmfprdfilestorage.blob.core.windows.net/..."
+}`}
+            </pre>
+          </Paper>
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Upload Profile Picture for Specific User (Admin)
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Upload a profile picture for a specific user by their ID. Requires admin permissions.
+          </Typography>
+
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Endpoint</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Auth</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
+                  <TableCell><code>/objects/users/:userId/profile-picture</code></TableCell>
+                  <TableCell>Bearer Token</TableCell>
+                  <TableCell>Upload profile picture for specific user</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`# Example Response
+{
+  "success": true,
+  "url": "https://tmfprdfilestorage.blob.core.windows.net/...",
+  "path": "users/123e4567/profile_1701234567890.jpg"
+}`}
+            </pre>
+          </Paper>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Person color="primary" fontSize="small" />
+            Retrieving Profile Pictures
           </Typography>
           
           <Typography variant="body1" paragraph>
@@ -261,9 +454,62 @@ export default function ProfilePicturesApiPage() {
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Business color="primary" fontSize="small" />
-            Organization Logo
+            Organization Logos
           </Typography>
           
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Upload Organization Logo (Admin)
+          </Typography>
+          
+          <Typography variant="body1" paragraph>
+            Upload a logo for a specific organization. Requires admin permissions or organization admin role.
+          </Typography>
+
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Endpoint</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Auth</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
+                  <TableCell><code>/objects/organizations/:organizationId/logo</code></TableCell>
+                  <TableCell>Bearer Token</TableCell>
+                  <TableCell>Upload logo for specific organization</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Request Format:</strong> <code>multipart/form-data</code> with a <code>file</code> field. 
+              Recommended formats: PNG or SVG.
+            </Typography>
+          </Alert>
+
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 3 }}>
+            <pre style={{ margin: 0 }}>
+{`# Example Response
+{
+  "success": true,
+  "url": "https://tmfprdfilestorage.blob.core.windows.net/...",
+  "path": "organizations/456e7890/logo_1701234567890.png"
+}`}
+            </pre>
+          </Paper>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            Retrieving Organization Logos
+          </Typography>
+
           <Typography variant="body1" paragraph>
             Organization logos are returned in the <code>logoUrl</code> field of organization response objects.
           </Typography>
