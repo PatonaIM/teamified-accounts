@@ -365,6 +365,15 @@ export class SsoController {
     @Req() req: any,
     @Res() res: Response,
   ) {
+    console.log('[SSO] Logout request received:', {
+      hasIdTokenHint: !!logoutDto.id_token_hint,
+      idTokenHintLength: logoutDto.id_token_hint?.length,
+      postLogoutRedirectUri: logoutDto.post_logout_redirect_uri,
+      clientId: logoutDto.client_id,
+      hasCookie: !!req.cookies?.access_token,
+      hasAuthHeader: !!req.headers?.authorization,
+    });
+    
     // Try to identify user from cookie or Authorization header
     let userId: string | null = null;
     let token: string | undefined;
@@ -386,6 +395,8 @@ export class SsoController {
       } catch (error) {
         console.log('[SSO] Logout: Could not verify JWT:', error.message);
       }
+    } else {
+      console.log('[SSO] Logout: No token found from cookie or header');
     }
 
     // Perform logout (revoke sessions in database)
