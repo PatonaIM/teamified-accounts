@@ -335,45 +335,23 @@ export const refreshAccessToken = async (refreshToken: string): Promise<{ data: 
 export const getCurrentUser = async (): Promise<User> => {
   console.log('authService.getCurrentUser: Starting user retrieval');
   
-  // First, try to get cached user data from localStorage (NO API CALL NEEDED!)
+  // Check if we have a valid access token first
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error('No access token available');
+  }
+  
+  // First, try to get cached user data from localStorage
+  // Only use cache if it has portal routing info (preferredPortal field)
   const cachedUser = getUserData();
-  if (cachedUser) {
-    console.log('authService.getCurrentUser: Using cached user data:', cachedUser);
+  if (cachedUser && cachedUser.preferredPortal !== undefined) {
+    console.log('authService.getCurrentUser: Using cached user data with portal info:', cachedUser);
     return cachedUser;
   }
   
-  console.log('authService.getCurrentUser: No cached data, trying JWT fallback');
-  
-  // Second fallback: Parse JWT token to get user info (NO API CALL NEEDED!)
-  const token = getAccessToken();
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('authService.getCurrentUser: JWT payload:', payload);
-      
-      const jwtUser: User = {
-        id: payload.sub || '',
-        email: payload.email || '',
-        firstName: payload.firstName || '',
-        lastName: payload.lastName || '',
-        isActive: true,
-        emailVerified: true,
-        roles: payload.roles || []
-      };
-      
-      console.log('authService.getCurrentUser: Using JWT-based user:', jwtUser);
-      
-      // Cache for future use
-      setUserData(jwtUser);
-      
-      return jwtUser;
-    } catch (jwtError) {
-      console.error('authService.getCurrentUser: JWT parsing failed:', jwtError);
-    }
-  }
-  
-  // Third fallback: Try API call to /me endpoint (only if previous methods failed)
-  console.log('authService.getCurrentUser: Attempting API call to /v1/users/me as last resort');
+  // If cache is missing or doesn't have portal routing info, fetch from API
+  // This ensures portal routing works correctly for all users
+  console.log('authService.getCurrentUser: Fetching fresh user data from API for portal routing');
   try {
     const response = await api.get('/v1/users/me');
     console.log('authService.getCurrentUser: API Response:', response.data);
@@ -394,13 +372,34 @@ export const getCurrentUser = async (): Promise<User> => {
       }
     }
     
-    // Cache for future use
+    // Cache for future use (now includes preferredPortal)
     setUserData(user);
     
     return user;
   } catch (error) {
-    console.error('authService.getCurrentUser: All methods failed:', error);
-    throw new Error('Failed to get current user - no cached data, JWT parsing failed, and API call failed');
+    console.error('authService.getCurrentUser: API call failed:', error);
+    
+    // Fallback: Parse JWT token to get basic user info (no portal routing)
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('authService.getCurrentUser: Using JWT fallback (no portal routing):', payload);
+      
+      const jwtUser: User = {
+        id: payload.sub || '',
+        email: payload.email || '',
+        firstName: payload.firstName || '',
+        lastName: payload.lastName || '',
+        isActive: true,
+        emailVerified: true,
+        roles: payload.roles || [],
+        // No preferredPortal - will trigger API fetch next time
+      };
+      
+      return jwtUser;
+    } catch (jwtError) {
+      console.error('authService.getCurrentUser: JWT parsing also failed:', jwtError);
+      throw new Error('Failed to get current user - API call failed and JWT parsing failed');
+    }
   }
 };
 
