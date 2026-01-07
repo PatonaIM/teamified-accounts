@@ -23,7 +23,7 @@ API reference for uploading and retrieving user profile pictures and organizatio
 
 > **Note:** Profile pictures and logos are stored in Azure Blob Storage and returned as fully-qualified URLs that can be used directly in \`<img>\` tags.
 
-## Uploading Profile Pictures
+## User Profile Pictures
 
 ### Upload Current User's Profile Picture
 
@@ -84,7 +84,7 @@ curl -X POST "/objects/users/123e4567-e89b-12d3-a456-426614174000/profile-pictur
 }
 \`\`\`
 
-## Retrieving Profile Pictures
+### Retrieving Profile Pictures
 
 User profile pictures are returned in the \`profilePictureUrl\` field of user response objects.
 
@@ -121,7 +121,7 @@ GET /v1/users/123e4567-e89b-12d3-a456-426614174000
 }
 \`\`\`
 
-## Uploading Organization Logos
+## Organization Logos
 
 ### Upload Organization Logo (Admin)
 
@@ -153,7 +153,7 @@ curl -X POST "/objects/organizations/456e7890-e89b-12d3-a456-426614174000/logo" 
 }
 \`\`\`
 
-## Retrieving Organization Logos
+### Retrieving Organization Logos
 
 Organization logos are returned in the \`logoUrl\` field of organization response objects.
 
@@ -253,7 +253,7 @@ export default function ProfilePicturesApiPage() {
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Person color="primary" fontSize="small" />
-            Uploading Profile Pictures
+            User Profile Pictures
           </Typography>
           
           <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
@@ -346,13 +346,9 @@ curl -X POST "${apiUrl}/v1/users/me/profile-picture" \\
 }`}
             </pre>
           </Paper>
-        </Box>
+          <Divider sx={{ my: 3 }} />
 
-        <Divider />
-
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Person color="primary" fontSize="small" />
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
             Retrieving Profile Pictures
           </Typography>
           
