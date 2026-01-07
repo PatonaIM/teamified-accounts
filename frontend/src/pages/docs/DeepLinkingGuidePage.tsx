@@ -16,10 +16,12 @@ import {
   TableHead,
   TableRow,
   Chip,
+  useTheme,
 } from '@mui/material';
 import { ContentCopy, CheckCircle, Devices, Timer, Security, Link as LinkIcon } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import DownloadMarkdownButton from '../../components/docs/DownloadMarkdownButton';
 
 interface TabPanelProps {
@@ -45,6 +47,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function DeepLinkingGuidePage() {
+  const theme = useTheme();
+  const codeStyle = theme.palette.mode === 'dark' ? atomOneDark : docco;
   const [tabValue, setTabValue] = useState(0);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -701,7 +705,7 @@ export function useAuth() {
             >
               {copiedIndex === 10 ? <CheckCircle color="success" /> : <ContentCopy />}
             </IconButton>
-            <SyntaxHighlighter language="typescript" style={docco}>
+            <SyntaxHighlighter language="typescript" style={codeStyle}>
               {tokenStorageCode}
             </SyntaxHighlighter>
           </Box>
@@ -715,7 +719,7 @@ export function useAuth() {
             >
               {copiedIndex === 11 ? <CheckCircle color="success" /> : <ContentCopy />}
             </IconButton>
-            <SyntaxHighlighter language="typescript" style={docco}>
+            <SyntaxHighlighter language="typescript" style={codeStyle}>
               {sessionValidationCode}
             </SyntaxHighlighter>
           </Box>
@@ -729,7 +733,7 @@ export function useAuth() {
             >
               {copiedIndex === 12 ? <CheckCircle color="success" /> : <ContentCopy />}
             </IconButton>
-            <SyntaxHighlighter language="typescript" style={docco}>
+            <SyntaxHighlighter language="typescript" style={codeStyle}>
               {reactAuthContextCode}
             </SyntaxHighlighter>
           </Box>

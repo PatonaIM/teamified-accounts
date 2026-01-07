@@ -11,10 +11,12 @@ import {
   Button,
   IconButton,
   Tooltip,
+  useTheme,
 } from '@mui/material';
 import { ContentCopy, CheckCircle, OpenInNew } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import DownloadMarkdownButton from '../../components/docs/DownloadMarkdownButton';
 
 const markdownContent = `# SSO Integration Guide
@@ -276,6 +278,8 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function SsoIntegrationPage() {
+  const theme = useTheme();
+  const codeStyle = theme.palette.mode === 'dark' ? atomOneDark : docco;
   const [tabValue, setTabValue] = useState(0);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -529,7 +533,7 @@ curl -X GET ${userInfoUrl} \\
             >
               {copiedIndex === 10 ? <CheckCircle color="success" /> : <ContentCopy />}
             </IconButton>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
               {codeExamples.javascript}
             </SyntaxHighlighter>
           </Box>
@@ -543,7 +547,7 @@ curl -X GET ${userInfoUrl} \\
             >
               {copiedIndex === 11 ? <CheckCircle color="success" /> : <ContentCopy />}
             </IconButton>
-            <SyntaxHighlighter language="python" style={docco}>
+            <SyntaxHighlighter language="python" style={codeStyle}>
               {codeExamples.python}
             </SyntaxHighlighter>
           </Box>
@@ -557,7 +561,7 @@ curl -X GET ${userInfoUrl} \\
             >
               {copiedIndex === 12 ? <CheckCircle color="success" /> : <ContentCopy />}
             </IconButton>
-            <SyntaxHighlighter language="bash" style={docco}>
+            <SyntaxHighlighter language="bash" style={codeStyle}>
               {codeExamples.curl}
             </SyntaxHighlighter>
           </Box>

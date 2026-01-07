@@ -7,10 +7,12 @@ import {
   Stack,
   IconButton,
   Chip,
+  useTheme,
 } from '@mui/material';
 import { ContentCopy, CheckCircle } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import DownloadMarkdownButton from '../../components/docs/DownloadMarkdownButton';
 
 const markdownContent = `# Multi-Organization Integration Guide
@@ -152,6 +154,8 @@ const MyComponent = () => {
 `;
 
 export default function MultiOrganizationIntegrationPage() {
+  const theme = useTheme();
+  const codeStyle = theme.palette.mode === 'dark' ? atomOneDark : docco;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const handleCopy = (text: string, index: number) => {
@@ -371,7 +375,7 @@ const MyComponent = () => {
           >
             {copiedIndex === 0 ? <CheckCircle color="success" /> : <ContentCopy />}
           </IconButton>
-          <SyntaxHighlighter language="json" style={docco}>
+          <SyntaxHighlighter language="json" style={codeStyle}>
             {codeExamples.jwt}
           </SyntaxHighlighter>
         </Box>
@@ -447,7 +451,7 @@ const MyComponent = () => {
           >
             {copiedIndex === 1 ? <CheckCircle color="success" /> : <ContentCopy />}
           </IconButton>
-          <SyntaxHighlighter language="typescript" style={docco}>
+          <SyntaxHighlighter language="typescript" style={codeStyle}>
             {codeExamples.roleMatrix}
           </SyntaxHighlighter>
         </Box>
@@ -468,7 +472,7 @@ const MyComponent = () => {
           >
             {copiedIndex === 2 ? <CheckCircle color="success" /> : <ContentCopy />}
           </IconButton>
-          <SyntaxHighlighter language="javascript" style={docco}>
+          <SyntaxHighlighter language="javascript" style={codeStyle}>
             {codeExamples.apiRequest}
           </SyntaxHighlighter>
         </Box>
@@ -489,7 +493,7 @@ const MyComponent = () => {
           >
             {copiedIndex === 3 ? <CheckCircle color="success" /> : <ContentCopy />}
           </IconButton>
-          <SyntaxHighlighter language="typescript" style={docco}>
+          <SyntaxHighlighter language="typescript" style={codeStyle}>
             {codeExamples.backend}
           </SyntaxHighlighter>
         </Box>
@@ -510,7 +514,7 @@ const MyComponent = () => {
           >
             {copiedIndex === 4 ? <CheckCircle color="success" /> : <ContentCopy />}
           </IconButton>
-          <SyntaxHighlighter language="typescript" style={docco}>
+          <SyntaxHighlighter language="typescript" style={codeStyle}>
             {codeExamples.frontend}
           </SyntaxHighlighter>
         </Box>

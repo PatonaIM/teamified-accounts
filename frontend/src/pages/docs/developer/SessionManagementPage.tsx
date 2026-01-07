@@ -10,6 +10,7 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
+  useTheme,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -22,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownButton';
 
 const markdownContent = `# Session Management Guide
@@ -296,6 +298,9 @@ async function refreshTokens() {
 `;
 
 export default function SessionManagementPage() {
+  const theme = useTheme();
+  const codeStyle = theme.palette.mode === 'dark' ? atomOneDark : docco;
+  
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, flexWrap: 'wrap', gap: 2 }}>
@@ -377,7 +382,7 @@ export default function SessionManagementPage() {
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
               1. Initiate Authorization
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`// Generate PKCE code verifier and challenge
 const codeVerifier = generateCodeVerifier();
 const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -399,7 +404,7 @@ window.location.href = authorizeUrl.toString();`}
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
               2. Handle Callback & Exchange Code for Tokens
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`// On callback page, extract code and exchange for tokens
 const urlParams = new URLSearchParams(window.location.search);
 const code = urlParams.get('code');
@@ -425,7 +430,7 @@ const tokens = await response.json();
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
               3. Store Tokens (Client-Side)
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`// Store tokens securely in localStorage
 localStorage.setItem('access_token', tokens.access_token);
 localStorage.setItem('refresh_token', tokens.refresh_token);
@@ -455,7 +460,7 @@ localStorage.setItem('user_data', JSON.stringify(await userInfo.json()));`}
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
               Client-Side Session Check
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`function isSessionActive() {
   const accessToken = localStorage.getItem('access_token');
   
@@ -486,7 +491,7 @@ if (isSessionActive()) {
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
               Server-Side Session Validation
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`// Validate session by calling the /me endpoint
 async function validateSession() {
   const accessToken = localStorage.getItem('access_token');
@@ -539,7 +544,7 @@ async function validateSession() {
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
               Step 1: Clear Client-Side Storage
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`function clearLocalSession() {
   // Clear access and refresh tokens
   localStorage.removeItem('access_token');
@@ -557,7 +562,7 @@ async function validateSession() {
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
               Step 2: Call SSO Logout Endpoint
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`async function logout() {
   // 1. Clear local tokens first
   clearLocalSession();
@@ -713,7 +718,7 @@ async function validateSession() {
               Since tokens may now be rejected mid-session (if the user logs out from another app), 
               your application should gracefully handle 401 Unauthorized responses:
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`// Axios interceptor example
 axios.interceptors.response.use(
   response => response,
@@ -791,7 +796,7 @@ axios.interceptors.response.use(
             <Typography variant="body1" paragraph>
               When access tokens expire, use the refresh token to obtain new tokens:
             </Typography>
-            <SyntaxHighlighter language="javascript" style={docco}>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`async function refreshTokens() {
   const refreshToken = localStorage.getItem('refresh_token');
   
