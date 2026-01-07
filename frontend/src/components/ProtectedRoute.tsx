@@ -4,34 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { saveLastPath } from './SessionAwareRedirect';
 import { isPortalRedirectEnabled } from '../utils/featureFlags';
+import { getPortalUrl, getPortalName, isPortalConfigValid } from '../config/portalUrls';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
-
-// Helper function to get external portal URL from preferred portal
-const getPortalUrl = (preferredPortal: 'accounts' | 'ats' | 'jobseeker' | undefined): string | null => {
-  switch (preferredPortal) {
-    case 'ats':
-      return 'https://teamified-ats.replit.app';
-    case 'jobseeker':
-      return 'https://teamified-jobseeker.replit.app';
-    case 'accounts':
-    default:
-      return null; // Stay in accounts
-  }
-};
-
-const getPortalName = (preferredPortal: 'accounts' | 'ats' | 'jobseeker' | undefined): string => {
-  switch (preferredPortal) {
-    case 'ats':
-      return 'ATS Portal';
-    case 'jobseeker':
-      return 'Jobseeker Portal';
-    default:
-      return 'your portal';
-  }
-};
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -50,6 +27,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     if (user && !loading && !redirectStarted.current) {
       if (!isPortalRedirectEnabled()) {
         console.log('[ProtectedRoute] Portal redirects are disabled by feature flag');
+        return;
+      }
+      if (!isPortalConfigValid()) {
+        console.error('[ProtectedRoute] Portal config invalid, missing environment variables. Portal redirects disabled.');
         return;
       }
       const portalUrl = getPortalUrl(user.preferredPortal);

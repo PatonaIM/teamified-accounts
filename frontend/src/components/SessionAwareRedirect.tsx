@@ -1,38 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography, Alert } from '@mui/material';
 import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken, getCurrentUser } from '../services/authService';
 import type { User } from '../services/authService';
 import { isPortalRedirectEnabled } from '../utils/featureFlags';
+import { getPortalUrl, getPortalName, isPortalConfigValid, getMissingPortalVariables } from '../config/portalUrls';
 
 const LAST_PATH_KEY = 'teamified_last_path';
 const LAST_PATH_USER_KEY = 'teamified_last_path_user';
 const DEFAULT_AUTHENTICATED_PATH = '/account/profile';
 const SIGNUP_PATH = '/signup/path';
-
-// Helper function to get external portal URL from preferred portal
-const getPortalUrl = (preferredPortal: 'accounts' | 'ats' | 'jobseeker' | undefined): string | null => {
-  switch (preferredPortal) {
-    case 'ats':
-      return 'https://teamified-ats.replit.app';
-    case 'jobseeker':
-      return 'https://teamified-jobseeker.replit.app';
-    case 'accounts':
-    default:
-      return null; // Stay in accounts
-  }
-};
-
-const getPortalName = (preferredPortal: 'accounts' | 'ats' | 'jobseeker' | undefined): string => {
-  switch (preferredPortal) {
-    case 'ats':
-      return 'ATS Portal';
-    case 'jobseeker':
-      return 'Jobseeker Portal';
-    default:
-      return 'your portal';
-  }
-};
 
 const PUBLIC_PATHS = [
   '/login',
@@ -208,6 +185,10 @@ const SessionAwareRedirect: React.FC = () => {
     if (isLoggedIn && !checking && userData && !needsRoleSelection && !redirectStarted.current) {
       if (!isPortalRedirectEnabled()) {
         console.log('[SessionAwareRedirect] Portal redirects are disabled by feature flag');
+        return;
+      }
+      if (!isPortalConfigValid()) {
+        console.error('[SessionAwareRedirect] Portal config invalid, missing environment variables:', getMissingPortalVariables());
         return;
       }
       const portalUrl = getPortalUrl(userData.preferredPortal);
