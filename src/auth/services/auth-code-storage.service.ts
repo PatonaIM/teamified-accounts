@@ -6,6 +6,7 @@ interface AuthCodeData {
   userId: string;
   clientId: string;
   redirectUri: string;
+  environment?: string;
   state?: string;
   codeChallenge?: string;
   codeChallengeMethod?: string;
@@ -31,6 +32,7 @@ export class AuthCodeStorageService {
     userId: string;
     clientId: string;
     redirectUri: string;
+    environment?: string;
     state?: string;
     codeChallenge?: string;
     codeChallengeMethod?: string;
@@ -43,6 +45,7 @@ export class AuthCodeStorageService {
       userId: data.userId,
       clientId: data.clientId,
       redirectUri: data.redirectUri,
+      environment: data.environment,
       state: data.state,
       codeChallenge: data.codeChallenge,
       codeChallengeMethod: data.codeChallengeMethod,

@@ -21,7 +21,7 @@ import { createHash, randomUUID } from 'crypto';
 import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
 import { UserOAuthLogin } from './entities/user-oauth-login.entity';
 import { UserAppActivity } from './entities/user-app-activity.entity';
-import { getUriStrings } from '../oauth-clients/oauth-client.utils';
+import { getUriStrings, findEnvironmentForUri } from '../oauth-clients/oauth-client.utils';
 
 @Injectable()
 export class SsoService {
@@ -113,11 +113,15 @@ export class SsoService {
       return errorRedirect;
     }
 
+    // Determine environment from redirect_uri for environment-based logout
+    const environment = findEnvironmentForUri(client, redirect_uri);
+
     // Create authorization code
     const authCode = await this.authCodeStorage.createAuthCode({
       userId,
       clientId: client_id,
       redirectUri: redirect_uri,
+      environment: environment || undefined,
       state,
       codeChallenge: code_challenge,
       codeChallengeMethod: code_challenge_method,
