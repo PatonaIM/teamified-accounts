@@ -87,6 +87,12 @@ Core features include:
   - Security: httpOnly, secure (production), sameSite='lax' cookie flags
   - Works alongside custom token storage strategies for backwards compatibility
   - Documentation at `/docs/developer/sso-integration`
+  - **Global SSO Logout**: Logging out from any client application invalidates sessions across ALL connected clients:
+    - User entity has `globalLogoutAt` timestamp set when logging out
+    - JwtAuthGuard checks token `iat` against `globalLogoutAt` on every request
+    - SSO session check endpoint also validates against `globalLogoutAt`
+    - Tokens issued before logout are immediately rejected across all clients
+    - Deleted users' tokens are also rejected for security
 
 - **Multi-Identity SSO (Candidate + Employee Model)**: Users can link multiple email addresses (personal and work emails for different organizations) that all resolve to a single user identity. Login works with any linked email using a single password. Key features:
   - UserEmail entity for storing multiple emails per user with types (personal/work) and organization linking
