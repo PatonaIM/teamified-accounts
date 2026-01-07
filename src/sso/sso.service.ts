@@ -21,7 +21,8 @@ import { createHash, randomUUID } from 'crypto';
 import { IntentType } from '../oauth-clients/entities/oauth-client.entity';
 import { UserOAuthLogin } from './entities/user-oauth-login.entity';
 import { UserAppActivity } from './entities/user-app-activity.entity';
-import { getUriStrings, findEnvironmentForUri } from '../oauth-clients/oauth-client.utils';
+import { getUriStrings, findEnvironmentForUri, getLogoutUrisByEnvironment } from '../oauth-clients/oauth-client.utils';
+import { EnvironmentType } from '../oauth-clients/entities/oauth-client.entity';
 
 @Injectable()
 export class SsoService {
@@ -233,10 +234,11 @@ export class SsoService {
 
     // Create session for refresh token support (required for token refresh to work)
     // Pass the tokenFamily to ensure session and refresh token are aligned
+    // Include environment from auth code for environment-specific logout filtering
     await this.sessionService.createSession(user, refreshToken, {
       ip: 'sso-client',
       userAgent: `OAuth Client: ${client.name}`,
-    }, tokenFamily);
+    }, tokenFamily, authCodeData.environment);
 
     // Get user roles
     const userRoles = await this.userRolesService.getUserRoles(user.id);
@@ -560,8 +562,15 @@ export class SsoService {
    * Get all active OAuth clients that have valid logout_uris configured
    * Used for front-channel logout to notify all connected apps
    * SECURITY: Runtime validation ensures only approved domains are included
+   * 
+   * @param environment - Optional environment filter. When provided, only logout URIs
+   *   matching that environment (or with no environment tag) are returned.
+   *   This enables environment-specific logout: users logging out of development
+   *   only get logged out of development apps, not production.
    */
-  async getClientsWithLogoutUri(): Promise<Array<{ clientId: string; name: string; logoutUri: string }>> {
+  async getClientsWithLogoutUri(
+    environment?: EnvironmentType | null,
+  ): Promise<Array<{ clientId: string; name: string; logoutUri: string }>> {
     const clients = await this.oauthClientsService.findActive();
     const result: Array<{ clientId: string; name: string; logoutUri: string }> = [];
     
@@ -570,22 +579,24 @@ export class SsoService {
         continue;
       }
       
-      // Add each valid logout URI for this client
-      for (const logoutUriObj of client.logout_uris) {
-        if (!logoutUriObj.uri || logoutUriObj.uri.trim() === '') {
-          continue;
-        }
+      // If environment filter is provided, use utility function for filtering
+      // Otherwise, include all logout URIs
+      const logoutUris = environment
+        ? getLogoutUrisByEnvironment(client, environment)
+        : client.logout_uris.map((lu: any) => lu.uri).filter((uri: string) => uri && uri.trim() !== '');
+      
+      for (const logoutUri of logoutUris) {
         // SECURITY: Runtime validation to ensure only approved domains are included
         // This provides defense-in-depth even if validation was bypassed during registration
-        const isValid = this.oauthClientsService.isValidLogoutUri(logoutUriObj.uri);
+        const isValid = this.oauthClientsService.isValidLogoutUri(logoutUri);
         if (!isValid) {
-          this.logger.warn(`Skipping invalid logout_uri for client ${client.name}: ${logoutUriObj.uri}`);
+          this.logger.warn(`Skipping invalid logout_uri for client ${client.name}: ${logoutUri}`);
           continue;
         }
         result.push({
           clientId: client.client_id,
           name: client.name,
-          logoutUri: logoutUriObj.uri,
+          logoutUri,
         });
       }
     }
@@ -631,6 +642,16 @@ export class SsoService {
         // as attackers could forge tokens to logout arbitrary users
         this.logger.warn(`SSO logout: id_token_hint signature verification failed - ignoring hint`);
       }
+    }
+    
+    // Get user's session environment BEFORE revoking (for environment-specific logout)
+    let sessionEnvironment: EnvironmentType | null = null;
+    if (effectiveUserId) {
+      const envString = await this.sessionService.getMostRecentSessionEnvironment(effectiveUserId);
+      if (envString === 'development' || envString === 'staging' || envString === 'production') {
+        sessionEnvironment = envString as EnvironmentType;
+      }
+      this.logger.log(`SSO logout: User ${effectiveUserId} session environment: ${sessionEnvironment || 'none'}`);
     }
     
     // If we have a userId, revoke all their sessions
@@ -703,10 +724,14 @@ export class SsoService {
       validatedRedirectUri = url.toString();
     }
 
-    // Get all clients with logout_uri for front-channel logout
-    const frontChannelLogoutUris = await this.getClientsWithLogoutUri();
+    // Get clients with logout_uri for front-channel logout
+    // Filter by session environment to only logout from apps in the same environment
+    const frontChannelLogoutUris = await this.getClientsWithLogoutUri(sessionEnvironment);
     
-    this.logger.log(`SSO logout: Found ${frontChannelLogoutUris.length} clients with logout_uri for front-channel logout`);
+    this.logger.log(
+      `SSO logout: Found ${frontChannelLogoutUris.length} clients with logout_uri for front-channel logout` +
+      (sessionEnvironment ? ` (filtered by environment: ${sessionEnvironment})` : ' (all environments)')
+    );
 
     return {
       redirectUrl: validatedRedirectUri,
