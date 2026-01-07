@@ -39,13 +39,13 @@ export class MarketingRedirectService {
 
   /**
    * Get the configured signup redirect URL for the given intent
-   * Uses environment variables: JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL, ATS_PORTAL_SIGNUP_REDIRECT_URL
+   * Uses environment variables: JOBSEEKER_PORTAL_REDIRECT_URL, ATS_PORTAL_REDIRECT_URL
    */
   private getSignupRedirectUrl(intent: 'client' | 'candidate'): string | null {
     if (intent === 'candidate') {
-      return this.configService.get<string>('JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL') || null;
+      return this.configService.get<string>('JOBSEEKER_PORTAL_REDIRECT_URL') || null;
     } else {
-      return this.configService.get<string>('ATS_PORTAL_SIGNUP_REDIRECT_URL') || null;
+      return this.configService.get<string>('ATS_PORTAL_REDIRECT_URL') || null;
     }
   }
 
@@ -83,7 +83,7 @@ export class MarketingRedirectService {
       const redirectUri = this.getSignupRedirectUrl(intent);
       if (!redirectUri) {
         this.logger.warn(
-          `No signup redirect URL configured for intent=${intent}. Missing ${intent === 'candidate' ? 'JOBSEEKER_PORTAL_SIGNUP_REDIRECT_URL' : 'ATS_PORTAL_SIGNUP_REDIRECT_URL'} environment variable.`,
+          `No signup redirect URL configured for intent=${intent}. Missing ${intent === 'candidate' ? 'JOBSEEKER_PORTAL_REDIRECT_URL' : 'ATS_PORTAL_REDIRECT_URL'} environment variable.`,
         );
         return {
           shouldRedirect: false,
