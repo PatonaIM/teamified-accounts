@@ -165,14 +165,21 @@ const LoginPageMUI: React.FC = () => {
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   const [shakeEmail, setShakeEmail] = useState(false);
   const [portalRedirect, setPortalRedirect] = useState<{ url: string; name: string } | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [signupUrl, setSignupUrl] = useState('');
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-    if (field === 'email' && emailAlreadyRegistered) {
-      setEmailAlreadyRegistered(false);
+    if (field === 'email') {
+      if (emailAlreadyRegistered) {
+        setEmailAlreadyRegistered(false);
+      }
+      if (isNewUser) {
+        setIsNewUser(false);
+      }
     }
   };
 
@@ -225,6 +232,7 @@ const LoginPageMUI: React.FC = () => {
       
       if (data.valid) {
         setStep('password');
+        setIsNewUser(false);
       } else {
         // Build signup URL with email, returnUrl, and intent (if present)
         const signupParams = new URLSearchParams();
@@ -235,8 +243,8 @@ const LoginPageMUI: React.FC = () => {
         if (intent) {
           signupParams.set('intent', intent);
         }
-        const signupUrl = `/signup-select?${signupParams.toString()}`;
-        navigate(signupUrl);
+        setSignupUrl(`/signup-select?${signupParams.toString()}`);
+        setIsNewUser(true);
       }
     } catch (error) {
       setErrors({ 
@@ -682,34 +690,91 @@ const LoginPageMUI: React.FC = () => {
                 }}
               />
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={isLoading}
-                sx={{
-                  borderRadius: 2,
-                  py: 1.5,
-                  mb: 3,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  bgcolor: '#9333EA',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    bgcolor: '#A855F7',
-                  },
-                  '&:active': {
-                    bgcolor: '#7E22CE',
-                  },
-                  '&:disabled': {
-                    bgcolor: 'rgba(147, 51, 234, 0.5)',
-                    color: 'white',
-                  },
-                }}
-              >
-                {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
-              </Button>
+              {/* Friendly New User Message */}
+              {isNewUser && mode === 'signin' && (
+                <Box
+                  sx={{
+                    bgcolor: '#F3E8FF',
+                    borderRadius: 2,
+                    p: 2.5,
+                    mb: 3,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: '#1a1a1a',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      mb: 0.5,
+                    }}
+                  >
+                    Looks like you're new!
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: '#4a4a4a',
+                      fontSize: '0.9rem',
+                      mb: 2,
+                    }}
+                  >
+                    This email isn't registered yet. Click create an account to get started.
+                  </Typography>
+                  <Button
+                    onClick={() => navigate(signupUrl)}
+                    fullWidth
+                    variant="contained"
+                    sx={{
+                      borderRadius: 2,
+                      py: 1.5,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                    }}
+                  >
+                    Create Account
+                  </Button>
+                </Box>
+              )}
+
+              {!isNewUser && (
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={isLoading}
+                  sx={{
+                    borderRadius: 2,
+                    py: 1.5,
+                    mb: 3,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    bgcolor: '#9333EA',
+                    boxShadow: 'none',
+                    '&:hover': {
+                      bgcolor: '#A855F7',
+                    },
+                    '&:active': {
+                      bgcolor: '#7E22CE',
+                    },
+                    '&:disabled': {
+                      bgcolor: 'rgba(147, 51, 234, 0.5)',
+                      color: 'white',
+                    },
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
+                </Button>
+              )}
 
               <Divider sx={{ my: 3, borderColor: '#E5E7EB' }}>
                 <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
