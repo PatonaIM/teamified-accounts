@@ -488,7 +488,7 @@ const LoginPageMUI: React.FC = () => {
           <Typography
             variant="h4"
             sx={{
-              color: '#1a1a1a',
+              color: '#9333EA',
               fontWeight: 700,
               mb: 4,
               lineHeight: 1.3,
@@ -563,10 +563,11 @@ const LoginPageMUI: React.FC = () => {
           sx={{
             width: '100%',
             maxWidth: 400,
-            bgcolor: '#2A2A2A',
+            bgcolor: 'white',
             borderRadius: 3,
             padding: 4,
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid #E5E7EB',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
         >
           {/* Email Step */}
@@ -576,7 +577,7 @@ const LoginPageMUI: React.FC = () => {
               <Typography
                 variant="h4"
                 sx={{
-                  color: 'white',
+                  color: '#1a1a1a',
                   fontWeight: 600,
                   mb: 1,
                   textAlign: 'center',
@@ -588,7 +589,7 @@ const LoginPageMUI: React.FC = () => {
               {/* Mode Toggle Link */}
               <Typography
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: '#6b7280',
                   textAlign: 'center',
                   mb: 4,
                   fontSize: '0.9rem',
@@ -639,29 +640,29 @@ const LoginPageMUI: React.FC = () => {
                     '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
                   },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'transparent',
+                    bgcolor: '#F9FAFB',
                     borderRadius: 2,
                     '& fieldset': {
-                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.23)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#E5E7EB',
                     },
                     '&:hover fieldset': {
-                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.4)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#9333EA',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#A16AE8',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#9333EA',
                       borderWidth: 2,
                     },
                   },
                   '& .MuiInputBase-input': {
-                    color: 'white',
+                    color: '#1a1a1a',
                     '&:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
-                      WebkitTextFillColor: 'white',
-                      caretColor: 'white',
+                      WebkitBoxShadow: '0 0 0 100px #F9FAFB inset',
+                      WebkitTextFillColor: '#1a1a1a',
+                      caretColor: '#1a1a1a',
                     },
                   },
                   '& .MuiInputBase-input::placeholder': {
-                    color: 'rgba(255, 255, 255, 0.5)',
+                    color: '#9CA3AF',
                     opacity: 1,
                   },
                   '& .MuiFormHelperText-root': {
@@ -696,8 +697,8 @@ const LoginPageMUI: React.FC = () => {
                 {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
               </Button>
 
-              <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+              <Divider sx={{ my: 3, borderColor: '#E5E7EB' }}>
+                <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
                   or
                 </Typography>
               </Divider>
@@ -708,7 +709,7 @@ const LoginPageMUI: React.FC = () => {
                 <Typography
                   variant="body2"
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: '#6b7280',
                     fontSize: '0.875rem',
                   }}
                 >
@@ -716,7 +717,7 @@ const LoginPageMUI: React.FC = () => {
                   <Link
                     href="mailto:hello@teamified.com"
                     sx={{
-                      color: '#A16AE8',
+                      color: '#9333EA',
                       textDecoration: 'none',
                       '&:hover': {
                         textDecoration: 'underline',
@@ -737,7 +738,7 @@ const LoginPageMUI: React.FC = () => {
               <Typography
                 variant="h4"
                 sx={{
-                  color: 'white',
+                  color: '#1a1a1a',
                   fontWeight: 600,
                   mb: 2,
                   textAlign: 'center',
@@ -749,7 +750,7 @@ const LoginPageMUI: React.FC = () => {
               <Typography
                 variant="body1"
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: '#6b7280',
                   textAlign: 'center',
                   mb: 4,
                 }}
@@ -781,11 +782,11 @@ const LoginPageMUI: React.FC = () => {
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                         sx={{ 
-                          color: 'rgba(255, 255, 255, 0.7)',
+                          color: '#6b7280',
                           zIndex: 1,
                           '&:hover': {
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                            color: '#1a1a1a',
+                            bgcolor: 'rgba(0, 0, 0, 0.05)',
                           },
                         }}
                       >
@@ -797,36 +798,36 @@ const LoginPageMUI: React.FC = () => {
                 sx={{
                   mb: 3,
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'transparent',
+                    bgcolor: '#F9FAFB',
                     borderRadius: 2,
                     '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.23)',
+                      borderColor: '#E5E7EB',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      borderColor: '#9333EA',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#A16AE8',
+                      borderColor: '#9333EA',
                       borderWidth: 2,
                     },
                   },
                   '& .MuiInputBase-input': {
-                    color: 'white',
+                    color: '#1a1a1a',
                     '&:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
-                      WebkitTextFillColor: 'white',
-                      caretColor: 'white',
+                      WebkitBoxShadow: '0 0 0 100px #F9FAFB inset',
+                      WebkitTextFillColor: '#1a1a1a',
+                      caretColor: '#1a1a1a',
                     },
                   },
                   '& .MuiInputBase-input::placeholder': {
-                    color: 'rgba(255, 255, 255, 0.5)',
+                    color: '#9CA3AF',
                     opacity: 1,
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',
                   },
                   '& .MuiInputAdornment-root': {
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: '#6b7280',
                   },
                 }}
               />
@@ -843,15 +844,15 @@ const LoginPageMUI: React.FC = () => {
                     fontWeight: 600,
                     textTransform: 'none',
                     fontSize: '1rem',
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                    color: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#E5E7EB',
+                    color: '#1a1a1a',
                     '&:hover': {
-                      borderColor: 'rgba(255, 255, 255, 0.5)',
-                      bgcolor: 'rgba(255, 255, 255, 0.05)',
+                      borderColor: '#9333EA',
+                      bgcolor: 'rgba(147, 51, 234, 0.05)',
                     },
                     '&:disabled': {
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      color: 'rgba(255, 255, 255, 0.5)',
+                      borderColor: '#E5E7EB',
+                      color: '#9CA3AF',
                     },
                   }}
                 >
@@ -888,11 +889,11 @@ const LoginPageMUI: React.FC = () => {
                 <Link
                   href="/forgot-password"
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: '#6b7280',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     '&:hover': {
-                      color: '#A16AE8',
+                      color: '#9333EA',
                       textDecoration: 'underline',
                     },
                   }}
