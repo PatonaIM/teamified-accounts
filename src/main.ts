@@ -84,6 +84,39 @@ async function bootstrap() {
     const configService = app.get(ConfigService);
     logger.log('✅ ConfigService initialized');
 
+    // Add explicit OPTIONS handler middleware BEFORE CORS
+    // This ensures preflight requests are handled by our server, not intercepted by proxies
+    const httpAdapter = app.getHttpAdapter().getInstance();
+    httpAdapter.options('*', (req, res) => {
+      const origin = req.headers.origin;
+      const trustedOriginsForMiddleware = getTrustedOrigins();
+      
+      // Check if origin should be allowed
+      let allowOrigin = false;
+      if (!origin) {
+        allowOrigin = true;
+      } else if (trustedOriginsForMiddleware.some(trusted => origin === trusted || origin.endsWith(trusted.replace('https://', '.')))) {
+        allowOrigin = true;
+      } else if (origin.includes('.replit.app') || origin.includes('.replit.dev')) {
+        allowOrigin = true;
+      }
+      
+      if (allowOrigin && origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Idempotency-Key,X-Requested-With');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        res.status(204).end();
+      } else if (!origin) {
+        res.status(204).end();
+      } else {
+        logger.warn(`CORS preflight blocked origin: ${origin}`);
+        res.status(403).end();
+      }
+    });
+    logger.log('✅ Explicit OPTIONS handler configured for preflight requests');
+
     // Enable CORS - Dynamic configuration based on environment
     logger.log('Configuring CORS...');
     
