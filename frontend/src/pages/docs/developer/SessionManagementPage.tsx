@@ -884,17 +884,43 @@ export function LogoutCallback() {
             </Typography>
             <Typography variant="body2" paragraph>
               Each logout URI can be tagged with an environment: <strong>production</strong>, <strong>staging</strong>, 
-              or <strong>development</strong>. This helps organize your URIs in the admin panel.
+              or <strong>development</strong>. These tags enable <strong>environment-specific logout</strong> to 
+              prevent development logouts from affecting production sessions.
             </Typography>
             
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
-                <strong>Current Behavior:</strong> During logout, Teamified Accounts calls <strong>all configured 
-                logout URIs</strong> for all active OAuth clients, regardless of environment tag. This ensures 
-                the user is logged out everywhere. The environment tags are primarily for organization and 
-                filtering in the admin UI.
+                <strong>Environment-Specific Logout:</strong> When a user logs out, the system determines 
+                which environment they logged in from (based on the redirect_uri used during OAuth authorization). 
+                Only logout URIs matching that environment are called. This means:
               </Typography>
+              <List dense disablePadding sx={{ mt: 1 }}>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemText 
+                    primary="• Logging out from development only affects development apps"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemText 
+                    primary="• Logging out from production only affects production apps"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemText 
+                    primary="• Logout URIs without an environment tag are called in all environments"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+              </List>
             </Alert>
+            
+            <Typography variant="body2" paragraph sx={{ mt: 2 }}>
+              <strong>Best Practice:</strong> Tag each logout URI with the appropriate environment. If you want 
+              a logout URI to always be called (e.g., for a service that spans all environments), leave the 
+              environment tag empty.
+            </Typography>
 
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
               Security Features
