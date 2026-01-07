@@ -440,13 +440,42 @@ const LoginPageMUI: React.FC = () => {
     <Box 
       sx={{ 
         display: 'flex', 
+        flexDirection: 'column',
         minHeight: '100vh',
         bgcolor: '#F5F7F8',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 4,
       }}
     >
+      {/* Top Header Bar */}
+      <Box
+        sx={{
+          width: '100%',
+          py: 2,
+          px: 3,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 500,
+            fontSize: '1.1rem',
+            color: '#1a1a1a',
+          }}
+        >
+          teamified
+        </Typography>
+      </Box>
+
+      {/* Main Content Area */}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 4,
+        }}
+      >
         {/* Sign-in Form Container */}
         <Box
           sx={{
@@ -792,6 +821,7 @@ const LoginPageMUI: React.FC = () => {
             </form>
           )}
         </Box>
+      </Box>
     </Box>
   );
 };
