@@ -455,15 +455,15 @@ const LoginPageMUI: React.FC = () => {
           borderBottom: '1px solid #E5E7EB',
         }}
       >
-        <Typography
+        <Box
+          component="img"
+          src="/assets/teamified-logo-black.png"
+          alt="Teamified"
           sx={{
-            fontWeight: 500,
-            fontSize: '1.1rem',
-            color: '#1a1a1a',
+            height: 24,
+            width: 'auto',
           }}
-        >
-          teamified
-        </Typography>
+        />
       </Box>
 
       {/* Main Content Area */}
