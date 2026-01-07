@@ -21,6 +21,8 @@ import {
   Login,
   RouteOutlined,
   Storage,
+  Logout,
+  Settings,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -40,10 +42,10 @@ export default function ReleaseNote_v1014() {
                   <Typography variant="body2" color="text.secondary">
                     January 7, 2026
                   </Typography>
-                  <Chip label="2 min read" size="small" variant="outlined" />
+                  <Chip label="4 min read" size="small" variant="outlined" />
                 </Stack>
                 <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
-                  Role-Based Login Redirects
+                  Role-Based Redirects & Global SSO Logout
                 </Typography>
               </Box>
             </Stack>
@@ -52,8 +54,8 @@ export default function ReleaseNote_v1014() {
           <Alert severity="info" icon={<AutoAwesome />}>
             <Typography variant="body2">
               <strong>What's New:</strong> Users are now automatically redirected to the appropriate 
-              portal based on the email address they use to log in, creating a seamless experience 
-              across Jobseeker Portal, ATS Portal, and Teamified Accounts.
+              portal based on login context. Plus, logging out from any Teamified app now terminates 
+              sessions across ALL connected applications for enhanced security.
             </Typography>
           </Alert>
 
@@ -77,6 +79,14 @@ export default function ReleaseNote_v1014() {
               <ListItem sx={{ py: 0.25 }}>
                 <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                 <ListItemText primary="Persistent portal routing keeps users in their appropriate portal" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
+              </ListItem>
+              <ListItem sx={{ py: 0.25 }}>
+                <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Global SSO logout terminates sessions across all connected apps" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
+              </ListItem>
+              <ListItem sx={{ py: 0.25 }}>
+                <ListItemIcon sx={{ minWidth: 28 }}><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Portal URLs now use environment variables for flexible deployment" primaryTypographyProps={{ variant: 'body2', color: 'text.primary' }} />
               </ListItem>
             </List>
           </Box>
@@ -210,6 +220,96 @@ export default function ReleaseNote_v1014() {
                 <ListItemText 
                   primary="Fallback Logic" 
                   secondary="Uses primary email for routing when login context is unavailable" 
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Logout color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                Global SSO Logout
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Logging out from any Teamified application (Jobseeker Portal, ATS, HRIS, etc.) now 
+              immediately terminates the user's session across ALL connected clients. No more 
+              phantom sessions remaining active after logout.
+            </Typography>
+            
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              How It Works:
+            </Typography>
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Instant Session Termination" 
+                  secondary="Logout from any app invalidates tokens across all connected applications" 
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Automatic Detection" 
+                  secondary="Other apps detect the logout on their next request and redirect to login" 
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Clean State" 
+                  secondary="Local storage and cookies are cleared automatically across all apps" 
+                />
+              </ListItem>
+            </List>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              This ensures enhanced security for users who may forget to log out of individual 
+              applications, preventing unauthorized access to their accounts.
+            </Typography>
+          </Box>
+
+          <Divider />
+
+          <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <Settings color="primary" />
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                Environment-Based Portal URLs
+              </Typography>
+            </Stack>
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Portal redirect URLs are now configured via environment variables instead of hardcoded 
+              values, enabling seamless support for both development and production environments.
+            </Typography>
+            
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Configuration:
+            </Typography>
+            <List dense>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="VITE_PORTAL_URL_JOBSEEKER" 
+                  secondary="URL of the Jobseeker Portal for candidate redirects" 
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="VITE_PORTAL_URL_ATS" 
+                  secondary="URL of the ATS Portal for employer redirects" 
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                <ListItemText 
+                  primary="Validation & Fallback" 
+                  secondary="Portal redirects are disabled with error logging if URLs are missing" 
                 />
               </ListItem>
             </List>
