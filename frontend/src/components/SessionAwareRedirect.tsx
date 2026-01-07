@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken, getCurrentUser } from '../services/authService';
 import type { User } from '../services/authService';
+import { isPortalRedirectEnabled } from '../utils/featureFlags';
 
 const LAST_PATH_KEY = 'teamified_last_path';
 const LAST_PATH_USER_KEY = 'teamified_last_path_user';
@@ -182,6 +183,10 @@ const SessionAwareRedirect: React.FC = () => {
   // Check if user should be redirected to external portal
   useEffect(() => {
     if (isLoggedIn && !checking && userData && !needsRoleSelection && !redirectStarted.current) {
+      if (!isPortalRedirectEnabled()) {
+        console.log('[SessionAwareRedirect] Portal redirects are disabled by feature flag');
+        return;
+      }
       const portalUrl = getPortalUrl(userData.preferredPortal);
       if (portalUrl) {
         console.log('[SessionAwareRedirect] User should be at external portal:', userData.preferredPortal);
