@@ -553,10 +553,40 @@ export class SsoService {
   }
 
   /**
+   * Get all active OAuth clients that have a valid logout_uri configured
+   * Used for front-channel logout to notify all connected apps
+   * SECURITY: Runtime validation ensures only approved domains are included
+   */
+  async getClientsWithLogoutUri(): Promise<Array<{ clientId: string; name: string; logoutUri: string }>> {
+    const clients = await this.oauthClientsService.findActive();
+    
+    return clients
+      .filter(client => {
+        if (!client.logout_uri || client.logout_uri.trim() === '') {
+          return false;
+        }
+        // SECURITY: Runtime validation to ensure only approved domains are included
+        // This provides defense-in-depth even if validation was bypassed during registration
+        const isValid = this.oauthClientsService.isValidLogoutUri(client.logout_uri);
+        if (!isValid) {
+          this.logger.warn(`Skipping invalid logout_uri for client ${client.name}: ${client.logout_uri}`);
+        }
+        return isValid;
+      })
+      .map(client => ({
+        clientId: client.client_id,
+        name: client.name,
+        logoutUri: client.logout_uri,
+      }));
+  }
+
+  /**
    * SSO Logout: Revoke user sessions and optionally redirect back to client
    * 
    * This endpoint handles RP-initiated logout for OAuth 2.0 clients.
    * It revokes all user sessions, clears cookies, and redirects to the post_logout_redirect_uri.
+   * 
+   * Front-channel logout: Returns list of logout URIs for iframe-based logout propagation
    */
   async logout(
     userId: string | null,
@@ -564,7 +594,11 @@ export class SsoService {
     clientId?: string,
     state?: string,
     idTokenHint?: string,
-  ): Promise<{ redirectUrl: string | null; message: string }> {
+  ): Promise<{ 
+    redirectUrl: string | null; 
+    message: string;
+    frontChannelLogoutUris: Array<{ clientId: string; name: string; logoutUri: string }>;
+  }> {
     // Try to extract userId from id_token_hint if not already provided
     // SECURITY: Only trust id_token_hint when we can verify it
     let effectiveUserId = userId;
@@ -656,9 +690,15 @@ export class SsoService {
       validatedRedirectUri = url.toString();
     }
 
+    // Get all clients with logout_uri for front-channel logout
+    const frontChannelLogoutUris = await this.getClientsWithLogoutUri();
+    
+    this.logger.log(`SSO logout: Found ${frontChannelLogoutUris.length} clients with logout_uri for front-channel logout`);
+
     return {
       redirectUrl: validatedRedirectUri,
-      message: userId ? 'Logged out successfully' : 'Session cleared',
+      message: effectiveUserId ? 'Logged out successfully' : 'Session cleared',
+      frontChannelLogoutUris,
     };
   }
 }

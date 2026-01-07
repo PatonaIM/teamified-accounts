@@ -118,4 +118,13 @@ export class CreateOAuthClientDto {
   @IsString({ each: true })
   @IsOptional()
   allowed_scopes?: string[];
+
+  @ApiProperty({
+    description: 'Logout URI for front-channel Single Sign-Out. When a user logs out from any app, this URI will be called via iframe to clear the local session.',
+    example: 'https://app.teamified.com/auth/logout/callback',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  logout_uri?: string;
 }

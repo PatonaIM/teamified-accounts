@@ -362,13 +362,44 @@ api.interceptors.response.use(
 
 ---
 
-## 6. Logout Implementation
+## 6. Logout Implementation (Single Sign-Out)
 
-### CRITICAL: Proper Logout Flow
+Teamified Accounts implements **Single Sign-Out (SLO)** using front-channel logout. When a user logs out from ANY Teamified app, they are automatically logged out from ALL connected apps.
+
+### How Single Sign-Out Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Single Sign-Out Flow                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. User clicks "Logout" in ATS app                                 │
+│     └── ATS clears local storage                                    │
+│     └── ATS redirects to /api/v1/sso/logout                        │
+│                                                                      │
+│  2. Teamified Accounts SSO:                                         │
+│     └── Revokes all user sessions in database                       │
+│     └── Sets globalLogoutAt timestamp                               │
+│     └── Clears httpOnly cookies on .teamified.com                  │
+│     └── Renders front-channel logout page                          │
+│                                                                      │
+│  3. Front-channel logout page:                                      │
+│     └── Loads hidden iframes for each registered client app        │
+│     └── Each iframe calls the client's logout_uri                  │
+│     └── Client apps clear their local tokens                       │
+│     └── Redirects to final destination after all frames load       │
+│                                                                      │
+│  4. User lands on logged-out page                                   │
+│     └── ALL Teamified apps are now logged out                      │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### CRITICAL: Proper Logout Flow for Client Apps
 
 Logout requires TWO steps:
 1. Clear local storage FIRST
-2. Call SSO logout endpoint
+2. Redirect to SSO logout endpoint (NOT just call it)
 
 ```javascript
 function clearLocalSession() {
@@ -389,7 +420,7 @@ async function logout(redirectAfterLogout = '/') {
     `${window.location.origin}${redirectAfterLogout}`);
   logoutUrl.searchParams.set('client_id', 'YOUR_CLIENT_ID');
   
-  // Step 3: Redirect to SSO logout (clears httpOnly cookies)
+  // Step 3: Redirect to SSO logout (triggers front-channel logout)
   window.location.href = logoutUrl.toString();
 }
 ```
@@ -408,10 +439,131 @@ async function logout(redirectAfterLogout = '/') {
 *Required if redirecting to external URLs
 
 **What the endpoint does:**
-- Clears httpOnly authentication cookies on shared domain
-- Revokes all user sessions in the database
-- Invalidates all refresh token families
-- Redirects to `post_logout_redirect_uri` (if valid)
+1. Clears httpOnly authentication cookies on shared domain
+2. Revokes all user sessions in the database
+3. Sets `globalLogoutAt` timestamp (invalidates all existing tokens)
+4. Renders front-channel logout page with hidden iframes
+5. Calls each registered client's `logout_uri` via iframe
+6. Redirects to `post_logout_redirect_uri` after all iframes load (or 3s timeout)
+
+### Implementing Logout Callback (Required for SLO)
+
+To receive front-channel logout notifications, your client app must:
+
+1. **Register a logout_uri** when configuring your OAuth client
+2. **Implement a logout callback endpoint** that clears local tokens
+
+#### Step 1: Register Your Logout URI
+
+Update your OAuth client in Teamified Accounts admin:
+- **logout_uri**: `https://yourapp.teamified.com/auth/logout/callback`
+
+**Security Requirements for logout_uri:**
+- Must use HTTPS protocol (except localhost for development)
+- Must be on an approved Teamified domain (*.teamified.com, *.teamified.au, *.replit.app, *.replit.dev, or localhost)
+- Path must start with `/`
+
+This can be done via the PATCH endpoint:
+```javascript
+await fetch('https://accounts.teamified.com/api/v1/oauth-clients/{id}', {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${adminToken}`,
+  },
+  body: JSON.stringify({
+    logout_uri: 'https://yourapp.teamified.com/auth/logout/callback',
+  }),
+});
+```
+
+#### Step 2: Implement Logout Callback Endpoint
+
+Create an endpoint that clears local tokens when called:
+
+**React Router Example:**
+```javascript
+// src/pages/LogoutCallback.tsx
+import { useEffect } from 'react';
+
+export function LogoutCallback() {
+  useEffect(() => {
+    // Clear all local tokens
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_data');
+    sessionStorage.clear();
+    
+    console.log('[SSO] Front-channel logout received - tokens cleared');
+  }, []);
+
+  // Return minimal HTML (this page is loaded in hidden iframe)
+  return <div>Logged out</div>;
+}
+
+// Add route
+<Route path="/auth/logout/callback" element={<LogoutCallback />} />
+```
+
+**Express.js Backend Example:**
+```javascript
+// If you handle tokens server-side
+app.get('/auth/logout/callback', (req, res) => {
+  // Clear any server-side session
+  req.session?.destroy?.();
+  
+  // Clear cookies
+  res.clearCookie('session_id');
+  res.clearCookie('access_token');
+  
+  res.send('OK');
+});
+```
+
+### Session Validation on App Load
+
+As a safety net, always validate the session on app initialization:
+
+```javascript
+async function initializeApp() {
+  // Check if session is still valid
+  try {
+    const response = await fetch('https://accounts.teamified.com/api/v1/sso/session', {
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      // Session invalid - clear local tokens and redirect
+      clearLocalSession();
+      redirectToLogin();
+      return;
+    }
+    
+    const session = await response.json();
+    // Session valid - proceed with app
+    loadApp(session.user);
+  } catch (error) {
+    // Network error - use local tokens but validate soon
+    const localToken = localStorage.getItem('access_token');
+    if (localToken && isTokenValid(localToken)) {
+      loadApp(getUserFromToken(localToken));
+    } else {
+      clearLocalSession();
+      redirectToLogin();
+    }
+  }
+}
+```
+
+### Why Front-Channel Logout?
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Front-channel (current)** | Works with any client, browser-based | Requires 3s timeout, user sees loading page |
+| Back-channel | Instant, server-to-server | Requires clients to have backend endpoints |
+| Polling only | Simple | Delay until next poll, not truly instant |
+
+Front-channel logout is the OAuth 2.0 standard for browser-based applications and provides immediate logout across all apps without requiring backend infrastructure from client apps
 
 ---
 
@@ -505,10 +657,13 @@ async function callProtectedAPI() {
 - [ ] Automatic token refresh on 401 responses
 - [ ] New refresh token stored after each refresh (rotation)
 
-### Logout Flow
-- [ ] Local storage cleared BEFORE SSO logout call
-- [ ] SSO logout endpoint called
+### Logout Flow (Single Sign-Out)
+- [ ] Local storage cleared BEFORE SSO logout redirect
+- [ ] User redirected to `/api/v1/sso/logout` (not just API call)
 - [ ] client_id included for redirect validation
+- [ ] logout_uri registered for your OAuth client
+- [ ] Logout callback endpoint implemented (`/auth/logout/callback`)
+- [ ] Session check on app load as safety net
 
 ### Security
 - [ ] PKCE used for all authorization flows

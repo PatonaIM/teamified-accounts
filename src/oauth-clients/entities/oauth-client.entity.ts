@@ -71,4 +71,7 @@ export class OAuthClient {
 
   @Column({ type: 'simple-array', nullable: true })
   allowed_scopes: string[];
+
+  @Column({ type: 'text', nullable: true })
+  logout_uri: string;
 }
