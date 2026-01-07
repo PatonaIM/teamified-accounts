@@ -437,86 +437,16 @@ const LoginPageMUI: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Left Panel - Purple Gradient (~63%) */}
-      <Box
-        sx={{
-          flex: '0 0 63%',
-          background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 6,
-          color: 'white',
-          position: 'relative',
-          '@media (max-width: 900px)': {
-            display: 'none',
-          },
-        }}
-      >
-        <Box sx={{ maxWidth: 600, textAlign: 'center' }}>
-          <Typography
-            variant="h1"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              fontSize: { xs: '3.5rem', md: '4.5rem' },
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Teamified
-          </Typography>
-          <Typography
-            variant="h4"
-            sx={{
-              opacity: 0.95,
-              fontSize: { xs: '1.25rem', md: '1.75rem' },
-              fontWeight: 400,
-              lineHeight: 1.5,
-              mb: 3,
-            }}
-          >
-            Build Your Global Team in Days — Not Weeks
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              opacity: 0.8,
-              fontSize: '0.875rem',
-            }}
-          >
-            Learn more about Teamified. Visit{' '}
-            <Link
-              href="https://www.teamified.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: 'white',
-                fontWeight: 500,
-                textDecoration: 'underline',
-                '&:hover': {
-                  opacity: 0.9,
-                },
-              }}
-            >
-              www.teamified.com
-            </Link>
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Right Panel - Dark Background (~37%) */}
-      <Box
-        sx={{
-          flex: 1,
-          bgcolor: '#1E1E1E',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 4,
-        }}
-      >
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        minHeight: '100vh',
+        bgcolor: '#1E1E1E',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 4,
+      }}
+    >
         {/* Sign-in Form Container */}
         <Box
           sx={{
@@ -862,7 +792,6 @@ const LoginPageMUI: React.FC = () => {
             </form>
           )}
         </Box>
-      </Box>
     </Box>
   );
 };
