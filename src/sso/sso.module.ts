@@ -10,10 +10,11 @@ import { UsersModule } from '../users/users.module';
 import { UserRolesModule } from '../user-roles/user-roles.module';
 import { UserOAuthLogin } from './entities/user-oauth-login.entity';
 import { UserAppActivity } from './entities/user-app-activity.entity';
+import { User } from '../auth/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserOAuthLogin, UserAppActivity]),
+    TypeOrmModule.forFeature([UserOAuthLogin, UserAppActivity, User]),
     OAuthClientsModule,
     AuthModule,
     UsersModule,

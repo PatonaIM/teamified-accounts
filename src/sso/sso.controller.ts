@@ -15,6 +15,8 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Throttle } from '@nestjs/throttler';
 import { SsoService } from './sso.service';
 import { MarketingRedirectService } from './marketing-redirect.service';
@@ -23,6 +25,7 @@ import { TokenExchangeDto } from './dto/token.dto';
 import { RecordActivityDto } from './dto/user-activity.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { User } from '../auth/entities/user.entity';
 import { getAccessTokenCookieOptions, getRefreshTokenCookieOptions, getClearCookieOptions } from '../common/utils/cookie.utils';
 
 @Controller('v1/sso')
@@ -31,6 +34,8 @@ export class SsoController {
     private readonly ssoService: SsoService,
     private readonly marketingRedirectService: MarketingRedirectService,
     private readonly jwtService: JwtService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   /**
@@ -273,6 +278,20 @@ export class SsoController {
     try {
       const payload = this.jwtService.verify(token);
       
+      // Check global logout timestamp - if token was issued before user's global logout, reject it
+      // This enables true SSO logout across all clients
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+        select: ['id', 'globalLogoutAt'],
+      });
+      
+      if (user?.globalLogoutAt) {
+        const tokenIssuedAt = new Date(payload.iat * 1000);
+        if (tokenIssuedAt < user.globalLogoutAt) {
+          throw new UnauthorizedException('Session has been terminated. Please log in again.');
+        }
+      }
+      
       return {
         authenticated: true,
         user: {
@@ -291,6 +310,9 @@ export class SsoController {
         expiresAt: new Date(payload.exp * 1000).toISOString(),
       };
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid or expired session');
     }
   }
