@@ -7,6 +7,11 @@ export interface RedirectUri {
   environment: EnvironmentType;
 }
 
+export interface LogoutUri {
+  uri: string;
+  environment: EnvironmentType;
+}
+
 export const AVAILABLE_SCOPES = [
   { value: 'read:users', label: 'Read Users', description: 'View user profiles and lists' },
   { value: 'write:users', label: 'Write Users', description: 'Create and update users' },
@@ -31,7 +36,7 @@ export interface OAuthClient {
   default_intent: 'client' | 'candidate' | 'both';
   allow_client_credentials: boolean;
   allowed_scopes: string[] | null;
-  logout_uri: string | null;
+  logout_uris: LogoutUri[];
   metadata: {
     app_url?: string;
     owner?: string;
@@ -51,7 +56,7 @@ export interface CreateOAuthClientDto {
   owner?: string;
   allow_client_credentials?: boolean;
   allowed_scopes?: string[];
-  logout_uri?: string;
+  logout_uris?: LogoutUri[];
 }
 
 export interface UpdateOAuthClientDto {
@@ -64,7 +69,7 @@ export interface UpdateOAuthClientDto {
   is_active?: boolean;
   allow_client_credentials?: boolean;
   allowed_scopes?: string[];
-  logout_uri?: string;
+  logout_uris?: LogoutUri[];
 }
 
 export const oauthClientsService = {

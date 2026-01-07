@@ -27,7 +27,7 @@ import {
   Collapse,
 } from '@mui/material';
 import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout, ExpandMore, ExpandLess } from '@mui/icons-material';
-import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
+import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type LogoutUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
 interface Props {
@@ -60,8 +60,13 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [environmentFilter, setEnvironmentFilter] = useState<EnvironmentType | null>(null);
   const [allowClientCredentials, setAllowClientCredentials] = useState(false);
   const [allowedScopes, setAllowedScopes] = useState<string[]>([]);
-  const [logoutUri, setLogoutUri] = useState('');
-  const [logoutUriError, setLogoutUriError] = useState<string | null>(null);
+  const [logoutUris, setLogoutUris] = useState<LogoutUri[]>([]);
+  const [newLogoutUriInput, setNewLogoutUriInput] = useState('');
+  const [newLogoutUriEnvironment, setNewLogoutUriEnvironment] = useState<EnvironmentType>('development');
+  const [logoutUriEnvironmentFilter, setLogoutUriEnvironmentFilter] = useState<EnvironmentType | null>(null);
+  const [editingLogoutUriIndex, setEditingLogoutUriIndex] = useState<number | null>(null);
+  const [editingLogoutUriValue, setEditingLogoutUriValue] = useState('');
+  const [logoutUrisExpanded, setLogoutUrisExpanded] = useState(true);
   const [redirectUrisExpanded, setRedirectUrisExpanded] = useState(true);
   const { showSnackbar } = useSnackbar();
 
@@ -87,8 +92,20 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       setOriginalRedirectUris([...validUris]);
       setAllowClientCredentials(client.allow_client_credentials || false);
       setAllowedScopes(client.allowed_scopes || []);
-      setLogoutUri(client.logout_uri || '');
-      setLogoutUriError(null);
+      const rawLogoutUris = Array.isArray(client.logout_uris) ? client.logout_uris : [];
+      const validLogoutUris: LogoutUri[] = rawLogoutUris
+        .filter((uri): uri is LogoutUri => 
+          uri !== null && 
+          typeof uri === 'object' && 
+          !Array.isArray(uri) &&
+          typeof uri.uri === 'string' && 
+          uri.uri.trim() !== ''
+        )
+        .map(uri => ({
+          uri: uri.uri,
+          environment: uri.environment || 'development',
+        }));
+      setLogoutUris(validLogoutUris);
     } else {
       resetForm();
     }
@@ -106,50 +123,20 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setEnvironmentFilter(null);
     setAllowClientCredentials(false);
     setAllowedScopes([]);
-    setLogoutUri('');
-    setLogoutUriError(null);
-  };
-
-  const validateLogoutUri = (uri: string): string | null => {
-    if (!uri.trim()) return null;
-    
-    try {
-      const url = new URL(uri);
-      
-      if (url.hostname !== 'localhost' && url.protocol !== 'https:') {
-        return 'Logout URI must use HTTPS (except localhost)';
-      }
-      
-      const allowedDomains = ['.teamified.com', '.teamified.au', '.replit.app', '.replit.dev', 'localhost'];
-      const isAllowed = allowedDomains.some(domain => 
-        url.hostname === domain.replace('.', '') || url.hostname.endsWith(domain)
-      );
-      
-      if (!isAllowed) {
-        return 'Logout URI must be on an approved domain (teamified.com, teamified.au, replit.app, replit.dev, or localhost)';
-      }
-      
-      if (!url.pathname.startsWith('/')) {
-        return 'Logout URI path must start with /';
-      }
-      
-      return null;
-    } catch {
-      return 'Invalid URL format';
-    }
-  };
-
-  const handleLogoutUriChange = (value: string) => {
-    setLogoutUri(value);
-    if (value.trim()) {
-      setLogoutUriError(validateLogoutUri(value));
-    } else {
-      setLogoutUriError(null);
-    }
+    setLogoutUris([]);
+    setNewLogoutUriInput('');
+    setNewLogoutUriEnvironment('development');
+    setLogoutUriEnvironmentFilter(null);
+    setEditingLogoutUriIndex(null);
+    setEditingLogoutUriValue('');
   };
 
   const toggleEnvironmentFilter = (env: EnvironmentType) => {
     setEnvironmentFilter(environmentFilter === env ? null : env);
+  };
+
+  const toggleLogoutUriEnvironmentFilter = (env: EnvironmentType) => {
+    setLogoutUriEnvironmentFilter(logoutUriEnvironmentFilter === env ? null : env);
   };
 
   const environmentOrder: Record<EnvironmentType, number> = {
@@ -161,6 +148,11 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const filteredRedirectUris = redirectUris
     .map((uri, index) => ({ uri, originalIndex: index }))
     .filter(item => !environmentFilter || item.uri.environment === environmentFilter)
+    .sort((a, b) => environmentOrder[a.uri.environment] - environmentOrder[b.uri.environment]);
+
+  const filteredLogoutUris = logoutUris
+    .map((uri, index) => ({ uri, originalIndex: index }))
+    .filter(item => !logoutUriEnvironmentFilter || item.uri.environment === logoutUriEnvironmentFilter)
     .sort((a, b) => environmentOrder[a.uri.environment] - environmentOrder[b.uri.environment]);
 
   const isUriModified = (uri: RedirectUri, index: number): boolean => {
@@ -219,6 +211,53 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     }
   };
 
+  const handleAddLogoutUri = () => {
+    if (newLogoutUriInput.trim()) {
+      const isReplitApp = newLogoutUriInput.includes('.replit.app');
+      setLogoutUris([...logoutUris, { 
+        uri: newLogoutUriInput.trim(), 
+        environment: isReplitApp ? 'production' : newLogoutUriEnvironment 
+      }]);
+      setNewLogoutUriInput('');
+      setNewLogoutUriEnvironment('development');
+    }
+  };
+
+  const handleRemoveLogoutUri = (index: number) => {
+    setLogoutUris(logoutUris.filter((_, i) => i !== index));
+  };
+
+  const handleLogoutUriChange = (index: number, value: string) => {
+    const newUris = [...logoutUris];
+    const currentUri = newUris[index];
+    const currentEnv = (currentUri && typeof currentUri === 'object' && !Array.isArray(currentUri)) 
+      ? currentUri.environment || 'development' 
+      : 'development';
+    newUris[index] = { uri: value, environment: currentEnv };
+    setLogoutUris(newUris);
+  };
+
+  const handleLogoutUriEnvironmentChange = (index: number, environment: EnvironmentType) => {
+    const newUris = [...logoutUris];
+    const currentUri = newUris[index];
+    if (currentUri && typeof currentUri === 'object' && !Array.isArray(currentUri) && typeof currentUri.uri === 'string') {
+      newUris[index] = { uri: currentUri.uri, environment };
+      setLogoutUris(newUris);
+    }
+  };
+
+  const getLogoutUriEnvironmentCounts = () => {
+    const counts = { development: 0, staging: 0, production: 0 };
+    logoutUris.forEach(uri => {
+      if (uri.environment) {
+        counts[uri.environment]++;
+      }
+    });
+    return counts;
+  };
+
+  const logoutUriEnvCounts = getLogoutUriEnvironmentCounts();
+
   const handleSubmit = async () => {
     console.log('[OAuthClientDialog] redirectUris state:', JSON.stringify(redirectUris));
     
@@ -242,6 +281,19 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       return;
     }
 
+    const filteredLogoutUrisList = logoutUris
+      .filter((uri): uri is LogoutUri => 
+        uri !== null && 
+        typeof uri === 'object' && 
+        !Array.isArray(uri) &&
+        typeof uri.uri === 'string' && 
+        uri.uri.trim() !== ''
+      )
+      .map(uri => ({
+        uri: uri.uri,
+        environment: uri.environment || 'development',
+      }));
+
     const data: CreateOAuthClientDto = {
       name,
       description: description || undefined,
@@ -249,7 +301,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       default_intent: defaultIntent,
       allow_client_credentials: allowClientCredentials,
       allowed_scopes: allowClientCredentials ? allowedScopes : [],
-      logout_uri: logoutUri.trim() || undefined,
+      logout_uris: filteredLogoutUrisList.length > 0 ? filteredLogoutUrisList : undefined,
     };
 
     try {
@@ -807,37 +859,267 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
             <Divider sx={{ my: 1 }} />
 
             <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Logout fontSize="small" color="action" />
-                <Typography variant="subtitle2">Single Sign-Out (SLO)</Typography>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: 1,
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.8 },
+                }}
+                onClick={() => setLogoutUrisExpanded(!logoutUrisExpanded)}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Logout fontSize="small" color="action" />
+                  <Typography variant="subtitle2">Logout URIs</Typography>
+                  <Chip 
+                    label={`${logoutUris.length} configured`} 
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.65rem' }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Stack direction="row" spacing={0.5}>
+                    <Chip 
+                      label={`${logoutUriEnvCounts.production} Prod`} 
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('production'); }}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'transparent',
+                        color: logoutUriEnvironmentFilter === 'production' ? 'white' : 'text.secondary',
+                        border: `1px solid ${environmentColors.production}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                        },
+                      }} 
+                    />
+                    <Chip 
+                      label={`${logoutUriEnvCounts.staging} Staging`} 
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('staging'); }}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                        color: logoutUriEnvironmentFilter === 'staging' ? 'white' : 'text.secondary',
+                        border: `1px solid ${environmentColors.staging}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                        },
+                      }} 
+                    />
+                    <Chip 
+                      label={`${logoutUriEnvCounts.development} Dev`} 
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('development'); }}
+                      sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem',
+                        bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'transparent',
+                        color: logoutUriEnvironmentFilter === 'development' ? 'white' : 'text.secondary',
+                        border: `1px solid ${environmentColors.development}`,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                        },
+                      }} 
+                    />
+                  </Stack>
+                  {logoutUrisExpanded ? <ExpandLess /> : <ExpandMore />}
+                </Box>
               </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                Configure a logout callback URL to automatically sign users out of this application when they log out from Teamified Accounts.
+              
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                Configure logout callback URLs to automatically sign users out of this application when they log out from Teamified Accounts.
               </Typography>
               
-              <TextField
-                label="Logout URI (Optional)"
-                value={logoutUri}
-                onChange={(e) => handleLogoutUriChange(e.target.value)}
-                fullWidth
-                placeholder="https://yourapp.teamified.com/auth/logout/callback"
-                error={!!logoutUriError}
-                helperText={logoutUriError || 'Must use HTTPS and be on an approved domain (teamified.com, teamified.au, replit.app, replit.dev, or localhost)'}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    fontFamily: 'monospace',
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-              
-              {logoutUri && !logoutUriError && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    When a user logs out from Teamified Accounts, this URL will be loaded in a hidden iframe to clear the user's session in your application.
-                  </Typography>
-                </Alert>
-              )}
+              <Collapse in={logoutUrisExpanded}>
+              <Stack spacing={1}>
+                {filteredLogoutUris.map(({ uri: uriObj, originalIndex }) => (
+                  <Box
+                    key={originalIndex}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      p: 1.5,
+                      bgcolor: 'action.hover',
+                      borderRadius: 1,
+                      border: '1px solid transparent',
+                    }}
+                  >
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <Select
+                        value={uriObj.environment}
+                        onChange={(e) => handleLogoutUriEnvironmentChange(originalIndex, e.target.value as EnvironmentType)}
+                        sx={{
+                          '& .MuiSelect-select': {
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                          },
+                          bgcolor: environmentColors[uriObj.environment],
+                          color: 'white',
+                          '& .MuiSvgIcon-root': { color: 'white' },
+                        }}
+                      >
+                        <MenuItem value="development">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.development }} />
+                            Dev
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="staging">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.staging }} />
+                            Staging
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="production">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.production }} />
+                            Prod
+                          </Box>
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+                    {editingLogoutUriIndex === originalIndex ? (
+                      <TextField
+                        value={editingLogoutUriValue}
+                        onChange={(e) => setEditingLogoutUriValue(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        placeholder="https://app.teamified.com/auth/logout/callback"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleLogoutUriChange(originalIndex, editingLogoutUriValue);
+                            setEditingLogoutUriIndex(null);
+                            setEditingLogoutUriValue('');
+                          }
+                        }}
+                        sx={{
+                          flex: 1,
+                          '& .MuiInputBase-input': {
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                          },
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          wordBreak: 'break-all',
+                          color: uriObj.uri ? 'text.primary' : 'text.disabled',
+                        }}
+                      >
+                        {uriObj.uri || 'Empty URI - click edit to add'}
+                      </Typography>
+                    )}
+                    {editingLogoutUriIndex === originalIndex ? (
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            handleLogoutUriChange(originalIndex, editingLogoutUriValue);
+                            setEditingLogoutUriIndex(null);
+                            setEditingLogoutUriValue('');
+                          }}
+                          color="success"
+                        >
+                          <Check fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditingLogoutUriIndex(originalIndex);
+                            setEditingLogoutUriValue(uriObj.uri);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Delete">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveLogoutUri(originalIndex)}
+                        color="error"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                ))}
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <Select
+                    value={newLogoutUriEnvironment}
+                    onChange={(e) => setNewLogoutUriEnvironment(e.target.value as EnvironmentType)}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        py: 1,
+                        fontSize: '0.75rem',
+                      },
+                    }}
+                  >
+                    <MenuItem value="development">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.development }} />
+                        Dev
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="staging">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.staging }} />
+                        Staging
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="production">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.production }} />
+                        Prod
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  placeholder="https://app.teamified.com/auth/logout/callback"
+                  value={newLogoutUriInput}
+                  onChange={(e) => setNewLogoutUriInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddLogoutUri()}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddLogoutUri}
+                  disabled={!newLogoutUriInput.trim()}
+                  startIcon={<Add />}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Add
+                </Button>
+              </Stack>
+              </Collapse>
             </Box>
           </Box>
         )}
@@ -858,7 +1140,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={loading || !name || !!logoutUriError}
+            disabled={loading || !name}
             sx={{
               bgcolor: '#4caf50',
               '&:hover': { bgcolor: '#43a047' },

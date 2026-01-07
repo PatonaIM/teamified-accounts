@@ -553,31 +553,40 @@ export class SsoService {
   }
 
   /**
-   * Get all active OAuth clients that have a valid logout_uri configured
+   * Get all active OAuth clients that have valid logout_uris configured
    * Used for front-channel logout to notify all connected apps
    * SECURITY: Runtime validation ensures only approved domains are included
    */
   async getClientsWithLogoutUri(): Promise<Array<{ clientId: string; name: string; logoutUri: string }>> {
     const clients = await this.oauthClientsService.findActive();
+    const result: Array<{ clientId: string; name: string; logoutUri: string }> = [];
     
-    return clients
-      .filter(client => {
-        if (!client.logout_uri || client.logout_uri.trim() === '') {
-          return false;
+    for (const client of clients) {
+      if (!client.logout_uris || !Array.isArray(client.logout_uris) || client.logout_uris.length === 0) {
+        continue;
+      }
+      
+      // Add each valid logout URI for this client
+      for (const logoutUriObj of client.logout_uris) {
+        if (!logoutUriObj.uri || logoutUriObj.uri.trim() === '') {
+          continue;
         }
         // SECURITY: Runtime validation to ensure only approved domains are included
         // This provides defense-in-depth even if validation was bypassed during registration
-        const isValid = this.oauthClientsService.isValidLogoutUri(client.logout_uri);
+        const isValid = this.oauthClientsService.isValidLogoutUri(logoutUriObj.uri);
         if (!isValid) {
-          this.logger.warn(`Skipping invalid logout_uri for client ${client.name}: ${client.logout_uri}`);
+          this.logger.warn(`Skipping invalid logout_uri for client ${client.name}: ${logoutUriObj.uri}`);
+          continue;
         }
-        return isValid;
-      })
-      .map(client => ({
-        clientId: client.client_id,
-        name: client.name,
-        logoutUri: client.logout_uri,
-      }));
+        result.push({
+          clientId: client.client_id,
+          name: client.name,
+          logoutUri: logoutUriObj.uri,
+        });
+      }
+    }
+    
+    return result;
   }
 
   /**

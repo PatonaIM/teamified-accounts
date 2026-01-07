@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
-import { OAuthClient, RedirectUri, EnvironmentType } from './entities/oauth-client.entity';
+import { OAuthClient, RedirectUri, LogoutUri, EnvironmentType } from './entities/oauth-client.entity';
 import { CreateOAuthClientDto } from './dto/create-oauth-client.dto';
 import { UpdateOAuthClientDto } from './dto/update-oauth-client.dto';
 import { getUriStrings, getUrisByEnvironment, validateRedirectUri as validateUri } from './oauth-client.utils';
@@ -33,15 +33,11 @@ export class OAuthClientsService {
   }
 
   /**
-   * Validate logout_uri for security
+   * Validate a single logout URI for security
    * SECURITY: Ensures logout_uri is HTTPS-only (except localhost) and from approved domains
    * This prevents iframe injection attacks during front-channel logout
    */
-  validateLogoutUri(logoutUri: string | undefined | null): string | null {
-    if (!logoutUri || logoutUri.trim() === '') {
-      return null;
-    }
-
+  private validateSingleLogoutUri(logoutUri: string): void {
     try {
       const url = new URL(logoutUri);
       
@@ -72,13 +68,34 @@ export class OAuthClientsService {
       }
       
       this.logger.log(`Validated logout_uri: ${logoutUri}`);
-      return logoutUri;
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
       throw new BadRequestException(`Invalid logout_uri format: ${error.message}`);
     }
+  }
+
+  /**
+   * Validate and filter logout_uris array
+   * SECURITY: Validates each URI and returns only valid ones
+   */
+  validateLogoutUris(logoutUris: LogoutUri[] | undefined | null): LogoutUri[] {
+    if (!logoutUris || !Array.isArray(logoutUris)) {
+      return [];
+    }
+
+    const validUris: LogoutUri[] = [];
+    for (const uriObj of logoutUris) {
+      if (uriObj && typeof uriObj === 'object' && typeof uriObj.uri === 'string' && uriObj.uri.trim() !== '') {
+        this.validateSingleLogoutUri(uriObj.uri);
+        validUris.push({
+          uri: uriObj.uri,
+          environment: uriObj.environment || 'development',
+        });
+      }
+    }
+    return validUris;
   }
 
   /**
@@ -110,8 +127,8 @@ export class OAuthClientsService {
     createDto: CreateOAuthClientDto,
     createdBy: string,
   ): Promise<OAuthClient> {
-    // Validate logout_uri before saving (SECURITY: prevents iframe injection)
-    const validatedLogoutUri = this.validateLogoutUri(createDto.logout_uri);
+    // Validate logout_uris before saving (SECURITY: prevents iframe injection)
+    const validatedLogoutUris = this.validateLogoutUris(createDto.logout_uris);
     
     const client = this.oauthClientsRepository.create({
       name: createDto.name,
@@ -125,7 +142,7 @@ export class OAuthClientsService {
         owner: createDto.owner,
       },
       created_by: createdBy,
-      logout_uri: validatedLogoutUri,
+      logout_uris: validatedLogoutUris,
     });
 
     return this.oauthClientsRepository.save(client);
@@ -235,9 +252,9 @@ export class OAuthClientsService {
     if (updateDto.allowed_scopes !== undefined) {
       client.allowed_scopes = updateDto.allowed_scopes;
     }
-    if (updateDto.logout_uri !== undefined) {
-      // Validate logout_uri before saving (SECURITY: prevents iframe injection)
-      client.logout_uri = this.validateLogoutUri(updateDto.logout_uri);
+    if (updateDto.logout_uris !== undefined) {
+      // Validate logout_uris before saving (SECURITY: prevents iframe injection)
+      client.logout_uris = this.validateLogoutUris(updateDto.logout_uris);
     }
 
     return this.oauthClientsRepository.save(client);
