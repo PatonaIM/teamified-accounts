@@ -61,7 +61,7 @@ BASE_URL = "https://teamified-accounts.replit.app"
 
 [userenv.shared]
 VITE_ENABLE_PORTAL_REDIRECTS = "1"
-JOBSEEKER_PORTAL_REDIRECT_URL = "https://teamified-jobseeker.replit.app/api/auth/callback/teamified-sso"
+JOBSEEKER_PORTAL_REDIRECT_URL = "https://270a25ac-5fe3-4516-878e-ca92be1342f6-00-3t6zo5hw1y0g6.pike.replit.dev/api/auth/callback/teamified-sso"
 ATS_PORTAL_REDIRECT_URL = "https://teamified-ats.replit.app/auth/callback"
 
 [[ports]]
