@@ -292,12 +292,41 @@ const ClientAdminSignupPage: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 2,
+        flexDirection: 'column',
+        bgcolor: '#F5F7F8',
       }}
     >
+      {/* Header with Teamified Logo */}
+      <Box
+        sx={{
+          width: '100%',
+          py: 2,
+          px: 4,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          teamified
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 2,
+        }}
+      >
       <Container maxWidth="md">
         <Fade in key={step} timeout={400}>
           <Paper
@@ -312,18 +341,20 @@ const ClientAdminSignupPage: React.FC = () => {
             {/* Step 1: Basic Information */}
             {step === 'basic' && (
               <Box component="form" onSubmit={handleContinue} noValidate>
-                <Box textAlign="center" mb={4}>
+                <Box mb={4}>
                   <Typography
                     variant="h4"
                     component="h1"
                     gutterBottom
-                    fontWeight="bold"
-                    color="secondary"
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
                   >
-                    Business Sign Up
+                    Welcome to Teamified
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Let's get started with the basics
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Let's get started with your email
                   </Typography>
                 </Box>
 
@@ -333,19 +364,47 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Alert>
                 )}
 
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  error={!!errors.email}
-                  helperText={errors.email}
-                  margin="normal"
-                  required
-                  autoFocus
-                  disabled={isLoading}
-                />
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Email address
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type="email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    error={!!errors.email}
+                    helperText={errors.email}
+                    autoFocus
+                    disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#E5E7EB',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9333EA',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#9333EA',
+                          borderWidth: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
 
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
                   <TextField
@@ -453,34 +512,55 @@ const ClientAdminSignupPage: React.FC = () => {
                   }}
                 />
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="secondary"
-                  size="large"
-                  disabled={isLoading}
-                  sx={{
-                    mt: 3,
-                    mb: 2,
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  Continue
-                </Button>
-
-                <Box textAlign="center" mt={2}>
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                   <Button
-                    startIcon={<ArrowBack />}
+                    variant="outlined"
                     onClick={handleBack}
                     disabled={isLoading}
-                    sx={{ textTransform: 'none' }}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
                   >
-                    {intent === 'candidate' || intent === 'client' ? 'Back to Login' : 'Back to Selection'}
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
                   </Button>
                 </Box>
               </Box>
@@ -781,6 +861,7 @@ const ClientAdminSignupPage: React.FC = () => {
           </Paper>
         </Fade>
       </Container>
+      </Box>
     </Box>
   );
 };
