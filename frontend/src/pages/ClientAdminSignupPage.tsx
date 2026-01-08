@@ -83,7 +83,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
-  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website' | 'business'>('email');
+  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website' | 'business' | 'hiring'>('email');
   const [noWebsite, setNoWebsite] = useState(false);
   const [selectedCompanySize, setSelectedCompanySize] = useState<string>('');
   const websiteInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +108,11 @@ const ClientAdminSignupPage: React.FC = () => {
     howCanWeHelp: '',
     termsAccepted: false,
   });
+
+  const hasBusinessData = formData.businessDescription.trim() !== '' || 
+                          formData.industry !== '' || 
+                          formData.companySize !== '';
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -209,9 +214,9 @@ const ClientAdminSignupPage: React.FC = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!noWebsite && !formData.website) {
-      newErrors.website = 'Website URL is required';
+      newErrors.website = 'Website URL is required.';
     } else if (!noWebsite && formData.website && !isValidUrl(formData.website)) {
-      newErrors.website = 'Please enter a valid website URL';
+      newErrors.website = 'Please enter a valid website URL (e.g., https://company.com).';
     }
 
     setErrors(newErrors);
@@ -289,6 +294,10 @@ const ClientAdminSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (step === 'hiring') {
+      setStep('business');
+      return;
+    }
     if (step === 'business') {
       setStep('website');
       return;
@@ -320,6 +329,11 @@ const ClientAdminSignupPage: React.FC = () => {
   const handleCompanySizeSelect = (size: string) => {
     setSelectedCompanySize(size);
     handleInputChange('companySize', size);
+  };
+
+  const handleBusinessContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStep('hiring');
   };
 
   const handleNoWebsiteToggle = () => {
@@ -999,7 +1013,7 @@ const ClientAdminSignupPage: React.FC = () => {
 
             {/* Step 5: Business Information */}
             {step === 'business' && (
-              <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Box component="form" onSubmit={handleBusinessContinue} noValidate>
                 <Box mb={4}>
                   <Typography
                     variant="h4"
@@ -1146,6 +1160,166 @@ const ClientAdminSignupPage: React.FC = () => {
                       </Box>
                     ))}
                   </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : hasBusinessData ? 'Next' : 'Skip'}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 6: What are you looking for? */}
+            {step === 'hiring' && (
+              <Box component="form" onSubmit={handleSubmit} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    What are you looking for?
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Help us understand your hiring needs
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    What role/s do you need?
+                  </Typography>
+                  <TextField
+                    select
+                    fullWidth
+                    value={formData.rolesNeeded}
+                    onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
+                    disabled={isLoading}
+                    SelectProps={{
+                      displayEmpty: true,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  >
+                    <MenuItem value="" disabled>
+                      <Typography sx={{ color: '#9CA3AF' }}>e.g. Software Developer, Customer Support, Accountant...</Typography>
+                    </MenuItem>
+                    <MenuItem value="Software Developer">Software Developer</MenuItem>
+                    <MenuItem value="Customer Support">Customer Support</MenuItem>
+                    <MenuItem value="Accountant">Accountant</MenuItem>
+                    <MenuItem value="Project Manager">Project Manager</MenuItem>
+                    <MenuItem value="Designer">Designer</MenuItem>
+                    <MenuItem value="Marketing">Marketing</MenuItem>
+                    <MenuItem value="Sales">Sales</MenuItem>
+                    <MenuItem value="HR">HR</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </TextField>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    How can we help you?
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder="Tell us about your hiring goals, timeline, or any specific requirements..."
+                    value={formData.howCanWeHelp}
+                    onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
+                    disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
