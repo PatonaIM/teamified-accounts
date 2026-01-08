@@ -83,7 +83,9 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
-  const [step, setStep] = useState<'email' | 'name' | 'details'>('email');
+  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website'>('email');
+  const [noWebsite, setNoWebsite] = useState(false);
+  const websiteInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     email: emailParam,
     password: '',
@@ -198,30 +200,17 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.companyName = 'Company name must not exceed 255 characters';
     }
 
-    if (formData.slug && (formData.slug.length < 2 || formData.slug.length > 100)) {
-      newErrors.slug = 'Slug must be between 2 and 100 characters';
-    } else if (formData.slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug)) {
-      newErrors.slug = 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)';
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (!isPasswordValid(formData.password)) {
-      newErrors.password = 'Password does not meet all requirements';
-    }
+  const validateWebsiteStep = () => {
+    const newErrors: { [key: string]: string } = {};
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (formData.website && !isValidUrl(formData.website)) {
+    if (!noWebsite && !formData.website) {
+      newErrors.website = 'Website URL is required';
+    } else if (!noWebsite && formData.website && !isValidUrl(formData.website)) {
       newErrors.website = 'Please enter a valid website URL';
-    }
-
-    if (!formData.termsAccepted) {
-      newErrors.termsAccepted = 'You must accept the terms to continue';
     }
 
     setErrors(newErrors);
@@ -242,10 +231,17 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
+  const handleDetailsContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateDetailsStep()) {
+      setStep('website');
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!validateDetailsStep()) {
+    if (!validateWebsiteStep()) {
       return;
     }
 
@@ -289,6 +285,10 @@ const ClientAdminSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (step === 'website') {
+      setStep('details');
+      return;
+    }
     if (step === 'details') {
       setStep('name');
       return;
@@ -307,6 +307,18 @@ const ClientAdminSignupPage: React.FC = () => {
     } else {
       navigate(`/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
     }
+  };
+
+  const handleNoWebsiteToggle = () => {
+    setNoWebsite(true);
+    handleInputChange('website', '');
+  };
+
+  const handleHaveWebsiteToggle = () => {
+    setNoWebsite(false);
+    setTimeout(() => {
+      websiteInputRef.current?.focus();
+    }, 100);
   };
 
   return (
@@ -680,7 +692,7 @@ const ClientAdminSignupPage: React.FC = () => {
 
             {/* Step 3: Company Details */}
             {step === 'details' && (
-              <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Box component="form" onSubmit={handleDetailsContinue} noValidate>
                 <Box mb={4}>
                   <Typography
                     variant="h4"
@@ -701,12 +713,6 @@ const ClientAdminSignupPage: React.FC = () => {
                 {errors.general && (
                   <Alert severity="error" sx={{ mb: 3 }}>
                     {errors.general}
-                  </Alert>
-                )}
-
-                {successMessage && (
-                  <Alert severity="success" sx={{ mb: 3 }}>
-                    {successMessage}
                   </Alert>
                 )}
 
@@ -762,6 +768,167 @@ const ClientAdminSignupPage: React.FC = () => {
                     disabled={isLoading}
                   />
                 </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    Next
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 4: Website */}
+            {step === 'website' && (
+              <Box component="form" onSubmit={handleSubmit} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    Welcome to Teamified, {formData.firstName}!
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    We'll use AI to understand your business and create a tailored job description
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                {!noWebsite ? (
+                  <>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          mb: 1,
+                          fontWeight: 500,
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        Website URL
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="www.example.com"
+                        value={formData.website}
+                        onChange={(e) => handleInputChange('website', e.target.value)}
+                        error={!!errors.website}
+                        helperText={errors.website}
+                        disabled={isLoading}
+                        inputRef={websiteInputRef}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            '& fieldset': { borderColor: '#E5E7EB' },
+                            '&:hover fieldset': { borderColor: '#9333EA' },
+                            '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    <Box sx={{ mb: 3 }}>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={handleNoWebsiteToggle}
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        I don't have a website
+                      </Link>
+                    </Box>
+                  </>
+                ) : (
+                  <Box sx={{ mb: 3, p: 3, bgcolor: '#F9FAFB', borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                    <Typography sx={{ color: '#6b7280', mb: 2 }}>
+                      No problem! We'll help you create a great job description without it.
+                    </Typography>
+                    <Link
+                      component="button"
+                      type="button"
+                      onClick={handleHaveWebsiteToggle}
+                      sx={{
+                        color: '#9333EA',
+                        textDecoration: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
+                      }}
+                    >
+                      Actually, I have website
+                    </Link>
+                  </Box>
+                )}
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                   <Button
