@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, CheckCircle, Business, Login as LoginIcon, LinkOutlined, InfoOutlined } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { login, logout } from '../services/authService';
+import { logout } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 
@@ -70,6 +70,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [wasAuthenticatedAccept, setWasAuthenticatedAccept] = useState(false);
 
   useEffect(() => {
     const fetchInvitation = async () => {
@@ -206,26 +207,12 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
       }
 
       setSuccess(true);
+      setIsLoading(false);
 
-      try {
-        await login({
-          email: formData.email,
-          password: formData.password,
-          rememberMe: true,
-        });
-        
-        await refreshUser();
-
-        setTimeout(() => {
-          const orgSlug = invitation?.organizationSlug;
-          navigate(orgSlug ? `/organization/${orgSlug}` : '/account/profile', { replace: true });
-        }, 2000);
-      } catch (loginError) {
-        console.error('Auto-login failed:', loginError);
-        setTimeout(() => {
-          navigate(`/login?email=${encodeURIComponent(formData.email)}`, { replace: true });
-        }, 2000);
-      }
+      // Redirect to login after showing success message (no auto-login for security)
+      setTimeout(() => {
+        navigate(`/login?email=${encodeURIComponent(formData.email)}`, { replace: true });
+      }, 2000);
     } catch (err) {
       console.error('Error accepting invitation:', err);
       setError('Network error. Please check your connection and try again.');
@@ -242,6 +229,7 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
         inviteCode: code,
       });
 
+      setWasAuthenticatedAccept(true);
       setSuccess(true);
       await refreshUser();
 
@@ -304,20 +292,38 @@ const OrganizationInvitationAcceptPage: React.FC = () => {
   }
 
   if (success) {
+    const getSuccessTitle = () => {
+      if (wantToLinkAccount) return 'Account Linked!';
+      if (wasAuthenticatedAccept) return 'Welcome!';
+      return 'Account Created!';
+    };
+
+    const getSuccessMessage = () => {
+      if (wantToLinkAccount) {
+        return `Your work email has been linked and you've joined ${invitation?.organizationName}!`;
+      }
+      return `You've successfully joined ${invitation?.organizationName}!`;
+    };
+
+    const getRedirectMessage = () => {
+      if (wasAuthenticatedAccept) {
+        return 'Redirecting you to your organization...';
+      }
+      return 'Redirecting you to login...';
+    };
+
     return (
       <Container maxWidth="sm" sx={{ mt: 8 }}>
         <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
           <CheckCircle color="success" sx={{ fontSize: 80, mb: 2 }} />
           <Typography variant="h4" gutterBottom>
-            {wantToLinkAccount ? 'Account Linked!' : 'Welcome!'}
+            {getSuccessTitle()}
           </Typography>
           <Typography variant="body1" color="text.secondary" paragraph>
-            {wantToLinkAccount 
-              ? `Your work email has been linked and you've joined ${invitation?.organizationName}!`
-              : `You've successfully joined ${invitation?.organizationName}!`}
+            {getSuccessMessage()}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Redirecting you to your account...
+            {getRedirectMessage()}
           </Typography>
         </Paper>
       </Container>
