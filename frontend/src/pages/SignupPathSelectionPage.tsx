@@ -130,7 +130,7 @@ const SignupPathSelectionPage: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        bgcolor: '#F5F7F8',
         padding: { xs: 2, md: 4 },
       }}
     >
@@ -144,13 +144,13 @@ const SignupPathSelectionPage: React.FC = () => {
                 gutterBottom
                 sx={{
                   fontWeight: 700,
-                  color: 'white',
+                  color: '#1a1a1a',
                   fontSize: { xs: '2rem', md: '2.75rem' },
                 }}
               >
                 Let's get started
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 400, color: 'rgba(255, 255, 255, 0.85)' }}>
+              <Typography variant="h6" sx={{ fontWeight: 400, color: '#6b7280' }}>
                 Tell us who you are
               </Typography>
             </Box>
@@ -342,11 +342,11 @@ const SignupPathSelectionPage: React.FC = () => {
                 startIcon={<ArrowBack />}
                 onClick={() => navigate('/login')}
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.9)',
+                  color: '#6b7280',
                   textTransform: 'none',
                   fontSize: '0.95rem',
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
                   },
                 }}
               >
@@ -370,13 +370,13 @@ const SignupPathSelectionPage: React.FC = () => {
                   label={stat.text}
                   variant="filled"
                   sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    color: 'white',
+                    backgroundColor: 'white',
+                    color: '#1a1a1a',
                     px: 1,
                     py: 2.5,
                     borderRadius: 10,
-                    backdropFilter: 'blur(10px)',
-                    '& .MuiChip-icon': { color: 'white' },
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    '& .MuiChip-icon': { color: '#9333EA' },
                     '& .MuiChip-label': { fontWeight: 500 },
                   }}
                 />
@@ -438,14 +438,14 @@ const SignupPathSelectionPage: React.FC = () => {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <CheckCircle sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.7)' }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                <CheckCircle sx={{ fontSize: 18, color: '#9333EA' }} />
+                <Typography variant="body2" sx={{ color: '#4a4a4a' }}>
                   500+ Companies Trust Us
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Star sx={{ fontSize: 18, color: '#fbbf24' }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                <Typography variant="body2" sx={{ color: '#4a4a4a' }}>
                   4.9/5 Average Rating
                 </Typography>
               </Box>
