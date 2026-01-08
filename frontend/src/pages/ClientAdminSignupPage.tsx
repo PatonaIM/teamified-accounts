@@ -591,9 +591,10 @@ const ClientAdminSignupPage: React.FC = () => {
                   <PhoneInput
                     countryCode={formData.mobileCountryCode}
                     phoneNumber={formData.mobileNumber}
-                    onCountryCodeChange={(value) => handleInputChange('mobileCountryCode', value)}
-                    onPhoneNumberChange={(value) => handleInputChange('mobileNumber', value)}
-                    error={errors.mobileNumber}
+                    onCountryChange={(value) => handleInputChange('mobileCountryCode', value)}
+                    onPhoneChange={(value) => handleInputChange('mobileNumber', value)}
+                    error={!!errors.mobileNumber}
+                    helperText={errors.mobileNumber}
                     disabled={isLoading}
                   />
                 </Box>
@@ -617,8 +618,8 @@ const ClientAdminSignupPage: React.FC = () => {
                   <PhoneInput
                     countryCode={formData.phoneCountryCode}
                     phoneNumber={formData.phoneNumber}
-                    onCountryCodeChange={(value) => handleInputChange('phoneCountryCode', value)}
-                    onPhoneNumberChange={(value) => handleInputChange('phoneNumber', value)}
+                    onCountryChange={(value) => handleInputChange('phoneCountryCode', value)}
+                    onPhoneChange={(value) => handleInputChange('phoneNumber', value)}
                     disabled={isLoading}
                   />
                 </Box>

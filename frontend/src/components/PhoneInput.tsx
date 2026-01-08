@@ -18,6 +18,18 @@ import { countries, type Country } from './CountrySelect';
 
 const POPULAR_COUNTRY_CODES = ['AU', 'GB', 'US'];
 
+const PHONE_LENGTH_BY_COUNTRY: Record<string, { min: number; max: number }> = {
+  AU: { min: 9, max: 9 },
+  GB: { min: 10, max: 10 },
+  US: { min: 10, max: 10 },
+  CA: { min: 10, max: 10 },
+  IN: { min: 10, max: 10 },
+  NZ: { min: 9, max: 10 },
+  SG: { min: 8, max: 8 },
+  PH: { min: 10, max: 10 },
+  DEFAULT: { min: 6, max: 15 },
+};
+
 const getFlagUrl = (countryCode: string) => 
   `https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`;
 
@@ -113,15 +125,15 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
             alignItems: 'center',
             gap: 0.5,
             px: 1.5,
-            py: 1,
+            py: 1.5,
             border: '1px solid',
-            borderColor: error ? 'error.main' : 'rgba(0, 0, 0, 0.23)',
-            borderRadius: 1,
+            borderColor: error ? 'error.main' : '#E5E7EB',
+            borderRadius: 2,
             cursor: disabled ? 'default' : 'pointer',
-            backgroundColor: disabled ? 'action.disabledBackground' : 'background.paper',
+            backgroundColor: disabled ? 'action.disabledBackground' : 'white',
             minWidth: 100,
             '&:hover': {
-              borderColor: disabled ? undefined : 'text.primary',
+              borderColor: disabled ? undefined : '#9333EA',
             },
           }}
         >
@@ -142,16 +154,27 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           fullWidth
           value={phoneNumber}
           onChange={(e) => {
-            const value = e.target.value.replace(/[^\d\s-]/g, '');
-            onPhoneChange(value);
+            const digitsOnly = e.target.value.replace(/\D/g, '');
+            const phoneConfig = PHONE_LENGTH_BY_COUNTRY[countryCode] || PHONE_LENGTH_BY_COUNTRY.DEFAULT;
+            const limitedValue = digitsOnly.slice(0, phoneConfig.max);
+            onPhoneChange(limitedValue);
           }}
           error={error}
           disabled={disabled}
-          placeholder="555 123 4567"
+          placeholder="555123456"
           size="medium"
+          inputProps={{
+            inputMode: 'numeric',
+            pattern: '[0-9]*',
+          }}
           sx={{
             '& .MuiOutlinedInput-root': {
               height: '100%',
+              bgcolor: 'white',
+              borderRadius: 2,
+              '& fieldset': { borderColor: '#E5E7EB' },
+              '&:hover fieldset': { borderColor: '#9333EA' },
+              '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
             },
           }}
         />
