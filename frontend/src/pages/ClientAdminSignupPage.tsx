@@ -680,18 +680,20 @@ const ClientAdminSignupPage: React.FC = () => {
             {/* Step 3: Company Details */}
             {step === 'details' && (
               <Box component="form" onSubmit={handleSubmit} noValidate>
-                <Box textAlign="center" mb={4}>
+                <Box mb={4}>
                   <Typography
                     variant="h4"
                     component="h1"
                     gutterBottom
-                    fontWeight="bold"
-                    color="secondary"
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
                   >
-                    Tell us more about {formData.companyName}
+                    Your company details?
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Help us understand your business better
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Tell us about your organization
                   </Typography>
                 </Box>
 
@@ -707,268 +709,113 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Alert>
                 )}
 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Company Name
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="Your company name"
+                    value={formData.companyName}
+                    onChange={(e) => handleInputChange('companyName', e.target.value)}
+                    error={!!errors.companyName}
+                    helperText={errors.companyName}
+                    disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Country
+                  </Typography>
                   <CountrySelect
                     value={formData.country}
                     onChange={(value) => handleInputChange('country', value)}
-                    label="Country"
                     disabled={isLoading}
                   />
                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Industry"
-                    value={formData.industry}
-                    onChange={(e) => handleInputChange('industry', e.target.value)}
-                    error={!!errors.industry}
-                    helperText={errors.industry}
-                    disabled={isLoading}
-                  >
-                    <MenuItem value="">
-                      <em>Select industry (optional)</em>
-                    </MenuItem>
-                    {INDUSTRIES.map((industry) => (
-                      <MenuItem key={industry} value={industry}>
-                        {industry}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
-                  <TextField
-                    select
-                    fullWidth
-                    label="Company Size"
-                    value={formData.companySize}
-                    onChange={(e) => handleInputChange('companySize', e.target.value)}
-                    error={!!errors.companySize}
-                    helperText={errors.companySize}
-                    disabled={isLoading}
-                  >
-                    <MenuItem value="">
-                      <em>Select size (optional)</em>
-                    </MenuItem>
-                    {COMPANY_SIZES.map((size) => (
-                      <MenuItem key={size} value={size}>
-                        {size}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Box>
-
-                <Box sx={{ mt: 3 }}>
-                  <PhoneInput
-                    countryCode={formData.mobileCountryCode}
-                    phoneNumber={formData.mobileNumber}
-                    onCountryChange={(code) => handleInputChange('mobileCountryCode', code)}
-                    onPhoneChange={(number) => handleInputChange('mobileNumber', number)}
-                    label="Mobile Number"
-                    disabled={isLoading}
-                  />
-                </Box>
-
-                <Box sx={{ mt: 2 }}>
-                  <PhoneInput
-                    countryCode={formData.phoneCountryCode}
-                    phoneNumber={formData.phoneNumber}
-                    onCountryChange={(code) => handleInputChange('phoneCountryCode', code)}
-                    onPhoneChange={(number) => handleInputChange('phoneNumber', number)}
-                    label="Phone Number (optional)"
-                    disabled={isLoading}
-                  />
-                </Box>
-
-                <TextField
-                  fullWidth
-                  label="Company Website (optional)"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  error={!!errors.website}
-                  helperText={errors.website}
-                  margin="normal"
-                  disabled={isLoading}
-                  placeholder="https://example.com"
-                />
-
-                <Box sx={{ position: 'relative', mt: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Business Description"
-                    value={formData.businessDescription}
-                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
-                    error={!!errors.businessDescription}
-                    helperText={errors.businessDescription}
-                    multiline
-                    rows={5}
-                    disabled={isLoading || isAnalyzingWebsite}
-                    placeholder="Tell us about your business..."
-                  />
-                  {isValidUrl(formData.website) && !isAnalyzingWebsite && (
-                    <Tooltip title="Analyze my website" arrow placement="left">
-                      <IconButton
-                        onClick={handleAnalyzeWebsite}
-                        disabled={isLoading}
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          opacity: 0.6,
-                          transition: 'opacity 0.2s, transform 0.2s',
-                          '&:hover': {
-                            opacity: 1,
-                            transform: 'scale(1.1)',
-                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
-                          },
-                        }}
-                      >
-                        <AutoAwesome sx={{ color: '#7c3aed', fontSize: 26 }} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {isAnalyzingWebsite && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 22,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        borderRadius: 1,
-                        gap: 1,
-                      }}
-                    >
-                      <AutoAwesome
-                        sx={{
-                          color: '#7c3aed',
-                          fontSize: 32,
-                          animation: `${sparkle} 1s ease-in-out infinite`,
-                        }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        Analyzing your website...
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                <TextField
-                  fullWidth
-                  label="What roles do you need? (optional)"
-                  value={formData.rolesNeeded}
-                  onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
-                  error={!!errors.rolesNeeded}
-                  helperText={errors.rolesNeeded}
-                  margin="normal"
-                  disabled={isLoading}
-                  placeholder="e.g., Software Engineers, Product Managers"
-                />
-
-                <TextField
-                  fullWidth
-                  label="How can we help you? (optional)"
-                  value={formData.howCanWeHelp}
-                  onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
-                  error={!!errors.howCanWeHelp}
-                  helperText={errors.howCanWeHelp}
-                  margin="normal"
-                  multiline
-                  rows={2}
-                  disabled={isLoading}
-                  placeholder="Tell us how we can assist your hiring needs..."
-                />
-
-                <Box sx={{ mt: 3 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={formData.termsAccepted}
-                        onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
-                        disabled={isLoading}
-                        color="secondary"
-                      />
-                    }
-                    label={
-                      <Typography variant="body2" color="text.secondary">
-                        I accept the{' '}
-                        <Link
-                          href={getServiceAgreementUrl(formData.country)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          color="secondary"
-                        >
-                          Service Agreement
-                        </Link>
-                        ,{' '}
-                        <Link
-                          href="https://teamified.com/terms"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          color="secondary"
-                        >
-                          Terms
-                        </Link>
-                        {' '}and{' '}
-                        <Link
-                          href="https://teamified.com/privacy"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          color="secondary"
-                        >
-                          Privacy Policy
-                        </Link>
-                      </Typography>
-                    }
-                  />
-                  {errors.termsAccepted && (
-                    <Typography variant="caption" color="error" sx={{ ml: 2 }}>
-                      {errors.termsAccepted}
-                    </Typography>
-                  )}
-                </Box>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="secondary"
-                  size="large"
-                  disabled={isLoading}
-                  sx={{
-                    mt: 3,
-                    mb: 2,
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {isLoading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Create Account & Organization'
-                  )}
-                </Button>
-
-                <Box textAlign="center" mt={2}>
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                   <Button
-                    startIcon={<ArrowBack />}
+                    variant="outlined"
                     onClick={handleBack}
                     disabled={isLoading}
-                    sx={{ textTransform: 'none' }}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
                   >
                     Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
                   </Button>
                 </Box>
               </Box>
             )}
+
           </Paper>
         </Fade>
       </Container>
