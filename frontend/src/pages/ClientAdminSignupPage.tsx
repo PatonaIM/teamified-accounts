@@ -53,6 +53,69 @@ const INDUSTRIES = [
   'Other',
 ];
 
+const ROLES_BY_CATEGORY: Record<string, string[]> = {
+  'Technology': [
+    'Software Developer',
+    'Frontend Developer',
+    'Backend Developer',
+    'Full Stack Developer',
+    'DevOps Engineer',
+    'Data Engineer',
+    'Data Scientist',
+    'QA Engineer',
+    'UI/UX Designer',
+    'Product Manager',
+    'Technical Lead',
+    'IT Support',
+  ],
+  'Business & Operations': [
+    'Project Manager',
+    'Business Analyst',
+    'Operations Manager',
+    'Executive Assistant',
+    'Office Manager',
+    'Procurement Specialist',
+  ],
+  'Finance & Accounting': [
+    'Accountant',
+    'Financial Analyst',
+    'Bookkeeper',
+    'Payroll Specialist',
+    'Tax Specialist',
+    'CFO',
+  ],
+  'Sales & Marketing': [
+    'Sales Representative',
+    'Account Executive',
+    'Marketing Manager',
+    'Digital Marketing Specialist',
+    'Content Writer',
+    'SEO Specialist',
+    'Social Media Manager',
+    'Growth Hacker',
+  ],
+  'Customer Service': [
+    'Customer Support Representative',
+    'Customer Success Manager',
+    'Technical Support',
+    'Help Desk Specialist',
+  ],
+  'Human Resources': [
+    'HR Manager',
+    'Recruiter',
+    'Talent Acquisition Specialist',
+    'HR Coordinator',
+    'Training Specialist',
+  ],
+  'Other': [
+    'Legal Counsel',
+    'Graphic Designer',
+    'Video Editor',
+    'Virtual Assistant',
+    'Other',
+  ],
+};
+
 const sparkle = keyframes`
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.2); }
@@ -83,9 +146,12 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
-  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website' | 'business' | 'hiring'>('email');
+  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website' | 'business' | 'hiring' | 'review'>('email');
   const [noWebsite, setNoWebsite] = useState(false);
   const [selectedCompanySize, setSelectedCompanySize] = useState<string>('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editSection, setEditSection] = useState<string | null>(null);
   const websiteInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     email: emailParam,
@@ -112,6 +178,8 @@ const ClientAdminSignupPage: React.FC = () => {
   const hasBusinessData = formData.businessDescription.trim() !== '' || 
                           formData.industry !== '' || 
                           formData.companySize !== '';
+
+  const hasHiringData = selectedRoles.length > 0 || formData.howCanWeHelp.trim() !== '';
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -233,14 +301,26 @@ const ClientAdminSignupPage: React.FC = () => {
   const handleNameContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateNameStep()) {
-      setStep('details');
+      if (editMode) {
+        setEditMode(false);
+        setEditSection(null);
+        setStep('review');
+      } else {
+        setStep('details');
+      }
     }
   };
 
   const handleDetailsContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateDetailsStep()) {
-      setStep('website');
+      if (editMode) {
+        setEditMode(false);
+        setEditSection(null);
+        setStep('review');
+      } else {
+        setStep('website');
+      }
     }
   };
 
@@ -294,6 +374,16 @@ const ClientAdminSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (editMode) {
+      setEditMode(false);
+      setEditSection(null);
+      setStep('review');
+      return;
+    }
+    if (step === 'review') {
+      setStep('hiring');
+      return;
+    }
     if (step === 'hiring') {
       setStep('business');
       return;
@@ -333,7 +423,58 @@ const ClientAdminSignupPage: React.FC = () => {
 
   const handleBusinessContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('hiring');
+    if (editMode) {
+      setEditMode(false);
+      setEditSection(null);
+      setStep('review');
+    } else {
+      setStep('hiring');
+    }
+  };
+
+  const handleHiringContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editMode) {
+      setEditMode(false);
+      setEditSection(null);
+      setStep('review');
+    } else {
+      setStep('review');
+    }
+  };
+
+  const handleRoleToggle = (role: string) => {
+    setSelectedRoles(prev => 
+      prev.includes(role) 
+        ? prev.filter(r => r !== role)
+        : [...prev, role]
+    );
+  };
+
+  const handleEditSection = (section: string) => {
+    setEditMode(true);
+    setEditSection(section);
+    switch (section) {
+      case 'contact':
+        setStep('name');
+        break;
+      case 'company':
+        setStep('details');
+        break;
+      case 'business':
+        setStep('business');
+        break;
+      case 'hiring':
+        setStep('hiring');
+        break;
+    }
+  };
+
+  const handleUpdateSection = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditMode(false);
+    setEditSection(null);
+    setStep('review');
   };
 
   const handleNoWebsiteToggle = () => {
@@ -664,28 +805,30 @@ const ClientAdminSignupPage: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={handleBack}
-                    disabled={isLoading}
-                    startIcon={<ArrowBack />}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      borderColor: '#9333EA',
-                      color: '#9333EA',
-                      '&:hover': {
-                        borderColor: '#7E22CE',
-                        bgcolor: 'rgba(147, 51, 234, 0.04)',
-                      },
-                    }}
-                  >
-                    Back
-                  </Button>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
                   <Button
                     type="submit"
                     variant="contained"
@@ -711,7 +854,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    Next
+                    {editMode ? 'Update' : 'Next'}
                   </Button>
                 </Box>
               </Box>
@@ -797,28 +940,30 @@ const ClientAdminSignupPage: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={handleBack}
-                    disabled={isLoading}
-                    startIcon={<ArrowBack />}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      borderColor: '#9333EA',
-                      color: '#9333EA',
-                      '&:hover': {
-                        borderColor: '#7E22CE',
-                        bgcolor: 'rgba(147, 51, 234, 0.04)',
-                      },
-                    }}
-                  >
-                    Back
-                  </Button>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
                   <Button
                     type="submit"
                     variant="contained"
@@ -844,7 +989,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    Next
+                    {editMode ? 'Update' : 'Next'}
                   </Button>
                 </Box>
               </Box>
@@ -1163,28 +1308,30 @@ const ClientAdminSignupPage: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={handleBack}
-                    disabled={isLoading}
-                    startIcon={<ArrowBack />}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      borderColor: '#9333EA',
-                      color: '#9333EA',
-                      '&:hover': {
-                        borderColor: '#7E22CE',
-                        bgcolor: 'rgba(147, 51, 234, 0.04)',
-                      },
-                    }}
-                  >
-                    Back
-                  </Button>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
                   <Button
                     type="submit"
                     variant="contained"
@@ -1210,7 +1357,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    {isLoading ? <CircularProgress size={24} color="inherit" /> : hasBusinessData ? 'Next' : 'Skip'}
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasBusinessData ? 'Next' : 'Skip'}
                   </Button>
                 </Box>
               </Box>
@@ -1218,7 +1365,7 @@ const ClientAdminSignupPage: React.FC = () => {
 
             {/* Step 6: What are you looking for? */}
             {step === 'hiring' && (
-              <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Box component="form" onSubmit={handleHiringContinue} noValidate>
                 <Box mb={4}>
                   <Typography
                     variant="h4"
@@ -1247,7 +1394,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     component="label"
                     sx={{
                       display: 'block',
-                      mb: 1,
+                      mb: 1.5,
                       fontWeight: 500,
                       color: '#1a1a1a',
                       fontSize: '0.875rem',
@@ -1255,38 +1402,57 @@ const ClientAdminSignupPage: React.FC = () => {
                   >
                     What role/s do you need?
                   </Typography>
-                  <TextField
-                    select
-                    fullWidth
-                    value={formData.rolesNeeded}
-                    onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
-                    disabled={isLoading}
-                    SelectProps={{
-                      displayEmpty: true,
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'white',
-                        borderRadius: 2,
-                        '& fieldset': { borderColor: '#E5E7EB' },
-                        '&:hover fieldset': { borderColor: '#9333EA' },
-                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
-                      },
-                    }}
-                  >
-                    <MenuItem value="" disabled>
-                      <Typography sx={{ color: '#9CA3AF' }}>e.g. Software Developer, Customer Support, Accountant...</Typography>
-                    </MenuItem>
-                    <MenuItem value="Software Developer">Software Developer</MenuItem>
-                    <MenuItem value="Customer Support">Customer Support</MenuItem>
-                    <MenuItem value="Accountant">Accountant</MenuItem>
-                    <MenuItem value="Project Manager">Project Manager</MenuItem>
-                    <MenuItem value="Designer">Designer</MenuItem>
-                    <MenuItem value="Marketing">Marketing</MenuItem>
-                    <MenuItem value="Sales">Sales</MenuItem>
-                    <MenuItem value="HR">HR</MenuItem>
-                    <MenuItem value="Other">Other</MenuItem>
-                  </TextField>
+                  <Box sx={{ 
+                    maxHeight: 300, 
+                    overflowY: 'auto', 
+                    border: '1px solid #E5E7EB', 
+                    borderRadius: 2, 
+                    bgcolor: 'white',
+                    p: 2,
+                  }}>
+                    {Object.entries(ROLES_BY_CATEGORY).map(([category, roles]) => (
+                      <Box key={category} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            color: '#6b7280',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            mb: 1,
+                          }}
+                        >
+                          {category}
+                        </Typography>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 0.5 }}>
+                          {roles.map((role) => (
+                            <FormControlLabel
+                              key={role}
+                              control={
+                                <Checkbox
+                                  checked={selectedRoles.includes(role)}
+                                  onChange={() => handleRoleToggle(role)}
+                                  disabled={isLoading}
+                                  sx={{
+                                    color: '#D1D5DB',
+                                    '&.Mui-checked': {
+                                      color: '#9333EA',
+                                    },
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography sx={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                                  {role}
+                                </Typography>
+                              }
+                              sx={{ m: 0 }}
+                            />
+                          ))}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
                 </Box>
 
                 <Box sx={{ mb: 3 }}>
@@ -1323,28 +1489,30 @@ const ClientAdminSignupPage: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={handleBack}
-                    disabled={isLoading}
-                    startIcon={<ArrowBack />}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      borderColor: '#9333EA',
-                      color: '#9333EA',
-                      '&:hover': {
-                        borderColor: '#7E22CE',
-                        bgcolor: 'rgba(147, 51, 234, 0.04)',
-                      },
-                    }}
-                  >
-                    Back
-                  </Button>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
                   <Button
                     type="submit"
                     variant="contained"
@@ -1370,7 +1538,246 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Skip'}
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasHiringData ? 'Next' : 'Skip'}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 7: Review Your Information */}
+            {step === 'review' && (
+              <Box>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    Review Your Information
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Please confirm your details and accept our terms
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                <Box sx={{ maxHeight: 400, overflowY: 'auto', pr: 1 }}>
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Contact Details</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('contact')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Name</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.firstName} {formData.lastName}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Email</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.email}</Typography>
+                      </Box>
+                      {formData.mobileNumber && (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Mobile</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                            {countries.find(c => c.code === formData.mobileCountryCode)?.dialCode} {formData.mobileNumber}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Company Details</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('company')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Company</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.companyName || 'Not provided'}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Country</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                          {countries.find(c => c.code === formData.country)?.name || formData.country}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Business Details</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('business')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                      {formData.businessDescription && (
+                        <Box>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Description</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem', mt: 0.5 }}>
+                            {formData.businessDescription}
+                          </Typography>
+                        </Box>
+                      )}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Industry</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.industry || 'Not specified'}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Size</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.companySize || 'Not specified'}</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Hiring Needs</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('hiring')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    {selectedRoles.length > 0 ? (
+                      <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        {selectedRoles.join(', ')}
+                      </Typography>
+                    ) : (
+                      <Typography sx={{ color: '#9CA3AF', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                        No hiring needs specified
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ mt: 3, p: 2, bgcolor: '#F9FAFB', borderRadius: 2 }}>
+                  <Typography sx={{ fontWeight: 600, color: '#1a1a1a', mb: 2 }}>Legal Agreement</Typography>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={formData.termsAccepted}
+                        onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
+                        disabled={isLoading}
+                        sx={{
+                          color: '#D1D5DB',
+                          '&.Mui-checked': {
+                            color: '#9333EA',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography sx={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                        I accept the{' '}
+                        <Link
+                          href={getServiceAgreementUrl(formData.country)}
+                          target="_blank"
+                          sx={{ color: '#9333EA' }}
+                        >
+                          Service Agreement (AU)
+                        </Link>
+                        ,{' '}
+                        <Link href="https://teamified.com/terms" target="_blank" sx={{ color: '#9333EA' }}>
+                          Terms
+                        </Link>
+                        , and{' '}
+                        <Link href="https://teamified.com/privacy" target="_blank" sx={{ color: '#9333EA' }}>
+                          Privacy Policy
+                        </Link>
+                      </Typography>
+                    }
+                  />
+                  {errors.terms && (
+                    <Typography sx={{ color: '#DC2626', fontSize: '0.75rem', mt: 1 }}>
+                      {errors.terms}
+                    </Typography>
+                  )}
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={isLoading || !formData.termsAccepted}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create My Account'}
                   </Button>
                 </Box>
               </Box>
