@@ -718,33 +718,10 @@ const LoginPageMUI: React.FC = () => {
                     sx={{
                       color: '#4a4a4a',
                       fontSize: '0.9rem',
-                      mb: 2,
                     }}
                   >
-                    This email isn't registered yet. Click on "Create New Account" to get started.
+                    This email isn't registered yet. Click on "Create an account" above to get started.
                   </Typography>
-                  <Button
-                    onClick={() => navigate(signupUrl)}
-                    fullWidth
-                    variant="contained"
-                    sx={{
-                      borderRadius: 2,
-                      py: 1.5,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      bgcolor: '#9333EA',
-                      boxShadow: 'none',
-                      '&:hover': {
-                        bgcolor: '#A855F7',
-                      },
-                      '&:active': {
-                        bgcolor: '#7E22CE',
-                      },
-                    }}
-                  >
-                    Create New Account
-                  </Button>
                 </Box>
               )}
 
