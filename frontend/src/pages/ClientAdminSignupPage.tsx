@@ -83,7 +83,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
-  const [step, setStep] = useState<'basic' | 'details'>('basic');
+  const [step, setStep] = useState<'email' | 'name' | 'details'>('email');
   const [formData, setFormData] = useState({
     email: emailParam,
     password: '',
@@ -153,7 +153,7 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
-  const validateStep1 = () => {
+  const validateEmailStep = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.email) {
@@ -161,6 +161,13 @@ const ClientAdminSignupPage: React.FC = () => {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateNameStep = () => {
+    const newErrors: { [key: string]: string } = {};
 
     if (!formData.firstName) {
       newErrors.firstName = 'First name is required';
@@ -173,6 +180,17 @@ const ClientAdminSignupPage: React.FC = () => {
     } else if (formData.lastName.length > 50) {
       newErrors.lastName = 'Last name must not exceed 50 characters';
     }
+
+    if (!formData.mobileNumber) {
+      newErrors.mobileNumber = 'Mobile number is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateDetailsStep = () => {
+    const newErrors: { [key: string]: string } = {};
 
     if (!formData.companyName) {
       newErrors.companyName = 'Company name is required';
@@ -198,13 +216,6 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStep2 = () => {
-    const newErrors: { [key: string]: string } = {};
-
     if (formData.website && !isValidUrl(formData.website)) {
       newErrors.website = 'Please enter a valid website URL';
     }
@@ -217,9 +228,16 @@ const ClientAdminSignupPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleContinue = (e: React.FormEvent) => {
+  const handleEmailContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateStep1()) {
+    if (validateEmailStep()) {
+      setStep('name');
+    }
+  };
+
+  const handleNameContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateNameStep()) {
       setStep('details');
     }
   };
@@ -227,7 +245,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!validateStep2()) {
+    if (!validateDetailsStep()) {
       return;
     }
 
@@ -272,7 +290,11 @@ const ClientAdminSignupPage: React.FC = () => {
 
   const handleBack = () => {
     if (step === 'details') {
-      setStep('basic');
+      setStep('name');
+      return;
+    }
+    if (step === 'name') {
+      setStep('email');
       return;
     }
     
@@ -338,9 +360,9 @@ const ClientAdminSignupPage: React.FC = () => {
               overflow: 'hidden',
             }}
           >
-            {/* Step 1: Basic Information */}
-            {step === 'basic' && (
-              <Box component="form" onSubmit={handleContinue} noValidate>
+            {/* Step 1: Email */}
+            {step === 'email' && (
+              <Box component="form" onSubmit={handleEmailContinue} noValidate>
                 <Box mb={4}>
                   <Typography
                     variant="h4"
@@ -406,111 +428,200 @@ const ClientAdminSignupPage: React.FC = () => {
                   />
                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="First Name"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    error={!!errors.firstName}
-                    helperText={errors.firstName}
-                    required
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
                     disabled={isLoading}
-                  />
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    Next
+                  </Button>
+                </Box>
+              </Box>
+            )}
 
-                  <TextField
-                    fullWidth
-                    label="Last Name"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    error={!!errors.lastName}
-                    helperText={errors.lastName}
-                    required
+            {/* Step 2: Name & Contact */}
+            {step === 'name' && (
+              <Box component="form" onSubmit={handleNameContinue} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    What's your name?
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    We'd love to know who we're working with
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
+                  <Box>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      First Name
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="John"
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      error={!!errors.firstName}
+                      helperText={errors.firstName}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Last Name
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="Smith"
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      error={!!errors.lastName}
+                      helperText={errors.lastName}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Mobile Number
+                  </Typography>
+                  <PhoneInput
+                    countryCode={formData.mobileCountryCode}
+                    phoneNumber={formData.mobileNumber}
+                    onCountryCodeChange={(value) => handleInputChange('mobileCountryCode', value)}
+                    onPhoneNumberChange={(value) => handleInputChange('mobileNumber', value)}
+                    error={errors.mobileNumber}
                     disabled={isLoading}
                   />
                 </Box>
 
-                <TextField
-                  fullWidth
-                  label="Company Name"
-                  value={formData.companyName}
-                  onChange={(e) => handleInputChange('companyName', e.target.value)}
-                  error={!!errors.companyName}
-                  helperText={errors.companyName}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                />
-
-                <TextField
-                  fullWidth
-                  label="Organization Slug"
-                  value={formData.slug}
-                  onChange={(e) => handleInputChange('slug', e.target.value)}
-                  error={!!errors.slug}
-                  helperText={errors.slug || 'URL-friendly identifier (auto-generated from company name)'}
-                  margin="normal"
-                  disabled={isLoading}
-                />
-
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  error={!!errors.password}
-                  helperText={errors.password}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{
-                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                          }}
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <PasswordRequirements password={formData.password} />
-
-                <TextField
-                  fullWidth
-                  label="Confirm Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{
-                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                          }}
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Phone Number{' '}
+                    <Typography component="span" sx={{ color: '#9CA3AF', fontWeight: 400 }}>
+                      (optional)
+                    </Typography>
+                  </Typography>
+                  <PhoneInput
+                    countryCode={formData.phoneCountryCode}
+                    phoneNumber={formData.phoneNumber}
+                    onCountryCodeChange={(value) => handleInputChange('phoneCountryCode', value)}
+                    onPhoneNumberChange={(value) => handleInputChange('phoneNumber', value)}
+                    disabled={isLoading}
+                  />
+                </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                   <Button
@@ -560,13 +671,13 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
+                    Next
                   </Button>
                 </Box>
               </Box>
             )}
 
-            {/* Step 2: Company Details */}
+            {/* Step 3: Company Details */}
             {step === 'details' && (
               <Box component="form" onSubmit={handleSubmit} noValidate>
                 <Box textAlign="center" mb={4}>
