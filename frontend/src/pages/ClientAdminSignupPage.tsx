@@ -29,6 +29,7 @@ import { clientAdminSignup, analyzeWebsite } from '../services/authService';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
+import RolesMultiSelect from '../components/RolesMultiSelect';
 
 const COMPANY_SIZES = [
   '1-20 employees',
@@ -52,69 +53,6 @@ const INDUSTRIES = [
   'Media & Entertainment',
   'Other',
 ];
-
-const ROLES_BY_CATEGORY: Record<string, string[]> = {
-  'Technology': [
-    'Software Developer',
-    'Frontend Developer',
-    'Backend Developer',
-    'Full Stack Developer',
-    'DevOps Engineer',
-    'Data Engineer',
-    'Data Scientist',
-    'QA Engineer',
-    'UI/UX Designer',
-    'Product Manager',
-    'Technical Lead',
-    'IT Support',
-  ],
-  'Business & Operations': [
-    'Project Manager',
-    'Business Analyst',
-    'Operations Manager',
-    'Executive Assistant',
-    'Office Manager',
-    'Procurement Specialist',
-  ],
-  'Finance & Accounting': [
-    'Accountant',
-    'Financial Analyst',
-    'Bookkeeper',
-    'Payroll Specialist',
-    'Tax Specialist',
-    'CFO',
-  ],
-  'Sales & Marketing': [
-    'Sales Representative',
-    'Account Executive',
-    'Marketing Manager',
-    'Digital Marketing Specialist',
-    'Content Writer',
-    'SEO Specialist',
-    'Social Media Manager',
-    'Growth Hacker',
-  ],
-  'Customer Service': [
-    'Customer Support Representative',
-    'Customer Success Manager',
-    'Technical Support',
-    'Help Desk Specialist',
-  ],
-  'Human Resources': [
-    'HR Manager',
-    'Recruiter',
-    'Talent Acquisition Specialist',
-    'HR Coordinator',
-    'Training Specialist',
-  ],
-  'Other': [
-    'Legal Counsel',
-    'Graphic Designer',
-    'Video Editor',
-    'Virtual Assistant',
-    'Other',
-  ],
-};
 
 const sparkle = keyframes`
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -152,6 +90,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [editSection, setEditSection] = useState<string | null>(null);
+  const [originalSectionData, setOriginalSectionData] = useState<Record<string, unknown> | null>(null);
   const websiteInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     email: emailParam,
@@ -451,7 +390,65 @@ const ClientAdminSignupPage: React.FC = () => {
     );
   };
 
+  const extractSectionSnapshot = (section: string): Record<string, unknown> => {
+    switch (section) {
+      case 'contact':
+        return {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          mobileCountryCode: formData.mobileCountryCode,
+          mobileNumber: formData.mobileNumber,
+          phoneCountryCode: formData.phoneCountryCode,
+          phoneNumber: formData.phoneNumber,
+        };
+      case 'company':
+        return {
+          companyName: formData.companyName,
+          country: formData.country,
+        };
+      case 'business':
+        return {
+          businessDescription: formData.businessDescription,
+          industry: formData.industry,
+          companySize: selectedCompanySize,
+        };
+      case 'hiring':
+        return {
+          selectedRoles: [...selectedRoles],
+          howCanWeHelp: formData.howCanWeHelp,
+        };
+      default:
+        return {};
+    }
+  };
+
+  const arraysEqual = (a: string[], b: string[]): boolean => {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((val, idx) => val === sortedB[idx]);
+  };
+
+  const hasSectionChanged = (): boolean => {
+    if (!originalSectionData || !editSection) return false;
+    const current = extractSectionSnapshot(editSection);
+    
+    for (const key of Object.keys(originalSectionData)) {
+      const origVal = originalSectionData[key];
+      const currVal = current[key];
+      
+      if (Array.isArray(origVal) && Array.isArray(currVal)) {
+        if (!arraysEqual(origVal as string[], currVal as string[])) return true;
+      } else if (origVal !== currVal) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const handleEditSection = (section: string) => {
+    const snapshot = extractSectionSnapshot(section);
+    setOriginalSectionData(snapshot);
     setEditMode(true);
     setEditSection(section);
     switch (section) {
@@ -470,10 +467,18 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setEditSection(null);
+    setOriginalSectionData(null);
+    setStep('review');
+  };
+
   const handleUpdateSection = (e: React.FormEvent) => {
     e.preventDefault();
     setEditMode(false);
     setEditSection(null);
+    setOriginalSectionData(null);
     setStep('review');
   };
 
@@ -829,33 +834,58 @@ const ClientAdminSignupPage: React.FC = () => {
                       Back
                     </Button>
                   )}
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isLoading}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      bgcolor: '#9333EA',
-                      boxShadow: 'none',
-                      '&:hover': {
-                        bgcolor: '#A855F7',
-                      },
-                      '&:active': {
-                        bgcolor: '#7E22CE',
-                      },
-                      '&:disabled': {
-                        bgcolor: 'rgba(147, 51, 234, 0.5)',
-                        color: 'white',
-                      },
-                    }}
-                  >
-                    {editMode ? 'Update' : 'Next'}
-                  </Button>
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {editMode ? 'Update' : 'Next'}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             )}
@@ -964,33 +994,58 @@ const ClientAdminSignupPage: React.FC = () => {
                       Back
                     </Button>
                   )}
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isLoading}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      bgcolor: '#9333EA',
-                      boxShadow: 'none',
-                      '&:hover': {
-                        bgcolor: '#A855F7',
-                      },
-                      '&:active': {
-                        bgcolor: '#7E22CE',
-                      },
-                      '&:disabled': {
-                        bgcolor: 'rgba(147, 51, 234, 0.5)',
-                        color: 'white',
-                      },
-                    }}
-                  >
-                    {editMode ? 'Update' : 'Next'}
-                  </Button>
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {editMode ? 'Update' : 'Next'}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             )}
@@ -1332,33 +1387,58 @@ const ClientAdminSignupPage: React.FC = () => {
                       Back
                     </Button>
                   )}
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isLoading}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      bgcolor: '#9333EA',
-                      boxShadow: 'none',
-                      '&:hover': {
-                        bgcolor: '#A855F7',
-                      },
-                      '&:active': {
-                        bgcolor: '#7E22CE',
-                      },
-                      '&:disabled': {
-                        bgcolor: 'rgba(147, 51, 234, 0.5)',
-                        color: 'white',
-                      },
-                    }}
-                  >
-                    {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasBusinessData ? 'Next' : 'Skip'}
-                  </Button>
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasBusinessData ? 'Next' : 'Skip'}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             )}
@@ -1402,57 +1482,11 @@ const ClientAdminSignupPage: React.FC = () => {
                   >
                     What role/s do you need?
                   </Typography>
-                  <Box sx={{ 
-                    maxHeight: 300, 
-                    overflowY: 'auto', 
-                    border: '1px solid #E5E7EB', 
-                    borderRadius: 2, 
-                    bgcolor: 'white',
-                    p: 2,
-                  }}>
-                    {Object.entries(ROLES_BY_CATEGORY).map(([category, roles]) => (
-                      <Box key={category} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
-                        <Typography
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: '0.8rem',
-                            color: '#6b7280',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            mb: 1,
-                          }}
-                        >
-                          {category}
-                        </Typography>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 0.5 }}>
-                          {roles.map((role) => (
-                            <FormControlLabel
-                              key={role}
-                              control={
-                                <Checkbox
-                                  checked={selectedRoles.includes(role)}
-                                  onChange={() => handleRoleToggle(role)}
-                                  disabled={isLoading}
-                                  sx={{
-                                    color: '#D1D5DB',
-                                    '&.Mui-checked': {
-                                      color: '#9333EA',
-                                    },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Typography sx={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
-                                  {role}
-                                </Typography>
-                              }
-                              sx={{ m: 0 }}
-                            />
-                          ))}
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
+                  <RolesMultiSelect
+                    selectedRoles={selectedRoles}
+                    onChange={setSelectedRoles}
+                    disabled={isLoading}
+                  />
                 </Box>
 
                 <Box sx={{ mb: 3 }}>
@@ -1513,33 +1547,58 @@ const ClientAdminSignupPage: React.FC = () => {
                       Back
                     </Button>
                   )}
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={isLoading}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      bgcolor: '#9333EA',
-                      boxShadow: 'none',
-                      '&:hover': {
-                        bgcolor: '#A855F7',
-                      },
-                      '&:active': {
-                        bgcolor: '#7E22CE',
-                      },
-                      '&:disabled': {
-                        bgcolor: 'rgba(147, 51, 234, 0.5)',
-                        color: 'white',
-                      },
-                    }}
-                  >
-                    {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasHiringData ? 'Next' : 'Skip'}
-                  </Button>
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasHiringData ? 'Next' : 'Skip'}
+                    </Button>
+                  )}
                 </Box>
               </Box>
             )}
