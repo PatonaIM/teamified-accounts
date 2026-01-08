@@ -229,11 +229,14 @@ const LoginPageMUI: React.FC = () => {
       });
 
       const data = await response.json();
+      console.log('[LoginPageMUI] Check email response:', data);
       
       if (data.valid) {
+        console.log('[LoginPageMUI] Email exists, proceeding to password step');
         setStep('password');
         setIsNewUser(false);
       } else {
+        console.log('[LoginPageMUI] Email not found, showing new user message');
         // Build signup URL with email, returnUrl, and intent (if present)
         const signupParams = new URLSearchParams();
         signupParams.set('email', formData.email);
@@ -746,43 +749,45 @@ const LoginPageMUI: React.FC = () => {
               )}
 
               {!isNewUser && (
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  disabled={isLoading}
-                  sx={{
-                    borderRadius: 2,
-                    py: 1.5,
-                    mb: 3,
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    bgcolor: '#9333EA',
-                    boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor: '#A855F7',
-                    },
-                    '&:active': {
-                      bgcolor: '#7E22CE',
-                    },
-                    '&:disabled': {
-                      bgcolor: 'rgba(147, 51, 234, 0.5)',
-                      color: 'white',
-                    },
-                  }}
-                >
-                  {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
-                </Button>
+                <>
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      borderRadius: 2,
+                      py: 1.5,
+                      mb: 3,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
+                  </Button>
+
+                  <Divider sx={{ my: 3, borderColor: '#E5E7EB' }}>
+                    <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
+                      or
+                    </Typography>
+                  </Divider>
+
+                  <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
+                </>
               )}
-
-              <Divider sx={{ my: 3, borderColor: '#E5E7EB' }}>
-                <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
-                  or
-                </Typography>
-              </Divider>
-
-              <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
 
               <Box sx={{ textAlign: 'center', mt: 4 }}>
                 <Typography
