@@ -721,7 +721,7 @@ const LoginPageMUI: React.FC = () => {
                       mb: 2,
                     }}
                   >
-                    This email isn't registered yet. Click create an account to get started.
+                    This email isn't registered yet. Click on "Create New Account" to get started.
                   </Typography>
                   <Button
                     onClick={() => navigate(signupUrl)}
@@ -743,7 +743,7 @@ const LoginPageMUI: React.FC = () => {
                       },
                     }}
                   >
-                    Create Account
+                    Create New Account
                   </Button>
                 </Box>
               )}
