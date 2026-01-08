@@ -20,6 +20,7 @@ import InvitationPreviewPage from './pages/InvitationPreviewPage';
 import OrganizationInvitationAcceptPage from './pages/OrganizationInvitationAcceptPage';
 import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitationManagementPage';
 import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
+import TestLogoutCallback from './pages/test/TestLogoutCallback';
 import PortalRedirectPage from './pages/PortalRedirectPage';
 import DocsLayout from './components/docs/DocsLayout';
 import OverviewPage from './pages/docs/product/OverviewPage';
@@ -455,6 +456,7 @@ function App() {
                   />
                 </Route>
                 <Route path="/test" element={<IntegratedTestSuite />} />
+                <Route path="/test/logout-callback" element={<TestLogoutCallback />} />
                 <Route path="/portal-redirect" element={<PortalRedirectPage />} />
                 
                 {/* Documentation with sidebar layout */}

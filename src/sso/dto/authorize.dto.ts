@@ -28,4 +28,12 @@ export class AuthorizeDto {
   @IsEnum(['client', 'candidate', 'both'])
   @IsOptional()
   intent?: 'client' | 'candidate' | 'both';
+
+  @IsString()
+  @IsOptional()
+  scope?: string;
+
+  @IsEnum(['none', 'login', 'consent', 'select_account'])
+  @IsOptional()
+  prompt?: 'none' | 'login' | 'consent' | 'select_account';
 }

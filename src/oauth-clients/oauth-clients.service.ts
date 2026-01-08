@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
-import { OAuthClient, RedirectUri, EnvironmentType } from './entities/oauth-client.entity';
+import { OAuthClient, RedirectUri, LogoutUri, EnvironmentType } from './entities/oauth-client.entity';
 import { CreateOAuthClientDto } from './dto/create-oauth-client.dto';
 import { UpdateOAuthClientDto } from './dto/update-oauth-client.dto';
 import { getUriStrings, getUrisByEnvironment, validateRedirectUri as validateUri } from './oauth-client.utils';
@@ -9,6 +9,16 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class OAuthClientsService {
+  private readonly logger = new Logger(OAuthClientsService.name);
+  
+  private readonly allowedLogoutUriDomains = [
+    'teamified.com',
+    'teamified.au',
+    'replit.app',
+    'replit.dev',
+    'localhost',
+  ];
+
   constructor(
     @InjectRepository(OAuthClient)
     private readonly oauthClientsRepository: Repository<OAuthClient>,
@@ -22,10 +32,104 @@ export class OAuthClientsService {
     return crypto.randomBytes(32).toString('hex');
   }
 
+  /**
+   * Validate a single logout URI for security
+   * SECURITY: Ensures logout_uri is HTTPS-only (except localhost) and from approved domains
+   * This prevents iframe injection attacks during front-channel logout
+   */
+  private validateSingleLogoutUri(logoutUri: string): void {
+    try {
+      const url = new URL(logoutUri);
+      
+      // Must be HTTPS (except localhost for development)
+      const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      if (!isLocalhost && url.protocol !== 'https:') {
+        throw new BadRequestException('logout_uri must use HTTPS protocol');
+      }
+      
+      // Check if domain is in allowlist (or subdomain thereof)
+      const hostname = url.hostname.toLowerCase();
+      const isAllowed = this.allowedLogoutUriDomains.some(domain => {
+        if (domain === 'localhost') {
+          return hostname === 'localhost' || hostname === '127.0.0.1';
+        }
+        return hostname === domain || hostname.endsWith(`.${domain}`);
+      });
+      
+      if (!isAllowed) {
+        throw new BadRequestException(
+          `logout_uri domain not in approved list. Allowed: ${this.allowedLogoutUriDomains.join(', ')}`,
+        );
+      }
+      
+      // Path must start with / (no relative URLs)
+      if (!url.pathname.startsWith('/')) {
+        throw new BadRequestException('logout_uri path must start with /');
+      }
+      
+      this.logger.log(`Validated logout_uri: ${logoutUri}`);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(`Invalid logout_uri format: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validate and filter logout_uris array
+   * SECURITY: Validates each URI and returns only valid ones
+   */
+  validateLogoutUris(logoutUris: LogoutUri[] | undefined | null): LogoutUri[] {
+    if (!logoutUris || !Array.isArray(logoutUris)) {
+      return [];
+    }
+
+    const validUris: LogoutUri[] = [];
+    for (const uriObj of logoutUris) {
+      if (uriObj && typeof uriObj === 'object' && typeof uriObj.uri === 'string' && uriObj.uri.trim() !== '') {
+        this.validateSingleLogoutUri(uriObj.uri);
+        validUris.push({
+          uri: uriObj.uri,
+          environment: uriObj.environment || 'development',
+        });
+      }
+    }
+    return validUris;
+  }
+
+  /**
+   * Check if a logout_uri is valid at runtime (for filtering during logout)
+   * Returns true if valid, false if not (non-throwing version for filtering)
+   */
+  isValidLogoutUri(logoutUri: string): boolean {
+    try {
+      const url = new URL(logoutUri);
+      const isLocalhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      
+      if (!isLocalhost && url.protocol !== 'https:') {
+        return false;
+      }
+      
+      const hostname = url.hostname.toLowerCase();
+      return this.allowedLogoutUriDomains.some(domain => {
+        if (domain === 'localhost') {
+          return hostname === 'localhost' || hostname === '127.0.0.1';
+        }
+        return hostname === domain || hostname.endsWith(`.${domain}`);
+      });
+    } catch {
+      return false;
+    }
+  }
+
   async create(
     createDto: CreateOAuthClientDto,
     createdBy: string,
   ): Promise<OAuthClient> {
+    // Validate logout_uris before saving (SECURITY: prevents iframe injection)
+    const validatedLogoutUris = this.validateLogoutUris(createDto.logout_uris);
+    
     const client = this.oauthClientsRepository.create({
       name: createDto.name,
       description: createDto.description,
@@ -38,6 +142,7 @@ export class OAuthClientsService {
         owner: createDto.owner,
       },
       created_by: createdBy,
+      logout_uris: validatedLogoutUris,
     });
 
     return this.oauthClientsRepository.save(client);
@@ -146,6 +251,10 @@ export class OAuthClientsService {
     }
     if (updateDto.allowed_scopes !== undefined) {
       client.allowed_scopes = updateDto.allowed_scopes;
+    }
+    if (updateDto.logout_uris !== undefined) {
+      // Validate logout_uris before saving (SECURITY: prevents iframe injection)
+      client.logout_uris = this.validateLogoutUris(updateDto.logout_uris);
     }
 
     return this.oauthClientsRepository.save(client);

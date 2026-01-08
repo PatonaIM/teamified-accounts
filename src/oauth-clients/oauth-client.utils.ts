@@ -87,3 +87,39 @@ export function validateRedirectUri(client: OAuthClient, redirectUri: string): b
   const uriStrings = getUriStrings(client);
   return uriStrings.includes(redirectUri);
 }
+
+export function findEnvironmentForUri(client: OAuthClient, redirectUri: string): EnvironmentType | null {
+  if (!client.redirect_uris || !Array.isArray(client.redirect_uris)) {
+    return null;
+  }
+  
+  for (const entry of client.redirect_uris) {
+    const extracted = extractUriWithEnvironment(entry);
+    if (extracted && extracted.uri === redirectUri) {
+      return extracted.environment;
+    }
+  }
+  
+  return null;
+}
+
+export function getLogoutUrisByEnvironment(
+  client: OAuthClient, 
+  environment: EnvironmentType | null
+): string[] {
+  if (!client.logout_uris || !Array.isArray(client.logout_uris)) {
+    return [];
+  }
+  
+  return client.logout_uris
+    .filter((logoutUri: any) => {
+      if (!logoutUri || !logoutUri.uri || logoutUri.uri.trim() === '') {
+        return false;
+      }
+      if (environment === null) {
+        return true;
+      }
+      return logoutUri.environment === null || logoutUri.environment === environment;
+    })
+    .map((logoutUri: any) => logoutUri.uri);
+}

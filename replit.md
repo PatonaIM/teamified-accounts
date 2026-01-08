@@ -22,7 +22,7 @@ The backend is built with NestJS (TypeScript), featuring a modular design, JWT-b
 
 *   **Authentication & Authorization:** OAuth 2.0 + PKCE, JWT-based authentication with refresh tokens, RBAC, and S2S authentication using OAuth 2.0 Client Credentials Grant.
 *   **User Management:** Unified profile management, universal email verification, multi-identity SSO (linking personal and work emails), and employer-driven work email provisioning.
-*   **SSO & Session Management:** Cross-app SSO with shared httpOnly cookies, global SSO logout, session persistence, and role-based login redirects.
+*   **SSO & Session Management:** Cross-app SSO with shared httpOnly cookies, global SSO logout with front-channel logout (SLO), session persistence, and role-based login redirects. Single Sign-Out propagates logout across all connected apps via iframe fan-out.
 *   **Integrations:** Direct Google OAuth integration with intent-aware role selection, API Key Management, and environment-tagged redirect URIs for OAuth clients.
 *   **Modules:** Hiring Module (Job Request, Interview, Talent Pool), Salary History Module, Client Management Module, and a redesigned Analytics Dashboard with card-based report selection.
 *   **Documentation:** Sidebar-based documentation portal with Product Guide, Developer Guide, and Release Notes sections.

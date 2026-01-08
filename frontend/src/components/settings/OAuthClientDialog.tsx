@@ -24,9 +24,10 @@ import {
   FormControlLabel,
   Checkbox,
   FormGroup,
+  Collapse,
 } from '@mui/material';
-import { Add, Delete, ContentCopy, Edit, Check, Close, Api } from '@mui/icons-material';
-import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
+import { Add, Delete, ContentCopy, Edit, Check, Close, Api, Logout, ExpandMore, ExpandLess, Link } from '@mui/icons-material';
+import { oauthClientsService, type OAuthClient, type CreateOAuthClientDto, type RedirectUri, type LogoutUri, type EnvironmentType, AVAILABLE_SCOPES } from '../../services/oauthClientsService';
 import { useSnackbar } from '../../contexts/SnackbarContext';
 
 interface Props {
@@ -59,6 +60,14 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const [environmentFilter, setEnvironmentFilter] = useState<EnvironmentType | null>(null);
   const [allowClientCredentials, setAllowClientCredentials] = useState(false);
   const [allowedScopes, setAllowedScopes] = useState<string[]>([]);
+  const [logoutUris, setLogoutUris] = useState<LogoutUri[]>([]);
+  const [newLogoutUriInput, setNewLogoutUriInput] = useState('');
+  const [newLogoutUriEnvironment, setNewLogoutUriEnvironment] = useState<EnvironmentType>('development');
+  const [logoutUriEnvironmentFilter, setLogoutUriEnvironmentFilter] = useState<EnvironmentType | null>(null);
+  const [editingLogoutUriIndex, setEditingLogoutUriIndex] = useState<number | null>(null);
+  const [editingLogoutUriValue, setEditingLogoutUriValue] = useState('');
+  const [logoutUrisExpanded, setLogoutUrisExpanded] = useState(false);
+  const [redirectUrisExpanded, setRedirectUrisExpanded] = useState(false);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -83,6 +92,20 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       setOriginalRedirectUris([...validUris]);
       setAllowClientCredentials(client.allow_client_credentials || false);
       setAllowedScopes(client.allowed_scopes || []);
+      const rawLogoutUris = Array.isArray(client.logout_uris) ? client.logout_uris : [];
+      const validLogoutUris: LogoutUri[] = rawLogoutUris
+        .filter((uri): uri is LogoutUri => 
+          uri !== null && 
+          typeof uri === 'object' && 
+          !Array.isArray(uri) &&
+          typeof uri.uri === 'string' && 
+          uri.uri.trim() !== ''
+        )
+        .map(uri => ({
+          uri: uri.uri,
+          environment: uri.environment || 'development',
+        }));
+      setLogoutUris(validLogoutUris);
     } else {
       resetForm();
     }
@@ -100,10 +123,20 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     setEnvironmentFilter(null);
     setAllowClientCredentials(false);
     setAllowedScopes([]);
+    setLogoutUris([]);
+    setNewLogoutUriInput('');
+    setNewLogoutUriEnvironment('development');
+    setLogoutUriEnvironmentFilter(null);
+    setEditingLogoutUriIndex(null);
+    setEditingLogoutUriValue('');
   };
 
   const toggleEnvironmentFilter = (env: EnvironmentType) => {
     setEnvironmentFilter(environmentFilter === env ? null : env);
+  };
+
+  const toggleLogoutUriEnvironmentFilter = (env: EnvironmentType) => {
+    setLogoutUriEnvironmentFilter(logoutUriEnvironmentFilter === env ? null : env);
   };
 
   const environmentOrder: Record<EnvironmentType, number> = {
@@ -115,6 +148,11 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
   const filteredRedirectUris = redirectUris
     .map((uri, index) => ({ uri, originalIndex: index }))
     .filter(item => !environmentFilter || item.uri.environment === environmentFilter)
+    .sort((a, b) => environmentOrder[a.uri.environment] - environmentOrder[b.uri.environment]);
+
+  const filteredLogoutUris = logoutUris
+    .map((uri, index) => ({ uri, originalIndex: index }))
+    .filter(item => !logoutUriEnvironmentFilter || item.uri.environment === logoutUriEnvironmentFilter)
     .sort((a, b) => environmentOrder[a.uri.environment] - environmentOrder[b.uri.environment]);
 
   const isUriModified = (uri: RedirectUri, index: number): boolean => {
@@ -173,6 +211,53 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
     }
   };
 
+  const handleAddLogoutUri = () => {
+    if (newLogoutUriInput.trim()) {
+      const isReplitApp = newLogoutUriInput.includes('.replit.app');
+      setLogoutUris([...logoutUris, { 
+        uri: newLogoutUriInput.trim(), 
+        environment: isReplitApp ? 'production' : newLogoutUriEnvironment 
+      }]);
+      setNewLogoutUriInput('');
+      setNewLogoutUriEnvironment('development');
+    }
+  };
+
+  const handleRemoveLogoutUri = (index: number) => {
+    setLogoutUris(logoutUris.filter((_, i) => i !== index));
+  };
+
+  const handleLogoutUriChange = (index: number, value: string) => {
+    const newUris = [...logoutUris];
+    const currentUri = newUris[index];
+    const currentEnv = (currentUri && typeof currentUri === 'object' && !Array.isArray(currentUri)) 
+      ? currentUri.environment || 'development' 
+      : 'development';
+    newUris[index] = { uri: value, environment: currentEnv };
+    setLogoutUris(newUris);
+  };
+
+  const handleLogoutUriEnvironmentChange = (index: number, environment: EnvironmentType) => {
+    const newUris = [...logoutUris];
+    const currentUri = newUris[index];
+    if (currentUri && typeof currentUri === 'object' && !Array.isArray(currentUri) && typeof currentUri.uri === 'string') {
+      newUris[index] = { uri: currentUri.uri, environment };
+      setLogoutUris(newUris);
+    }
+  };
+
+  const getLogoutUriEnvironmentCounts = () => {
+    const counts = { development: 0, staging: 0, production: 0 };
+    logoutUris.forEach(uri => {
+      if (uri.environment) {
+        counts[uri.environment]++;
+      }
+    });
+    return counts;
+  };
+
+  const logoutUriEnvCounts = getLogoutUriEnvironmentCounts();
+
   const handleSubmit = async () => {
     console.log('[OAuthClientDialog] redirectUris state:', JSON.stringify(redirectUris));
     
@@ -196,6 +281,19 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       return;
     }
 
+    const filteredLogoutUrisList = logoutUris
+      .filter((uri): uri is LogoutUri => 
+        uri !== null && 
+        typeof uri === 'object' && 
+        !Array.isArray(uri) &&
+        typeof uri.uri === 'string' && 
+        uri.uri.trim() !== ''
+      )
+      .map(uri => ({
+        uri: uri.uri,
+        environment: uri.environment || 'development',
+      }));
+
     const data: CreateOAuthClientDto = {
       name,
       description: description || undefined,
@@ -203,6 +301,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       default_intent: defaultIntent,
       allow_client_credentials: allowClientCredentials,
       allowed_scopes: allowClientCredentials ? allowedScopes : [],
+      logout_uris: filteredLogoutUrisList.length > 0 ? filteredLogoutUrisList : undefined,
     };
 
     try {
@@ -399,60 +498,146 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
               <MenuItem value="candidate">Candidate Only</MenuItem>
             </TextField>
 
+            <Divider sx={{ my: 1 }} />
+
             <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2">Redirect URIs</Typography>
-                <Stack direction="row" spacing={0.5}>
-                  <Chip 
-                    label={`${envCounts.production} Prod`} 
-                    size="small"
-                    onClick={() => toggleEnvironmentFilter('production')}
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
-                      color: environmentFilter === 'production' ? 'white' : 'text.secondary',
-                      border: `1px solid ${environmentColors.production}`,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
-                      },
-                    }} 
-                  />
-                  <Chip 
-                    label={`${envCounts.staging} Staging`} 
-                    size="small"
-                    onClick={() => toggleEnvironmentFilter('staging')}
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
-                      color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
-                      border: `1px solid ${environmentColors.staging}`,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
-                      },
-                    }} 
-                  />
-                  <Chip 
-                    label={`${envCounts.development} Dev`} 
-                    size="small"
-                    onClick={() => toggleEnvironmentFilter('development')}
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.65rem',
-                      bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
-                      color: environmentFilter === 'development' ? 'white' : 'text.secondary',
-                      border: `1px solid ${environmentColors.development}`,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
-                      },
-                    }} 
-                  />
-                </Stack>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Api fontSize="small" color="action" />
+                  <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
+                </Box>
+                <Switch
+                  checked={allowClientCredentials}
+                  onChange={(e) => setAllowClientCredentials(e.target.checked)}
+                  color="primary"
+                  size="small"
+                />
               </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: allowClientCredentials ? 2 : 0 }}>
+                Enable this to allow backend systems to authenticate directly using client credentials (without a user session).
+              </Typography>
+
+              {allowClientCredentials && (
+                <Box sx={{ 
+                  p: 2, 
+                  bgcolor: 'action.hover', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Allowed API Scopes</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    Select which API operations this application can perform when using service-to-service authentication.
+                  </Typography>
+                  <FormGroup>
+                    {AVAILABLE_SCOPES.map((scope) => (
+                      <FormControlLabel
+                        key={scope.value}
+                        control={
+                          <Checkbox
+                            checked={allowedScopes.includes(scope.value)}
+                            onChange={() => handleScopeToggle(scope.value)}
+                            size="small"
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2" component="span">{scope.label}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                              {scope.description}
+                            </Typography>
+                          </Box>
+                        }
+                        sx={{ mb: 0.5 }}
+                      />
+                    ))}
+                  </FormGroup>
+                  {allowedScopes.length === 0 && (
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                      Select at least one scope for the application to access APIs.
+                    </Alert>
+                  )}
+                </Box>
+              )}
+            </Box>
+
+            <Divider sx={{ my: 1 }} />
+
+            <Box>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: 0.5,
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.8 },
+                }}
+                onClick={() => setRedirectUrisExpanded(!redirectUrisExpanded)}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Link fontSize="small" color="action" />
+                  <Typography variant="subtitle2">Redirect URIs</Typography>
+                  <Chip 
+                    label={`${redirectUris.length} configured`} 
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.65rem' }}
+                  />
+                </Box>
+                {redirectUrisExpanded ? <ExpandLess /> : <ExpandMore />}
+              </Box>
+              <Stack direction="row" spacing={0.5} sx={{ mb: 1, ml: 3.5 }}>
+                <Chip 
+                  label={`${envCounts.production} Prod`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('production'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: environmentFilter === 'production' ? environmentColors.production : 'transparent',
+                    color: environmentFilter === 'production' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.production}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: environmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${envCounts.staging} Staging`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('staging'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                    color: environmentFilter === 'staging' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.staging}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: environmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${envCounts.development} Dev`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleEnvironmentFilter('development'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: environmentFilter === 'development' ? environmentColors.development : 'transparent',
+                    color: environmentFilter === 'development' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.development}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: environmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                    },
+                  }} 
+                />
+              </Stack>
+              
+              <Collapse in={redirectUrisExpanded}>
               
               <Stack spacing={1}>
                 {filteredRedirectUris.map(({ uri: uriObj, originalIndex }) => (
@@ -667,75 +852,267 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                   Add
                 </Button>
               </Stack>
+              </Collapse>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
+            <Divider sx={{ my: 1 }} />
 
             <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Api fontSize="small" color="action" />
-                <Typography variant="subtitle2">Service-to-Service Authentication</Typography>
-              </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                Enable this to allow backend systems to authenticate directly using client credentials (without a user session).
-              </Typography>
-              
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={allowClientCredentials}
-                    onChange={(e) => setAllowClientCredentials(e.target.checked)}
-                    color="primary"
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  mb: 0.5,
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.8 },
+                }}
+                onClick={() => setLogoutUrisExpanded(!logoutUrisExpanded)}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Logout fontSize="small" color="action" />
+                  <Typography variant="subtitle2">Logout URIs</Typography>
+                  <Chip 
+                    label={`${logoutUris.length} configured`} 
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.65rem' }}
                   />
-                }
-                label={
-                  <Typography variant="body2">Enable Client Credentials Grant</Typography>
-                }
-                sx={{ alignItems: 'flex-start', mb: 2 }}
-              />
-
-              {allowClientCredentials && (
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: 'action.hover', 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>Allowed API Scopes</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-                    Select which API operations this application can perform when using service-to-service authentication.
-                  </Typography>
-                  <FormGroup>
-                    {AVAILABLE_SCOPES.map((scope) => (
-                      <FormControlLabel
-                        key={scope.value}
-                        control={
-                          <Checkbox
-                            checked={allowedScopes.includes(scope.value)}
-                            onChange={() => handleScopeToggle(scope.value)}
-                            size="small"
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body2" component="span">{scope.label}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                              {scope.description}
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ mb: 0.5 }}
-                      />
-                    ))}
-                  </FormGroup>
-                  {allowedScopes.length === 0 && (
-                    <Alert severity="warning" sx={{ mt: 2 }}>
-                      Select at least one scope for the application to access APIs.
-                    </Alert>
-                  )}
                 </Box>
-              )}
+                {logoutUrisExpanded ? <ExpandLess /> : <ExpandMore />}
+              </Box>
+              <Stack direction="row" spacing={0.5} sx={{ mb: 1, ml: 3.5 }}>
+                <Chip 
+                  label={`${logoutUriEnvCounts.production} Prod`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('production'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'transparent',
+                    color: logoutUriEnvironmentFilter === 'production' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.production}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: logoutUriEnvironmentFilter === 'production' ? environmentColors.production : 'rgba(244, 67, 54, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${logoutUriEnvCounts.staging} Staging`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('staging'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'transparent',
+                    color: logoutUriEnvironmentFilter === 'staging' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.staging}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: logoutUriEnvironmentFilter === 'staging' ? environmentColors.staging : 'rgba(255, 152, 0, 0.1)',
+                    },
+                  }} 
+                />
+                <Chip 
+                  label={`${logoutUriEnvCounts.development} Dev`} 
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); toggleLogoutUriEnvironmentFilter('development'); }}
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.65rem',
+                    bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'transparent',
+                    color: logoutUriEnvironmentFilter === 'development' ? 'white' : 'text.secondary',
+                    border: `1px solid ${environmentColors.development}`,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: logoutUriEnvironmentFilter === 'development' ? environmentColors.development : 'rgba(33, 150, 243, 0.1)',
+                    },
+                  }} 
+                />
+              </Stack>
+              
+              <Collapse in={logoutUrisExpanded}>
+              <Stack spacing={1}>
+                {filteredLogoutUris.map(({ uri: uriObj, originalIndex }) => (
+                  <Box
+                    key={originalIndex}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      p: 1.5,
+                      bgcolor: 'action.hover',
+                      borderRadius: 1,
+                      border: '1px solid transparent',
+                    }}
+                  >
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <Select
+                        value={uriObj.environment}
+                        onChange={(e) => handleLogoutUriEnvironmentChange(originalIndex, e.target.value as EnvironmentType)}
+                        sx={{
+                          '& .MuiSelect-select': {
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                          },
+                          bgcolor: environmentColors[uriObj.environment],
+                          color: 'white',
+                          '& .MuiSvgIcon-root': { color: 'white' },
+                        }}
+                      >
+                        <MenuItem value="development">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.development }} />
+                            Dev
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="staging">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.staging }} />
+                            Staging
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="production">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.production }} />
+                            Prod
+                          </Box>
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+                    {editingLogoutUriIndex === originalIndex ? (
+                      <TextField
+                        value={editingLogoutUriValue}
+                        onChange={(e) => setEditingLogoutUriValue(e.target.value)}
+                        size="small"
+                        fullWidth
+                        autoFocus
+                        placeholder="https://app.teamified.com/auth/logout/callback"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            handleLogoutUriChange(originalIndex, editingLogoutUriValue);
+                            setEditingLogoutUriIndex(null);
+                            setEditingLogoutUriValue('');
+                          }
+                        }}
+                        sx={{
+                          flex: 1,
+                          '& .MuiInputBase-input': {
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                          },
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          flex: 1,
+                          fontFamily: 'monospace',
+                          fontSize: '0.875rem',
+                          wordBreak: 'break-all',
+                          color: uriObj.uri ? 'text.primary' : 'text.disabled',
+                        }}
+                      >
+                        {uriObj.uri || 'Empty URI - click edit to add'}
+                      </Typography>
+                    )}
+                    {editingLogoutUriIndex === originalIndex ? (
+                      <Tooltip title="Save">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            handleLogoutUriChange(originalIndex, editingLogoutUriValue);
+                            setEditingLogoutUriIndex(null);
+                            setEditingLogoutUriValue('');
+                          }}
+                          color="success"
+                        >
+                          <Check fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            setEditingLogoutUriIndex(originalIndex);
+                            setEditingLogoutUriValue(uriObj.uri);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Delete">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveLogoutUri(originalIndex)}
+                        color="error"
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                ))}
+              </Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <Select
+                    value={newLogoutUriEnvironment}
+                    onChange={(e) => setNewLogoutUriEnvironment(e.target.value as EnvironmentType)}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        py: 1,
+                        fontSize: '0.75rem',
+                      },
+                    }}
+                  >
+                    <MenuItem value="development">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.development }} />
+                        Dev
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="staging">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.staging }} />
+                        Staging
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="production">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: environmentColors.production }} />
+                        Prod
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  placeholder="https://app.teamified.com/auth/logout/callback"
+                  value={newLogoutUriInput}
+                  onChange={(e) => setNewLogoutUriInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddLogoutUri()}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={handleAddLogoutUri}
+                  disabled={!newLogoutUriInput.trim()}
+                  startIcon={<Add />}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  Add
+                </Button>
+              </Stack>
+              </Collapse>
             </Box>
           </Box>
         )}

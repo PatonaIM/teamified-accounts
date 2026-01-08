@@ -339,19 +339,103 @@ function App() {
 
 4. **Configure CORS correctly** - The Portal already allows all origins, but ensure your app sends the correct headers
 
-### Logout Behavior
+### Single Sign-Out (SLO) with Front-Channel Logout
 
-When a user logs out from any Teamified app, the shared cookie is cleared across all subdomains:
+When a user logs out from any Teamified app, **all connected apps are notified and logged out automatically**. This is achieved through front-channel logout:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Single Sign-Out Flow                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. User logs out from ATS                                          │
+│     └── ATS redirects to /api/v1/sso/logout                        │
+│                                                                      │
+│  2. Teamified Accounts:                                             │
+│     └── Revokes all sessions, clears cookies                       │
+│     └── Renders page with hidden iframes for each client app       │
+│                                                                      │
+│  3. Each client's logout_uri is called via iframe                  │
+│     └── https://hris.teamified.com/auth/logout/callback            │
+│     └── https://ats.teamified.com/auth/logout/callback             │
+│     └── https://jobs.teamified.com/auth/logout/callback            │
+│                                                                      │
+│  4. All apps clear their local tokens                               │
+│                                                                      │
+│  5. User is redirected to final destination                         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Implementing Logout in Your App
+
+**Step 1: Initiate logout by redirecting to SSO (not just clearing local tokens)**
 
 ```typescript
-// The logout endpoint clears the shared cookie
-await fetch(`${PORTAL_URL}/api/v1/auth/logout`, {
-  method: 'POST',
-  credentials: 'include',
-});
-
-// User is now logged out of ALL Teamified apps
+function logout() {
+  // Clear local tokens FIRST
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  sessionStorage.clear();
+  
+  // Redirect to central SSO logout (triggers front-channel logout to all apps)
+  const logoutUrl = new URL(`${PORTAL_URL}/api/v1/sso/logout`);
+  logoutUrl.searchParams.set('post_logout_redirect_uri', window.location.origin);
+  logoutUrl.searchParams.set('client_id', YOUR_CLIENT_ID);
+  
+  window.location.href = logoutUrl.toString();
+}
 ```
+
+**Step 2: Register a logout_uri for your OAuth client**
+
+Update your OAuth client configuration to include a `logout_uri`. This is the endpoint that will be called (via hidden iframe) when any other app initiates logout:
+
+```typescript
+// Example: Update via API (admin only)
+await fetch(`${PORTAL_URL}/api/v1/oauth-clients/${clientId}`, {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${adminToken}`,
+  },
+  body: JSON.stringify({
+    logout_uri: 'https://yourapp.teamified.com/auth/logout/callback',
+  }),
+});
+```
+
+**Step 3: Implement the logout callback endpoint**
+
+Create a simple page/endpoint that clears local tokens when loaded:
+
+```typescript
+// React example - src/pages/LogoutCallback.tsx
+import { useEffect } from 'react';
+
+export function LogoutCallback() {
+  useEffect(() => {
+    // Clear ALL local tokens
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+    
+    console.log('[SSO] Front-channel logout received - local session cleared');
+  }, []);
+
+  return <div>Logged out</div>;
+}
+
+// Route: /auth/logout/callback
+```
+
+#### Important Notes
+
+- The front-channel logout page shows a "Signing out..." spinner for up to 3 seconds while iframes load
+- If an app's logout_uri fails to load, the flow continues after the timeout
+- Apps should also check `/api/v1/sso/session` on page load as a safety net
+- The `globalLogoutAt` timestamp ensures tokens issued before logout are rejected
 
 ### Migration Guide for Existing Apps
 

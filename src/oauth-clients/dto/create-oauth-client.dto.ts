@@ -32,6 +32,30 @@ export class RedirectUriDto {
   }
 }
 
+export class LogoutUriDto {
+  @ApiProperty({
+    description: 'The logout callback URI',
+    example: 'https://app.teamified.com/auth/logout/callback',
+  })
+  @IsString()
+  uri: string;
+
+  @ApiProperty({
+    description: 'Environment for this logout URI',
+    example: 'production',
+    enum: EnvironmentType,
+  })
+  @IsIn(['development', 'staging', 'production'])
+  environment: 'development' | 'staging' | 'production';
+
+  constructor(data?: Partial<LogoutUriDto>) {
+    if (data) {
+      this.uri = data.uri;
+      this.environment = data.environment;
+    }
+  }
+}
+
 export class CreateOAuthClientDto {
   @ApiProperty({
     description: 'Name of the application',
@@ -118,4 +142,27 @@ export class CreateOAuthClientDto {
   @IsString({ each: true })
   @IsOptional()
   allowed_scopes?: string[];
+
+  @ApiProperty({
+    description: 'Logout URIs for front-channel Single Sign-Out with environment tags. When a user logs out from any app, these URIs will be called via iframe to clear the local session.',
+    example: [
+      { uri: 'https://app.teamified.com/auth/logout/callback', environment: 'production' },
+      { uri: 'https://app-dev.repl.co/auth/logout/callback', environment: 'development' },
+    ],
+    required: false,
+  })
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.map((item: any) => {
+        if (item instanceof LogoutUriDto) return item;
+        return new LogoutUriDto(item);
+      });
+    }
+    return value;
+  })
+  @Type(() => LogoutUriDto)
+  logout_uris?: LogoutUriDto[];
 }

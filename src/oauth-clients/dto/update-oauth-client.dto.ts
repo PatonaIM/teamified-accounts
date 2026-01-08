@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateOAuthClientDto, RedirectUriDto } from './create-oauth-client.dto';
-import { IsBoolean, IsOptional, IsArray, ValidateNested, IsString } from 'class-validator';
+import { CreateOAuthClientDto, RedirectUriDto, LogoutUriDto } from './create-oauth-client.dto';
+import { IsBoolean, IsOptional, IsArray, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
@@ -36,4 +36,25 @@ export class UpdateOAuthClientDto extends PartialType(CreateOAuthClientDto) {
   @Type(() => RedirectUriDto)
   redirect_uris?: RedirectUriDto[];
 
+  @ApiProperty({
+    description: 'Logout URIs for front-channel Single Sign-Out with environment tags.',
+    example: [
+      { uri: 'https://app.teamified.com/auth/logout/callback', environment: 'production' },
+    ],
+    required: false,
+  })
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value.map((item: any) => {
+        if (item instanceof LogoutUriDto) return item;
+        return new LogoutUriDto(item);
+      });
+    }
+    return value;
+  })
+  @Type(() => LogoutUriDto)
+  logout_uris?: LogoutUriDto[];
 }

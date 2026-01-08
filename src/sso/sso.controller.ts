@@ -12,6 +12,7 @@ import {
   HttpCode,
   Headers,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
@@ -154,6 +155,28 @@ export class SsoController {
     });
 
     if (!user || !user.sub) {
+      // If prompt=none, return error instead of redirecting to login (silent SSO check)
+      if (authorizeDto.prompt === 'none') {
+        // Validate client and redirect_uri before returning error (prevent open redirect)
+        const client = await this.ssoService.validateClientAndRedirectUri(
+          authorizeDto.client_id,
+          authorizeDto.redirect_uri,
+        );
+        if (!client) {
+          console.log('[SSO] prompt=none: Invalid client_id or redirect_uri');
+          throw new BadRequestException('Invalid client_id or redirect_uri');
+        }
+
+        const errorUrl = new URL(authorizeDto.redirect_uri);
+        errorUrl.searchParams.set('error', 'login_required');
+        errorUrl.searchParams.set('error_description', 'User is not authenticated');
+        if (authorizeDto.state) {
+          errorUrl.searchParams.set('state', authorizeDto.state);
+        }
+        console.log('[SSO] prompt=none but user not authenticated, returning login_required error');
+        return res.redirect(HttpStatus.FOUND, errorUrl.toString());
+      }
+
       // User not authenticated - redirect to login with return URL
       const returnUrl = encodeURIComponent(
         `/api/v1/sso/authorize?${new URLSearchParams(authorizeDto as any).toString()}`
@@ -348,6 +371,9 @@ export class SsoController {
    * Centralized logout endpoint for OAuth 2.0 clients.
    * Clears all user sessions (cookies + database) and optionally redirects back to client.
    * 
+   * Front-channel logout: Renders an HTML page with hidden iframes that call each
+   * registered client's logout_uri to propagate the logout across all connected apps.
+   * 
    * Query Parameters:
    * - post_logout_redirect_uri: (optional) URL to redirect after logout
    * - id_token_hint: (optional) The ID token for user identification
@@ -416,9 +442,43 @@ export class SsoController {
     console.log('[SSO] Logout complete:', {
       userId,
       redirectUrl: result.redirectUrl,
+      frontChannelLogoutCount: result.frontChannelLogoutUris.length,
     });
 
-    // If a valid redirect URL was provided, redirect the user
+    // If there are clients with logout URIs, render the front-channel logout page
+    // This page loads hidden iframes for each client to propagate the logout
+    if (result.frontChannelLogoutUris.length > 0) {
+      const finalRedirectUrl = result.redirectUrl || '/login?logged_out=true';
+      const logoutHtml = this.generateFrontChannelLogoutPage(
+        result.frontChannelLogoutUris,
+        finalRedirectUrl,
+      );
+      
+      // SECURITY: Build CSP frame-src allowlist from validated logout URIs
+      const frameOrigins = result.frontChannelLogoutUris
+        .map(client => {
+          try {
+            return new URL(client.logoutUri).origin;
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+        .join(' ');
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      // CSP: Only allow iframes from validated logout URI origins
+      res.setHeader(
+        'Content-Security-Policy', 
+        `default-src 'self'; frame-src ${frameOrigins}; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'`,
+      );
+      return res.send(logoutHtml);
+    }
+
+    // If no front-channel logout needed and a valid redirect URL was provided, redirect the user
     if (result.redirectUrl) {
       return res.redirect(HttpStatus.FOUND, result.redirectUrl);
     }
@@ -428,6 +488,119 @@ export class SsoController {
       success: true,
       message: result.message,
     });
+  }
+
+  /**
+   * Generate the front-channel logout HTML page
+   * This page renders hidden iframes to each client's logout_uri and redirects after all load
+   */
+  private generateFrontChannelLogoutPage(
+    logoutUris: Array<{ clientId: string; name: string; logoutUri: string }>,
+    finalRedirectUrl: string,
+  ): string {
+    const iframeHtml = logoutUris
+      .map((client, index) => 
+        `<iframe 
+          id="logout-frame-${index}" 
+          src="${this.escapeHtml(client.logoutUri)}" 
+          style="display:none; width:0; height:0; border:0;" 
+          sandbox="allow-scripts allow-same-origin"
+          referrerpolicy="no-referrer"
+          onload="frameLoaded(${index})"
+          onerror="frameLoaded(${index})"
+        ></iframe>`
+      )
+      .join('\n      ');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signing out...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    h2 { margin-bottom: 0.5rem; }
+    p { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h2>Signing out...</h2>
+    <p>Please wait while we sign you out of all applications.</p>
+  </div>
+  
+  <!-- Hidden iframes for front-channel logout -->
+  <div style="display:none;">
+    ${iframeHtml}
+  </div>
+  
+  <script>
+    var totalFrames = ${logoutUris.length};
+    var loadedFrames = 0;
+    var timeoutMs = 3000; // 3 second timeout
+    var redirectUrl = "${this.escapeHtml(finalRedirectUrl)}";
+    
+    function frameLoaded(index) {
+      loadedFrames++;
+      console.log('[SSO Logout] Frame ' + index + ' loaded (' + loadedFrames + '/' + totalFrames + ')');
+      
+      if (loadedFrames >= totalFrames) {
+        console.log('[SSO Logout] All frames loaded, redirecting...');
+        redirect();
+      }
+    }
+    
+    function redirect() {
+      window.location.href = redirectUrl;
+    }
+    
+    // Fallback: redirect after timeout even if some iframes fail
+    setTimeout(function() {
+      console.log('[SSO Logout] Timeout reached, redirecting...');
+      redirect();
+    }, timeoutMs);
+  </script>
+</body>
+</html>`;
+  }
+
+  /**
+   * Escape HTML to prevent XSS in generated logout page
+   */
+  private escapeHtml(unsafe: string): string {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   /**

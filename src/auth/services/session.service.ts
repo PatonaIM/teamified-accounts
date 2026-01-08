@@ -29,6 +29,7 @@ export class SessionService {
     refreshToken: string,
     deviceMetadata: DeviceMetadata,
     existingTokenFamily?: string,
+    environment?: string,
   ): Promise<Session> {
     const tokenFamily = existingTokenFamily || this.jwtService.generateTokenFamily();
     const refreshTokenHash = this.jwtService.hashRefreshToken(refreshToken);
@@ -39,6 +40,7 @@ export class SessionService {
       refreshTokenHash,
       tokenFamily,
       deviceMetadata,
+      environment: environment || null,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       lastActivityAt: now,
     });
@@ -157,5 +159,17 @@ export class SessionService {
       },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async getMostRecentSessionEnvironment(userId: string): Promise<string | null> {
+    const session = await this.sessionRepository.findOne({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      order: { lastActivityAt: 'DESC' },
+    });
+    
+    return session?.environment || null;
   }
 }
