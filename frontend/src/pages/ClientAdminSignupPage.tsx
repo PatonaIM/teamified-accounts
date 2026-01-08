@@ -310,7 +310,10 @@ const ClientAdminSignupPage: React.FC = () => {
         termsAccepted: formData.termsAccepted,
       });
 
+      console.log('Client admin signup response:', response);
+
       if (response.atsProvisioningSuccess && response.atsRedirectUrl) {
+        console.log('Redirecting to ATS portal:', response.atsRedirectUrl);
         window.location.href = response.atsRedirectUrl;
       } else {
         setPendingAtsRetry(response);
@@ -320,9 +323,10 @@ const ClientAdminSignupPage: React.FC = () => {
         setIsLoading(false);
       }
     } catch (error: any) {
-      console.error('Client admin signup error:', error);
+      console.error('Client admin signup error:', error?.message || error);
+      const errorMessage = error?.message || 'Failed to create account. Please try again.';
       setErrors({
-        general: error.message || 'Failed to create account. Please try again.',
+        general: errorMessage,
       });
       setIsLoading(false);
     }
