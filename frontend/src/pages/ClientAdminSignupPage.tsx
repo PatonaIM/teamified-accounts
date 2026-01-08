@@ -120,6 +120,13 @@ const ClientAdminSignupPage: React.FC = () => {
 
   const hasHiringData = selectedRoles.length > 0 || formData.howCanWeHelp.trim() !== '';
 
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      rolesNeeded: selectedRoles.join(', '),
+    }));
+  }, [selectedRoles]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
