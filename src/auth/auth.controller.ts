@@ -1159,6 +1159,27 @@ export class AuthController {
     );
   }
 
+  @Post('signup/retry-ats-provisioning')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retry ATS Provisioning',
+    description: 'Retry ATS portal provisioning for a user who just signed up but experienced a provisioning failure.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'ATS provisioning retry result',
+  })
+  async retryAtsProvisioning(
+    @Body() retryDto: { userId: string; organizationId: string; organizationSlug: string },
+  ): Promise<{ success: boolean; atsRedirectUrl?: string; error?: string }> {
+    return this.authService.retryAtsProvisioning(
+      retryDto.userId,
+      retryDto.organizationId,
+      retryDto.organizationSlug,
+    );
+  }
+
   @Post('signup/candidate')
   @Throttle({ default: { limit: 5, ttl: 300000 } })
   @HttpCode(HttpStatus.CREATED)

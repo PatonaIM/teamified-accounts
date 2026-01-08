@@ -212,6 +212,75 @@ export class ClientAdminSignupResponseDto {
     required: false,
   })
   hubspotContactId?: string;
+
+  @ApiProperty({
+    description: 'ATS portal redirect URL for onboarding',
+    required: false,
+  })
+  atsRedirectUrl?: string;
+
+  @ApiProperty({
+    description: 'Whether ATS provisioning was successful',
+    required: false,
+  })
+  atsProvisioningSuccess?: boolean;
+
+  @ApiProperty({
+    description: 'User ID for retry provisioning',
+    required: false,
+  })
+  userId?: string;
+
+  @ApiProperty({
+    description: 'Organization ID for retry provisioning',
+    required: false,
+  })
+  organizationId?: string;
+}
+
+export class RetryAtsProvisioningDto {
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'User ID',
+  })
+  @IsString()
+  @IsNotEmpty({ message: 'User ID is required' })
+  userId: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Organization ID',
+  })
+  @IsString()
+  @IsNotEmpty({ message: 'Organization ID is required' })
+  organizationId: string;
+
+  @ApiProperty({
+    example: 'acme-corp',
+    description: 'Organization slug',
+  })
+  @IsString()
+  @IsNotEmpty({ message: 'Organization slug is required' })
+  organizationSlug: string;
+}
+
+export class RetryAtsProvisioningResponseDto {
+  @ApiProperty({
+    description: 'Whether the retry was successful',
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'ATS portal redirect URL',
+    required: false,
+  })
+  atsRedirectUrl?: string;
+
+  @ApiProperty({
+    description: 'Error message if retry failed',
+    required: false,
+  })
+  error?: string;
 }
 
 export class AnalyzeWebsiteDto {

@@ -25,7 +25,8 @@ import {
   AutoAwesome,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { clientAdminSignup, analyzeWebsite } from '../services/authService';
+import { clientAdminSignup, analyzeWebsite, retryAtsProvisioning } from '../services/authService';
+import type { SignupResponse } from '../services/authService';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
@@ -133,6 +134,7 @@ const ClientAdminSignupPage: React.FC = () => {
   const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [pendingAtsRetry, setPendingAtsRetry] = useState<SignupResponse | null>(null);
   const slugManuallyEditedRef = useRef(false);
 
   const handleAnalyzeWebsite = useCallback(async () => {
@@ -287,7 +289,7 @@ const ClientAdminSignupPage: React.FC = () => {
       const mobileDialCode = countries.find(c => c.code === formData.mobileCountryCode)?.dialCode || '';
       const phoneDialCode = countries.find(c => c.code === formData.phoneCountryCode)?.dialCode || '';
 
-      await clientAdminSignup({
+      const response = await clientAdminSignup({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -308,13 +310,52 @@ const ClientAdminSignupPage: React.FC = () => {
         termsAccepted: formData.termsAccepted,
       });
 
-      navigate('/signup-success', { replace: true });
+      if (response.atsProvisioningSuccess && response.atsRedirectUrl) {
+        window.location.href = response.atsRedirectUrl;
+      } else {
+        setPendingAtsRetry(response);
+        setErrors({
+          atsError: "We couldn't connect you to the ATS portal right now. Please try again in a moment.",
+        });
+        setIsLoading(false);
+      }
     } catch (error: any) {
       console.error('Client admin signup error:', error);
       setErrors({
         general: error.message || 'Failed to create account. Please try again.',
       });
-    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetryAtsProvisioning = async () => {
+    if (!pendingAtsRetry?.userId || !pendingAtsRetry?.organizationId || !pendingAtsRetry?.organizationSlug) {
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const response = await retryAtsProvisioning(
+        pendingAtsRetry.userId,
+        pendingAtsRetry.organizationId,
+        pendingAtsRetry.organizationSlug,
+      );
+
+      if (response.success && response.atsRedirectUrl) {
+        window.location.href = response.atsRedirectUrl;
+      } else {
+        setErrors({
+          atsError: "We couldn't connect you to the ATS portal right now. Please try again in a moment.",
+        });
+        setIsLoading(false);
+      }
+    } catch (error: any) {
+      console.error('ATS retry error:', error);
+      setErrors({
+        atsError: "We couldn't connect you to the ATS portal right now. Please try again in a moment.",
+      });
       setIsLoading(false);
     }
   };
@@ -1633,6 +1674,25 @@ const ClientAdminSignupPage: React.FC = () => {
                 {errors.general && (
                   <Alert severity="error" sx={{ mb: 3 }}>
                     {errors.general}
+                  </Alert>
+                )}
+
+                {errors.atsError && (
+                  <Alert 
+                    severity="warning" 
+                    sx={{ mb: 3 }}
+                    action={
+                      <Button 
+                        color="inherit" 
+                        size="small"
+                        onClick={handleRetryAtsProvisioning}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Retrying...' : 'Try Again'}
+                      </Button>
+                    }
+                  >
+                    {errors.atsError}
                   </Alert>
                 )}
 

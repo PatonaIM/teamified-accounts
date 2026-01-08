@@ -26,6 +26,7 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { OrganizationMember } from '../organizations/entities/organization-member.entity';
 import { UserEmail } from '../user-emails/entities/user-email.entity';
 import { HubSpotService } from './services/hubspot.service';
+import { AtsProvisioningService } from './services/ats-provisioning.service';
 
 @Injectable()
 export class AuthService {
@@ -52,6 +53,7 @@ export class AuthService {
     private emailService: EmailService,
     private auditService: AuditService,
     private hubspotService: HubSpotService,
+    private atsProvisioningService: AtsProvisioningService,
   ) {}
 
   private async getUserPrimaryRole(userId: string): Promise<string> {
@@ -1429,6 +1431,31 @@ This is an automated message from Teamified.
       this.logger.error(`HubSpot exception: ${hubspotError instanceof Error ? hubspotError.message : String(hubspotError)}`);
     }
 
+    let atsProvisioningSuccess = false;
+    let atsRedirectUrl: string | undefined;
+    try {
+      const atsResult = await this.atsProvisioningService.provisionAtsAccess({
+        userId: savedUser.id,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        organizationId: savedOrg.id,
+        organizationSlug: savedOrg.slug,
+        organizationName: savedOrg.name,
+      });
+
+      atsProvisioningSuccess = atsResult.success;
+      atsRedirectUrl = atsResult.redirectUrl;
+
+      if (atsResult.success) {
+        this.logger.log(`ATS provisioning successful for ${savedUser.email}, redirect: ${atsResult.redirectUrl}`);
+      } else {
+        this.logger.warn(`ATS provisioning failed for ${savedUser.email}: ${atsResult.error}`);
+      }
+    } catch (atsError) {
+      this.logger.error(`ATS provisioning exception: ${atsError instanceof Error ? atsError.message : String(atsError)}`);
+    }
+
     return {
       message: 'Account created successfully. Please check your email to verify your account.',
       emailVerificationRequired: true,
@@ -1436,7 +1463,66 @@ This is an automated message from Teamified.
       organizationSlug: savedOrg.slug,
       hubspotContactCreated,
       hubspotContactId,
+      atsProvisioningSuccess,
+      atsRedirectUrl,
+      userId: savedUser.id,
+      organizationId: savedOrg.id,
     };
+  }
+
+  async retryAtsProvisioning(
+    userId: string,
+    organizationId: string,
+    organizationSlug: string,
+  ): Promise<{ success: boolean; atsRedirectUrl?: string; error?: string }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const organization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      return { success: false, error: 'Organization not found' };
+    }
+
+    try {
+      const atsResult = await this.atsProvisioningService.provisionAtsAccess({
+        userId: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        organizationId: organization.id,
+        organizationSlug: organizationSlug,
+        organizationName: organization.name,
+      });
+
+      if (atsResult.success) {
+        this.logger.log(`ATS retry provisioning successful for ${user.email}`);
+        return {
+          success: true,
+          atsRedirectUrl: atsResult.redirectUrl,
+        };
+      } else {
+        this.logger.warn(`ATS retry provisioning failed for ${user.email}: ${atsResult.error}`);
+        return {
+          success: false,
+          error: atsResult.error,
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`ATS retry provisioning exception for ${user.email}: ${errorMessage}`);
+      return {
+        success: false,
+        error: 'Failed to provision ATS access',
+      };
+    }
   }
 
   /**

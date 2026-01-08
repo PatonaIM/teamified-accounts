@@ -16,6 +16,7 @@ import { GoogleOAuthService } from './services/google-oauth.service';
 import { GoogleOAuthController } from './controllers/google-oauth.controller';
 import { WebsiteAnalysisService } from './services/website-analysis.service';
 import { HubSpotService } from './services/hubspot.service';
+import { AtsProvisioningService } from './services/ats-provisioning.service';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
 import { LegacyInvitation } from '../invitations/entities/legacy-invitation.entity';
@@ -58,6 +59,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     GoogleOAuthService,
     WebsiteAnalysisService,
     HubSpotService,
+    AtsProvisioningService,
     JwtAuthGuard,
   ],
   exports: [
@@ -71,6 +73,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     GoogleOAuthService,
     WebsiteAnalysisService,
     HubSpotService,
+    AtsProvisioningService,
     JwtAuthGuard,
     JwtModule, // Export JwtModule so other modules can inject JwtService
     TypeOrmModule, // Export TypeOrmModule so JwtAuthGuard can access User repository in other modules
