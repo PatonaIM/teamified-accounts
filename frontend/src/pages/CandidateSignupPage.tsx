@@ -141,12 +141,41 @@ const CandidateSignupPage: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 2,
+        flexDirection: 'column',
+        bgcolor: '#F5F7F8',
       }}
     >
+      {/* Header with Teamified Logo */}
+      <Box
+        sx={{
+          width: '100%',
+          py: 2,
+          px: 4,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          teamified
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: { xs: 2, md: 4 },
+        }}
+      >
       <Container maxWidth="sm">
         <Fade in timeout={600}>
           <Paper
@@ -359,6 +388,7 @@ const CandidateSignupPage: React.FC = () => {
           </Paper>
         </Fade>
       </Container>
+      </Box>
     </Box>
   );
 };
