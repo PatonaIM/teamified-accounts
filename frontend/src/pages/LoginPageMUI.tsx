@@ -268,6 +268,7 @@ const LoginPageMUI: React.FC = () => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
     setErrors({});
     setEmailAlreadyRegistered(false);
+    setIsNewUser(false);
   };
 
   const handleSignupContinue = async (event: React.FormEvent) => {
