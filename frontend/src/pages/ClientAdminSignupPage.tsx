@@ -83,8 +83,9 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
-  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website'>('email');
+  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website' | 'business'>('email');
   const [noWebsite, setNoWebsite] = useState(false);
+  const [selectedCompanySize, setSelectedCompanySize] = useState<string>('');
   const websiteInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     email: emailParam,
@@ -238,12 +239,15 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
+  const handleWebsiteContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateWebsiteStep()) {
+      setStep('business');
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!validateWebsiteStep()) {
-      return;
-    }
 
     setIsLoading(true);
     setErrors({});
@@ -285,6 +289,10 @@ const ClientAdminSignupPage: React.FC = () => {
   };
 
   const handleBack = () => {
+    if (step === 'business') {
+      setStep('website');
+      return;
+    }
     if (step === 'website') {
       setStep('details');
       return;
@@ -307,6 +315,11 @@ const ClientAdminSignupPage: React.FC = () => {
     } else {
       navigate(`/signup-select?email=${encodeURIComponent(formData.email)}${returnUrl !== '/account' ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
     }
+  };
+
+  const handleCompanySizeSelect = (size: string) => {
+    setSelectedCompanySize(size);
+    handleInputChange('companySize', size);
   };
 
   const handleNoWebsiteToggle = () => {
@@ -825,7 +838,7 @@ const ClientAdminSignupPage: React.FC = () => {
 
             {/* Step 4: Website */}
             {step === 'website' && (
-              <Box component="form" onSubmit={handleSubmit} noValidate>
+              <Box component="form" onSubmit={handleWebsiteContinue} noValidate>
                 <Box mb={4}>
                   <Typography
                     variant="h4"
@@ -978,7 +991,212 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Next'}
+                    Next
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 5: Business Information */}
+            {step === 'business' && (
+              <Box component="form" onSubmit={handleSubmit} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    Tell us about your business
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    This helps us match you with the right candidates
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Business Description
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder="Tell us what your company does..."
+                    value={formData.businessDescription}
+                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
+                    disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Industry
+                  </Typography>
+                  <TextField
+                    select
+                    fullWidth
+                    value={formData.industry}
+                    onChange={(e) => handleInputChange('industry', e.target.value)}
+                    disabled={isLoading}
+                    SelectProps={{
+                      displayEmpty: true,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  >
+                    <MenuItem value="" disabled>
+                      <Typography sx={{ color: '#9CA3AF' }}>Select your industry</Typography>
+                    </MenuItem>
+                    {INDUSTRIES.map((industry) => (
+                      <MenuItem key={industry} value={industry}>
+                        {industry}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                    Select the industry your company operates in
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1.5,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Company Size
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+                    {COMPANY_SIZES.map((size) => (
+                      <Box
+                        key={size}
+                        onClick={() => !isLoading && handleCompanySizeSelect(size)}
+                        sx={{
+                          p: 2,
+                          border: '1px solid',
+                          borderColor: selectedCompanySize === size ? '#9333EA' : '#E5E7EB',
+                          borderRadius: 2,
+                          cursor: isLoading ? 'default' : 'pointer',
+                          bgcolor: selectedCompanySize === size ? 'rgba(147, 51, 234, 0.04)' : 'white',
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            borderColor: isLoading ? undefined : '#9333EA',
+                            bgcolor: isLoading ? undefined : 'rgba(147, 51, 234, 0.02)',
+                          },
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontWeight: selectedCompanySize === size ? 600 : 400,
+                            color: selectedCompanySize === size ? '#9333EA' : '#1a1a1a',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {size}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Skip'}
                   </Button>
                 </Box>
               </Box>
