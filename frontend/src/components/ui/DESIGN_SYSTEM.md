@@ -40,6 +40,8 @@ import {
 | Secondary Brand | #002DFF | `bg-secondary-brand` | Secondary CTAs |
 | Secondary Brand Dark | #1D4ED8 | `bg-secondary-brand-dark` | Active states |
 
+> **Note:** Tailwind's `secondary` is a neutral gray for subtle backgrounds. MUI's `secondary` maps to brand blue (#002DFF) per Material Design convention. Use `secondary-brand` in Tailwind for brand blue.
+
 ### Status Colors
 
 | Token | Hex | Tailwind Class | Usage |

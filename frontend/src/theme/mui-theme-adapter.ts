@@ -1,5 +1,12 @@
 import { createTheme, type ThemeOptions } from '@mui/material/styles';
 
+/**
+ * MUI Theme Adapter - Syncs Material UI components with Teamified design tokens
+ * 
+ * Note: MUI's `secondary` maps to our brand blue (#002DFF) following Material Design conventions.
+ * Tailwind's `secondary` is a neutral gray for subtle UI backgrounds.
+ * Use `secondary-brand` CSS variable when referencing brand blue in Tailwind.
+ */
 const designTokens = {
   primary: {
     main: '#9333EA',
