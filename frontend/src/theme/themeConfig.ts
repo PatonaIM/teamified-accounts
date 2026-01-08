@@ -12,7 +12,9 @@ export interface ThemeConfig {
 
 // Teamified Brand Colors
 const teamifiedColors = {
-  primary: '#7C3AED', // Purple
+  primary: '#9333EA', // Purple (updated to match style guide)
+  primaryLight: '#A855F7',
+  primaryDark: '#7C3AED',
   secondary: '#EC4899', // Pink
   success: '#10B981',
   warning: '#F59E0B',
@@ -87,8 +89,8 @@ export const themeConfigs: Record<ThemeMode, ThemeConfig> = {
       mode: 'light',
       primary: {
         main: teamifiedColors.primary,
-        light: '#a78bfa',
-        dark: '#5b21b6',
+        light: teamifiedColors.primaryLight,
+        dark: teamifiedColors.primaryDark,
         contrastText: '#fff',
       },
       secondary: {

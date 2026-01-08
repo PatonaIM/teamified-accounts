@@ -365,6 +365,13 @@ const CandidateSignupPage: React.FC = () => {
                   textTransform: 'none',
                   fontSize: '1rem',
                   fontWeight: 600,
+                  bgcolor: '#9333EA',
+                  '&:hover': {
+                    bgcolor: '#A855F7',
+                  },
+                  '&:active': {
+                    bgcolor: '#7C3AED',
+                  },
                 }}
               >
                 {isLoading ? (
