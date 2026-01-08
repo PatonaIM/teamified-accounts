@@ -128,13 +128,42 @@ const SignupPathSelectionPage: React.FC = () => {
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
         bgcolor: '#F5F7F8',
-        padding: { xs: 2, md: 4 },
       }}
     >
-      <Container maxWidth="lg">
+      {/* Header with Teamified Logo */}
+      <Box
+        sx={{
+          width: '100%',
+          py: 2,
+          px: 4,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          teamified
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: { xs: 2, md: 4 },
+        }}
+      >
+        <Container maxWidth="lg">
         <Fade in timeout={600}>
           <Box>
             <Box textAlign="center" mb={5}>
@@ -453,6 +482,7 @@ const SignupPathSelectionPage: React.FC = () => {
           </Box>
         </Fade>
       </Container>
+      </Box>
     </Box>
   );
 };
