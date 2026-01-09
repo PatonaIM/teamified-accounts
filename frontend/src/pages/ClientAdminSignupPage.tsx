@@ -186,6 +186,18 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.email = 'Please enter a valid email address';
     }
 
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (!isPasswordValid(formData.password)) {
+      newErrors.password = 'Password does not meet all requirements';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -646,6 +658,119 @@ const ClientAdminSignupPage: React.FC = () => {
                     helperText={errors.email}
                     autoFocus
                     disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#E5E7EB',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9333EA',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#9333EA',
+                          borderWidth: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* Password Field */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Password
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    error={!!errors.password}
+                    helperText={errors.password}
+                    disabled={isLoading}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            sx={{ color: '#9CA3AF' }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#E5E7EB',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9333EA',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#9333EA',
+                          borderWidth: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* Password Requirements */}
+                <PasswordRequirements password={formData.password} />
+
+                {/* Confirm Password Field */}
+                <Box sx={{ mb: 2, mt: 2 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Confirm Password
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    error={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword}
+                    helperText={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''}
+                    disabled={isLoading}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                            sx={{ color: '#9CA3AF' }}
+                          >
+                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         bgcolor: 'white',
