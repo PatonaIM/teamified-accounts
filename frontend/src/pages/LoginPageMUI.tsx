@@ -495,13 +495,14 @@ const LoginPageMUI: React.FC = () => {
             width: '100%',
             maxWidth: 400,
             display: { xs: 'none', md: 'block' },
+            textAlign: 'center',
           }}
         >
           <Typography
             variant="h4"
             sx={{
               fontWeight: 700,
-              mb: 4,
+              mb: 1,
               lineHeight: 1.3,
               color: '#9333EA',
             }}
@@ -520,7 +521,7 @@ const LoginPageMUI: React.FC = () => {
             In One Platform
           </Typography>
 
-          <Box sx={{ borderTop: '1px solid #E5E7EB', pt: 3 }}>
+          <Box sx={{ borderTop: '1px solid #E5E7EB', pt: 3, textAlign: 'center' }}>
             <Typography sx={{ color: '#4a4a4a', fontSize: '0.9rem', mb: 1 }}>
               ✅ No upfront cost · ✅ No credit card required
             </Typography>
