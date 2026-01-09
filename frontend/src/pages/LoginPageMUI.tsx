@@ -158,8 +158,21 @@ const LoginPageMUI: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const passwordRequirements = {
+    minLength: formData.password.length >= 8,
+    hasUppercase: /[A-Z]/.test(formData.password),
+    hasLowercase: /[a-z]/.test(formData.password),
+    hasNumber: /[0-9]/.test(formData.password),
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
+  };
+
+  const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
+  const passwordsMatch = formData.password === formData.confirmPassword && formData.confirmPassword.length > 0;
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
@@ -278,6 +291,17 @@ const LoginPageMUI: React.FC = () => {
       return;
     }
 
+    // Validate password requirements for signup
+    if (!isPasswordValid) {
+      setErrors({ password: 'Password does not meet all requirements' });
+      return;
+    }
+
+    if (!passwordsMatch) {
+      setErrors({ confirmPassword: 'Passwords do not match' });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -300,9 +324,10 @@ const LoginPageMUI: React.FC = () => {
         setShakeEmail(true);
         setTimeout(() => setShakeEmail(false), 500);
       } else {
-        // Email doesn't exist - proceed to signup
+        // Email doesn't exist - proceed to signup with password
         const signupParams = new URLSearchParams();
         signupParams.set('email', formData.email);
+        signupParams.set('password', formData.password);
         if (returnUrl !== '/account/profile') {
           signupParams.set('returnUrl', returnUrl);
         }
@@ -687,13 +712,144 @@ const LoginPageMUI: React.FC = () => {
                 </Box>
               )}
 
+              {/* Password fields for signup mode */}
+              {mode === 'signup' && (
+                <>
+                  {/* Welcome Message */}
+                  <Box
+                    sx={{
+                      bgcolor: '#F3E8FF',
+                      borderRadius: 2,
+                      p: 2,
+                      mb: 3,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color: '#9333EA',
+                        fontWeight: 600,
+                        fontSize: '0.95rem',
+                      }}
+                    >
+                      We are Business - Welcome to Teamified
+                    </Typography>
+                  </Box>
+
+                  {/* Password Field */}
+                  <TextField
+                    fullWidth
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    error={!!errors.password}
+                    helperText={errors.password}
+                    disabled={isLoading}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            sx={{ color: '#9CA3AF' }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      mb: 2,
+                      '& .MuiInputLabel-root': {
+                        color: '#9CA3AF',
+                        '&.Mui-focused': { color: '#9333EA' },
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
+
+                  {/* Password Requirements */}
+                  <Box sx={{ mb: 3, pl: 1 }}>
+                    <Typography sx={{ fontSize: '0.75rem', color: '#6b7280', mb: 1 }}>
+                      Password must have:
+                    </Typography>
+                    {[
+                      { label: 'At least 8 characters', met: passwordRequirements.minLength },
+                      { label: 'At least 1 uppercase letter', met: passwordRequirements.hasUppercase },
+                      { label: 'At least 1 lowercase letter', met: passwordRequirements.hasLowercase },
+                      { label: 'At least 1 number', met: passwordRequirements.hasNumber },
+                      { label: 'At least 1 special character', met: passwordRequirements.hasSpecial },
+                    ].map((req, idx) => (
+                      <Typography
+                        key={idx}
+                        sx={{
+                          fontSize: '0.75rem',
+                          color: req.met ? '#10B981' : '#9CA3AF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                        }}
+                      >
+                        {req.met ? '✓' : '○'} {req.label}
+                      </Typography>
+                    ))}
+                  </Box>
+
+                  {/* Confirm Password Field */}
+                  <TextField
+                    fullWidth
+                    label="Confirm Password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    error={formData.confirmPassword.length > 0 && !passwordsMatch}
+                    helperText={formData.confirmPassword.length > 0 && !passwordsMatch ? 'Passwords do not match' : ''}
+                    disabled={isLoading}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                            sx={{ color: '#9CA3AF' }}
+                          >
+                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      mb: 3,
+                      '& .MuiInputLabel-root': {
+                        color: '#9CA3AF',
+                        '&.Mui-focused': { color: '#9333EA' },
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </>
+              )}
+
               {!isNewUser && (
                 <>
                   <Button
                     type="submit"
                     fullWidth
                     variant="contained"
-                    disabled={isLoading}
+                    disabled={isLoading || (mode === 'signup' && (!isPasswordValid || !passwordsMatch))}
                     sx={{
                       borderRadius: 2,
                       py: 1.5,
