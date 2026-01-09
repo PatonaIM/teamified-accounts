@@ -503,62 +503,22 @@ const LoginPageMUI: React.FC = () => {
               fontWeight: 700,
               mb: 4,
               lineHeight: 1.3,
+              color: '#9333EA',
             }}
           >
-            <Box component="span" sx={{ color: '#9333EA' }}>Hire. Manage. Scale Globally </Box>
-            <Box component="span" sx={{ color: '#111827' }}>— In One Platform</Box>
+            Hire. Manage. Scale Globally
           </Typography>
-
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: '#A16AE8',
-                  mt: 1,
-                  mr: 2,
-                  flexShrink: 0,
-                }}
-              />
-              <Typography sx={{ color: '#4a4a4a', fontSize: '1rem' }}>
-                Pre-screened candidates matched to your role
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: '#A16AE8',
-                  mt: 1,
-                  mr: 2,
-                  flexShrink: 0,
-                }}
-              />
-              <Typography sx={{ color: '#4a4a4a', fontSize: '1rem' }}>
-                Reduce staffing costs by up to 70%
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-              <Box
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  bgcolor: '#A16AE8',
-                  mt: 1,
-                  mr: 2,
-                  flexShrink: 0,
-                }}
-              />
-              <Typography sx={{ color: '#4a4a4a', fontSize: '1rem' }}>
-                Guaranteed quality with recruiter validation
-              </Typography>
-            </Box>
-          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              mb: 4,
+              lineHeight: 1.3,
+              color: '#111827',
+            }}
+          >
+            In One Platform
+          </Typography>
 
           <Box sx={{ borderTop: '1px solid #E5E7EB', pt: 3 }}>
             <Typography sx={{ color: '#4a4a4a', fontSize: '0.9rem', mb: 1 }}>
