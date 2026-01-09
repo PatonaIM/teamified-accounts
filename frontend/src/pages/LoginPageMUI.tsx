@@ -687,6 +687,59 @@ const LoginPageMUI: React.FC = () => {
                 </Box>
               )}
 
+              {/* Friendly Already Registered Message */}
+              {emailAlreadyRegistered && mode === 'signup' && (
+                <Box
+                  sx={{
+                    bgcolor: '#FEF3C7',
+                    borderRadius: 2,
+                    p: 2.5,
+                    mb: 3,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: '#1a1a1a',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      mb: 0.5,
+                    }}
+                  >
+                    You've signed up before using this email.
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: '#4a4a4a',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    Try{' '}
+                    <Link
+                      component="button"
+                      type="button"
+                      onClick={() => {
+                        setMode('signin');
+                        setEmailAlreadyRegistered(false);
+                        setErrors({});
+                      }}
+                      sx={{
+                        color: '#9333EA',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
+                      }}
+                    >
+                      sign in
+                    </Link>{' '}
+                    instead.
+                  </Typography>
+                </Box>
+              )}
+
 
               {!isNewUser && (
                 <>
