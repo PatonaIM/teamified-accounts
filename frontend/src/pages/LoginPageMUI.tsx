@@ -714,28 +714,7 @@ const LoginPageMUI: React.FC = () => {
                       fontSize: '0.9rem',
                     }}
                   >
-                    Try{' '}
-                    <Link
-                      component="button"
-                      type="button"
-                      onClick={() => {
-                        setMode('signin');
-                        setEmailAlreadyRegistered(false);
-                        setErrors({});
-                      }}
-                      sx={{
-                        color: '#9333EA',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          textDecoration: 'underline',
-                        },
-                      }}
-                    >
-                      sign in
-                    </Link>{' '}
-                    instead.
+                    Try sign in instead.
                   </Typography>
                 </Box>
               )}
