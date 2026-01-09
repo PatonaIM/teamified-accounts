@@ -1293,10 +1293,12 @@ This is an automated message from Teamified.
     userAgent?: string,
   ): Promise<ClientAdminSignupResponseDto> {
     const { 
-      email, password, firstName, lastName, companyName, slug: providedSlug, 
+      password, firstName, lastName, companyName, slug: providedSlug, 
       industry, companySize, country, mobileNumber, phoneNumber, 
       website, businessDescription, rolesNeeded, howCanWeHelp 
     } = signupDto;
+    // Normalize email to lowercase for consistent storage and lookup
+    const email = signupDto.email.toLowerCase().trim();
 
     // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
@@ -1634,7 +1636,9 @@ This is an automated message from Teamified.
     ip?: string,
     userAgent?: string,
   ): Promise<CandidateSignupResponseDto> {
-    const { email, password, firstName, lastName } = signupDto;
+    const { password, firstName, lastName } = signupDto;
+    // Normalize email to lowercase for consistent storage and lookup
+    const email = signupDto.email.toLowerCase().trim();
 
     // Check for existing active user (ignore soft-deleted users to allow re-registration)
     const existingUser = await this.userRepository.findOne({
