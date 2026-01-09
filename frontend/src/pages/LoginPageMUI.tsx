@@ -500,7 +500,7 @@ const LoginPageMUI: React.FC = () => {
         >
           <Box
             component="img"
-            src="/assets/global_hiring_network_illustration.png"
+            src="/assets/diverse_business_team_collaboration.png"
             alt="Global Hiring Network"
             sx={{
               width: '100%',
