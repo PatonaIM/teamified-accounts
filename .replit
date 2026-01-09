@@ -62,14 +62,14 @@ VITE_PORTAL_URL_JOBSEEKER = "https://teamified-jobseeker.replit.app"
 VITE_PORTAL_URL_ATS = "https://teamified-ats.replit.app"
 
 [userenv.shared]
-VITE_ENABLE_PORTAL_REDIRECTS = "1"
+VITE_ENABLE_PORTAL_REDIRECTS = "0"
 JOBSEEKER_PORTAL_REDIRECT_URL = "https://270a25ac-5fe3-4516-878e-ca92be1342f6-00-3t6zo5hw1y0g6.pike.replit.dev/api/auth/callback/teamified-sso"
 ATS_PORTAL_REDIRECT_URL = "https://teamified-ats.replit.app/auth/callback"
 
 [userenv.development]
 VITE_PORTAL_URL_JOBSEEKER = "https://270a25ac-5fe3-4516-878e-ca92be1342f6-00-3t6zo5hw1y0g6.pike.replit.dev"
 VITE_PORTAL_URL_ATS = "https://teamified-ats.replit.app"
-BASE_URL = "https://fca135f3-3e06-45b7-9e80-71c2e3ce4fa3-00-dp0qq5qhxli0.pike.replit.dev"
+BASE_URL = "https://6f77a2b1-cef7-4450-aab5-502c0e19cf86-00-1dc61r723tk8q.sisko.replit.dev"
 
 [[ports]]
 localPort = 3000

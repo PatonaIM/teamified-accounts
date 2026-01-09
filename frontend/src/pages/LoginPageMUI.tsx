@@ -505,8 +505,8 @@ const LoginPageMUI: React.FC = () => {
               lineHeight: 1.3,
             }}
           >
-            <Box component="span" sx={{ color: '#9333EA' }}>Build high-performing teams </Box>
-            <Box component="span" sx={{ color: '#111827' }}>faster with AI-powered hiring.</Box>
+            <Box component="span" sx={{ color: '#9333EA' }}>Hire. Manage. Scale Globally </Box>
+            <Box component="span" sx={{ color: '#111827' }}>— In One Platform</Box>
           </Typography>
 
           <Box sx={{ mb: 4 }}>
