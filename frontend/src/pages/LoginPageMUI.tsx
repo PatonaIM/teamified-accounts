@@ -498,18 +498,6 @@ const LoginPageMUI: React.FC = () => {
             textAlign: 'center',
           }}
         >
-          <Box
-            component="img"
-            src="/assets/diverse_business_team_collaboration.png"
-            alt="Global Hiring Network"
-            sx={{
-              width: '100%',
-              maxWidth: 320,
-              height: 'auto',
-              mb: 3,
-              borderRadius: 2,
-            }}
-          />
           <Typography
             variant="h4"
             sx={{
