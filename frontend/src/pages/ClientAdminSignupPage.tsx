@@ -205,20 +205,30 @@ const ClientAdminSignupPage: React.FC = () => {
     setErrors(prev => ({ ...prev, email: '' }));
   };
 
+  const [aiAnalysisError, setAiAnalysisError] = useState(false);
+
   const handleAnalyzeWebsite = useCallback(async () => {
     if (!isValidUrl(formData.website) || isAnalyzingWebsite) return;
     
     setIsAnalyzingWebsite(true);
+    setAiAnalysisError(false);
     try {
-      const result = await analyzeWebsite(formData.website);
+      let normalizedUrl = formData.website.trim();
+      if (!/^https?:\/\//i.test(normalizedUrl)) {
+        normalizedUrl = `https://${normalizedUrl}`;
+      }
+      const result = await analyzeWebsite(normalizedUrl);
       if (result.success && result.businessDescription) {
         setFormData(prev => ({
           ...prev,
           businessDescription: result.businessDescription || '',
         }));
+      } else {
+        setAiAnalysisError(true);
       }
     } catch (error) {
       console.error('Website analysis failed:', error);
+      setAiAnalysisError(true);
     } finally {
       setIsAnalyzingWebsite(false);
     }
@@ -1612,8 +1622,11 @@ const ClientAdminSignupPage: React.FC = () => {
                     rows={4}
                     placeholder={isAnalyzingWebsite ? "Generating description from your website..." : "Tell us what your company does..."}
                     value={formData.businessDescription}
-                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
-                    disabled={isLoading || isAnalyzingWebsite}
+                    onChange={(e) => {
+                      handleInputChange('businessDescription', e.target.value);
+                      setAiAnalysisError(false);
+                    }}
+                    disabled={isLoading}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         bgcolor: isAnalyzingWebsite ? '#F9FAFB' : 'white',
@@ -1624,7 +1637,12 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   />
-                  {formData.businessDescription && !isAnalyzingWebsite && formData.website && isValidUrl(formData.website) && (
+                  {aiAnalysisError && !isAnalyzingWebsite && (
+                    <Typography variant="caption" sx={{ color: '#EF4444', mt: 0.5, display: 'block' }}>
+                      Could not analyze website. Please enter a description manually.
+                    </Typography>
+                  )}
+                  {formData.businessDescription && !isAnalyzingWebsite && !aiAnalysisError && formData.website && isValidUrl(formData.website) && (
                     <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
                       AI-generated from your website. Feel free to edit.
                     </Typography>
