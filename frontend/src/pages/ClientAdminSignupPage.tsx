@@ -836,8 +836,8 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Box>
                 )}
 
-                {/* Only show remaining fields if email check complete and email doesn't exist */}
-                {!emailExists && !isCheckingEmail && (
+                {/* Only show remaining fields if email doesn't exist - keep visible during check but disabled */}
+                {!emailExists && (
                   <>
                 {/* Password Field */}
                 <Box sx={{ mb: 2 }}>
@@ -861,7 +861,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     error={!!errors.password}
                     helperText={errors.password}
-                    disabled={isLoading}
+                    disabled={isLoading || isCheckingEmail}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -919,7 +919,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     error={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword}
                     helperText={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''}
-                    disabled={isLoading}
+                    disabled={isLoading || isCheckingEmail}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
