@@ -568,7 +568,23 @@ const LoginPageMUI: React.FC = () => {
                     : 'Already have an account? '}
                 <Box
                   component="span"
-                  onClick={handleModeToggle}
+                  onClick={() => {
+                    if (mode === 'signin') {
+                      // Navigate directly to "Let's get started" flow with preserved params
+                      const signupParams = new URLSearchParams();
+                      if (returnUrl !== '/account/profile') {
+                        signupParams.set('returnUrl', returnUrl);
+                      }
+                      if (intent) {
+                        signupParams.set('intent', intent);
+                      }
+                      const queryString = signupParams.toString();
+                      navigate(`/signup-select${queryString ? `?${queryString}` : ''}`);
+                    } else {
+                      // Toggle back to sign in mode
+                      handleModeToggle();
+                    }
+                  }}
                   sx={{
                     color: '#A16AE8',
                     textDecoration: 'none',

@@ -51,14 +51,11 @@ const SignupPathSelectionPage: React.FC = () => {
   }, [sourceParam]);
 
   useEffect(() => {
-    if (!email) {
-      navigate('/login', { replace: true });
-      return;
-    }
-
     const buildQueryString = () => {
       const params = new URLSearchParams();
-      params.set('email', email);
+      if (email) {
+        params.set('email', email);
+      }
       if (returnUrl !== '/account') {
         params.set('returnUrl', returnUrl);
       }
@@ -72,10 +69,11 @@ const SignupPathSelectionPage: React.FC = () => {
       return params.toString();
     };
 
-    if (intent === 'candidate') {
+    // Only auto-redirect based on intent if email is provided
+    if (email && intent === 'candidate') {
       navigate(`/signup-candidate?${buildQueryString()}`, { replace: true });
       return;
-    } else if (intent === 'client') {
+    } else if (email && intent === 'client') {
       navigate(`/signup-client-admin?${buildQueryString()}`, { replace: true });
       return;
     }
@@ -83,7 +81,9 @@ const SignupPathSelectionPage: React.FC = () => {
 
   const buildSignupUrl = (path: string) => {
     const params = new URLSearchParams();
-    params.set('email', email);
+    if (email) {
+      params.set('email', email);
+    }
     if (returnUrl !== '/account') {
       params.set('returnUrl', returnUrl);
     }
