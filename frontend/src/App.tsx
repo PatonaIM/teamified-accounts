@@ -74,6 +74,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SuperAdminRoute from './components/SuperAdminRoute';
 import RoleBasedRoute from './components/RoleBasedRoute';
 import SessionAwareRedirect from './components/SessionAwareRedirect';
+import LandingPage from './pages/LandingPage';
 import AccountLayout from './components/AccountLayout';
 import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
@@ -512,7 +513,7 @@ function App() {
                   <Route path="release-notes/v1.0.0" element={<ReleaseNote_2025_12_02 />} />
                 </Route>
                 
-                <Route path="/" element={<SessionAwareRedirect />} />
+                <Route path="/" element={<LandingPage />} />
                 <Route path="*" element={<SessionAwareRedirect />} />
               </Routes>
             </div>
