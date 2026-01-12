@@ -1,16 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  CircularProgress,
-  Alert,
-  Button,
-} from '@mui/material';
-import { CheckCircle, Error } from '@mui/icons-material';
+import { Box, Typography, Fade } from '@mui/material';
+import { CheckCircle, Error as ErrorIcon, Lock } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import { Button } from '../components/ui/button';
+import { Alert } from '../components/ui/alert';
+import { Spinner } from '../components/ui/spinner';
 
 const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -21,15 +17,12 @@ const VerifyEmailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const hasVerified = useRef(false);
 
-  // Effect 1: Verify email once
   useEffect(() => {
     const verifyEmail = async () => {
-      // Only verify once
       if (hasVerified.current) {
         return;
       }
 
-      // Wait for auth to finish loading before proceeding
       if (authLoading) {
         return;
       }
@@ -66,7 +59,6 @@ const VerifyEmailPage: React.FC = () => {
     verifyEmail();
   }, [searchParams, authLoading]);
 
-
   return (
     <Box
       sx={{
@@ -74,110 +66,180 @@ const VerifyEmailPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
+        backgroundColor: '#F5F7F8',
+        fontFamily: '"Nunito Sans", sans-serif',
         p: 2,
       }}
     >
-      <Paper
-        elevation={24}
+      <Box
         sx={{
-          p: 4,
-          borderRadius: '24px',
-          maxWidth: 500,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
+          p: 5,
+          maxWidth: 440,
           width: '100%',
           textAlign: 'center',
         }}
       >
         {verifying && (
-          <>
-            <CircularProgress size={60} sx={{ mb: 3 }} />
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-              Verifying Your Email
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Please wait while we verify your email address...
-            </Typography>
-          </>
+          <Fade in={verifying}>
+            <Box>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  backgroundColor: '#F3E8FF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px',
+                }}
+              >
+                <Lock sx={{ fontSize: 32, color: '#9333EA' }} />
+              </Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontWeight: 700,
+                  fontSize: '24px',
+                  color: '#1F2937',
+                  mb: 1,
+                }}
+              >
+                Verifying Your Email
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#6B7280',
+                  mb: 3,
+                }}
+              >
+                Please wait while we verify your email address...
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Spinner size="lg" />
+              </Box>
+            </Box>
+          </Fade>
         )}
 
         {success && !verifying && (
-          <>
-            <CheckCircle
-              sx={{
-                fontSize: 80,
-                color: '#4CAF50',
-                mb: 3,
-              }}
-            />
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-              Email Verified Successfully!
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {user 
-                ? 'Your email has been verified successfully.'
-                : 'Your email has been verified. You can now log in to your account.'
-              }
-            </Typography>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {user
-                ? 'Your account is now fully verified.'
-                : 'You can now log in with your credentials.'
-              }
-            </Alert>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => navigate(user ? '/account' : '/login')}
-              sx={{
-                mt: 2,
-                py: 1.5,
-                background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                },
-              }}
-            >
-              {user ? 'Go to Profile' : 'Go to Login'}
-            </Button>
-          </>
+          <Fade in={success && !verifying}>
+            <Box>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  backgroundColor: '#D1FAE5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px',
+                }}
+              >
+                <CheckCircle sx={{ fontSize: 32, color: '#10B981' }} />
+              </Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontWeight: 700,
+                  fontSize: '24px',
+                  color: '#1F2937',
+                  mb: 1,
+                }}
+              >
+                Email Verified Successfully!
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#6B7280',
+                  mb: 3,
+                }}
+              >
+                {user 
+                  ? 'Your email has been verified successfully.'
+                  : 'Your email has been verified. You can now log in to your account.'
+                }
+              </Typography>
+              <Alert variant="success" className="mb-6 text-left">
+                {user
+                  ? 'Your account is now fully verified.'
+                  : 'You can now log in with your credentials.'
+                }
+              </Alert>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => navigate(user ? '/account' : '/login')}
+              >
+                {user ? 'Go to Profile' : 'Go to Login'}
+              </Button>
+            </Box>
+          </Fade>
         )}
 
         {error && !verifying && (
-          <>
-            <Error
-              sx={{
-                fontSize: 80,
-                color: '#f44336',
-                mb: 3,
-              }}
-            />
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-              Verification Failed
-            </Typography>
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              The verification link may have expired or is invalid. Please request a new verification email or contact support.
-            </Typography>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => navigate(user ? '/account' : '/login')}
-              sx={{
-                mt: 2,
-                py: 1.5,
-                background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #7B3FD6 0%, #5A7AFC 100%)',
-                },
-              }}
-            >
-              {user ? 'Go to Profile' : 'Go to Login'}
-            </Button>
-          </>
+          <Fade in={!!error && !verifying}>
+            <Box>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  backgroundColor: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px',
+                }}
+              >
+                <ErrorIcon sx={{ fontSize: 32, color: '#EF4444' }} />
+              </Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontWeight: 700,
+                  fontSize: '24px',
+                  color: '#1F2937',
+                  mb: 1,
+                }}
+              >
+                Verification Failed
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#6B7280',
+                  mb: 3,
+                }}
+              >
+                The verification link may have expired or is invalid. Please request a new verification email or contact support.
+              </Typography>
+              <Alert variant="destructive" className="mb-6 text-left">
+                {error}
+              </Alert>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => navigate(user ? '/account' : '/login')}
+              >
+                {user ? 'Go to Profile' : 'Go to Login'}
+              </Button>
+            </Box>
+          </Fade>
         )}
-      </Paper>
+      </Box>
     </Box>
   );
 };
