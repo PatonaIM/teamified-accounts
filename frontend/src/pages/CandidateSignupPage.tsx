@@ -319,6 +319,7 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.email}
                 margin="normal"
                 required
+                autoFocus
                 disabled={isLoading || isCheckingEmail}
                 InputProps={{
                   endAdornment: isCheckingEmail ? (
@@ -394,7 +395,6 @@ const CandidateSignupPage: React.FC = () => {
                     helperText={errors.firstName}
                     margin="normal"
                     required
-                    autoFocus
                     disabled={isLoading}
                   />
 
