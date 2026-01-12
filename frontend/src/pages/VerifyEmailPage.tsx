@@ -184,7 +184,7 @@ const VerifyEmailPage: React.FC = () => {
                 }
               </Typography>
               <Button
-                variant="secondary"
+                variant="default"
                 className="w-full"
                 size="lg"
                 onClick={() => navigate(user ? '/account' : '/login')}
@@ -246,7 +246,7 @@ const VerifyEmailPage: React.FC = () => {
                 Please request a new verification email or contact support.
               </Typography>
               <Button
-                variant="secondary"
+                variant="default"
                 className="w-full"
                 size="lg"
                 onClick={() => navigate(user ? '/account' : '/login')}
