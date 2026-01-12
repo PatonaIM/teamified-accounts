@@ -356,7 +356,7 @@ export class AuthService {
 <body>
     <div class="container">
         <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">📧 Verify your email</h1>
+            <h1 style="margin: 0; font-size: 28px;">Verify your email</h1>
             <p style="margin: 10px 0 0 0; opacity: 0.95;">Complete your account setup</p>
         </div>
         <div class="content">

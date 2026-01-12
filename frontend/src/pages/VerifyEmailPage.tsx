@@ -5,7 +5,6 @@ import { CheckCircle, Error as ErrorIcon, Lock } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/button';
-import { Alert } from '../components/ui/alert';
 import { Spinner } from '../components/ui/spinner';
 
 const VerifyEmailPage: React.FC = () => {
@@ -162,7 +161,7 @@ const VerifyEmailPage: React.FC = () => {
                   fontFamily: '"Nunito Sans", sans-serif',
                   fontSize: '14px',
                   color: '#6B7280',
-                  mb: 3,
+                  mb: 2,
                 }}
               >
                 {user 
@@ -170,13 +169,22 @@ const VerifyEmailPage: React.FC = () => {
                   : 'Your email has been verified. You can now log in to your account.'
                 }
               </Typography>
-              <Alert variant="success" className="mb-6 text-left">
+              <Typography
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#6B7280',
+                  mb: 3,
+                  textAlign: 'center',
+                }}
+              >
                 {user
                   ? 'Your account is now fully verified.'
                   : 'You can now log in with your credentials.'
                 }
-              </Alert>
+              </Typography>
               <Button
+                variant="outline"
                 className="w-full"
                 size="lg"
                 onClick={() => navigate(user ? '/account' : '/login')}
@@ -221,15 +229,24 @@ const VerifyEmailPage: React.FC = () => {
                   fontFamily: '"Nunito Sans", sans-serif',
                   fontSize: '14px',
                   color: '#6B7280',
-                  mb: 3,
+                  mb: 2,
                 }}
               >
-                The verification link may have expired or is invalid. Please request a new verification email or contact support.
-              </Typography>
-              <Alert variant="destructive" className="mb-6 text-left">
                 {error}
-              </Alert>
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  fontSize: '14px',
+                  color: '#6B7280',
+                  mb: 3,
+                  textAlign: 'center',
+                }}
+              >
+                Please request a new verification email or contact support.
+              </Typography>
               <Button
+                variant="outline"
                 className="w-full"
                 size="lg"
                 onClick={() => navigate(user ? '/account' : '/login')}
