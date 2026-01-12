@@ -1283,8 +1283,15 @@ export class InvitationsService {
     await this.acceptInvitation(inviteCode, savedUser.id);
 
     // 11. Send email verification
+    // Map invitation roleType to user type for email personalization
+    const userType: 'client_admin' | 'candidate' = 
+      invitation.roleType?.toLowerCase().includes('client') || 
+      invitation.roleType?.toLowerCase().includes('admin') 
+        ? 'client_admin' 
+        : 'candidate';
+    
     try {
-      await this.sendEmailVerification(savedUser, baseUrl);
+      await this.sendEmailVerification(savedUser, baseUrl, userType);
     } catch (error) {
       this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
     }
@@ -1567,8 +1574,15 @@ export class InvitationsService {
     await this.acceptInvitation(inviteCode, savedUser.id);
 
     // 11. Send email verification
+    // Map invitation roleType to user type for email personalization
+    const userType: 'client_admin' | 'candidate' = 
+      invitation.roleType?.toLowerCase().includes('client') || 
+      invitation.roleType?.toLowerCase().includes('admin') 
+        ? 'client_admin' 
+        : 'candidate';
+    
     try {
-      await this.sendEmailVerification(savedUser, baseUrl);
+      await this.sendEmailVerification(savedUser, baseUrl, userType);
     } catch (error) {
       this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
     }
@@ -1651,15 +1665,20 @@ export class InvitationsService {
   /**
    * Send email verification to user
    */
-  private async sendEmailVerification(user: User, baseUrl: string): Promise<void> {
+  private async sendEmailVerification(
+    user: User, 
+    baseUrl: string,
+    userType: 'client_admin' | 'candidate' = 'candidate',
+    companyName?: string
+  ): Promise<void> {
     const verificationLink = this.generateEmailVerificationLink(user.emailVerificationToken, baseUrl);
     
-    const htmlTemplate = this.generateEmailVerificationHtmlTemplate(user, verificationLink);
-    const textTemplate = this.generateEmailVerificationTextTemplate(user, verificationLink);
+    const htmlTemplate = this.generateEmailVerificationHtmlTemplate(user, verificationLink, userType, companyName);
+    const textTemplate = this.generateEmailVerificationTextTemplate(user, verificationLink, userType, companyName);
 
     const emailSent = await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Verify Your Email - Teamified',
+      subject: 'Verify your email — Teamified',
       html: htmlTemplate,
       text: textTemplate,
     });
@@ -1683,22 +1702,43 @@ export class InvitationsService {
     return `${baseUrl}/verify-email?token=${token}`;
   }
 
-  private generateEmailVerificationHtmlTemplate(user: User, verificationLink: string): string {
+  private generateEmailVerificationGreeting(
+    user: User, 
+    userType: 'client_admin' | 'candidate',
+    companyName?: string
+  ): string {
+    if (userType === 'client_admin' && companyName) {
+      return `Welcome to Teamified, ${companyName}!`;
+    }
+    if (user.firstName) {
+      return `Welcome to Teamified, ${user.firstName}!`;
+    }
+    return 'Welcome to Teamified!';
+  }
+
+  private generateEmailVerificationHtmlTemplate(
+    user: User, 
+    verificationLink: string,
+    userType: 'client_admin' | 'candidate' = 'candidate',
+    companyName?: string
+  ): string {
+    const greeting = this.generateEmailVerificationGreeting(user, userType, companyName);
+    
     return `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email - Teamified</title>
+    <title>Verify your email — Teamified</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
         .content { padding: 30px 20px; background-color: #f8f9fa; }
         .cta-button { 
             display: inline-block; 
-            background-color: #4CAF50;
+            background-color: #9333EA;
             color: white; 
             padding: 14px 36px; 
             text-decoration: none; 
@@ -1708,52 +1748,30 @@ export class InvitationsService {
             font-size: 16px;
         }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .expiry-warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0; }
-        .link-box { background-color: #e8eaf6; padding: 15px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border-left: 4px solid #667eea; }
-        .security-note { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .link-box { background-color: #e8eaf6; padding: 15px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border-left: 4px solid #9333EA; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">🎉 Welcome to Teamified!</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.95;">Email Verification Required</p>
+            <h1 style="margin: 0; font-size: 28px;">📧 Verify your email</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Complete your account setup</p>
         </div>
         <div class="content">
-            <h2 style="margin-top: 0; color: #667eea;">Hello ${user.firstName},</h2>
+            <h2 style="margin-top: 0; color: #9333EA;">${greeting}</h2>
             
-            <p style="font-size: 16px;">Thank you for joining <strong>Teamified</strong>! We're excited to have you on board.</p>
-            
-            <p>To complete your registration and access all features, please verify your email address by clicking the button below:</p>
+            <p style="font-size: 16px;">To complete your setup, please verify your email address by clicking the button below.</p>
             
             <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationLink}" class="cta-button" style="color: white !important; text-decoration: none;">Verify Email Address</a>
+                <a href="${verificationLink}" class="cta-button" style="color: white !important; text-decoration: none;">Verify email address</a>
             </div>
             
-            <div class="expiry-warning">
-                <strong>⏰ Important:</strong> This verification link will expire in <strong>24 hours</strong> for security reasons. 
-                Please verify your email before this time.
-            </div>
-            
-            <p style="margin-top: 25px;"><strong>Can't click the button?</strong> Copy and paste this link into your browser:</p>
+            <p style="margin-top: 25px;"><strong>If the button doesn't work,</strong> copy and paste this link into your browser:</p>
             <div class="link-box">
                 ${verificationLink}
             </div>
             
-            <div class="security-note">
-                <strong>🔒 Security Notice:</strong> This email was sent because someone created an account with this email address. If you didn't create this account, you can safely ignore this email.
-            </div>
-            
-            <h3 style="color: #667eea; margin-top: 30px;">What's next?</h3>
-            <ol style="padding-left: 20px; line-height: 1.8;">
-                <li>Click the verification link above</li>
-                <li>Your email will be verified automatically</li>
-                <li>Start exploring Teamified!</li>
-            </ol>
-            
-            <p style="margin-top: 30px;">If you have any questions or need assistance, please contact our support team.</p>
-            
-            <p style="margin-top: 25px;">Welcome aboard!</p>
+            <p style="color: #666; margin-top: 25px;">Once your email is verified, you'll have full access to all Teamified features.</p>
         </div>
         <div class="footer">
             <p style="margin: 5px 0;">This is an automated message from Teamified.</p>
@@ -1764,30 +1782,26 @@ export class InvitationsService {
 </html>`;
   }
 
-  private generateEmailVerificationTextTemplate(user: User, verificationLink: string): string {
+  private generateEmailVerificationTextTemplate(
+    user: User, 
+    verificationLink: string,
+    userType: 'client_admin' | 'candidate' = 'candidate',
+    companyName?: string
+  ): string {
+    const greeting = this.generateEmailVerificationGreeting(user, userType, companyName);
+    
     return `
-🎉 Welcome to Teamified!
-Email Verification Required
+Verify your email — Teamified
 
-Hello ${user.firstName},
+${greeting}
 
-Thank you for joining Teamified! We're excited to have you on board.
+To complete your setup, please verify your email address by visiting:
 
-To complete your registration and access all features, please verify your email address by visiting:
 ${verificationLink}
 
-IMPORTANT: This verification link will expire in 24 hours for security reasons. Please verify your email before this time.
+If the link doesn't work, copy and paste it into your browser.
 
-SECURITY NOTICE: This email was sent because someone created an account with this email address. If you didn't create this account, you can safely ignore this email.
-
-What's next:
-1. Click the verification link above
-2. Your email will be verified automatically
-3. Start exploring Teamified!
-
-If you have any questions or need assistance, please contact our support team.
-
-Welcome aboard!
+Once your email is verified, you'll have full access to all Teamified features.
 
 This is an automated message from Teamified.
 © ${new Date().getFullYear()} Teamified. All rights reserved.
