@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -19,6 +19,8 @@ import {
   Visibility,
   VisibilityOff,
   ArrowBack,
+  Login as LoginIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -46,11 +48,82 @@ const CandidateSignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [emailExists, setEmailExists] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [lastCheckedEmail, setLastCheckedEmail] = useState('');
+  const latestEmailRef = useRef(formData.email);
+  
+  // Keep ref in sync with email changes
+  latestEmailRef.current = formData.email.toLowerCase().trim();
+
+  const checkEmailExists = useCallback(async (email: string) => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      setEmailExists(false);
+      setEmailChecked(false);
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    setIsCheckingEmail(true);
+    try {
+      const response = await fetch('/api/v1/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await response.json();
+      // Only update state if this response matches the CURRENT email (use ref for latest value)
+      if (normalizedEmail === latestEmailRef.current) {
+        // valid === true means email exists in database (user already registered)
+        // valid === false means email is available for signup
+        setEmailExists(data.valid === true);
+        setEmailChecked(true);
+        setLastCheckedEmail(normalizedEmail);
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+      // Only update error state if email still matches
+      if (normalizedEmail === latestEmailRef.current) {
+        setEmailExists(false);
+        setEmailChecked(false);
+      }
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  }, []);
+
+  const handleEmailBlur = () => {
+    if (formData.email && /\S+@\S+\.\S+/.test(formData.email)) {
+      checkEmailExists(formData.email);
+    }
+  };
+
+  const handleLoginRedirect = () => {
+    const loginParams = new URLSearchParams();
+    loginParams.set('email', formData.email);
+    if (returnUrl !== '/account') {
+      loginParams.set('returnUrl', returnUrl);
+    }
+    navigate(`/login?${loginParams.toString()}`);
+  };
+
+  const handleUseDifferentEmail = () => {
+    setFormData(prev => ({ ...prev, email: '' }));
+    setEmailExists(false);
+    setEmailChecked(false);
+    setErrors(prev => ({ ...prev, email: '' }));
+  };
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    if (field === 'email') {
+      setEmailExists(false);
+      setEmailChecked(false);
+      setLastCheckedEmail('');
     }
   };
 
@@ -98,7 +171,28 @@ const CandidateSignupPage: React.FC = () => {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    // Run form validation first to show errors to user
     if (!validateForm()) {
+      return;
+    }
+
+    // Compute if the email check is valid for current input
+    const normalizedCurrentEmail = formData.email.toLowerCase().trim();
+    const emailCheckIsValid = emailChecked && lastCheckedEmail === normalizedCurrentEmail;
+    
+    // Don't proceed if email check is in progress
+    if (isCheckingEmail) {
+      return;
+    }
+    
+    // If email check is valid and email exists, block progression
+    if (emailCheckIsValid && emailExists) {
+      return;
+    }
+    
+    // If email hasn't been checked for current input, trigger check
+    if (!emailCheckIsValid && formData.email && /\S+@\S+\.\S+/.test(formData.email)) {
+      checkEmailExists(formData.email);
       return;
     }
 
@@ -220,25 +314,89 @@ const CandidateSignupPage: React.FC = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                error={!!errors.email}
+                onBlur={handleEmailBlur}
+                error={!!errors.email || emailExists}
                 helperText={errors.email}
                 margin="normal"
                 required
-                disabled={isLoading}
+                disabled={isLoading || isCheckingEmail}
+                InputProps={{
+                  endAdornment: isCheckingEmail ? (
+                    <InputAdornment position="end">
+                      <CircularProgress size={20} />
+                    </InputAdornment>
+                  ) : null,
+                }}
               />
 
-              <TextField
-                fullWidth
-                label="First Name"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                error={!!errors.firstName}
-                helperText={errors.firstName}
-                margin="normal"
-                required
-                autoFocus
-                disabled={isLoading}
-              />
+              {/* Email Exists Warning */}
+              {emailExists && (
+                <Box
+                  sx={{
+                    bgcolor: '#FEF3C7',
+                    borderRadius: 2,
+                    p: 2.5,
+                    mb: 2,
+                    border: '1px solid #FCD34D',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: '#92400E',
+                      fontWeight: 500,
+                      fontSize: '0.9rem',
+                      mb: 2,
+                    }}
+                  >
+                    This email ID is already present with us. Please log in or use a different email ID.
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<LoginIcon />}
+                      onClick={handleLoginRedirect}
+                      sx={{
+                        bgcolor: '#9333EA',
+                        '&:hover': { bgcolor: '#7C3AED' },
+                        textTransform: 'none',
+                      }}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<RefreshIcon />}
+                      onClick={handleUseDifferentEmail}
+                      sx={{
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': { borderColor: '#7C3AED', bgcolor: 'rgba(147, 51, 234, 0.04)' },
+                        textTransform: 'none',
+                      }}
+                    >
+                      Use different email
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Only show remaining fields if email check complete and email doesn't exist */}
+              {!emailExists && !isCheckingEmail && (
+                <>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    error={!!errors.firstName}
+                    helperText={errors.firstName}
+                    margin="normal"
+                    required
+                    autoFocus
+                    disabled={isLoading}
+                  />
 
               <TextField
                 fullWidth
@@ -380,6 +538,8 @@ const CandidateSignupPage: React.FC = () => {
                   'Create Account'
                 )}
               </Button>
+                </>
+              )}
 
               <Box textAlign="center" mt={2}>
                 <Button
