@@ -371,11 +371,13 @@ const SignupPathSelectionPage: React.FC = () => {
                 startIcon={<ArrowBack />}
                 onClick={() => navigate('/login')}
                 sx={{
-                  color: '#6b7280',
+                  color: '#9333EA',
                   textTransform: 'none',
                   fontSize: '0.95rem',
+                  fontWeight: 500,
+                  backgroundColor: 'transparent',
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    backgroundColor: 'rgba(147, 51, 234, 0.08)',
                   },
                 }}
               >
