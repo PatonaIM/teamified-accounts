@@ -1439,6 +1439,11 @@ const ClientAdminSignupPage: React.FC = () => {
                         placeholder="www.example.com"
                         value={formData.website}
                         onChange={(e) => handleInputChange('website', e.target.value)}
+                        onBlur={() => {
+                          if (isValidUrl(formData.website) && !formData.businessDescription) {
+                            handleAnalyzeWebsite();
+                          }
+                        }}
                         error={!!errors.website}
                         helperText={errors.website}
                         disabled={isLoading}
@@ -1581,36 +1586,49 @@ const ClientAdminSignupPage: React.FC = () => {
                 )}
 
                 <Box sx={{ mb: 3 }}>
-                  <Typography
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      mb: 1,
-                      fontWeight: 500,
-                      color: '#1a1a1a',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Business Description
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Business Description
+                    </Typography>
+                    {isAnalyzingWebsite && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={14} sx={{ color: '#9333EA' }} />
+                        <Typography sx={{ fontSize: '0.75rem', color: '#9333EA', fontWeight: 500 }}>
+                          AI is analyzing your website...
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
                   <TextField
                     fullWidth
                     multiline
                     rows={4}
-                    placeholder="Tell us what your company does..."
+                    placeholder={isAnalyzingWebsite ? "Generating description from your website..." : "Tell us what your company does..."}
                     value={formData.businessDescription}
                     onChange={(e) => handleInputChange('businessDescription', e.target.value)}
-                    disabled={isLoading}
+                    disabled={isLoading || isAnalyzingWebsite}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: 'white',
+                        bgcolor: isAnalyzingWebsite ? '#F9FAFB' : 'white',
                         borderRadius: 2,
-                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '& fieldset': { borderColor: isAnalyzingWebsite ? '#9333EA' : '#E5E7EB' },
                         '&:hover fieldset': { borderColor: '#9333EA' },
                         '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
                       },
                     }}
                   />
+                  {formData.businessDescription && !isAnalyzingWebsite && formData.website && isValidUrl(formData.website) && (
+                    <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                      AI-generated from your website. Feel free to edit.
+                    </Typography>
+                  )}
                 </Box>
 
                 <Box sx={{ mb: 3 }}>
