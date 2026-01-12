@@ -8,6 +8,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage';
 import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import GoogleSignupPathPage from './pages/GoogleSignupPathPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
@@ -188,6 +189,10 @@ function App() {
                 <Route 
                   path="/reset-password" 
                   element={<ResetPasswordPage />} 
+                />
+                <Route 
+                  path="/forgot-password" 
+                  element={<ForgotPasswordPage />} 
                 />
                 <Route 
                   path="/force-change-password" 

@@ -567,6 +567,119 @@ This is an automated security message from Teamified.
 `;
   }
 
+  async sendPasswordResetOtpEmail(user: { email: string; firstName: string }, otp: string): Promise<boolean> {
+    const htmlTemplate = this.generatePasswordResetOtpHtmlTemplate(user.firstName, otp);
+    const textTemplate = this.generatePasswordResetOtpTextTemplate(user.firstName, otp);
+
+    return this.sendEmail({
+      to: user.email,
+      subject: 'Your Password Reset Code - Teamified',
+      html: htmlTemplate,
+      text: textTemplate,
+    });
+  }
+
+  private generatePasswordResetOtpHtmlTemplate(firstName: string, otp: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Password Reset Code</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .otp-box { 
+            background-color: #f5f5f5;
+            border: 2px dashed #9333EA;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        .otp-code {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: 8px;
+            color: #9333EA;
+            font-family: 'Courier New', monospace;
+        }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        .expiry-warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .security-note { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">🔒 Password Reset Code</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your verification code is ready</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; color: #9333EA;">Hello ${firstName},</h2>
+            
+            <p style="font-size: 16px;">We received a request to reset your password for your <strong>Teamified account</strong>.</p>
+            
+            <p>Enter the following code to verify your identity:</p>
+            
+            <div class="otp-box">
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Your verification code:</p>
+                <div class="otp-code">${otp}</div>
+            </div>
+            
+            <div class="expiry-warning">
+                <strong>⏰ Important:</strong> This code will expire in <strong>10 minutes</strong> for security reasons.
+            </div>
+            
+            <div class="security-note">
+                <strong>🛡️ Security Notice:</strong> If you didn't request this password reset, please ignore this email. 
+                Your password will remain unchanged, and no action is needed.
+            </div>
+            
+            <h3 style="color: #9333EA; margin-top: 30px;">For your security:</h3>
+            <ul style="padding-left: 20px; line-height: 1.8;">
+                <li>Never share this code with anyone</li>
+                <li>Teamified will never ask for this code via phone or chat</li>
+                <li>Choose a strong, unique password</li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p style="margin: 5px 0;">This is an automated security message from Teamified.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generatePasswordResetOtpTextTemplate(firstName: string, otp: string): string {
+    return `
+Password Reset Code - Teamified
+
+Hello ${firstName},
+
+We received a request to reset your password for your Teamified account.
+
+Your verification code: ${otp}
+
+IMPORTANT: This code will expire in 10 minutes for security reasons.
+
+SECURITY NOTICE: If you didn't request this password reset, please ignore this email. 
+Your password will remain unchanged, and no action is needed.
+
+For your security:
+- Never share this code with anyone
+- Teamified will never ask for this code via phone or chat
+- Choose a strong, unique password
+
+This is an automated security message from Teamified.
+© ${new Date().getFullYear()} Teamified. All rights reserved.
+`;
+  }
+
   async sendAdminPasswordResetNotification(user: { email: string; firstName: string }): Promise<boolean> {
     const htmlTemplate = this.generateAdminPasswordResetNotificationHtmlTemplate(user.firstName);
     const textTemplate = this.generateAdminPasswordResetNotificationTextTemplate(user.firstName);

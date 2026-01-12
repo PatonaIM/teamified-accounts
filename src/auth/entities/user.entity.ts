@@ -66,6 +66,18 @@ export class User {
   @Column({ name: 'password_reset_token_expiry', type: 'timestamptz', nullable: true })
   passwordResetTokenExpiry: Date | null;
 
+  @Column({ name: 'password_reset_otp_hash', nullable: true })
+  passwordResetOtpHash: string | null;
+
+  @Column({ name: 'password_reset_otp_expiry', type: 'timestamptz', nullable: true })
+  passwordResetOtpExpiry: Date | null;
+
+  @Column({ name: 'password_reset_otp_attempts', type: 'int', default: 0 })
+  passwordResetOtpAttempts: number;
+
+  @Column({ name: 'password_reset_otp_locked_until', type: 'timestamptz', nullable: true })
+  passwordResetOtpLockedUntil: Date | null;
+
   @Column({ name: 'migrated_from_zoho', default: false })
   migratedFromZoho: boolean;
 

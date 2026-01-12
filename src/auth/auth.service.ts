@@ -9,6 +9,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { Session } from './entities/session.entity';
 import { LegacyInvitation, InvitationStatus } from '../invitations/entities/legacy-invitation.entity';
@@ -891,6 +893,226 @@ This is an automated message from Teamified.
     } catch (error) {
       this.logger.error(`Error in forgotPassword: ${error.message}`);
       return { message: securityMessage };
+    }
+  }
+
+  private generateOtp(): string {
+    const otp = crypto.randomInt(0, 1000000);
+    return otp.toString().padStart(6, '0');
+  }
+
+  async sendPasswordResetOtp(
+    email: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean; message: string; emailMasked?: string }> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email: normalizedEmail, isActive: true, deletedAt: IsNull() },
+      });
+
+      if (!user) {
+        this.logger.warn(`Password reset OTP requested for non-existent email: ${normalizedEmail}`);
+        await this.auditService.log({
+          actorUserId: null,
+          actorRole: 'anonymous',
+          action: 'password_reset_otp_failed',
+          entityType: 'User',
+          entityId: null,
+          changes: {
+            email: normalizedEmail,
+            reason: 'User not found',
+          },
+          ip,
+          userAgent,
+        });
+        return { success: false, message: 'Email not registered' };
+      }
+
+      if (user.passwordResetOtpLockedUntil && user.passwordResetOtpLockedUntil > new Date()) {
+        const remainingMinutes = Math.ceil((user.passwordResetOtpLockedUntil.getTime() - Date.now()) / 60000);
+        this.logger.warn(`Password reset OTP rate limited for: ${normalizedEmail}`);
+        return {
+          success: false,
+          message: `Too many attempts. Please try again in ${remainingMinutes} minutes.`,
+        };
+      }
+
+      const otp = this.generateOtp();
+      const otpHash = await bcrypt.hash(otp, 10);
+      const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+      await this.userRepository.update(user.id, {
+        passwordResetOtpHash: otpHash,
+        passwordResetOtpExpiry: otpExpiry,
+        passwordResetOtpAttempts: 0,
+        passwordResetOtpLockedUntil: null,
+      });
+
+      try {
+        await this.emailService.sendPasswordResetOtpEmail(user, otp);
+        this.logger.log(`Password reset OTP sent to ${normalizedEmail}`);
+      } catch (error) {
+        this.logger.error(`Failed to send password reset OTP email to ${normalizedEmail}: ${error.message}`);
+        return { success: false, message: 'Failed to send verification code. Please try again.' };
+      }
+
+      await this.auditService.log({
+        actorUserId: user.id,
+        actorRole: await this.getUserPrimaryRole(user.id),
+        action: 'password_reset_otp_sent',
+        entityType: 'User',
+        entityId: user.id,
+        changes: {
+          otpGenerated: true,
+          expiresAt: otpExpiry.toISOString(),
+        },
+        ip,
+        userAgent,
+      });
+
+      const [localPart, domain] = normalizedEmail.split('@');
+      const maskedLocal = localPart.length > 2 
+        ? localPart[0] + '*'.repeat(localPart.length - 2) + localPart[localPart.length - 1]
+        : localPart[0] + '*';
+      const emailMasked = `${maskedLocal}@${domain}`;
+
+      return {
+        success: true,
+        message: 'Verification code sent to your email',
+        emailMasked,
+      };
+    } catch (error) {
+      this.logger.error(`Error in sendPasswordResetOtp: ${error.message}`);
+      return { success: false, message: 'Something went wrong. Please try again.' };
+    }
+  }
+
+  async verifyPasswordResetOtp(
+    email: string,
+    otp: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ success: boolean; message: string; resetToken?: string }> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email: normalizedEmail, isActive: true, deletedAt: IsNull() },
+      });
+
+      if (!user) {
+        return { success: false, message: 'Invalid request' };
+      }
+
+      if (user.passwordResetOtpLockedUntil && user.passwordResetOtpLockedUntil > new Date()) {
+        const remainingMinutes = Math.ceil((user.passwordResetOtpLockedUntil.getTime() - Date.now()) / 60000);
+        return {
+          success: false,
+          message: `Too many attempts. Please try again in ${remainingMinutes} minutes.`,
+        };
+      }
+
+      if (!user.passwordResetOtpHash || !user.passwordResetOtpExpiry) {
+        return { success: false, message: 'No verification code requested. Please request a new code.' };
+      }
+
+      if (user.passwordResetOtpExpiry < new Date()) {
+        await this.userRepository.update(user.id, {
+          passwordResetOtpHash: null,
+          passwordResetOtpExpiry: null,
+          passwordResetOtpAttempts: 0,
+        });
+        return { success: false, message: 'Verification code has expired. Please request a new code.' };
+      }
+
+      const isValidOtp = await bcrypt.compare(otp, user.passwordResetOtpHash);
+
+      if (!isValidOtp) {
+        const newAttempts = (user.passwordResetOtpAttempts || 0) + 1;
+        const updates: Partial<User> = { passwordResetOtpAttempts: newAttempts };
+
+        if (newAttempts >= 5) {
+          updates.passwordResetOtpLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+          updates.passwordResetOtpHash = null;
+          updates.passwordResetOtpExpiry = null;
+          updates.passwordResetOtpAttempts = 0;
+          
+          await this.userRepository.update(user.id, updates);
+          
+          await this.auditService.log({
+            actorUserId: user.id,
+            actorRole: await this.getUserPrimaryRole(user.id),
+            action: 'password_reset_otp_locked',
+            entityType: 'User',
+            entityId: user.id,
+            changes: {
+              reason: 'Too many failed attempts',
+              lockedUntil: updates.passwordResetOtpLockedUntil.toISOString(),
+            },
+            ip,
+            userAgent,
+          });
+          
+          return { success: false, message: 'Too many failed attempts. Please try again in 15 minutes.' };
+        }
+
+        await this.userRepository.update(user.id, updates);
+        
+        await this.auditService.log({
+          actorUserId: user.id,
+          actorRole: await this.getUserPrimaryRole(user.id),
+          action: 'password_reset_otp_failed',
+          entityType: 'User',
+          entityId: user.id,
+          changes: {
+            reason: 'Invalid OTP code',
+            attemptNumber: newAttempts,
+            remainingAttempts: 5 - newAttempts,
+          },
+          ip,
+          userAgent,
+        });
+        
+        return { success: false, message: 'Incorrect code. Please try again.' };
+      }
+
+      const resetToken = uuidv4();
+      const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+      await this.userRepository.update(user.id, {
+        passwordResetToken: resetToken,
+        passwordResetTokenExpiry: resetTokenExpiry,
+        passwordResetOtpHash: null,
+        passwordResetOtpExpiry: null,
+        passwordResetOtpAttempts: 0,
+        passwordResetOtpLockedUntil: null,
+      });
+
+      await this.auditService.log({
+        actorUserId: user.id,
+        actorRole: await this.getUserPrimaryRole(user.id),
+        action: 'password_reset_otp_verified',
+        entityType: 'User',
+        entityId: user.id,
+        changes: {
+          resetTokenGenerated: true,
+          expiresAt: resetTokenExpiry.toISOString(),
+        },
+        ip,
+        userAgent,
+      });
+
+      return {
+        success: true,
+        message: 'Verification successful',
+        resetToken,
+      };
+    } catch (error) {
+      this.logger.error(`Error in verifyPasswordResetOtp: ${error.message}`);
+      return { success: false, message: 'Something went wrong. Please try again.' };
     }
   }
 
