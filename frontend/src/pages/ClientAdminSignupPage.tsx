@@ -32,7 +32,7 @@ import type { SignupResponse } from '../services/authService';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
-import { isValidPhoneNumber, type CountryCode } from 'libphonenumber-js';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 import RolesMultiSelect from '../components/RolesMultiSelect';
 
 const COMPANY_SIZES = [
@@ -332,7 +332,7 @@ const ClientAdminSignupPage: React.FC = () => {
     try {
       const country = countries.find(c => c.code === countryCode);
       const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
-      const isValid = isValidPhoneNumber(fullNumber, countryCode as CountryCode);
+      const isValid = isValidPhoneNumber(fullNumber, countryCode as any);
       
       if (!isValid) {
         const countryName = country?.name || countryCode;
@@ -365,7 +365,7 @@ const ClientAdminSignupPage: React.FC = () => {
     try {
       const country = countries.find(c => c.code === countryCode);
       const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
-      return isValidPhoneNumber(fullNumber, countryCode as CountryCode);
+      return isValidPhoneNumber(fullNumber, countryCode as any);
     } catch {
       return phoneNumber.length >= 6 && phoneNumber.length <= 15;
     }
@@ -420,7 +420,7 @@ const ClientAdminSignupPage: React.FC = () => {
       try {
         const country = countries.find(c => c.code === formData.mobileCountryCode);
         const fullNumber = `${country?.dialCode || ''}${formData.mobileNumber}`;
-        const isValid = isValidPhoneNumber(fullNumber, formData.mobileCountryCode as CountryCode);
+        const isValid = isValidPhoneNumber(fullNumber, formData.mobileCountryCode as any);
         if (!isValid) {
           const countryName = country?.name || formData.mobileCountryCode;
           newErrors.mobileNumber = `Enter a valid mobile number for ${countryName}.`;
