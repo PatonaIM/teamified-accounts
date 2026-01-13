@@ -936,8 +936,10 @@ const ClientAdminSignupPage: React.FC = () => {
                   />
                 </Box>
 
-                {/* Password Requirements */}
-                <PasswordRequirements password={formData.password} />
+                {/* Password Requirements - hide when password is valid */}
+                {!isPasswordValid(formData.password) && (
+                  <PasswordRequirements password={formData.password} />
+                )}
 
                 {/* Confirm Password Field */}
                 <Box sx={{ mb: 2, mt: 2 }}>
