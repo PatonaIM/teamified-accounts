@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Box, Typography, Fade } from '@mui/material';
+import { Box, Typography, Fade, Button, CircularProgress } from '@mui/material';
 import { CheckCircle, Error as ErrorIcon, Lock } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
-import { Button } from '../components/ui/button';
-import { Spinner } from '../components/ui/spinner';
 
 const VerifyEmailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -121,7 +119,7 @@ const VerifyEmailPage: React.FC = () => {
                 Please wait while we verify your email address...
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Spinner size="lg" />
+                <CircularProgress sx={{ color: '#9333EA' }} />
               </Box>
             </Box>
           </Fade>
@@ -184,10 +182,25 @@ const VerifyEmailPage: React.FC = () => {
                 }
               </Typography>
               <Button
-                variant="default"
-                className="w-full bg-primary hover:bg-primary-light active:bg-primary-dark text-white"
-                size="lg"
+                variant="contained"
+                fullWidth
+                size="large"
                 onClick={() => navigate(user ? '/account' : '/login')}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  bgcolor: '#9333EA',
+                  '&:hover': {
+                    bgcolor: '#A855F7',
+                  },
+                  '&:active': {
+                    bgcolor: '#7C3AED',
+                  },
+                }}
               >
                 {user ? 'Go to Profile' : 'Go to Login'}
               </Button>
@@ -246,10 +259,25 @@ const VerifyEmailPage: React.FC = () => {
                 Please request a new verification email or contact support.
               </Typography>
               <Button
-                variant="default"
-                className="w-full bg-primary hover:bg-primary-light active:bg-primary-dark text-white"
-                size="lg"
+                variant="contained"
+                fullWidth
+                size="large"
                 onClick={() => navigate(user ? '/account' : '/login')}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  fontFamily: '"Nunito Sans", sans-serif',
+                  bgcolor: '#9333EA',
+                  '&:hover': {
+                    bgcolor: '#A855F7',
+                  },
+                  '&:active': {
+                    bgcolor: '#7C3AED',
+                  },
+                }}
               >
                 {user ? 'Go to Profile' : 'Go to Login'}
               </Button>
