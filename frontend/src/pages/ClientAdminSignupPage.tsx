@@ -1675,7 +1675,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       />
                       {websiteAnalysisStatus === 'failed' && (
                         <Typography sx={{ color: '#EF4444', fontSize: '0.75rem', mt: 0.5 }}>
-                          We couldn't fetch your website. You can still continue and enter your business description manually.
+                          We couldn't fetch your website.
                         </Typography>
                       )}
                     </Box>
@@ -1804,7 +1804,12 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={isLoading || (!noWebsite && isValidUrl(formData.website) && isAnalyzingWebsite)}
+                    disabled={
+                      isLoading || 
+                      isAnalyzingWebsite || 
+                      (!noWebsite && formData.website && !isValidUrl(formData.website)) ||
+                      (!noWebsite && websiteAnalysisStatus === 'failed')
+                    }
                     sx={{
                       flex: 1,
                       py: 1.5,
