@@ -45,6 +45,7 @@ const CandidateSignupPage: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
@@ -465,21 +466,24 @@ const CandidateSignupPage: React.FC = () => {
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  onBlur={() => setConfirmPasswordTouched(true)}
                   error={!!errors.confirmPassword}
                   helperText={
                     errors.confirmPassword 
                       ? errors.confirmPassword 
-                      : formData.confirmPassword 
-                        ? (formData.password === formData.confirmPassword 
-                            ? 'Password match!' 
-                            : 'Password does not match')
-                        : ''
+                      : formData.confirmPassword && formData.password === formData.confirmPassword 
+                        ? 'Password match!' 
+                        : (confirmPasswordTouched && formData.confirmPassword && formData.password !== formData.confirmPassword)
+                          ? 'Password does not match'
+                          : ''
                   }
                   FormHelperTextProps={{
                     sx: {
-                      color: formData.confirmPassword 
-                        ? (formData.password === formData.confirmPassword ? '#10B981' : '#EF4444')
-                        : undefined
+                      color: formData.confirmPassword && formData.password === formData.confirmPassword 
+                        ? '#10B981' 
+                        : (confirmPasswordTouched && formData.confirmPassword && formData.password !== formData.confirmPassword)
+                          ? '#EF4444'
+                          : undefined
                     }
                   }}
                   disabled={isLoading}
