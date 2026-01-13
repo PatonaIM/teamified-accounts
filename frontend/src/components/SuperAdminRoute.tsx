@@ -62,16 +62,8 @@ const SuperAdminRoute: React.FC<SuperAdminRouteProps> = ({ children }) => {
         );
       }
     }
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '300px'
-      }}>
-        <CircularProgress />
-      </Box>
-    );
+    // User is not super admin and no portal redirect configured - redirect to login
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

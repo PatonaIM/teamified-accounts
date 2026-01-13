@@ -10,6 +10,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   clearUser: () => void;
   updateUser: (updates: Partial<User>) => void;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []); // Only run once on mount
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, refreshUser, clearUser, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, refreshUser, clearUser, updateUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -167,7 +167,7 @@ function App() {
       <ThemeProvider>
         <SnackbarProvider>
           <Router>
-            <PortalRedirectEnforcer />
+            <PortalRedirectEnforcer>
             <div className="App">
               <Routes>
                 <Route 
@@ -518,6 +518,7 @@ function App() {
                 <Route path="*" element={<SessionAwareRedirect />} />
               </Routes>
             </div>
+            </PortalRedirectEnforcer>
           </Router>
         </SnackbarProvider>
       </ThemeProvider>

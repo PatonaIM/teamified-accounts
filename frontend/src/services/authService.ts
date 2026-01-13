@@ -403,6 +403,41 @@ export const getCurrentUser = async (): Promise<User> => {
   }
 };
 
+export const fetchCurrentUser = async (): Promise<User | null> => {
+  console.log('authService.fetchCurrentUser: Force fetching fresh user data');
+  
+  const token = getAccessToken();
+  if (!token) {
+    console.log('authService.fetchCurrentUser: No access token');
+    return null;
+  }
+  
+  try {
+    const response = await api.get('/v1/users/me');
+    console.log('authService.fetchCurrentUser: API Response:', response.data);
+    
+    let user = response.data;
+    
+    if (response.data && response.data.user) {
+      user = response.data.user;
+      
+      if (user.userRoles && Array.isArray(user.userRoles)) {
+        user.roles = user.userRoles.map((roleObj: any) => {
+          return roleObj.roleType || roleObj.role?.name || roleObj.role || roleObj.name || String(roleObj);
+        });
+      } else {
+        user.roles = [];
+      }
+    }
+    
+    setUserData(user);
+    return user;
+  } catch (error) {
+    console.error('authService.fetchCurrentUser: API call failed:', error);
+    return null;
+  }
+};
+
 export const isAuthenticated = (): boolean => {
   const token = getAccessToken();
   if (!token) return false;
