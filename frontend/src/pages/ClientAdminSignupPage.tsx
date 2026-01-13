@@ -184,9 +184,17 @@ const ClientAdminSignupPage: React.FC = () => {
   }, []);
 
   const handleEmailBlur = () => {
-    if (formData.email && /\S+@\S+\.\S+/.test(formData.email)) {
-      checkEmailExists(formData.email);
+    // Validate email format first
+    if (!formData.email) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return;
     }
+    setErrors(prev => ({ ...prev, email: '' }));
+    // Check if email exists
+    checkEmailExists(formData.email);
   };
 
   const handleLoginRedirect = () => {
@@ -261,25 +269,70 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
+  // Field-level blur validation handlers
+  const validateEmailField = () => {
+    if (!formData.email) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, email: '' }));
+    return true;
+  };
+
+  const validatePasswordField = () => {
+    if (!formData.password) {
+      setErrors(prev => ({ ...prev, password: 'Password is required.' }));
+      return false;
+    } else if (!isPasswordValid(formData.password)) {
+      setErrors(prev => ({ ...prev, password: 'Password does not meet requirements.' }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, password: '' }));
+    return true;
+  };
+
+  const validateConfirmPasswordField = () => {
+    if (!formData.confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Please confirm your password.' }));
+      return false;
+    } else if (formData.password !== formData.confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match.' }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, confirmPassword: '' }));
+    return true;
+  };
+
+  // Check if email step is valid (for button disabled state)
+  const isEmailStepValid = () => {
+    const emailValid = formData.email && /\S+@\S+\.\S+/.test(formData.email);
+    const passwordValid = formData.password && isPasswordValid(formData.password);
+    const confirmPasswordValid = formData.confirmPassword && formData.password === formData.confirmPassword;
+    return emailValid && passwordValid && confirmPasswordValid && !emailExists && !isCheckingEmail;
+  };
+
   const validateEmailStep = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Enter a valid email address.';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Enter a valid email address.';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Password is required.';
     } else if (!isPasswordValid(formData.password)) {
-      newErrors.password = 'Password does not meet all requirements';
+      newErrors.password = 'Password does not meet requirements.';
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = 'Please confirm your password.';
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = 'Passwords do not match.';
     }
 
     setErrors(newErrors);
@@ -853,6 +906,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
+                    onBlur={validatePasswordField}
                     error={!!errors.password}
                     helperText={errors.password}
                     disabled={isLoading || isCheckingEmail}
@@ -911,8 +965,9 @@ const ClientAdminSignupPage: React.FC = () => {
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    error={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword}
-                    helperText={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''}
+                    onBlur={validateConfirmPasswordField}
+                    error={!!errors.confirmPassword}
+                    helperText={errors.confirmPassword}
                     disabled={isLoading || isCheckingEmail}
                     InputProps={{
                       endAdornment: (
@@ -975,7 +1030,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={isLoading}
+                    disabled={isLoading || !isEmailStepValid()}
                     sx={{
                       flex: 1,
                       py: 1.5,
