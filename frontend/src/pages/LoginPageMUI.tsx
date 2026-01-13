@@ -611,10 +611,10 @@ const LoginPageMUI: React.FC = () => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 error={!!errors.email || emailAlreadyRegistered}
-                helperText={errors.email || (emailAlreadyRegistered ? 'This email is already registered.' : '')}
+                helperText={errors.email}
                 disabled={isLoading}
                 sx={{
-                  mb: 3,
+                  mb: emailAlreadyRegistered ? 1.5 : 3,
                   animation: shakeEmail ? 'shake 0.5s ease-in-out' : 'none',
                   '@keyframes shake': {
                     '0%, 100%': { transform: 'translateX(0)' },
@@ -665,34 +665,38 @@ const LoginPageMUI: React.FC = () => {
               />
 
 
-              {/* Friendly Already Registered Message */}
+              {/* Inline Error: Account Already Exists */}
               {emailAlreadyRegistered && mode === 'signup' && (
                 <Box
                   sx={{
                     bgcolor: '#FEF3C7',
+                    border: '1px solid #FCD34D',
                     borderRadius: 2,
-                    p: 2.5,
+                    p: 2,
                     mb: 3,
-                    textAlign: 'center',
                   }}
                 >
                   <Typography
                     sx={{
                       color: '#1a1a1a',
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      mb: 0.5,
-                    }}
-                  >
-                    You've signed up before using this email.
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: '#4a4a4a',
                       fontSize: '0.9rem',
                     }}
                   >
-                    Try sign in instead.
+                    Account exists. Are you trying to{' '}
+                    <Link
+                      href="/login"
+                      sx={{
+                        color: '#9333EA',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
+                      }}
+                    >
+                      login
+                    </Link>
+                    ?
                   </Typography>
                 </Box>
               )}
