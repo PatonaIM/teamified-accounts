@@ -205,20 +205,30 @@ const ClientAdminSignupPage: React.FC = () => {
     setErrors(prev => ({ ...prev, email: '' }));
   };
 
+  const [aiAnalysisError, setAiAnalysisError] = useState(false);
+
   const handleAnalyzeWebsite = useCallback(async () => {
     if (!isValidUrl(formData.website) || isAnalyzingWebsite) return;
     
     setIsAnalyzingWebsite(true);
+    setAiAnalysisError(false);
     try {
-      const result = await analyzeWebsite(formData.website);
+      let normalizedUrl = formData.website.trim();
+      if (!/^https?:\/\//i.test(normalizedUrl)) {
+        normalizedUrl = `https://${normalizedUrl}`;
+      }
+      const result = await analyzeWebsite(normalizedUrl);
       if (result.success && result.businessDescription) {
         setFormData(prev => ({
           ...prev,
           businessDescription: result.businessDescription || '',
         }));
+      } else {
+        setAiAnalysisError(true);
       }
     } catch (error) {
       console.error('Website analysis failed:', error);
+      setAiAnalysisError(true);
     } finally {
       setIsAnalyzingWebsite(false);
     }
@@ -836,8 +846,8 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Box>
                 )}
 
-                {/* Only show remaining fields if email check complete and email doesn't exist */}
-                {!emailExists && !isCheckingEmail && (
+                {/* Only show remaining fields if email doesn't exist - keep visible during check but disabled */}
+                {!emailExists && (
                   <>
                 {/* Password Field */}
                 <Box sx={{ mb: 2 }}>
@@ -861,7 +871,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     error={!!errors.password}
                     helperText={errors.password}
-                    disabled={isLoading}
+                    disabled={isLoading || isCheckingEmail}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -919,7 +929,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     error={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword}
                     helperText={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''}
-                    disabled={isLoading}
+                    disabled={isLoading || isCheckingEmail}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -1439,6 +1449,11 @@ const ClientAdminSignupPage: React.FC = () => {
                         placeholder="www.example.com"
                         value={formData.website}
                         onChange={(e) => handleInputChange('website', e.target.value)}
+                        onBlur={() => {
+                          if (isValidUrl(formData.website) && !formData.businessDescription) {
+                            handleAnalyzeWebsite();
+                          }
+                        }}
                         error={!!errors.website}
                         helperText={errors.website}
                         disabled={isLoading}
@@ -1581,36 +1596,57 @@ const ClientAdminSignupPage: React.FC = () => {
                 )}
 
                 <Box sx={{ mb: 3 }}>
-                  <Typography
-                    component="label"
-                    sx={{
-                      display: 'block',
-                      mb: 1,
-                      fontWeight: 500,
-                      color: '#1a1a1a',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Business Description
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Business Description
+                    </Typography>
+                    {isAnalyzingWebsite && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CircularProgress size={14} sx={{ color: '#9333EA' }} />
+                        <Typography sx={{ fontSize: '0.75rem', color: '#9333EA', fontWeight: 500 }}>
+                          AI is analyzing your website...
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
                   <TextField
                     fullWidth
                     multiline
                     rows={4}
-                    placeholder="Tell us what your company does..."
+                    placeholder={isAnalyzingWebsite ? "Generating description from your website..." : "Tell us what your company does..."}
                     value={formData.businessDescription}
-                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
+                    onChange={(e) => {
+                      handleInputChange('businessDescription', e.target.value);
+                      setAiAnalysisError(false);
+                    }}
                     disabled={isLoading}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: 'white',
+                        bgcolor: isAnalyzingWebsite ? '#F9FAFB' : 'white',
                         borderRadius: 2,
-                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '& fieldset': { borderColor: isAnalyzingWebsite ? '#9333EA' : '#E5E7EB' },
                         '&:hover fieldset': { borderColor: '#9333EA' },
                         '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
                       },
                     }}
                   />
+                  {aiAnalysisError && !isAnalyzingWebsite && (
+                    <Typography variant="caption" sx={{ color: '#EF4444', mt: 0.5, display: 'block' }}>
+                      Could not analyze website. Please enter a description manually.
+                    </Typography>
+                  )}
+                  {formData.businessDescription && !isAnalyzingWebsite && !aiAnalysisError && formData.website && isValidUrl(formData.website) && (
+                    <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                      AI-generated from your website. Feel free to edit.
+                    </Typography>
+                  )}
                 </Box>
 
                 <Box sx={{ mb: 3 }}>

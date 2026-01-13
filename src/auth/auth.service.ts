@@ -201,8 +201,15 @@ export class AuthService {
     await this.invitationRepository.save(invitation);
 
     // Send email verification
+    // Map invitation role to user type for email personalization
+    const userType: 'client_admin' | 'candidate' = 
+      invitation.role?.toLowerCase().includes('client') || 
+      invitation.role?.toLowerCase().includes('admin') 
+        ? 'client_admin' 
+        : 'candidate';
+    
     try {
-      await this.sendEmailVerification(savedUser, baseUrl);
+      await this.sendEmailVerification(savedUser, baseUrl, userType);
     } catch (error) {
       this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
       // Don't fail the process if email sending fails
@@ -260,15 +267,20 @@ export class AuthService {
     };
   }
 
-  private async sendEmailVerification(user: User, baseUrl: string): Promise<void> {
+  private async sendEmailVerification(
+    user: User, 
+    baseUrl: string, 
+    userType: 'client_admin' | 'candidate' = 'candidate',
+    companyName?: string
+  ): Promise<void> {
     const verificationLink = this.generateEmailVerificationLink(user.emailVerificationToken, baseUrl);
     
-    const htmlTemplate = this.generateEmailVerificationHtmlTemplate(user, verificationLink);
-    const textTemplate = this.generateEmailVerificationTextTemplate(user, verificationLink);
+    const htmlTemplate = this.generateEmailVerificationHtmlTemplate(user, verificationLink, userType, companyName);
+    const textTemplate = this.generateEmailVerificationTextTemplate(user, verificationLink, userType, companyName);
 
     const emailSent = await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Verify Your Email - Teamified',
+      subject: 'Verify your email — Teamified',
       html: htmlTemplate,
       text: textTemplate,
     });
@@ -292,71 +304,106 @@ export class AuthService {
     return `${baseUrl}/verify-email?token=${token}`;
   }
 
-  private generateEmailVerificationHtmlTemplate(user: User, verificationLink: string): string {
+  private generateEmailVerificationGreeting(
+    user: User, 
+    userType: 'client_admin' | 'candidate',
+    companyName?: string
+  ): string {
+    if (userType === 'client_admin' && companyName) {
+      return `Welcome to Teamified, ${companyName}!`;
+    }
+    if (user.firstName) {
+      return `Welcome to Teamified, ${user.firstName}!`;
+    }
+    return 'Welcome to Teamified!';
+  }
+
+  private generateEmailVerificationHtmlTemplate(
+    user: User, 
+    verificationLink: string,
+    userType: 'client_admin' | 'candidate' = 'candidate',
+    companyName?: string
+  ): string {
+    const greeting = this.generateEmailVerificationGreeting(user, userType, companyName);
+    
     return `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Email - Teamified</title>
+    <title>Verify your email — Teamified</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
         .content { padding: 30px 20px; background-color: #f8f9fa; }
         .cta-button { 
             display: inline-block; 
-            background-color: #27ae60; 
+            background-color: #9333EA;
             color: white; 
-            padding: 12px 30px; 
+            padding: 14px 36px; 
             text-decoration: none; 
-            border-radius: 5px; 
+            border-radius: 6px; 
             margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
         }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        .link-box { background-color: #e8eaf6; padding: 15px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border-left: 4px solid #9333EA; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Email Verification</h1>
+            <h1 style="margin: 0; font-size: 28px;">Verify your email</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Complete your account setup</p>
         </div>
         <div class="content">
-            <h2>Welcome ${user.firstName} ${user.lastName}!</h2>
-            <p>Your account has been successfully created. To complete your setup, please verify your email address by clicking the button below:</p>
+            <h2 style="margin-top: 0; color: #9333EA;">${greeting}</h2>
             
-            <div style="text-align: center;">
-                <a href="${verificationLink}" class="cta-button">Verify Email Address</a>
+            <p style="font-size: 16px;">To complete your setup, please verify your email address by clicking the button below.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationLink}" class="cta-button" style="color: white !important; text-decoration: none;">Verify email address</a>
             </div>
             
-            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f1f1f1; padding: 10px; border-radius: 3px;">
+            <p style="margin-top: 25px;"><strong>If the button doesn't work,</strong> copy and paste this link into your browser:</p>
+            <div class="link-box">
                 ${verificationLink}
-            </p>
+            </div>
             
-            <p>Once your email is verified, you'll be able to access all features of Teamified.</p>
+            <p style="color: #666; margin-top: 25px;">Once your email is verified, you'll have full access to all Teamified features.</p>
         </div>
         <div class="footer">
-            <p>This is an automated message from Teamified.</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p style="margin: 5px 0;">This is an automated message from Teamified.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>`;
   }
 
-  private generateEmailVerificationTextTemplate(user: User, verificationLink: string): string {
+  private generateEmailVerificationTextTemplate(
+    user: User, 
+    verificationLink: string,
+    userType: 'client_admin' | 'candidate' = 'candidate',
+    companyName?: string
+  ): string {
+    const greeting = this.generateEmailVerificationGreeting(user, userType, companyName);
+    
     return `
-Email Verification - Teamified
+Verify your email — Teamified
 
-Welcome ${user.firstName} ${user.lastName}!
+${greeting}
 
-Your account has been successfully created. To complete your setup, please verify your email address by visiting:
+To complete your setup, please verify your email address by visiting:
 
 ${verificationLink}
 
-Once your email is verified, you'll be able to access all features of Teamified.
+If the link doesn't work, copy and paste it into your browser.
+
+Once your email is verified, you'll have full access to all Teamified features.
 
 This is an automated message from Teamified.
 © ${new Date().getFullYear()} Teamified. All rights reserved.
@@ -1602,7 +1649,7 @@ This is an automated message from Teamified.
 
     const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
     try {
-      await this.sendEmailVerification(savedUser, baseUrl);
+      await this.sendEmailVerification(savedUser, baseUrl, 'client_admin', companyName);
     } catch (error) {
       this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
     }
@@ -1905,7 +1952,7 @@ This is an automated message from Teamified.
 
     const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
     try {
-      await this.sendEmailVerification(savedUser, baseUrl);
+      await this.sendEmailVerification(savedUser, baseUrl, 'candidate');
     } catch (error) {
       this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
     }

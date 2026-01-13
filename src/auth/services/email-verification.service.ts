@@ -129,77 +129,135 @@ export class EmailVerificationService {
       
       let htmlContent: string;
       let textContent: string;
+      const displayName = user.firstName || 'there';
 
       if (roleType === 'candidate') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #667eea;">Welcome to Teamified, ${user.firstName}!</h1>
-            <p>Your email has been verified. Your candidate account is now ready!</p>
-            <div style="margin: 30px 0;">
-              <a href="https://jobseeker.teamified.com.au" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        color: white; 
-                        padding: 14px 28px; 
-                        text-decoration: none; 
-                        border-radius: 8px; 
-                        font-weight: bold;
-                        display: inline-block;">
-                Browse Jobs
-              </a>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Teamified</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .cta-button { 
+            display: inline-block; 
+            background-color: #9333EA;
+            color: white; 
+            padding: 14px 36px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Welcome to Teamified!</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your account is ready</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
+            
+            <p style="font-size: 16px;">Your email has been verified. Your candidate account is now ready!</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://jobseeker.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Browse Jobs</a>
             </div>
+            
             <p style="color: #666;">With Teamified, you can:</p>
-            <ul style="color: #666;">
-              <li>Browse and apply for exciting job opportunities</li>
-              <li>Track your application status</li>
-              <li>Build your professional profile</li>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
+                <li>Browse and apply for exciting job opportunities</li>
+                <li>Track your application status</li>
+                <li>Build your professional profile</li>
             </ul>
-            <p style="color: #999; font-size: 12px; margin-top: 30px;">
-              If you didn't create this account, please contact our support team.
-            </p>
-          </div>
-        `;
-        textContent = `Welcome to Teamified, ${user.firstName}!\n\nYour email has been verified. Your candidate account is now ready!\n\nBrowse Jobs: https://jobseeker.teamified.com.au\n\nWith Teamified, you can:\n- Browse and apply for exciting job opportunities\n- Track your application status\n- Build your professional profile`;
+        </div>
+        <div class="footer">
+            <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+        textContent = `Welcome to Teamified, ${displayName}!\n\nYour email has been verified. Your candidate account is now ready!\n\nBrowse Jobs: https://jobseeker.teamified.com.au\n\nWith Teamified, you can:\n- Browse and apply for exciting job opportunities\n- Track your application status\n- Build your professional profile\n\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
       } else {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #667eea;">Welcome to Teamified, ${user.firstName}!</h1>
-            <p>Your email has been verified. Your employer account is now ready!</p>
-            <div style="margin: 30px 0;">
-              <a href="https://ats.teamified.com.au" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        color: white; 
-                        padding: 14px 28px; 
-                        text-decoration: none; 
-                        border-radius: 8px; 
-                        font-weight: bold;
-                        display: inline-block;
-                        margin-right: 10px;">
-                Post Your First Job
-              </a>
-              <a href="https://hris.teamified.com.au" 
-                 style="background: white; 
-                        color: #667eea; 
-                        padding: 14px 28px; 
-                        text-decoration: none; 
-                        border-radius: 8px; 
-                        font-weight: bold;
-                        border: 2px solid #667eea;
-                        display: inline-block;">
-                Set Up Your Organization
-              </a>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Teamified</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .cta-button { 
+            display: inline-block; 
+            background-color: #9333EA;
+            color: white; 
+            padding: 14px 28px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .cta-button-outline { 
+            display: inline-block; 
+            background-color: white;
+            color: #9333EA; 
+            padding: 12px 26px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid #9333EA;
+        }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Welcome to Teamified!</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your employer account is ready</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
+            
+            <p style="font-size: 16px;">Your email has been verified. Your employer account is now ready!</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://ats.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Post Your First Job</a>
+                <a href="https://hris.teamified.com.au" class="cta-button-outline" style="color: #9333EA !important; text-decoration: none;">Set Up Your Organization</a>
             </div>
+            
             <p style="color: #666;">With Teamified, you can:</p>
-            <ul style="color: #666;">
-              <li>Post job openings and attract top talent</li>
-              <li>Manage your hiring pipeline</li>
-              <li>Onboard and manage your team members</li>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
+                <li>Post job openings and attract top talent</li>
+                <li>Manage your hiring pipeline</li>
+                <li>Onboard and manage your team members</li>
             </ul>
-            <p style="color: #999; font-size: 12px; margin-top: 30px;">
-              If you didn't create this account, please contact our support team.
-            </p>
-          </div>
-        `;
-        textContent = `Welcome to Teamified, ${user.firstName}!\n\nYour email has been verified. Your employer account is now ready!\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members`;
+        </div>
+        <div class="footer">
+            <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+        textContent = `Welcome to Teamified, ${displayName}!\n\nYour email has been verified. Your employer account is now ready!\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
       }
 
       await this.emailService.sendEmail({

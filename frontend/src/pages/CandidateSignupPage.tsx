@@ -319,6 +319,7 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.email}
                 margin="normal"
                 required
+                autoFocus
                 disabled={isLoading || isCheckingEmail}
                 InputProps={{
                   endAdornment: isCheckingEmail ? (
@@ -382,8 +383,8 @@ const CandidateSignupPage: React.FC = () => {
                 </Box>
               )}
 
-              {/* Only show remaining fields if email check complete and email doesn't exist */}
-              {!emailExists && !isCheckingEmail && (
+              {/* Only show remaining fields if email doesn't exist - keep visible during check but disabled */}
+              {!emailExists && (
                 <>
                   <TextField
                     fullWidth
@@ -394,8 +395,7 @@ const CandidateSignupPage: React.FC = () => {
                     helperText={errors.firstName}
                     margin="normal"
                     required
-                    autoFocus
-                    disabled={isLoading}
+                    disabled={isLoading || isCheckingEmail}
                   />
 
               <TextField
@@ -407,7 +407,7 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.lastName}
                 margin="normal"
                 required
-                disabled={isLoading}
+                disabled={isLoading || isCheckingEmail}
               />
 
               <TextField
@@ -420,16 +420,16 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.password}
                 margin="normal"
                 required
-                disabled={isLoading}
+                disabled={isLoading || isCheckingEmail}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        disabled={isLoading}
+                        disabled={isLoading || isCheckingEmail}
                         sx={{
-                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          color: (isLoading || isCheckingEmail) ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
                         }}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -450,16 +450,16 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.confirmPassword}
                 margin="normal"
                 required
-                disabled={isLoading}
+                disabled={isLoading || isCheckingEmail}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         edge="end"
-                        disabled={isLoading}
+                        disabled={isLoading || isCheckingEmail}
                         sx={{
-                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          color: (isLoading || isCheckingEmail) ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
                         }}
                       >
                         {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
@@ -475,7 +475,7 @@ const CandidateSignupPage: React.FC = () => {
                     <Checkbox
                       checked={formData.termsAccepted}
                       onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
-                      disabled={isLoading}
+                      disabled={isLoading || isCheckingEmail}
                       color="primary"
                     />
                   }
@@ -514,7 +514,7 @@ const CandidateSignupPage: React.FC = () => {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={isLoading}
+                disabled={isLoading || isCheckingEmail}
                 sx={{
                   mt: 3,
                   mb: 2,
