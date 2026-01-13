@@ -963,7 +963,20 @@ const ClientAdminSignupPage: React.FC = () => {
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     onBlur={validateConfirmPasswordField}
                     error={!!errors.confirmPassword}
-                    helperText={errors.confirmPassword}
+                    helperText={
+                      errors.confirmPassword 
+                        ? errors.confirmPassword 
+                        : (formData.confirmPassword && formData.password === formData.confirmPassword 
+                            ? 'Passwords match.' 
+                            : '')
+                    }
+                    FormHelperTextProps={{
+                      sx: {
+                        color: (!errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword) 
+                          ? '#10B981' 
+                          : undefined
+                      }
+                    }}
                     disabled={isLoading || isCheckingEmail}
                     InputProps={{
                       endAdornment: (
