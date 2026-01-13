@@ -1673,6 +1673,29 @@ const ClientAdminSignupPage: React.FC = () => {
                           },
                         }}
                       />
+                      {websiteAnalysisStatus === 'failed' && (
+                        <Typography sx={{ color: '#EF4444', fontSize: '0.75rem', mt: 0.5 }}>
+                          We couldn't fetch your website. You can still continue and enter your business description manually.{' '}
+                          <Link
+                            component="button"
+                            type="button"
+                            onClick={() => {
+                              setWebsiteAnalysisStatus('idle');
+                              handleAnalyzeWebsite();
+                            }}
+                            sx={{
+                              color: '#9333EA',
+                              textDecoration: 'none',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              '&:hover': { textDecoration: 'underline' },
+                            }}
+                          >
+                            Try again
+                          </Link>
+                        </Typography>
+                      )}
                     </Box>
 
                     {/* Analysis Status Feedback */}
@@ -1724,43 +1747,6 @@ const ClientAdminSignupPage: React.FC = () => {
                         <Typography sx={{ fontWeight: 600, color: '#10B981', fontSize: '0.875rem' }}>
                           Website analyzed successfully! Click Next to continue.
                         </Typography>
-                      </Box>
-                    )}
-
-                    {websiteAnalysisStatus === 'failed' && (
-                      <Box sx={{ 
-                        mb: 3, 
-                        p: 2, 
-                        bgcolor: '#FEF2F2', 
-                        borderRadius: 2, 
-                        border: '1px solid #EF4444',
-                      }}>
-                        <Typography sx={{ fontWeight: 600, color: '#EF4444', fontSize: '0.875rem', mb: 1 }}>
-                          Could not analyze website
-                        </Typography>
-                        <Typography sx={{ color: '#6b7280', fontSize: '0.75rem', mb: 2 }}>
-                          We couldn't fetch your website. You can still continue and enter your business description manually.
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                          <Link
-                            component="button"
-                            type="button"
-                            onClick={() => {
-                              setWebsiteAnalysisStatus('idle');
-                              handleAnalyzeWebsite();
-                            }}
-                            sx={{
-                              color: '#9333EA',
-                              textDecoration: 'none',
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              '&:hover': { textDecoration: 'underline' },
-                            }}
-                          >
-                            Try again
-                          </Link>
-                        </Box>
                       </Box>
                     )}
 
