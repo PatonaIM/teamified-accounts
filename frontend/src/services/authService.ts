@@ -483,7 +483,37 @@ export interface SignupResponse {
   emailVerificationRequired: boolean;
   email: string;
   organizationSlug?: string;
+  atsProvisioningSuccess?: boolean;
+  atsRedirectUrl?: string;
+  userId?: string;
+  organizationId?: string;
 }
+
+export interface RetryAtsResponse {
+  success: boolean;
+  atsRedirectUrl?: string;
+  error?: string;
+}
+
+export const retryAtsProvisioning = async (
+  userId: string,
+  organizationId: string,
+  organizationSlug: string,
+): Promise<RetryAtsResponse> => {
+  try {
+    const response = await api.post('/v1/auth/signup/retry-ats-provisioning', {
+      userId,
+      organizationId,
+      organizationSlug,
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return { success: false, error: error.response.data?.message || 'Retry failed' };
+    }
+    return { success: false, error: 'Failed to retry. Please try again.' };
+  }
+};
 
 export const candidateSignup = async (data: CandidateSignupData): Promise<SignupResponse> => {
   try {

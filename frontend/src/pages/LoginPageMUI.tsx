@@ -171,8 +171,10 @@ const LoginPageMUI: React.FC = () => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-    if (field === 'email' && emailAlreadyRegistered) {
-      setEmailAlreadyRegistered(false);
+    if (field === 'email') {
+      if (emailAlreadyRegistered) {
+        setEmailAlreadyRegistered(false);
+      }
     }
   };
 
@@ -222,10 +224,13 @@ const LoginPageMUI: React.FC = () => {
       });
 
       const data = await response.json();
+      console.log('[LoginPageMUI] Check email response:', data);
       
       if (data.valid) {
+        console.log('[LoginPageMUI] Email exists, proceeding to password step');
         setStep('password');
       } else {
+        console.log('[LoginPageMUI] Email not found, redirecting to signup flow');
         // Build signup URL with email, returnUrl, and intent (if present)
         const signupParams = new URLSearchParams();
         signupParams.set('email', formData.email);
@@ -235,8 +240,8 @@ const LoginPageMUI: React.FC = () => {
         if (intent) {
           signupParams.set('intent', intent);
         }
-        const signupUrl = `/signup-select?${signupParams.toString()}`;
-        navigate(signupUrl);
+        // Redirect directly to "Let's Get Started" flow
+        navigate(`/signup-select?${signupParams.toString()}`);
       }
     } catch (error) {
       setErrors({ 
@@ -437,95 +442,98 @@ const LoginPageMUI: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Left Panel - Purple Gradient (~63%) */}
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        minHeight: '100vh',
+        bgcolor: '#F5F7F8',
+      }}
+    >
+      {/* Top Header Bar */}
       <Box
         sx={{
-          flex: '0 0 63%',
-          background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 6,
-          color: 'white',
-          position: 'relative',
-          '@media (max-width: 900px)': {
-            display: 'none',
-          },
+          width: '100%',
+          py: 2,
+          px: 3,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
         }}
       >
-        <Box sx={{ maxWidth: 600, textAlign: 'center' }}>
-          <Typography
-            variant="h1"
-            sx={{
-              fontWeight: 700,
-              mb: 3,
-              fontSize: { xs: '3.5rem', md: '4.5rem' },
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Teamified
-          </Typography>
-          <Typography
-            variant="h4"
-            sx={{
-              opacity: 0.95,
-              fontSize: { xs: '1.25rem', md: '1.75rem' },
-              fontWeight: 400,
-              lineHeight: 1.5,
-              mb: 3,
-            }}
-          >
-            Build Your Global Team in Days — Not Weeks
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              opacity: 0.8,
-              fontSize: '0.875rem',
-            }}
-          >
-            Learn more about Teamified. Visit{' '}
-            <Link
-              href="https://www.teamified.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                color: 'white',
-                fontWeight: 500,
-                textDecoration: 'underline',
-                '&:hover': {
-                  opacity: 0.9,
-                },
-              }}
-            >
-              www.teamified.com
-            </Link>
-          </Typography>
-        </Box>
+        <Box
+          component="img"
+          src="/assets/teamified-logo-black.png"
+          alt="Teamified"
+          sx={{
+            height: 24,
+            width: 'auto',
+          }}
+        />
       </Box>
 
-      {/* Right Panel - Dark Background (~37%) */}
+      {/* Main Content Area */}
       <Box
         sx={{
           flex: 1,
-          bgcolor: '#1E1E1E',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           padding: 4,
+          gap: 4,
         }}
       >
+        {/* Marketing Content Box (box1) */}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 400,
+            display: { xs: 'none', md: 'block' },
+            textAlign: 'center',
+          }}
+        >
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+              lineHeight: 1.3,
+              color: '#9333EA',
+            }}
+          >
+            Hire. Manage. Scale Globally
+          </Typography>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              mb: 4,
+              lineHeight: 1.3,
+              color: '#111827',
+            }}
+          >
+            In One Platform
+          </Typography>
+
+          <Box sx={{ borderTop: '1px solid #E5E7EB', pt: 3, textAlign: 'center' }}>
+            <Typography sx={{ color: '#4a4a4a', fontSize: '0.9rem', mb: 1 }}>
+              ✅ No upfront cost · ✅ No credit card required
+            </Typography>
+            <Typography sx={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              Success guarantee — replacement at no extra cost.
+            </Typography>
+          </Box>
+        </Box>
+
         {/* Sign-in Form Container */}
         <Box
           sx={{
             width: '100%',
             maxWidth: 400,
-            bgcolor: '#2A2A2A',
+            bgcolor: 'white',
             borderRadius: 3,
             padding: 4,
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid #E5E7EB',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
         >
           {/* Email Step */}
@@ -535,7 +543,7 @@ const LoginPageMUI: React.FC = () => {
               <Typography
                 variant="h4"
                 sx={{
-                  color: 'white',
+                  color: '#1a1a1a',
                   fontWeight: 600,
                   mb: 1,
                   textAlign: 'center',
@@ -547,7 +555,7 @@ const LoginPageMUI: React.FC = () => {
               {/* Mode Toggle Link */}
               <Typography
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: '#6b7280',
                   textAlign: 'center',
                   mb: 4,
                   fontSize: '0.9rem',
@@ -560,7 +568,23 @@ const LoginPageMUI: React.FC = () => {
                     : 'Already have an account? '}
                 <Box
                   component="span"
-                  onClick={handleModeToggle}
+                  onClick={() => {
+                    if (mode === 'signin') {
+                      // Navigate directly to "Let's get started" flow with preserved params
+                      const signupParams = new URLSearchParams();
+                      if (returnUrl !== '/account/profile') {
+                        signupParams.set('returnUrl', returnUrl);
+                      }
+                      if (intent) {
+                        signupParams.set('intent', intent);
+                      }
+                      const queryString = signupParams.toString();
+                      navigate(`/signup-select${queryString ? `?${queryString}` : ''}`);
+                    } else {
+                      // Toggle back to sign in mode
+                      handleModeToggle();
+                    }
+                  }}
                   sx={{
                     color: '#A16AE8',
                     textDecoration: 'none',
@@ -583,7 +607,7 @@ const LoginPageMUI: React.FC = () => {
               )}
               <TextField
                 fullWidth
-                placeholder="Personal or Work Email"
+                label="Personal or Work Email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 error={!!errors.email || emailAlreadyRegistered}
@@ -597,37 +621,82 @@ const LoginPageMUI: React.FC = () => {
                     '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-5px)' },
                     '20%, 40%, 60%, 80%': { transform: 'translateX(5px)' },
                   },
+                  '& .MuiInputLabel-root': {
+                    color: '#9CA3AF',
+                    '&.Mui-focused': {
+                      color: '#9333EA',
+                    },
+                    '&.MuiInputLabel-shrink': {
+                      color: '#6b7280',
+                    },
+                    '&.Mui-focused.MuiInputLabel-shrink': {
+                      color: '#9333EA',
+                    },
+                    '&.Mui-error': {
+                      color: '#ef4444',
+                    },
+                  },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'transparent',
+                    bgcolor: 'white',
                     borderRadius: 2,
                     '& fieldset': {
-                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.23)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#E5E7EB',
                     },
                     '&:hover fieldset': {
-                      borderColor: emailAlreadyRegistered ? '#ef4444' : 'rgba(255, 255, 255, 0.4)',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#9333EA',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#A16AE8',
+                      borderColor: emailAlreadyRegistered ? '#ef4444' : '#9333EA',
                       borderWidth: 2,
                     },
                   },
                   '& .MuiInputBase-input': {
-                    color: 'white',
+                    color: '#1a1a1a',
                     '&:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
-                      WebkitTextFillColor: 'white',
-                      caretColor: 'white',
+                      WebkitBoxShadow: '0 0 0 100px white inset',
+                      WebkitTextFillColor: '#1a1a1a',
+                      caretColor: '#1a1a1a',
                     },
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    opacity: 1,
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',
                   },
                 }}
               />
+
+
+              {/* Friendly Already Registered Message */}
+              {emailAlreadyRegistered && mode === 'signup' && (
+                <Box
+                  sx={{
+                    bgcolor: '#FEF3C7',
+                    borderRadius: 2,
+                    p: 2.5,
+                    mb: 3,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: '#1a1a1a',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      mb: 0.5,
+                    }}
+                  >
+                    You've signed up before using this email.
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: '#4a4a4a',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    Try sign in instead.
+                  </Typography>
+                </Box>
+              )}
+
 
               <Button
                 type="submit"
@@ -641,22 +710,25 @@ const LoginPageMUI: React.FC = () => {
                   fontWeight: 600,
                   textTransform: 'none',
                   fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                  boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                  bgcolor: '#9333EA',
+                  boxShadow: 'none',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                    boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                    bgcolor: '#A855F7',
+                  },
+                  '&:active': {
+                    bgcolor: '#7E22CE',
                   },
                   '&:disabled': {
-                    background: 'rgba(161, 106, 232, 0.5)',
+                    bgcolor: 'rgba(147, 51, 234, 0.5)',
+                    color: 'white',
                   },
                 }}
               >
                 {isLoading ? <CircularProgress size={24} color="inherit" /> : (mode === 'signin' ? 'Next' : 'Continue')}
               </Button>
 
-              <Divider sx={{ my: 3, borderColor: 'rgba(255, 255, 255, 0.12)' }}>
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+              <Divider sx={{ my: 3, borderColor: '#E5E7EB' }}>
+                <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
                   or
                 </Typography>
               </Divider>
@@ -667,7 +739,7 @@ const LoginPageMUI: React.FC = () => {
                 <Typography
                   variant="body2"
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: '#6b7280',
                     fontSize: '0.875rem',
                   }}
                 >
@@ -675,7 +747,7 @@ const LoginPageMUI: React.FC = () => {
                   <Link
                     href="mailto:hello@teamified.com"
                     sx={{
-                      color: '#A16AE8',
+                      color: '#9333EA',
                       textDecoration: 'none',
                       '&:hover': {
                         textDecoration: 'underline',
@@ -696,7 +768,7 @@ const LoginPageMUI: React.FC = () => {
               <Typography
                 variant="h4"
                 sx={{
-                  color: 'white',
+                  color: '#1a1a1a',
                   fontWeight: 600,
                   mb: 2,
                   textAlign: 'center',
@@ -708,7 +780,7 @@ const LoginPageMUI: React.FC = () => {
               <Typography
                 variant="body1"
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  color: '#6b7280',
                   textAlign: 'center',
                   mb: 4,
                 }}
@@ -726,7 +798,7 @@ const LoginPageMUI: React.FC = () => {
               <TextField
                 fullWidth
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
+                label="Password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 error={!!errors.password}
@@ -740,11 +812,11 @@ const LoginPageMUI: React.FC = () => {
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                         sx={{ 
-                          color: 'rgba(255, 255, 255, 0.7)',
+                          color: '#6b7280',
                           zIndex: 1,
                           '&:hover': {
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            bgcolor: 'rgba(255, 255, 255, 0.1)',
+                            color: '#1a1a1a',
+                            bgcolor: 'rgba(0, 0, 0, 0.05)',
                           },
                         }}
                       >
@@ -755,37 +827,48 @@ const LoginPageMUI: React.FC = () => {
                 }}
                 sx={{
                   mb: 3,
+                  '& .MuiInputLabel-root': {
+                    color: '#9CA3AF',
+                    '&.Mui-focused': {
+                      color: '#9333EA',
+                    },
+                    '&.MuiInputLabel-shrink': {
+                      color: '#6b7280',
+                    },
+                    '&.Mui-focused.MuiInputLabel-shrink': {
+                      color: '#9333EA',
+                    },
+                    '&.Mui-error': {
+                      color: '#ef4444',
+                    },
+                  },
                   '& .MuiOutlinedInput-root': {
-                    bgcolor: 'transparent',
+                    bgcolor: 'white',
                     borderRadius: 2,
                     '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.23)',
+                      borderColor: '#E5E7EB',
                     },
                     '&:hover fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      borderColor: '#9333EA',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#A16AE8',
+                      borderColor: '#9333EA',
                       borderWidth: 2,
                     },
                   },
                   '& .MuiInputBase-input': {
-                    color: 'white',
+                    color: '#1a1a1a',
                     '&:-webkit-autofill': {
-                      WebkitBoxShadow: '0 0 0 100px #2A2A2A inset',
-                      WebkitTextFillColor: 'white',
-                      caretColor: 'white',
+                      WebkitBoxShadow: '0 0 0 100px white inset',
+                      WebkitTextFillColor: '#1a1a1a',
+                      caretColor: '#1a1a1a',
                     },
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    opacity: 1,
                   },
                   '& .MuiFormHelperText-root': {
                     color: '#ef4444',
                   },
                   '& .MuiInputAdornment-root': {
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: '#6b7280',
                   },
                 }}
               />
@@ -802,15 +885,18 @@ const LoginPageMUI: React.FC = () => {
                     fontWeight: 600,
                     textTransform: 'none',
                     fontSize: '1rem',
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                    color: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#9333EA',
+                    color: '#9333EA',
                     '&:hover': {
-                      borderColor: 'rgba(255, 255, 255, 0.5)',
-                      bgcolor: 'rgba(255, 255, 255, 0.05)',
+                      bgcolor: 'rgba(147, 51, 234, 0.1)',
+                      borderColor: '#9333EA',
+                    },
+                    '&:active': {
+                      bgcolor: 'rgba(147, 51, 234, 0.2)',
                     },
                     '&:disabled': {
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      color: 'rgba(255, 255, 255, 0.5)',
+                      borderColor: '#E5E7EB',
+                      color: '#9CA3AF',
                     },
                   }}
                 >
@@ -828,14 +914,17 @@ const LoginPageMUI: React.FC = () => {
                     fontWeight: 600,
                     textTransform: 'none',
                     fontSize: '1rem',
-                    background: 'linear-gradient(135deg, #A16AE8 0%, #8096FD 100%)',
-                    boxShadow: '0 4px 15px rgba(161, 106, 232, 0.3)',
+                    bgcolor: '#9333EA',
+                    boxShadow: 'none',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #8B5AE8 0%, #6B86FD 100%)',
-                      boxShadow: '0 6px 20px rgba(161, 106, 232, 0.4)',
+                      bgcolor: '#A855F7',
+                    },
+                    '&:active': {
+                      bgcolor: '#7E22CE',
                     },
                     '&:disabled': {
-                      background: 'rgba(161, 106, 232, 0.5)',
+                      bgcolor: 'rgba(147, 51, 234, 0.5)',
+                      color: 'white',
                     },
                   }}
                 >
@@ -847,11 +936,11 @@ const LoginPageMUI: React.FC = () => {
                 <Link
                   href="/forgot-password"
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: '#6b7280',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     '&:hover': {
-                      color: '#A16AE8',
+                      color: '#9333EA',
                       textDecoration: 'underline',
                     },
                   }}

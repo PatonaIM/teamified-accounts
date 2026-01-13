@@ -1,37 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,200..1000;1,200..1000&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root{
-  --background: 240 9% 98%;
-  --foreground: 240 10% 6%;
+  /* Background & Foreground */
+  --background: 210 20% 98%;        /* #F9FAFB */
+  --foreground: 220 13% 8%;         /* #111827 */
 
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 6%;
+  /* Card */
+  --card: 0 0% 100%;                /* #FFFFFF */
+  --card-foreground: 220 13% 8%;    /* #111827 */
 
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 4% 45%;
+  /* Muted */
+  --muted: 220 14% 96%;             /* #F3F4F6 */
+  --muted-foreground: 220 9% 46%;   /* #6B7280 */
 
-  --border: 240 15% 90%;
-  --input: 240 15% 90%;
+  /* Border & Input */
+  --border: 220 13% 91%;            /* #E5E7EB */
+  --input: 220 13% 91%;             /* #E5E7EB */
 
-  --primary: 251 100% 68%;          /* #7B61FF */
-  --primary-foreground: 0 0% 100%;
+  /* Primary Purple (#9333EA) */
+  --primary: 270 91% 56%;           /* #9333EA */
+  --primary-foreground: 0 0% 100%;  /* white */
+  --primary-lighter: 270 95% 81%;   /* #D8B4FE */
+  --primary-light: 271 91% 65%;     /* #A855F7 */
+  --primary-dark: 263 70% 58%;      /* #7C3AED */
 
-  --secondary: 236 100% 97%;        /* #EEF2FF */
-  --secondary-foreground: 240 10% 6%;
+  /* Secondary (neutral for UI) */
+  --secondary: 220 14% 96%;         /* #F3F4F6 */
+  --secondary-foreground: 220 13% 8%;
 
+  /* Secondary Brand Blue (#002DFF) */
+  --secondary-brand: 230 100% 50%;  /* #002DFF */
+  --secondary-brand-foreground: 0 0% 100%;
+  --secondary-brand-lighter: 214 95% 87%;  /* #BFDBFE */
+  --secondary-brand-light: 217 91% 60%;    /* #3B82F6 */
+  --secondary-brand-dark: 224 76% 48%;     /* #1D4ED8 */
+
+  /* Accent */
   --accent: 217 91% 60%;            /* #3B82F6 */
   --accent-foreground: 0 0% 100%;
 
+  /* Status Colors */
+  --success: 160 84% 39%;           /* #10B981 */
+  --success-foreground: 0 0% 100%;
+  
+  --warning: 39 100% 50%;           /* #FFA500 */
+  --warning-foreground: 220 13% 8%;
+  
   --destructive: 0 84% 60%;         /* #EF4444 */
   --destructive-foreground: 0 0% 100%;
+  
+  --info: 217 91% 60%;              /* #3B82F6 */
+  --info-foreground: 0 0% 100%;
 
-  --success: 142 72% 33%;           /* #16A34A */
-  --warning: 46 91% 52%;            /* #EAB308 */
+  /* Special Colors */
+  --premium: 45 93% 53%;            /* #D4AF37 */
+  --premium-foreground: 220 13% 8%;
+  
+  --danger: 0 84% 60%;              /* #EF4444 */
+  --danger-foreground: 0 0% 100%;
 
-  --ring: 251 100% 68%;
-  --radius: 0.75rem;
+  /* Ring & Radius */
+  --ring: 270 91% 56%;              /* Primary color for focus rings */
+  --radius: 0.5rem;
+
+  /* Spacing Scale (4px base) */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Typography Scale */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Dark mode overrides */
+.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 20% 98%;
+  --card: 222 47% 14%;
+  --card-foreground: 210 20% 98%;
+  --muted: 217 32% 18%;
+  --muted-foreground: 215 20% 65%;
+  --border: 217 32% 22%;
+  --input: 217 32% 22%;
+  --primary: 270 91% 56%;
+  --primary-foreground: 0 0% 100%;
 }
 
 *{box-sizing:border-box}

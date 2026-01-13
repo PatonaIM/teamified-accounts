@@ -51,14 +51,11 @@ const SignupPathSelectionPage: React.FC = () => {
   }, [sourceParam]);
 
   useEffect(() => {
-    if (!email) {
-      navigate('/login', { replace: true });
-      return;
-    }
-
     const buildQueryString = () => {
       const params = new URLSearchParams();
-      params.set('email', email);
+      if (email) {
+        params.set('email', email);
+      }
       if (returnUrl !== '/account') {
         params.set('returnUrl', returnUrl);
       }
@@ -72,10 +69,11 @@ const SignupPathSelectionPage: React.FC = () => {
       return params.toString();
     };
 
-    if (intent === 'candidate') {
+    // Only auto-redirect based on intent if email is provided
+    if (email && intent === 'candidate') {
       navigate(`/signup-candidate?${buildQueryString()}`, { replace: true });
       return;
-    } else if (intent === 'client') {
+    } else if (email && intent === 'client') {
       navigate(`/signup-client-admin?${buildQueryString()}`, { replace: true });
       return;
     }
@@ -83,7 +81,9 @@ const SignupPathSelectionPage: React.FC = () => {
 
   const buildSignupUrl = (path: string) => {
     const params = new URLSearchParams();
-    params.set('email', email);
+    if (email) {
+      params.set('email', email);
+    }
     if (returnUrl !== '/account') {
       params.set('returnUrl', returnUrl);
     }
@@ -128,13 +128,42 @@ const SignupPathSelectionPage: React.FC = () => {
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: { xs: 2, md: 4 },
+        bgcolor: '#F5F7F8',
       }}
     >
-      <Container maxWidth="lg">
+      {/* Header with Teamified Logo */}
+      <Box
+        sx={{
+          width: '100%',
+          py: 2,
+          px: 4,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          teamified
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: { xs: 2, md: 4 },
+        }}
+      >
+        <Container maxWidth="lg">
         <Fade in timeout={600}>
           <Box>
             <Box textAlign="center" mb={5}>
@@ -144,13 +173,13 @@ const SignupPathSelectionPage: React.FC = () => {
                 gutterBottom
                 sx={{
                   fontWeight: 700,
-                  color: 'white',
+                  color: '#1a1a1a',
                   fontSize: { xs: '2rem', md: '2.75rem' },
                 }}
               >
                 Let's get started
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 400, color: 'rgba(255, 255, 255, 0.85)' }}>
+              <Typography variant="h6" sx={{ fontWeight: 400, color: '#6b7280' }}>
                 Tell us who you are
               </Typography>
             </Box>
@@ -342,11 +371,13 @@ const SignupPathSelectionPage: React.FC = () => {
                 startIcon={<ArrowBack />}
                 onClick={() => navigate('/login')}
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.9)',
+                  color: '#9333EA',
                   textTransform: 'none',
                   fontSize: '0.95rem',
+                  fontWeight: 500,
+                  backgroundColor: 'transparent',
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: 'rgba(147, 51, 234, 0.08)',
                   },
                 }}
               >
@@ -370,13 +401,13 @@ const SignupPathSelectionPage: React.FC = () => {
                   label={stat.text}
                   variant="filled"
                   sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    color: 'white',
+                    backgroundColor: 'white',
+                    color: '#1a1a1a',
                     px: 1,
                     py: 2.5,
                     borderRadius: 10,
-                    backdropFilter: 'blur(10px)',
-                    '& .MuiChip-icon': { color: 'white' },
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    '& .MuiChip-icon': { color: '#9333EA' },
                     '& .MuiChip-label': { fontWeight: 500 },
                   }}
                 />
@@ -438,14 +469,14 @@ const SignupPathSelectionPage: React.FC = () => {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <CheckCircle sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.7)' }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                <CheckCircle sx={{ fontSize: 18, color: '#9333EA' }} />
+                <Typography variant="body2" sx={{ color: '#4a4a4a' }}>
                   500+ Companies Trust Us
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Star sx={{ fontSize: 18, color: '#fbbf24' }} />
-                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                <Typography variant="body2" sx={{ color: '#4a4a4a' }}>
                   4.9/5 Average Rating
                 </Typography>
               </Box>
@@ -453,6 +484,7 @@ const SignupPathSelectionPage: React.FC = () => {
           </Box>
         </Fade>
       </Container>
+      </Box>
     </Box>
   );
 };

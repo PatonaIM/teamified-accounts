@@ -23,12 +23,16 @@ import {
   VisibilityOff,
   ArrowBack,
   AutoAwesome,
+  Login as LoginIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { clientAdminSignup, analyzeWebsite } from '../services/authService';
+import { clientAdminSignup, analyzeWebsite, retryAtsProvisioning } from '../services/authService';
+import type { SignupResponse } from '../services/authService';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
+import RolesMultiSelect from '../components/RolesMultiSelect';
 
 const COMPANY_SIZES = [
   '1-20 employees',
@@ -83,7 +87,14 @@ const ClientAdminSignupPage: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account';
   const intent = searchParams.get('intent') || '';
 
-  const [step, setStep] = useState<'basic' | 'details'>('basic');
+  const [step, setStep] = useState<'email' | 'name' | 'details' | 'website' | 'business' | 'hiring' | 'review'>('email');
+  const [noWebsite, setNoWebsite] = useState(false);
+  const [selectedCompanySize, setSelectedCompanySize] = useState<string>('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editSection, setEditSection] = useState<string | null>(null);
+  const [originalSectionData, setOriginalSectionData] = useState<Record<string, unknown> | null>(null);
+  const websiteInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     email: emailParam,
     password: '',
@@ -105,13 +116,94 @@ const ClientAdminSignupPage: React.FC = () => {
     howCanWeHelp: '',
     termsAccepted: false,
   });
+
+  const hasBusinessData = formData.businessDescription.trim() !== '' || 
+                          formData.industry !== '' || 
+                          formData.companySize !== '';
+
+  const hasHiringData = selectedRoles.length > 0 || formData.howCanWeHelp.trim() !== '';
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      rolesNeeded: selectedRoles.join(', '),
+    }));
+  }, [selectedRoles]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [pendingAtsRetry, setPendingAtsRetry] = useState<SignupResponse | null>(null);
   const slugManuallyEditedRef = useRef(false);
+  const [emailExists, setEmailExists] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [lastCheckedEmail, setLastCheckedEmail] = useState('');
+  const latestEmailRef = useRef(formData.email);
+  
+  // Keep ref in sync with email changes
+  latestEmailRef.current = formData.email.toLowerCase().trim();
+
+  const checkEmailExists = useCallback(async (email: string) => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      setEmailExists(false);
+      setEmailChecked(false);
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    setIsCheckingEmail(true);
+    try {
+      const response = await fetch('/api/v1/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await response.json();
+      // Only update state if this response matches the CURRENT email (use ref for latest value)
+      if (normalizedEmail === latestEmailRef.current) {
+        // valid === true means email exists in database (user already registered)
+        // valid === false means email is available for signup
+        setEmailExists(data.valid === true);
+        setEmailChecked(true);
+        setLastCheckedEmail(normalizedEmail);
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+      // Only update error state if email still matches
+      if (normalizedEmail === latestEmailRef.current) {
+        setEmailExists(false);
+        setEmailChecked(false);
+      }
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  }, []);
+
+  const handleEmailBlur = () => {
+    if (formData.email && /\S+@\S+\.\S+/.test(formData.email)) {
+      checkEmailExists(formData.email);
+    }
+  };
+
+  const handleLoginRedirect = () => {
+    const loginParams = new URLSearchParams();
+    loginParams.set('email', formData.email);
+    if (returnUrl !== '/account') {
+      loginParams.set('returnUrl', returnUrl);
+    }
+    navigate(`/login?${loginParams.toString()}`);
+  };
+
+  const handleUseDifferentEmail = () => {
+    setFormData(prev => ({ ...prev, email: '' }));
+    setEmailExists(false);
+    setEmailChecked(false);
+    setErrors(prev => ({ ...prev, email: '' }));
+  };
 
   const handleAnalyzeWebsite = useCallback(async () => {
     if (!isValidUrl(formData.website) || isAnalyzingWebsite) return;
@@ -138,6 +230,12 @@ const ClientAdminSignupPage: React.FC = () => {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
+    if (field === 'email') {
+      setEmailExists(false);
+      setEmailChecked(false);
+      setLastCheckedEmail('');
+    }
+
     if (field === 'slug') {
       slugManuallyEditedRef.current = true;
     }
@@ -153,37 +251,13 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
-  const validateStep1 = () => {
+  const validateEmailStep = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.firstName) {
-      newErrors.firstName = 'First name is required';
-    } else if (formData.firstName.length > 50) {
-      newErrors.firstName = 'First name must not exceed 50 characters';
-    }
-
-    if (!formData.lastName) {
-      newErrors.lastName = 'Last name is required';
-    } else if (formData.lastName.length > 50) {
-      newErrors.lastName = 'Last name must not exceed 50 characters';
-    }
-
-    if (!formData.companyName) {
-      newErrors.companyName = 'Company name is required';
-    } else if (formData.companyName.length > 255) {
-      newErrors.companyName = 'Company name must not exceed 255 characters';
-    }
-
-    if (formData.slug && (formData.slug.length < 2 || formData.slug.length > 100)) {
-      newErrors.slug = 'Slug must be between 2 and 100 characters';
-    } else if (formData.slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formData.slug)) {
-      newErrors.slug = 'Slug must be lowercase alphanumeric with hyphens only (e.g., acme-corp)';
     }
 
     if (!formData.password) {
@@ -202,34 +276,121 @@ const ClientAdminSignupPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
+  const validateNameStep = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (formData.website && !isValidUrl(formData.website)) {
-      newErrors.website = 'Please enter a valid website URL';
+    if (!formData.firstName) {
+      newErrors.firstName = 'First name is required';
+    } else if (formData.firstName.length > 50) {
+      newErrors.firstName = 'First name must not exceed 50 characters';
     }
 
-    if (!formData.termsAccepted) {
-      newErrors.termsAccepted = 'You must accept the terms to continue';
+    if (!formData.lastName) {
+      newErrors.lastName = 'Last name is required';
+    } else if (formData.lastName.length > 50) {
+      newErrors.lastName = 'Last name must not exceed 50 characters';
+    }
+
+    if (!formData.mobileNumber) {
+      newErrors.mobileNumber = 'Mobile number is required';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleContinue = (e: React.FormEvent) => {
+  const validateDetailsStep = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.companyName) {
+      newErrors.companyName = 'Company name is required';
+    } else if (formData.companyName.length > 255) {
+      newErrors.companyName = 'Company name must not exceed 255 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateWebsiteStep = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!noWebsite && !formData.website) {
+      newErrors.website = 'Website URL is required.';
+    } else if (!noWebsite && formData.website && !isValidUrl(formData.website)) {
+      newErrors.website = 'Please enter a valid website URL (e.g., https://company.com).';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleEmailContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateStep1()) {
-      setStep('details');
+    
+    // Run form validation first to show errors to user
+    if (!validateEmailStep()) {
+      return;
+    }
+    
+    // Compute if the email check is valid for current input
+    const normalizedCurrentEmail = formData.email.toLowerCase().trim();
+    const emailCheckIsValid = emailChecked && lastCheckedEmail === normalizedCurrentEmail;
+    
+    // Don't proceed if email check is in progress
+    if (isCheckingEmail) {
+      return;
+    }
+    
+    // If email check is valid and email exists, block progression
+    if (emailCheckIsValid && emailExists) {
+      return;
+    }
+    
+    // If email hasn't been checked for current input, trigger check
+    if (!emailCheckIsValid && formData.email && /\S+@\S+\.\S+/.test(formData.email)) {
+      checkEmailExists(formData.email);
+      return;
+    }
+    
+    setStep('name');
+  };
+
+  const handleNameContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateNameStep()) {
+      if (editMode) {
+        setEditMode(false);
+        setEditSection(null);
+        setStep('review');
+      } else {
+        setStep('details');
+      }
+    }
+  };
+
+  const handleDetailsContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateDetailsStep()) {
+      if (editMode) {
+        setEditMode(false);
+        setEditSection(null);
+        setStep('review');
+      } else {
+        setStep('website');
+      }
+    }
+  };
+
+  const handleWebsiteContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateWebsiteStep()) {
+      setStep('business');
     }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!validateStep2()) {
-      return;
-    }
 
     setIsLoading(true);
     setErrors({});
@@ -238,7 +399,7 @@ const ClientAdminSignupPage: React.FC = () => {
       const mobileDialCode = countries.find(c => c.code === formData.mobileCountryCode)?.dialCode || '';
       const phoneDialCode = countries.find(c => c.code === formData.phoneCountryCode)?.dialCode || '';
 
-      await clientAdminSignup({
+      const response = await clientAdminSignup({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -259,20 +420,89 @@ const ClientAdminSignupPage: React.FC = () => {
         termsAccepted: formData.termsAccepted,
       });
 
-      navigate('/signup-success', { replace: true });
+      console.log('Client admin signup response:', response);
+
+      if (response.atsProvisioningSuccess && response.atsRedirectUrl) {
+        console.log('Redirecting to ATS portal:', response.atsRedirectUrl);
+        window.location.href = response.atsRedirectUrl;
+      } else {
+        setPendingAtsRetry(response);
+        setErrors({
+          atsError: "We couldn't connect you to the ATS portal right now. Please try again in a moment.",
+        });
+        setIsLoading(false);
+      }
     } catch (error: any) {
-      console.error('Client admin signup error:', error);
+      console.error('Client admin signup error:', error?.message || error);
+      const errorMessage = error?.message || 'Failed to create account. Please try again.';
       setErrors({
-        general: error.message || 'Failed to create account. Please try again.',
+        general: errorMessage,
       });
-    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetryAtsProvisioning = async () => {
+    if (!pendingAtsRetry?.userId || !pendingAtsRetry?.organizationId || !pendingAtsRetry?.organizationSlug) {
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const response = await retryAtsProvisioning(
+        pendingAtsRetry.userId,
+        pendingAtsRetry.organizationId,
+        pendingAtsRetry.organizationSlug,
+      );
+
+      if (response.success && response.atsRedirectUrl) {
+        window.location.href = response.atsRedirectUrl;
+      } else {
+        setErrors({
+          atsError: "We couldn't connect you to the ATS portal right now. Please try again in a moment.",
+        });
+        setIsLoading(false);
+      }
+    } catch (error: any) {
+      console.error('ATS retry error:', error);
+      setErrors({
+        atsError: "We couldn't connect you to the ATS portal right now. Please try again in a moment.",
+      });
       setIsLoading(false);
     }
   };
 
   const handleBack = () => {
+    if (editMode) {
+      setEditMode(false);
+      setEditSection(null);
+      setStep('review');
+      return;
+    }
+    if (step === 'review') {
+      setStep('hiring');
+      return;
+    }
+    if (step === 'hiring') {
+      setStep('business');
+      return;
+    }
+    if (step === 'business') {
+      setStep('website');
+      return;
+    }
+    if (step === 'website') {
+      setStep('details');
+      return;
+    }
     if (step === 'details') {
-      setStep('basic');
+      setStep('name');
+      return;
+    }
+    if (step === 'name') {
+      setStep('email');
       return;
     }
     
@@ -287,17 +517,185 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
+  const handleCompanySizeSelect = (size: string) => {
+    setSelectedCompanySize(size);
+    handleInputChange('companySize', size);
+  };
+
+  const handleBusinessContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editMode) {
+      setEditMode(false);
+      setEditSection(null);
+      setStep('review');
+    } else {
+      setStep('hiring');
+    }
+  };
+
+  const handleHiringContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editMode) {
+      setEditMode(false);
+      setEditSection(null);
+      setStep('review');
+    } else {
+      setStep('review');
+    }
+  };
+
+  const handleRoleToggle = (role: string) => {
+    setSelectedRoles(prev => 
+      prev.includes(role) 
+        ? prev.filter(r => r !== role)
+        : [...prev, role]
+    );
+  };
+
+  const extractSectionSnapshot = (section: string): Record<string, unknown> => {
+    switch (section) {
+      case 'contact':
+        return {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          mobileCountryCode: formData.mobileCountryCode,
+          mobileNumber: formData.mobileNumber,
+          phoneCountryCode: formData.phoneCountryCode,
+          phoneNumber: formData.phoneNumber,
+        };
+      case 'company':
+        return {
+          companyName: formData.companyName,
+          country: formData.country,
+        };
+      case 'business':
+        return {
+          businessDescription: formData.businessDescription,
+          industry: formData.industry,
+          companySize: selectedCompanySize,
+        };
+      case 'hiring':
+        return {
+          selectedRoles: [...selectedRoles],
+          howCanWeHelp: formData.howCanWeHelp,
+        };
+      default:
+        return {};
+    }
+  };
+
+  const arraysEqual = (a: string[], b: string[]): boolean => {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((val, idx) => val === sortedB[idx]);
+  };
+
+  const hasSectionChanged = (): boolean => {
+    if (!originalSectionData || !editSection) return false;
+    const current = extractSectionSnapshot(editSection);
+    
+    for (const key of Object.keys(originalSectionData)) {
+      const origVal = originalSectionData[key];
+      const currVal = current[key];
+      
+      if (Array.isArray(origVal) && Array.isArray(currVal)) {
+        if (!arraysEqual(origVal as string[], currVal as string[])) return true;
+      } else if (origVal !== currVal) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleEditSection = (section: string) => {
+    const snapshot = extractSectionSnapshot(section);
+    setOriginalSectionData(snapshot);
+    setEditMode(true);
+    setEditSection(section);
+    switch (section) {
+      case 'contact':
+        setStep('name');
+        break;
+      case 'company':
+        setStep('details');
+        break;
+      case 'business':
+        setStep('business');
+        break;
+      case 'hiring':
+        setStep('hiring');
+        break;
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setEditSection(null);
+    setOriginalSectionData(null);
+    setStep('review');
+  };
+
+  const handleUpdateSection = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditMode(false);
+    setEditSection(null);
+    setOriginalSectionData(null);
+    setStep('review');
+  };
+
+  const handleNoWebsiteToggle = () => {
+    setNoWebsite(true);
+    handleInputChange('website', '');
+  };
+
+  const handleHaveWebsiteToggle = () => {
+    setNoWebsite(false);
+    setTimeout(() => {
+      websiteInputRef.current?.focus();
+    }, 100);
+  };
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 2,
+        flexDirection: 'column',
+        bgcolor: '#F5F7F8',
       }}
     >
+      {/* Header with Teamified Logo */}
+      <Box
+        sx={{
+          width: '100%',
+          py: 2,
+          px: 4,
+          bgcolor: 'white',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: '#1a1a1a',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          teamified
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 2,
+        }}
+      >
       <Container maxWidth="md">
         <Fade in key={step} timeout={400}>
           <Paper
@@ -309,21 +707,23 @@ const ClientAdminSignupPage: React.FC = () => {
               overflow: 'hidden',
             }}
           >
-            {/* Step 1: Basic Information */}
-            {step === 'basic' && (
-              <Box component="form" onSubmit={handleContinue} noValidate>
-                <Box textAlign="center" mb={4}>
+            {/* Step 1: Email */}
+            {step === 'email' && (
+              <Box component="form" onSubmit={handleEmailContinue} noValidate>
+                <Box mb={4}>
                   <Typography
                     variant="h4"
                     component="h1"
                     gutterBottom
-                    fontWeight="bold"
-                    color="secondary"
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
                   >
-                    Business Sign Up
+                    Welcome to Teamified
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Let's get started with the basics
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Let's get started with your email
                   </Typography>
                 </Box>
 
@@ -333,174 +733,844 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Alert>
                 )}
 
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  error={!!errors.email}
-                  helperText={errors.email}
-                  margin="normal"
-                  required
-                  autoFocus
-                  disabled={isLoading}
-                />
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Email address
+                  </Typography>
                   <TextField
                     fullWidth
-                    label="First Name"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    error={!!errors.firstName}
-                    helperText={errors.firstName}
-                    required
-                    disabled={isLoading}
+                    type="email"
+                    placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onBlur={handleEmailBlur}
+                    error={!!errors.email || emailExists}
+                    helperText={errors.email}
+                    autoFocus
+                    disabled={isLoading || isCheckingEmail}
+                    InputProps={{
+                      endAdornment: isCheckingEmail ? (
+                        <InputAdornment position="end">
+                          <CircularProgress size={20} />
+                        </InputAdornment>
+                      ) : null,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#E5E7EB',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9333EA',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#9333EA',
+                          borderWidth: 2,
+                        },
+                      },
+                    }}
                   />
+                </Box>
 
+                {/* Email Exists Warning */}
+                {emailExists && (
+                  <Box
+                    sx={{
+                      bgcolor: '#FEF3C7',
+                      borderRadius: 2,
+                      p: 2.5,
+                      mb: 2,
+                      border: '1px solid #FCD34D',
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color: '#92400E',
+                        fontWeight: 500,
+                        fontSize: '0.9rem',
+                        mb: 2,
+                      }}
+                    >
+                      This email ID is already present with us. Please log in or use a different email ID.
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<LoginIcon />}
+                        onClick={handleLoginRedirect}
+                        sx={{
+                          bgcolor: '#9333EA',
+                          '&:hover': { bgcolor: '#7C3AED' },
+                          textTransform: 'none',
+                        }}
+                      >
+                        Login
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<RefreshIcon />}
+                        onClick={handleUseDifferentEmail}
+                        sx={{
+                          borderColor: '#9333EA',
+                          color: '#9333EA',
+                          '&:hover': { borderColor: '#7C3AED', bgcolor: 'rgba(147, 51, 234, 0.04)' },
+                          textTransform: 'none',
+                        }}
+                      >
+                        Use different email
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Only show remaining fields if email check complete and email doesn't exist */}
+                {!emailExists && !isCheckingEmail && (
+                  <>
+                {/* Password Field */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Password
+                  </Typography>
                   <TextField
                     fullWidth
-                    label="Last Name"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    error={!!errors.lastName}
-                    helperText={errors.lastName}
-                    required
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    error={!!errors.password}
+                    helperText={errors.password}
+                    disabled={isLoading}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            sx={{ color: '#9CA3AF' }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#E5E7EB',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9333EA',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#9333EA',
+                          borderWidth: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* Password Requirements */}
+                <PasswordRequirements password={formData.password} />
+
+                {/* Confirm Password Field */}
+                <Box sx={{ mb: 2, mt: 2 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Confirm Password
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    error={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword}
+                    helperText={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''}
+                    disabled={isLoading}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            edge="end"
+                            sx={{ color: '#9CA3AF' }}
+                          >
+                            {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': {
+                          borderColor: '#E5E7EB',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#9333EA',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#9333EA',
+                          borderWidth: 2,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+                  </>
+                )}
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={isLoading}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
+                  >
+                    Back
+                  </Button>
+                  {!emailExists && !isCheckingEmail && (
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    Next
+                  </Button>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 2: Name & Contact */}
+            {step === 'name' && (
+              <Box component="form" onSubmit={handleNameContinue} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    What's your name?
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    We'd love to know who we're working with
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
+                  <Box>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      First Name
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="John"
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      error={!!errors.firstName}
+                      helperText={errors.firstName}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Box>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Last Name
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="Smith"
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      error={!!errors.lastName}
+                      helperText={errors.lastName}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Mobile Number
+                  </Typography>
+                  <PhoneInput
+                    countryCode={formData.mobileCountryCode}
+                    phoneNumber={formData.mobileNumber}
+                    onCountryChange={(value) => handleInputChange('mobileCountryCode', value)}
+                    onPhoneChange={(value) => handleInputChange('mobileNumber', value)}
+                    error={!!errors.mobileNumber}
+                    helperText={errors.mobileNumber}
                     disabled={isLoading}
                   />
                 </Box>
 
-                <TextField
-                  fullWidth
-                  label="Company Name"
-                  value={formData.companyName}
-                  onChange={(e) => handleInputChange('companyName', e.target.value)}
-                  error={!!errors.companyName}
-                  helperText={errors.companyName}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                />
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Phone Number{' '}
+                    <Typography component="span" sx={{ color: '#9CA3AF', fontWeight: 400 }}>
+                      (optional)
+                    </Typography>
+                  </Typography>
+                  <PhoneInput
+                    countryCode={formData.phoneCountryCode}
+                    phoneNumber={formData.phoneNumber}
+                    onCountryChange={(value) => handleInputChange('phoneCountryCode', value)}
+                    onPhoneChange={(value) => handleInputChange('phoneNumber', value)}
+                    disabled={isLoading}
+                  />
+                </Box>
 
-                <TextField
-                  fullWidth
-                  label="Organization Slug"
-                  value={formData.slug}
-                  onChange={(e) => handleInputChange('slug', e.target.value)}
-                  error={!!errors.slug}
-                  helperText={errors.slug || 'URL-friendly identifier (auto-generated from company name)'}
-                  margin="normal"
-                  disabled={isLoading}
-                />
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {editMode ? 'Update' : 'Next'}
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            )}
 
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  error={!!errors.password}
-                  helperText={errors.password}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{
-                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                          }}
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <PasswordRequirements password={formData.password} />
+            {/* Step 3: Company Details */}
+            {step === 'details' && (
+              <Box component="form" onSubmit={handleDetailsContinue} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    Your company details?
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Tell us about your organization
+                  </Typography>
+                </Box>
 
-                <TextField
-                  fullWidth
-                  label="Confirm Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword}
-                  margin="normal"
-                  required
-                  disabled={isLoading}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          edge="end"
-                          disabled={isLoading}
-                          sx={{
-                            color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                          }}
-                        >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="secondary"
-                  size="large"
-                  disabled={isLoading}
-                  sx={{
-                    mt: 3,
-                    mb: 2,
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  Continue
-                </Button>
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Company Name
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="Your company name"
+                    value={formData.companyName}
+                    onChange={(e) => handleInputChange('companyName', e.target.value)}
+                    error={!!errors.companyName}
+                    helperText={errors.companyName}
+                    disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </Box>
 
-                <Box textAlign="center" mt={2}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Country
+                  </Typography>
+                  <CountrySelect
+                    value={formData.country}
+                    onChange={(value) => handleInputChange('country', value)}
+                    disabled={isLoading}
+                  />
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {editMode ? 'Update' : 'Next'}
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 4: Website */}
+            {step === 'website' && (
+              <Box component="form" onSubmit={handleWebsiteContinue} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    Welcome to Teamified, {formData.firstName}!
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    We'll use AI to understand your business and create a tailored job description
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                {!noWebsite ? (
+                  <>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          mb: 1,
+                          fontWeight: 500,
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        Website URL
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="www.example.com"
+                        value={formData.website}
+                        onChange={(e) => handleInputChange('website', e.target.value)}
+                        error={!!errors.website}
+                        helperText={errors.website}
+                        disabled={isLoading}
+                        inputRef={websiteInputRef}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            '& fieldset': { borderColor: '#E5E7EB' },
+                            '&:hover fieldset': { borderColor: '#9333EA' },
+                            '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    <Box sx={{ mb: 3 }}>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={handleNoWebsiteToggle}
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        I don't have a website
+                      </Link>
+                    </Box>
+                  </>
+                ) : (
+                  <Box sx={{ mb: 3, p: 3, bgcolor: '#F9FAFB', borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                    <Typography sx={{ color: '#6b7280', mb: 2 }}>
+                      No problem! We'll help you create a great job description without it.
+                    </Typography>
+                    <Link
+                      component="button"
+                      type="button"
+                      onClick={handleHaveWebsiteToggle}
+                      sx={{
+                        color: '#9333EA',
+                        textDecoration: 'none',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
+                      }}
+                    >
+                      Actually, I have website
+                    </Link>
+                  </Box>
+                )}
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                   <Button
-                    startIcon={<ArrowBack />}
+                    variant="outlined"
                     onClick={handleBack}
                     disabled={isLoading}
-                    sx={{ textTransform: 'none' }}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
                   >
-                    {intent === 'candidate' || intent === 'client' ? 'Back to Login' : 'Back to Selection'}
+                    Back
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isLoading}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    Next
                   </Button>
                 </Box>
               </Box>
             )}
 
-            {/* Step 2: Company Details */}
-            {step === 'details' && (
-              <Box component="form" onSubmit={handleSubmit} noValidate>
-                <Box textAlign="center" mb={4}>
+            {/* Step 5: Business Information */}
+            {step === 'business' && (
+              <Box component="form" onSubmit={handleBusinessContinue} noValidate>
+                <Box mb={4}>
                   <Typography
                     variant="h4"
                     component="h1"
                     gutterBottom
-                    fontWeight="bold"
-                    color="secondary"
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
                   >
-                    Tell us more about {formData.companyName}
+                    Tell us about your business
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    Help us understand your business better
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    This helps us match you with the right candidates
                   </Typography>
                 </Box>
 
@@ -510,34 +1580,73 @@ const ClientAdminSignupPage: React.FC = () => {
                   </Alert>
                 )}
 
-                {successMessage && (
-                  <Alert severity="success" sx={{ mb: 3 }}>
-                    {successMessage}
-                  </Alert>
-                )}
-
-                <Box sx={{ mt: 2 }}>
-                  <CountrySelect
-                    value={formData.country}
-                    onChange={(value) => handleInputChange('country', value)}
-                    label="Country"
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Business Description
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder="Tell us what your company does..."
+                    value={formData.businessDescription}
+                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
                     disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
                   />
                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 2 }}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Industry
+                  </Typography>
                   <TextField
                     select
                     fullWidth
-                    label="Industry"
                     value={formData.industry}
                     onChange={(e) => handleInputChange('industry', e.target.value)}
-                    error={!!errors.industry}
-                    helperText={errors.industry}
                     disabled={isLoading}
+                    SelectProps={{
+                      displayEmpty: true,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
                   >
-                    <MenuItem value="">
-                      <em>Select industry (optional)</em>
+                    <MenuItem value="" disabled>
+                      <Typography sx={{ color: '#9CA3AF' }}>Select your industry</Typography>
                     </MenuItem>
                     {INDUSTRIES.map((industry) => (
                       <MenuItem key={industry} value={industry}>
@@ -545,242 +1654,560 @@ const ClientAdminSignupPage: React.FC = () => {
                       </MenuItem>
                     ))}
                   </TextField>
+                  <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                    Select the industry your company operates in
+                  </Typography>
+                </Box>
 
-                  <TextField
-                    select
-                    fullWidth
-                    label="Company Size"
-                    value={formData.companySize}
-                    onChange={(e) => handleInputChange('companySize', e.target.value)}
-                    error={!!errors.companySize}
-                    helperText={errors.companySize}
-                    disabled={isLoading}
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1.5,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
                   >
-                    <MenuItem value="">
-                      <em>Select size (optional)</em>
-                    </MenuItem>
+                    Company Size
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
                     {COMPANY_SIZES.map((size) => (
-                      <MenuItem key={size} value={size}>
-                        {size}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Box>
-
-                <Box sx={{ mt: 3 }}>
-                  <PhoneInput
-                    countryCode={formData.mobileCountryCode}
-                    phoneNumber={formData.mobileNumber}
-                    onCountryChange={(code) => handleInputChange('mobileCountryCode', code)}
-                    onPhoneChange={(number) => handleInputChange('mobileNumber', number)}
-                    label="Mobile Number"
-                    disabled={isLoading}
-                  />
-                </Box>
-
-                <Box sx={{ mt: 2 }}>
-                  <PhoneInput
-                    countryCode={formData.phoneCountryCode}
-                    phoneNumber={formData.phoneNumber}
-                    onCountryChange={(code) => handleInputChange('phoneCountryCode', code)}
-                    onPhoneChange={(number) => handleInputChange('phoneNumber', number)}
-                    label="Phone Number (optional)"
-                    disabled={isLoading}
-                  />
-                </Box>
-
-                <TextField
-                  fullWidth
-                  label="Company Website (optional)"
-                  value={formData.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  error={!!errors.website}
-                  helperText={errors.website}
-                  margin="normal"
-                  disabled={isLoading}
-                  placeholder="https://example.com"
-                />
-
-                <Box sx={{ position: 'relative', mt: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Business Description"
-                    value={formData.businessDescription}
-                    onChange={(e) => handleInputChange('businessDescription', e.target.value)}
-                    error={!!errors.businessDescription}
-                    helperText={errors.businessDescription}
-                    multiline
-                    rows={5}
-                    disabled={isLoading || isAnalyzingWebsite}
-                    placeholder="Tell us about your business..."
-                  />
-                  {isValidUrl(formData.website) && !isAnalyzingWebsite && (
-                    <Tooltip title="Analyze my website" arrow placement="left">
-                      <IconButton
-                        onClick={handleAnalyzeWebsite}
-                        disabled={isLoading}
+                      <Box
+                        key={size}
+                        onClick={() => !isLoading && handleCompanySizeSelect(size)}
                         sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          opacity: 0.6,
-                          transition: 'opacity 0.2s, transform 0.2s',
+                          p: 2,
+                          border: '1px solid',
+                          borderColor: selectedCompanySize === size ? '#9333EA' : '#E5E7EB',
+                          borderRadius: 2,
+                          cursor: isLoading ? 'default' : 'pointer',
+                          bgcolor: selectedCompanySize === size ? 'rgba(147, 51, 234, 0.04)' : 'white',
+                          transition: 'all 0.2s',
                           '&:hover': {
-                            opacity: 1,
-                            transform: 'scale(1.1)',
-                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                            borderColor: isLoading ? undefined : '#9333EA',
+                            bgcolor: isLoading ? undefined : 'rgba(147, 51, 234, 0.02)',
                           },
                         }}
                       >
-                        <AutoAwesome sx={{ color: '#7c3aed', fontSize: 26 }} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {isAnalyzingWebsite && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 22,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        borderRadius: 1,
-                        gap: 1,
-                      }}
-                    >
-                      <AutoAwesome
-                        sx={{
-                          color: '#7c3aed',
-                          fontSize: 32,
-                          animation: `${sparkle} 1s ease-in-out infinite`,
-                        }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        Analyzing your website...
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography
+                          sx={{
+                            fontWeight: selectedCompanySize === size ? 600 : 400,
+                            color: selectedCompanySize === size ? '#9333EA' : '#1a1a1a',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {size}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
                 </Box>
 
-                <TextField
-                  fullWidth
-                  label="What roles do you need? (optional)"
-                  value={formData.rolesNeeded}
-                  onChange={(e) => handleInputChange('rolesNeeded', e.target.value)}
-                  error={!!errors.rolesNeeded}
-                  helperText={errors.rolesNeeded}
-                  margin="normal"
-                  disabled={isLoading}
-                  placeholder="e.g., Software Engineers, Product Managers"
-                />
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasBusinessData ? 'Next' : 'Skip'}
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            )}
 
-                <TextField
-                  fullWidth
-                  label="How can we help you? (optional)"
-                  value={formData.howCanWeHelp}
-                  onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
-                  error={!!errors.howCanWeHelp}
-                  helperText={errors.howCanWeHelp}
-                  margin="normal"
-                  multiline
-                  rows={2}
-                  disabled={isLoading}
-                  placeholder="Tell us how we can assist your hiring needs..."
-                />
+            {/* Step 6: What are you looking for? */}
+            {step === 'hiring' && (
+              <Box component="form" onSubmit={handleHiringContinue} noValidate>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    What are you looking for?
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Help us understand your hiring needs
+                  </Typography>
+                </Box>
 
-                <Box sx={{ mt: 3 }}>
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1.5,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    What role/s do you need?
+                  </Typography>
+                  <RolesMultiSelect
+                    selectedRoles={selectedRoles}
+                    onChange={setSelectedRoles}
+                    disabled={isLoading}
+                  />
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    How can we help you?
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder="Tell us about your hiring goals, timeline, or any specific requirements..."
+                    value={formData.howCanWeHelp}
+                    onChange={(e) => handleInputChange('howCanWeHelp', e.target.value)}
+                    disabled={isLoading}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'white',
+                        borderRadius: 2,
+                        '& fieldset': { borderColor: '#E5E7EB' },
+                        '&:hover fieldset': { borderColor: '#9333EA' },
+                        '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  {!editMode && (
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {editMode && !hasSectionChanged() ? (
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancelEdit}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back to Review
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? <CircularProgress size={24} color="inherit" /> : editMode ? 'Update' : hasHiringData ? 'Next' : 'Skip'}
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {/* Step 7: Review Your Information */}
+            {step === 'review' && (
+              <Box>
+                <Box mb={4}>
+                  <Typography
+                    variant="h4"
+                    component="h1"
+                    gutterBottom
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    Review Your Information
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                    Please confirm your details and accept our terms
+                  </Typography>
+                </Box>
+
+                {errors.general && (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {errors.general}
+                  </Alert>
+                )}
+
+                {errors.atsError && (
+                  <Alert 
+                    severity="warning" 
+                    sx={{ mb: 3 }}
+                    action={
+                      <Button 
+                        color="inherit" 
+                        size="small"
+                        onClick={handleRetryAtsProvisioning}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Retrying...' : 'Try Again'}
+                      </Button>
+                    }
+                  >
+                    {errors.atsError}
+                  </Alert>
+                )}
+
+                <Box sx={{ maxHeight: 400, overflowY: 'auto', pr: 1 }}>
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Contact Details</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('contact')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Name</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.firstName} {formData.lastName}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Email</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.email}</Typography>
+                      </Box>
+                      {formData.mobileNumber && (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Mobile</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                            {countries.find(c => c.code === formData.mobileCountryCode)?.dialCode} {formData.mobileNumber}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Company Details</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('company')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Company</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.companyName || 'Not provided'}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Country</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                          {countries.find(c => c.code === formData.country)?.name || formData.country}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Business Details</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('business')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
+                      {formData.businessDescription && (
+                        <Box>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Description</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem', mt: 0.5 }}>
+                            {formData.businessDescription}
+                          </Typography>
+                        </Box>
+                      )}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Industry</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.industry || 'Not specified'}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Size</Typography>
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{formData.companySize || 'Not specified'}</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Hiring Needs</Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => handleEditSection('hiring')}
+                        sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                      >
+                        Edit
+                      </Link>
+                    </Box>
+                    {selectedRoles.length > 0 ? (
+                      <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        {selectedRoles.join(', ')}
+                      </Typography>
+                    ) : (
+                      <Typography sx={{ color: '#9CA3AF', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                        No hiring needs specified
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+
+                <Box sx={{ mt: 3, p: 2, bgcolor: '#F9FAFB', borderRadius: 2 }}>
+                  <Typography sx={{ fontWeight: 600, color: '#1a1a1a', mb: 2 }}>Legal Agreement</Typography>
                   <FormControlLabel
                     control={
                       <Checkbox
                         checked={formData.termsAccepted}
                         onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
                         disabled={isLoading}
-                        color="secondary"
+                        sx={{
+                          color: '#D1D5DB',
+                          '&.Mui-checked': {
+                            color: '#9333EA',
+                          },
+                        }}
                       />
                     }
                     label={
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography sx={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
                         I accept the{' '}
                         <Link
                           href={getServiceAgreementUrl(formData.country)}
                           target="_blank"
-                          rel="noopener noreferrer"
-                          color="secondary"
+                          sx={{ color: '#9333EA' }}
                         >
-                          Service Agreement
+                          Service Agreement (AU)
                         </Link>
                         ,{' '}
-                        <Link
-                          href="https://teamified.com/terms"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          color="secondary"
-                        >
+                        <Link href="https://teamified.com/terms" target="_blank" sx={{ color: '#9333EA' }}>
                           Terms
                         </Link>
-                        {' '}and{' '}
-                        <Link
-                          href="https://teamified.com/privacy"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          color="secondary"
-                        >
+                        , and{' '}
+                        <Link href="https://teamified.com/privacy" target="_blank" sx={{ color: '#9333EA' }}>
                           Privacy Policy
                         </Link>
                       </Typography>
                     }
                   />
-                  {errors.termsAccepted && (
-                    <Typography variant="caption" color="error" sx={{ ml: 2 }}>
-                      {errors.termsAccepted}
+                  {errors.terms && (
+                    <Typography sx={{ color: '#DC2626', fontSize: '0.75rem', mt: 1 }}>
+                      {errors.terms}
                     </Typography>
                   )}
                 </Box>
 
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="secondary"
-                  size="large"
-                  disabled={isLoading}
-                  sx={{
-                    mt: 3,
-                    mb: 2,
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {isLoading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Create Account & Organization'
-                  )}
-                </Button>
-
-                <Box textAlign="center" mt={2}>
+                <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                   <Button
-                    startIcon={<ArrowBack />}
+                    variant="outlined"
                     onClick={handleBack}
                     disabled={isLoading}
-                    sx={{ textTransform: 'none' }}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      borderColor: '#9333EA',
+                      color: '#9333EA',
+                      '&:hover': {
+                        borderColor: '#7E22CE',
+                        bgcolor: 'rgba(147, 51, 234, 0.04)',
+                      },
+                    }}
                   >
                     Back
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={isLoading || !formData.termsAccepted}
+                    sx={{
+                      flex: 1,
+                      py: 1.5,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      bgcolor: '#9333EA',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        bgcolor: '#A855F7',
+                      },
+                      '&:active': {
+                        bgcolor: '#7E22CE',
+                      },
+                      '&:disabled': {
+                        bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        color: 'white',
+                      },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create My Account'}
                   </Button>
                 </Box>
               </Box>
             )}
+
           </Paper>
         </Fade>
       </Container>
+      </Box>
     </Box>
   );
 };

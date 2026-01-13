@@ -12,7 +12,33 @@ Preferred communication style: Simple, everyday language.
 
 ### UI/UX Decisions
 
-The frontend uses React 19, TypeScript, and Vite, styled with Material-UI (MUI v7) and a Tailwind CSS-based design system for a consistent UI, dynamic theming, and expressive user profiles.
+The frontend uses React 19, TypeScript, and Vite, styled with Material-UI (MUI v7) and a comprehensive Tailwind CSS-based design system for a consistent UI, dynamic theming, and expressive user profiles.
+
+### Design System
+
+**Location:** `frontend/src/components/ui/` (Single Source of Truth)
+
+**Core Design Tokens:**
+- **Primary Color:** #9333EA (Purple) with variants: lighter (#D8B4FE), light (#A855F7), dark (#7C3AED)
+- **Secondary Brand:** #002DFF (Blue) with variants
+- **Status Colors:** Success (#10B981), Warning (#FFA500), Error (#EF4444), Info (#3B82F6)
+- **Special:** Premium (#D4AF37), Danger (#EF4444)
+- **Typography:** Nunito Sans font family
+
+**Component Library (Radix UI primitives):**
+- Button (variants: default, secondary, outline, ghost, destructive, premium, danger, link)
+- FloatingLabelInput, FloatingLabelTextarea
+- Badge (variants: success, warning, destructive, info, premium)
+- Alert (variants: info, success, warning, destructive)
+- Dialog, AlertDialog (accessible with focus trap)
+- Checkbox, RadioGroup, Switch
+- Select, Popover, Tooltip
+- Progress, Spinner, Skeleton
+- Avatar, Card, Tabs
+
+**MUI Theme Adapter:** `frontend/src/theme/mui-theme-adapter.ts` - Syncs MUI components with design tokens for existing pages.
+
+**Documentation:** `frontend/src/components/ui/DESIGN_SYSTEM.md`
 
 ### Technical Implementations
 

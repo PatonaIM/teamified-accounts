@@ -741,6 +741,124 @@ export class AuthController {
     );
   }
 
+  @Post('password-reset/otp')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request password reset OTP',
+    description: `
+      Request a 6-digit OTP code for password reset.
+      
+      ## Process Flow:
+      1. User submits their email address
+      2. If account exists, a 6-digit OTP is sent via email
+      3. OTP expires after 10 minutes
+      4. User must verify OTP to proceed with password reset
+      
+      ## Security Features:
+      - Rate limited to 3 attempts per minute
+      - OTP is hashed and stored securely
+      - Returns whether email is registered (for better UX)
+      - Locked for 15 minutes after 5 failed verification attempts
+    `,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email', example: 'user@example.com' },
+      },
+      required: ['email'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent or error message returned',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        emailMasked: { type: 'string', example: 'u***r@example.com' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async sendPasswordResetOtp(
+    @Body() body: { email: string },
+    @Request() req: any,
+  ): Promise<{ success: boolean; message: string; emailMasked?: string }> {
+    return this.authService.sendPasswordResetOtp(
+      body.email,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
+  @Post('password-reset/otp/verify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify password reset OTP',
+    description: `
+      Verify the 6-digit OTP code and get a reset token.
+      
+      ## Process Flow:
+      1. User submits email and OTP code
+      2. System validates the OTP
+      3. If valid, returns a short-lived reset token
+      4. User uses reset token to set new password
+      
+      ## Security Features:
+      - Rate limited to 10 attempts per minute
+      - Maximum 5 failed attempts before 15-minute lockout
+      - Reset token expires after 15 minutes
+      - OTP is cleared after successful verification
+    `,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', format: 'email', example: 'user@example.com' },
+        otp: { type: 'string', example: '123456', minLength: 6, maxLength: 6 },
+      },
+      required: ['email', 'otp'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verification result',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        resetToken: { type: 'string', description: 'Only returned on success' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async verifyPasswordResetOtp(
+    @Body() body: { email: string; otp: string },
+    @Request() req: any,
+  ): Promise<{ success: boolean; message: string; resetToken?: string }> {
+    return this.authService.verifyPasswordResetOtp(
+      body.email,
+      body.otp,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
   @Post('admin/send-password-reset')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(
@@ -1156,6 +1274,27 @@ export class AuthController {
       signupDto,
       req.ip,
       req.get('user-agent'),
+    );
+  }
+
+  @Post('signup/retry-ats-provisioning')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retry ATS Provisioning',
+    description: 'Retry ATS portal provisioning for a user who just signed up but experienced a provisioning failure.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'ATS provisioning retry result',
+  })
+  async retryAtsProvisioning(
+    @Body() retryDto: { userId: string; organizationId: string; organizationSlug: string },
+  ): Promise<{ success: boolean; atsRedirectUrl?: string; error?: string }> {
+    return this.authService.retryAtsProvisioning(
+      retryDto.userId,
+      retryDto.organizationId,
+      retryDto.organizationSlug,
     );
   }
 

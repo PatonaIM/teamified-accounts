@@ -206,7 +206,7 @@ const SidebarMUI: React.FC<SidebarMUIProps> = ({
           p: 2,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'center',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
           minHeight: 64,
           borderBottom: 1,
           borderColor: 'divider',
