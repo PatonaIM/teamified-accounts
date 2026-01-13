@@ -848,39 +848,33 @@ const ClientAdminSignupPage: React.FC = () => {
 
                 {/* Email Exists Inline Error */}
                 {emailExists && (
-                  <Box
+                  <Typography
                     sx={{
-                      bgcolor: '#FEF3C7',
-                      border: '1px solid #FCD34D',
-                      borderRadius: 2,
-                      p: 2,
-                      mb: 2,
+                      color: '#d32f2f',
+                      fontSize: '0.75rem',
+                      mt: 0.5,
+                      mb: 1,
+                      ml: 1.75,
                     }}
                   >
-                    <Typography
+                    Account exists. Are you trying to{' '}
+                    <Box
+                      component="a"
+                      href="/login"
+                      onClick={handleLoginRedirect}
                       sx={{
-                        color: '#1a1a1a',
-                        fontSize: '0.9rem',
+                        color: '#9333EA',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
                       }}
                     >
-                      Account exists. Are you trying to{' '}
-                      <Box
-                        component="a"
-                        href="/login"
-                        sx={{
-                          color: '#9333EA',
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                          '&:hover': {
-                            textDecoration: 'underline',
-                          },
-                        }}
-                      >
-                        login
-                      </Box>
-                      ?
-                    </Typography>
-                  </Box>
+                      login
+                    </Box>
+                    ?
+                  </Typography>
                 )}
 
                 {/* Only show remaining fields if email doesn't exist - keep visible during check but disabled */}
