@@ -32,6 +32,7 @@ import type { SignupResponse } from '../services/authService';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
+import { isValidPhoneNumber, type CountryCode } from 'libphonenumber-js';
 import RolesMultiSelect from '../components/RolesMultiSelect';
 
 const COMPANY_SIZES = [
@@ -314,6 +315,62 @@ const ClientAdminSignupPage: React.FC = () => {
     return emailValid && passwordValid && confirmPasswordValid && !emailExists && !isCheckingEmail;
   };
 
+  // Mobile number validation using libphonenumber-js
+  const validateMobileNumber = (phoneNumber: string, countryCode: string): boolean => {
+    if (!phoneNumber) {
+      setErrors(prev => ({ ...prev, mobileNumber: 'Mobile number is required.' }));
+      return false;
+    }
+
+    // Check for digits only
+    if (!/^\d+$/.test(phoneNumber)) {
+      setErrors(prev => ({ ...prev, mobileNumber: 'Mobile number must contain digits only.' }));
+      return false;
+    }
+
+    // Validate using libphonenumber-js
+    try {
+      const country = countries.find(c => c.code === countryCode);
+      const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
+      const isValid = isValidPhoneNumber(fullNumber, countryCode as CountryCode);
+      
+      if (!isValid) {
+        const countryName = country?.name || countryCode;
+        setErrors(prev => ({ ...prev, mobileNumber: `Enter a valid mobile number for ${countryName}.` }));
+        return false;
+      }
+    } catch {
+      // Fallback: basic length validation if libphonenumber fails
+      if (phoneNumber.length < 6 || phoneNumber.length > 15) {
+        setErrors(prev => ({ ...prev, mobileNumber: 'Enter a valid mobile number.' }));
+        return false;
+      }
+    }
+
+    setErrors(prev => ({ ...prev, mobileNumber: '' }));
+    return true;
+  };
+
+  // Check if name step is valid (for button disabled state)
+  const isNameStepValid = () => {
+    const firstNameValid = formData.firstName && formData.firstName.length <= 50;
+    const lastNameValid = formData.lastName && formData.lastName.length <= 50;
+    const mobileValid = formData.mobileNumber && validateMobileNumberSilent(formData.mobileNumber, formData.mobileCountryCode);
+    return firstNameValid && lastNameValid && mobileValid;
+  };
+
+  // Silent validation (doesn't set errors)
+  const validateMobileNumberSilent = (phoneNumber: string, countryCode: string): boolean => {
+    if (!phoneNumber || !/^\d+$/.test(phoneNumber)) return false;
+    try {
+      const country = countries.find(c => c.code === countryCode);
+      const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
+      return isValidPhoneNumber(fullNumber, countryCode as CountryCode);
+    } catch {
+      return phoneNumber.length >= 6 && phoneNumber.length <= 15;
+    }
+  };
+
   const validateEmailStep = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -354,8 +411,25 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.lastName = 'Last name must not exceed 50 characters';
     }
 
+    // Mobile number validation
     if (!formData.mobileNumber) {
-      newErrors.mobileNumber = 'Mobile number is required';
+      newErrors.mobileNumber = 'Mobile number is required.';
+    } else if (!/^\d+$/.test(formData.mobileNumber)) {
+      newErrors.mobileNumber = 'Mobile number must contain digits only.';
+    } else {
+      try {
+        const country = countries.find(c => c.code === formData.mobileCountryCode);
+        const fullNumber = `${country?.dialCode || ''}${formData.mobileNumber}`;
+        const isValid = isValidPhoneNumber(fullNumber, formData.mobileCountryCode as CountryCode);
+        if (!isValid) {
+          const countryName = country?.name || formData.mobileCountryCode;
+          newErrors.mobileNumber = `Enter a valid mobile number for ${countryName}.`;
+        }
+      } catch {
+        if (formData.mobileNumber.length < 6 || formData.mobileNumber.length > 15) {
+          newErrors.mobileNumber = 'Enter a valid mobile number.';
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -1177,8 +1251,13 @@ const ClientAdminSignupPage: React.FC = () => {
                   <PhoneInput
                     countryCode={formData.mobileCountryCode}
                     phoneNumber={formData.mobileNumber}
-                    onCountryChange={(value) => handleInputChange('mobileCountryCode', value)}
+                    onCountryChange={(value) => {
+                      handleInputChange('mobileCountryCode', value);
+                      validateMobileNumber(formData.mobileNumber, value);
+                    }}
                     onPhoneChange={(value) => handleInputChange('mobileNumber', value)}
+                    onBlur={() => validateMobileNumber(formData.mobileNumber, formData.mobileCountryCode)}
+                    label=""
                     error={!!errors.mobileNumber}
                     helperText={errors.mobileNumber}
                     disabled={isLoading}
@@ -1206,6 +1285,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     phoneNumber={formData.phoneNumber}
                     onCountryChange={(value) => handleInputChange('phoneCountryCode', value)}
                     onPhoneChange={(value) => handleInputChange('phoneNumber', value)}
+                    label=""
                     disabled={isLoading}
                   />
                 </Box>
@@ -1262,7 +1342,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     <Button
                       type="submit"
                       variant="contained"
-                      disabled={isLoading}
+                      disabled={isLoading || !isNameStepValid()}
                       sx={{
                         flex: 1,
                         py: 1.5,

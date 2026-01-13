@@ -38,6 +38,7 @@ interface PhoneInputProps {
   phoneNumber: string;
   onCountryChange: (countryCode: string) => void;
   onPhoneChange: (phoneNumber: string) => void;
+  onBlur?: () => void;
   label?: string;
   error?: boolean;
   helperText?: string;
@@ -50,6 +51,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
   phoneNumber,
   onCountryChange,
   onPhoneChange,
+  onBlur,
   label = 'Phone Number',
   error,
   helperText,
@@ -159,6 +161,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
             const limitedValue = digitsOnly.slice(0, phoneConfig.max);
             onPhoneChange(limitedValue);
           }}
+          onBlur={onBlur}
           error={error}
           disabled={disabled}
           placeholder="555123456"
