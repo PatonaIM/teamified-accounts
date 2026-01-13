@@ -247,7 +247,9 @@ function App() {
                   path="/admin/invitations/internal" 
                   element={
                     <ProtectedRoute>
-                      <InternalTeamInvitationManagementPage />
+                      <SuperAdminRoute>
+                        <InternalTeamInvitationManagementPage />
+                      </SuperAdminRoute>
                     </ProtectedRoute>
                   } 
                 />
@@ -256,23 +258,23 @@ function App() {
                   path="/organization" 
                   element={
                     <ProtectedRoute>
-                      <AccountLayout />
+                      <SuperAdminRoute>
+                        <AccountLayout />
+                      </SuperAdminRoute>
                     </ProtectedRoute>
                   }
                 >
                   {/* Redirect /organization to first organization */}
                   <Route index element={<OrganizationRedirect />} />
-                  <Route path=":slug" element={
-                    <RoleBasedRoute allowedRoles={['super_admin', 'internal_hr', 'internal_account_manager', 'client_admin', 'client_hr', 'client_finance', 'client_recruiter', 'client_employee', 'client_hiring_manager']}>
-                      <MyOrganizationPage />
-                    </RoleBasedRoute>
-                  } />
+                  <Route path=":slug" element={<MyOrganizationPage />} />
                 </Route>
                 <Route 
                   path="/account" 
                   element={
                     <ProtectedRoute>
-                      <AccountLayout />
+                      <SuperAdminRoute>
+                        <AccountLayout />
+                      </SuperAdminRoute>
                     </ProtectedRoute>
                   }
                 >
@@ -281,27 +283,18 @@ function App() {
                   <Route path="profile" element={<MyProfilePage />} />
                   <Route path="security" element={<Navigate to="/account/profile" replace />} />
                 </Route>
-                {/* User Detail Page - accessible to both internal and client users */}
+                {/* User Detail Page - super admin only */}
                 <Route 
                   path="/users/:userId" 
                   element={
                     <ProtectedRoute>
-                      <AccountLayout />
+                      <SuperAdminRoute>
+                        <AccountLayout />
+                      </SuperAdminRoute>
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={
-                    <RoleBasedRoute allowedRoles={[
-                      'super_admin', 
-                      'internal_account_manager', 
-                      'internal_hr',
-                      'internal_staff',
-                      'client_admin', 
-                      'client_hr'
-                    ]}>
-                      <UserDetailPage />
-                    </RoleBasedRoute>
-                  } />
+                  <Route index element={<UserDetailPage />} />
                 </Route>
                 <Route 
                   path="/admin" 
@@ -434,25 +427,25 @@ function App() {
                   <Route 
                     path="audit-logs" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                      <SuperAdminRoute>
                         <AuditLogsPage />
-                      </RoleBasedRoute>
+                      </SuperAdminRoute>
                     } 
                   />
                   <Route 
                     path="organizations" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                      <SuperAdminRoute>
                         <OrganizationManagementPage />
-                      </RoleBasedRoute>
+                      </SuperAdminRoute>
                     } 
                   />
                   <Route 
                     path="users" 
                     element={
-                      <RoleBasedRoute allowedRoles={['super_admin', 'internal_account_manager']}>
+                      <SuperAdminRoute>
                         <UserManagement />
-                      </RoleBasedRoute>
+                      </SuperAdminRoute>
                     } 
                   />
                   {/* Redirect old admin user detail route to new location */}
