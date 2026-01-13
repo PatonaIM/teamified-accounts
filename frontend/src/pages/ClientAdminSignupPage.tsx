@@ -1038,7 +1038,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     onBlur={validatePasswordField}
                     error={!!errors.password}
                     helperText={errors.password}
-                    disabled={isLoading || isCheckingEmail}
+                    disabled={isLoading}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -1112,7 +1112,7 @@ const ClientAdminSignupPage: React.FC = () => {
                           : undefined
                       }
                     }}
-                    disabled={isLoading || isCheckingEmail}
+                    disabled={isLoading}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
