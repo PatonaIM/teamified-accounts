@@ -146,6 +146,8 @@ const ClientAdminSignupPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
+  const [websiteAnalysisStatus, setWebsiteAnalysisStatus] = useState<'idle' | 'analyzing' | 'completed' | 'failed'>('idle');
+  const userTypedDescriptionRef = useRef(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [pendingAtsRetry, setPendingAtsRetry] = useState<SignupResponse | null>(null);
@@ -231,6 +233,7 @@ const ClientAdminSignupPage: React.FC = () => {
     if (!isValidUrl(formData.website) || isAnalyzingWebsite) return;
     
     setIsAnalyzingWebsite(true);
+    setWebsiteAnalysisStatus('analyzing');
     setAiAnalysisError(false);
     try {
       let normalizedUrl = formData.website.trim();
@@ -239,16 +242,22 @@ const ClientAdminSignupPage: React.FC = () => {
       }
       const result = await analyzeWebsite(normalizedUrl);
       if (result.success && result.businessDescription) {
-        setFormData(prev => ({
-          ...prev,
-          businessDescription: result.businessDescription || '',
-        }));
+        // Only set description if user hasn't manually typed anything
+        if (!userTypedDescriptionRef.current) {
+          setFormData(prev => ({
+            ...prev,
+            businessDescription: result.businessDescription || '',
+          }));
+        }
+        setWebsiteAnalysisStatus('completed');
       } else {
         setAiAnalysisError(true);
+        setWebsiteAnalysisStatus('failed');
       }
     } catch (error) {
       console.error('Website analysis failed:', error);
       setAiAnalysisError(true);
+      setWebsiteAnalysisStatus('failed');
     } finally {
       setIsAnalyzingWebsite(false);
     }
@@ -268,6 +277,11 @@ const ClientAdminSignupPage: React.FC = () => {
 
     if (field === 'slug') {
       slugManuallyEditedRef.current = true;
+    }
+
+    // Track if user has manually typed in business description
+    if (field === 'businessDescription' && typeof value === 'string' && value.trim()) {
+      userTypedDescriptionRef.current = true;
     }
 
     if (field === 'companyName' && !slugManuallyEditedRef.current && typeof value === 'string') {
@@ -1633,15 +1647,21 @@ const ClientAdminSignupPage: React.FC = () => {
                         fullWidth
                         placeholder="www.example.com"
                         value={formData.website}
-                        onChange={(e) => handleInputChange('website', e.target.value)}
+                        onChange={(e) => {
+                          handleInputChange('website', e.target.value);
+                          // Reset analysis status when URL changes
+                          if (websiteAnalysisStatus !== 'idle') {
+                            setWebsiteAnalysisStatus('idle');
+                          }
+                        }}
                         onBlur={() => {
-                          if (isValidUrl(formData.website) && !formData.businessDescription) {
+                          if (isValidUrl(formData.website) && websiteAnalysisStatus === 'idle') {
                             handleAnalyzeWebsite();
                           }
                         }}
                         error={!!errors.website}
                         helperText={errors.website}
-                        disabled={isLoading}
+                        disabled={isLoading || isAnalyzingWebsite}
                         inputRef={websiteInputRef}
                         sx={{
                           '& .MuiOutlinedInput-root': {
@@ -1655,19 +1675,109 @@ const ClientAdminSignupPage: React.FC = () => {
                       />
                     </Box>
 
+                    {/* Analysis Status Feedback */}
+                    {websiteAnalysisStatus === 'analyzing' && (
+                      <Box sx={{ 
+                        mb: 3, 
+                        p: 2, 
+                        bgcolor: '#F5F3FF', 
+                        borderRadius: 2, 
+                        border: '1px solid #9333EA',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}>
+                        <CircularProgress size={20} sx={{ color: '#9333EA' }} />
+                        <Box>
+                          <Typography sx={{ fontWeight: 600, color: '#9333EA', fontSize: '0.875rem' }}>
+                            Analyzing your website...
+                          </Typography>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                            We're using AI to understand your business and generate a description
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+
+                    {websiteAnalysisStatus === 'completed' && (
+                      <Box sx={{ 
+                        mb: 3, 
+                        p: 2, 
+                        bgcolor: '#F0FDF4', 
+                        borderRadius: 2, 
+                        border: '1px solid #10B981',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}>
+                        <Box sx={{ 
+                          width: 24, 
+                          height: 24, 
+                          borderRadius: '50%', 
+                          bgcolor: '#10B981', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
+                          <Typography sx={{ color: 'white', fontSize: '0.875rem', fontWeight: 600 }}>✓</Typography>
+                        </Box>
+                        <Typography sx={{ fontWeight: 600, color: '#10B981', fontSize: '0.875rem' }}>
+                          Website analyzed successfully! Click Next to continue.
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {websiteAnalysisStatus === 'failed' && (
+                      <Box sx={{ 
+                        mb: 3, 
+                        p: 2, 
+                        bgcolor: '#FEF2F2', 
+                        borderRadius: 2, 
+                        border: '1px solid #EF4444',
+                      }}>
+                        <Typography sx={{ fontWeight: 600, color: '#EF4444', fontSize: '0.875rem', mb: 1 }}>
+                          Could not analyze website
+                        </Typography>
+                        <Typography sx={{ color: '#6b7280', fontSize: '0.75rem', mb: 2 }}>
+                          We couldn't fetch your website. You can still continue and enter your business description manually.
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          <Link
+                            component="button"
+                            type="button"
+                            onClick={() => {
+                              setWebsiteAnalysisStatus('idle');
+                              handleAnalyzeWebsite();
+                            }}
+                            sx={{
+                              color: '#9333EA',
+                              textDecoration: 'none',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              '&:hover': { textDecoration: 'underline' },
+                            }}
+                          >
+                            Try again
+                          </Link>
+                        </Box>
+                      </Box>
+                    )}
+
                     <Box sx={{ mb: 3 }}>
                       <Link
                         component="button"
                         type="button"
                         onClick={handleNoWebsiteToggle}
+                        disabled={isAnalyzingWebsite}
                         sx={{
-                          color: '#9333EA',
+                          color: isAnalyzingWebsite ? '#9CA3AF' : '#9333EA',
                           textDecoration: 'none',
                           fontSize: '0.875rem',
                           fontWeight: 500,
-                          cursor: 'pointer',
+                          cursor: isAnalyzingWebsite ? 'not-allowed' : 'pointer',
                           '&:hover': {
-                            textDecoration: 'underline',
+                            textDecoration: isAnalyzingWebsite ? 'none' : 'underline',
                           },
                         }}
                       >
@@ -1704,7 +1814,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     variant="outlined"
                     onClick={handleBack}
-                    disabled={isLoading}
+                    disabled={isLoading || isAnalyzingWebsite}
                     startIcon={<ArrowBack />}
                     sx={{
                       flex: 1,
@@ -1726,7 +1836,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={isLoading}
+                    disabled={isLoading || (!noWebsite && isValidUrl(formData.website) && isAnalyzingWebsite)}
                     sx={{
                       flex: 1,
                       py: 1.5,
@@ -1748,7 +1858,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    Next
+                    {isAnalyzingWebsite ? 'Analyzing...' : 'Next'}
                   </Button>
                 </Box>
               </Box>
@@ -1781,31 +1891,23 @@ const ClientAdminSignupPage: React.FC = () => {
                 )}
 
                 <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography
-                      component="label"
-                      sx={{
-                        fontWeight: 500,
-                        color: '#1a1a1a',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Business Description
-                    </Typography>
-                    {isAnalyzingWebsite && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={14} sx={{ color: '#9333EA' }} />
-                        <Typography sx={{ fontSize: '0.75rem', color: '#9333EA', fontWeight: 500 }}>
-                          AI is analyzing your website...
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Business Description
+                  </Typography>
                   <TextField
                     fullWidth
                     multiline
                     rows={4}
-                    placeholder={isAnalyzingWebsite ? "Generating description from your website..." : "Tell us what your company does..."}
+                    placeholder="Tell us what your company does..."
                     value={formData.businessDescription}
                     onChange={(e) => {
                       handleInputChange('businessDescription', e.target.value);
@@ -1814,21 +1916,16 @@ const ClientAdminSignupPage: React.FC = () => {
                     disabled={isLoading}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: isAnalyzingWebsite ? '#F9FAFB' : 'white',
+                        bgcolor: 'white',
                         borderRadius: 2,
-                        '& fieldset': { borderColor: isAnalyzingWebsite ? '#9333EA' : '#E5E7EB' },
+                        '& fieldset': { borderColor: '#E5E7EB' },
                         '&:hover fieldset': { borderColor: '#9333EA' },
                         '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
                       },
                     }}
                   />
-                  {aiAnalysisError && !isAnalyzingWebsite && (
-                    <Typography variant="caption" sx={{ color: '#EF4444', mt: 0.5, display: 'block' }}>
-                      Could not analyze website. Please enter a description manually.
-                    </Typography>
-                  )}
-                  {formData.businessDescription && !isAnalyzingWebsite && !aiAnalysisError && formData.website && isValidUrl(formData.website) && (
-                    <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                  {formData.businessDescription && !userTypedDescriptionRef.current && formData.website && isValidUrl(formData.website) && (
+                    <Typography variant="caption" sx={{ color: '#10B981', mt: 0.5, display: 'block' }}>
                       AI-generated from your website. Feel free to edit.
                     </Typography>
                   )}
