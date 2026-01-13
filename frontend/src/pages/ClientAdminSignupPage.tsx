@@ -69,8 +69,19 @@ const getServiceAgreementUrl = (countryCode: string): string => {
     GB: 'uk',
     US: 'us',
   };
-  const region = regionMap[countryCode] || 'us';
+  // Default to AU for any other country
+  const region = regionMap[countryCode] || 'au';
   return `https://teamified.com/service-agreement?region=${region}`;
+};
+
+const getServiceAgreementLabel = (countryCode: string): string => {
+  const labelMap: Record<string, string> = {
+    AU: 'Service Agreement (AU)',
+    GB: 'Service Agreement (UK)',
+    US: 'Service Agreement (US)',
+  };
+  // Default to AU for any other country
+  return labelMap[countryCode] || 'Service Agreement (AU)';
 };
 
 const isValidUrl = (url: string): boolean => {
@@ -328,11 +339,11 @@ const ClientAdminSignupPage: React.FC = () => {
       return false;
     }
 
-    // Validate using libphonenumber-js
+    // Validate using libphonenumber-js - pass national number with country code
     try {
       const country = countries.find(c => c.code === countryCode);
-      const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
-      const isValid = isValidPhoneNumber(fullNumber, countryCode as any);
+      // isValidPhoneNumber expects national number when country is provided
+      const isValid = isValidPhoneNumber(phoneNumber, countryCode as any);
       
       if (!isValid) {
         const countryName = country?.name || countryCode;
@@ -365,11 +376,11 @@ const ClientAdminSignupPage: React.FC = () => {
       return false;
     }
 
-    // Validate using libphonenumber-js
+    // Validate using libphonenumber-js - pass national number with country code
     try {
       const country = countries.find(c => c.code === countryCode);
-      const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
-      const isValid = isValidPhoneNumber(fullNumber, countryCode as any);
+      // isValidPhoneNumber expects national number when country is provided
+      const isValid = isValidPhoneNumber(phoneNumber, countryCode as any);
       
       if (!isValid) {
         const countryName = country?.name || countryCode;
@@ -400,9 +411,8 @@ const ClientAdminSignupPage: React.FC = () => {
   const validateMobileNumberSilent = (phoneNumber: string, countryCode: string): boolean => {
     if (!phoneNumber || !/^\d+$/.test(phoneNumber)) return false;
     try {
-      const country = countries.find(c => c.code === countryCode);
-      const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
-      return isValidPhoneNumber(fullNumber, countryCode as any);
+      // isValidPhoneNumber expects national number when country is provided
+      return isValidPhoneNumber(phoneNumber, countryCode as any);
     } catch {
       return phoneNumber.length >= 6 && phoneNumber.length <= 15;
     }
@@ -456,8 +466,8 @@ const ClientAdminSignupPage: React.FC = () => {
     } else {
       try {
         const country = countries.find(c => c.code === formData.mobileCountryCode);
-        const fullNumber = `${country?.dialCode || ''}${formData.mobileNumber}`;
-        const isValid = isValidPhoneNumber(fullNumber, formData.mobileCountryCode as any);
+        // isValidPhoneNumber expects national number when country is provided
+        const isValid = isValidPhoneNumber(formData.mobileNumber, formData.mobileCountryCode as any);
         if (!isValid) {
           const countryName = country?.name || formData.mobileCountryCode;
           newErrors.mobileNumber = `Enter a valid mobile number for ${countryName}.`;
@@ -2341,7 +2351,7 @@ const ClientAdminSignupPage: React.FC = () => {
                           target="_blank"
                           sx={{ color: '#9333EA' }}
                         >
-                          Service Agreement (AU)
+                          {getServiceAgreementLabel(formData.country)}
                         </Link>
                         ,{' '}
                         <Link href="https://teamified.com/terms" target="_blank" sx={{ color: '#9333EA' }}>
