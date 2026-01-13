@@ -185,7 +185,7 @@ const VerifyEmailPage: React.FC = () => {
               </Typography>
               <Button
                 variant="default"
-                className="w-full"
+                className="w-full bg-primary hover:bg-primary-light active:bg-primary-dark text-white"
                 size="lg"
                 onClick={() => navigate(user ? '/account' : '/login')}
               >
@@ -247,7 +247,7 @@ const VerifyEmailPage: React.FC = () => {
               </Typography>
               <Button
                 variant="default"
-                className="w-full"
+                className="w-full bg-primary hover:bg-primary-light active:bg-primary-dark text-white"
                 size="lg"
                 onClick={() => navigate(user ? '/account' : '/login')}
               >
