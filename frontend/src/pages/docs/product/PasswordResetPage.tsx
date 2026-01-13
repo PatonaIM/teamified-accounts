@@ -28,35 +28,35 @@ export default function PasswordResetPage() {
       <Stack spacing={4}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-            Self-Service Password Reset
+            Self-Service Password Reset (OTP Verification)
           </Typography>
           <Typography variant="body1" paragraph>
-            Users can reset their own password through the login page without administrator assistance.
+            Users can reset their own password through a secure 3-step OTP verification process without administrator assistance.
           </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Enhanced Security:</strong> Password reset now uses a 6-digit one-time passcode (OTP) 
+              sent via email instead of a clickable link. This provides better protection against phishing attacks.
+            </Typography>
+          </Alert>
           <Paper sx={{ p: 3, bgcolor: 'background.default' }}>
             <List>
               <ListItem>
                 <ListItemText 
-                  primary="1. Click 'Forgot Password' on the login page" 
-                  secondary="Navigate to the forgot password form"
+                  primary="Step 1: Request Password Reset" 
+                  secondary="Click 'Forgot Password' on the login page and enter your registered email address. A 6-digit OTP code will be sent to your email."
                 />
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="2. Enter your registered email address" 
-                  secondary="The system will send a password reset link"
+                  primary="Step 2: Verify OTP Code" 
+                  secondary="Enter the 6-digit code from your email. The code expires after 10 minutes for security. You can request a new code if needed."
                 />
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="3. Check your email for the reset link" 
-                  secondary="Link expires after 24 hours for security"
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText 
-                  primary="4. Click the link and create a new password" 
-                  secondary="Must meet password complexity requirements"
+                  primary="Step 3: Create New Password" 
+                  secondary="After successful OTP verification, create your new password. Must meet password complexity requirements (8+ characters, uppercase, lowercase, number, special character)."
                 />
               </ListItem>
             </List>
