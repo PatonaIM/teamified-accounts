@@ -351,6 +351,43 @@ const ClientAdminSignupPage: React.FC = () => {
     return true;
   };
 
+  // Phone number validation (optional field) using libphonenumber-js
+  const validatePhoneNumber = (phoneNumber: string, countryCode: string): boolean => {
+    // Phone is optional, so empty is valid
+    if (!phoneNumber) {
+      setErrors(prev => ({ ...prev, phoneNumber: '' }));
+      return true;
+    }
+
+    // Check for digits only
+    if (!/^\d+$/.test(phoneNumber)) {
+      setErrors(prev => ({ ...prev, phoneNumber: 'Phone number must contain digits only.' }));
+      return false;
+    }
+
+    // Validate using libphonenumber-js
+    try {
+      const country = countries.find(c => c.code === countryCode);
+      const fullNumber = `${country?.dialCode || ''}${phoneNumber}`;
+      const isValid = isValidPhoneNumber(fullNumber, countryCode as any);
+      
+      if (!isValid) {
+        const countryName = country?.name || countryCode;
+        setErrors(prev => ({ ...prev, phoneNumber: `Enter a valid phone number for ${countryName}.` }));
+        return false;
+      }
+    } catch {
+      // Fallback: basic length validation if libphonenumber fails
+      if (phoneNumber.length < 6 || phoneNumber.length > 15) {
+        setErrors(prev => ({ ...prev, phoneNumber: 'Enter a valid phone number.' }));
+        return false;
+      }
+    }
+
+    setErrors(prev => ({ ...prev, phoneNumber: '' }));
+    return true;
+  };
+
   // Check if name step is valid (for button disabled state)
   const isNameStepValid = () => {
     const firstNameValid = formData.firstName && formData.firstName.length <= 50;
@@ -1283,9 +1320,17 @@ const ClientAdminSignupPage: React.FC = () => {
                   <PhoneInput
                     countryCode={formData.phoneCountryCode}
                     phoneNumber={formData.phoneNumber}
-                    onCountryChange={(value) => handleInputChange('phoneCountryCode', value)}
+                    onCountryChange={(value) => {
+                      handleInputChange('phoneCountryCode', value);
+                      if (formData.phoneNumber) {
+                        validatePhoneNumber(formData.phoneNumber, value);
+                      }
+                    }}
                     onPhoneChange={(value) => handleInputChange('phoneNumber', value)}
+                    onBlur={() => validatePhoneNumber(formData.phoneNumber, formData.phoneCountryCode)}
                     label=""
+                    error={!!errors.phoneNumber}
+                    helperText={errors.phoneNumber}
                     disabled={isLoading}
                   />
                 </Box>
