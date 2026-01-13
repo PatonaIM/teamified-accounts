@@ -1675,25 +1675,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       />
                       {websiteAnalysisStatus === 'failed' && (
                         <Typography sx={{ color: '#EF4444', fontSize: '0.75rem', mt: 0.5 }}>
-                          We couldn't fetch your website. You can still continue and enter your business description manually.{' '}
-                          <Link
-                            component="button"
-                            type="button"
-                            onClick={() => {
-                              setWebsiteAnalysisStatus('idle');
-                              handleAnalyzeWebsite();
-                            }}
-                            sx={{
-                              color: '#9333EA',
-                              textDecoration: 'none',
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              '&:hover': { textDecoration: 'underline' },
-                            }}
-                          >
-                            Try again
-                          </Link>
+                          We couldn't fetch your website. You can still continue and enter your business description manually.
                         </Typography>
                       )}
                     </Box>
