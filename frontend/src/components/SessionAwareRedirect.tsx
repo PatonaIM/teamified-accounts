@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Box, CircularProgress, Typography, Alert } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken, getCurrentUser } from '../services/authService';
 import type { User } from '../services/authService';
 import { isPortalRedirectEnabled } from '../utils/featureFlags';
-import { getPortalUrl, getPortalName, isPortalConfigValid, getMissingPortalVariables } from '../config/portalUrls';
+import { getPortalUrl, getPortalName, isPortalConfigValid } from '../config/portalUrls';
 
 const LAST_PATH_KEY = 'teamified_last_path';
 const LAST_PATH_USER_KEY = 'teamified_last_path_user';
@@ -81,7 +81,6 @@ const SessionAwareRedirect: React.FC = () => {
   const [checking, setChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
-  const [portalRedirect, setPortalRedirect] = useState<{ url: string; name: string } | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const redirectStarted = useRef(false);
 
@@ -180,36 +179,32 @@ const SessionAwareRedirect: React.FC = () => {
     checkSession();
   }, []);
 
-  // Check if user should be redirected to external portal
-  useEffect(() => {
-    if (isLoggedIn && !checking && userData && !needsRoleSelection && !redirectStarted.current) {
-      if (!isPortalRedirectEnabled()) {
-        console.log('[SessionAwareRedirect] Portal redirects are disabled by feature flag');
-        return;
-      }
-      if (!isPortalConfigValid()) {
-        console.error('[SessionAwareRedirect] Portal config invalid, missing environment variables:', getMissingPortalVariables());
-        return;
-      }
-      const portalUrl = getPortalUrl(userData.preferredPortal);
-      if (portalUrl) {
-        console.log('[SessionAwareRedirect] User should be at external portal:', userData.preferredPortal);
-        redirectStarted.current = true;
-        setPortalRedirect({ url: portalUrl, name: getPortalName(userData.preferredPortal) });
-      }
+  // Compute portal target synchronously (pure, no side effects)
+  const portalTarget = useMemo(() => {
+    if (!isLoggedIn || checking || needsRoleSelection || !userData) {
+      return null;
     }
-  }, [isLoggedIn, checking, userData, needsRoleSelection]);
-
-  // Perform external redirect
-  useEffect(() => {
-    if (portalRedirect) {
-      console.log('[SessionAwareRedirect] Redirecting to external portal:', portalRedirect.url);
-      window.location.replace(portalRedirect.url);
+    if (!isPortalRedirectEnabled() || !isPortalConfigValid()) {
+      return null;
     }
-  }, [portalRedirect]);
+    const url = getPortalUrl(userData.preferredPortal);
+    if (!url) {
+      return null;
+    }
+    return { url, name: getPortalName(userData.preferredPortal) };
+  }, [isLoggedIn, checking, needsRoleSelection, userData]);
 
-  // Show loading overlay when redirecting to external portal
-  if (portalRedirect) {
+  // Perform external redirect via effect (proper side effect handling)
+  useEffect(() => {
+    if (portalTarget && !redirectStarted.current) {
+      console.log('[SessionAwareRedirect] Redirecting to external portal:', portalTarget.url);
+      redirectStarted.current = true;
+      window.location.replace(portalTarget.url);
+    }
+  }, [portalTarget]);
+
+  // Show loading overlay when portal redirect is pending
+  if (portalTarget) {
     return (
       <Box
         sx={{
@@ -222,15 +217,9 @@ const SessionAwareRedirect: React.FC = () => {
           color: 'white',
         }}
       >
-        <CircularProgress 
-          size={60} 
-          sx={{ 
-            color: 'white',
-            mb: 3 
-          }} 
-        />
+        <CircularProgress size={60} sx={{ color: 'white', mb: 3 }} />
         <Typography variant="h5" sx={{ fontWeight: 500, mb: 1 }}>
-          Redirecting you to {portalRedirect.name}...
+          Redirecting you to {portalTarget.name}...
         </Typography>
         <Typography variant="body2" sx={{ opacity: 0.8 }}>
           Please wait a moment
@@ -266,6 +255,7 @@ const SessionAwareRedirect: React.FC = () => {
       return <Navigate to={SIGNUP_PATH} replace />;
     }
     
+    // Portal redirect is handled by portalTarget useMemo above - if we reach here, user stays internal
     const lastPath = getLastPath();
     let targetPath = DEFAULT_AUTHENTICATED_PATH;
     
