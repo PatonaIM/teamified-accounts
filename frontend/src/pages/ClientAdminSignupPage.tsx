@@ -793,56 +793,40 @@ const ClientAdminSignupPage: React.FC = () => {
                   />
                 </Box>
 
-                {/* Email Exists Warning */}
+                {/* Email Exists Inline Error */}
                 {emailExists && (
                   <Box
                     sx={{
                       bgcolor: '#FEF3C7',
-                      borderRadius: 2,
-                      p: 2.5,
-                      mb: 2,
                       border: '1px solid #FCD34D',
+                      borderRadius: 2,
+                      p: 2,
+                      mb: 2,
                     }}
                   >
                     <Typography
                       sx={{
-                        color: '#92400E',
-                        fontWeight: 500,
+                        color: '#1a1a1a',
                         fontSize: '0.9rem',
-                        mb: 2,
                       }}
                     >
-                      This email ID is already present with us. Please log in or use a different email ID.
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<LoginIcon />}
-                        onClick={handleLoginRedirect}
+                      Account exists. Are you trying to{' '}
+                      <Box
+                        component="a"
+                        href="/login"
                         sx={{
-                          bgcolor: '#9333EA',
-                          '&:hover': { bgcolor: '#7C3AED' },
-                          textTransform: 'none',
-                        }}
-                      >
-                        Login
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<RefreshIcon />}
-                        onClick={handleUseDifferentEmail}
-                        sx={{
-                          borderColor: '#9333EA',
                           color: '#9333EA',
-                          '&:hover': { borderColor: '#7C3AED', bgcolor: 'rgba(147, 51, 234, 0.04)' },
-                          textTransform: 'none',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
                         }}
                       >
-                        Use different email
-                      </Button>
-                    </Box>
+                        login
+                      </Box>
+                      ?
+                    </Typography>
                   </Box>
                 )}
 
