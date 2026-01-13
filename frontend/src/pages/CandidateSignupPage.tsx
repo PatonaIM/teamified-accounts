@@ -380,7 +380,7 @@ const CandidateSignupPage: React.FC = () => {
                     helperText={errors.firstName}
                     margin="normal"
                     required
-                    disabled={isLoading || isCheckingEmail}
+                    disabled={isLoading}
                   />
 
               <TextField
@@ -392,7 +392,7 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.lastName}
                 margin="normal"
                 required
-                disabled={isLoading || isCheckingEmail}
+                disabled={isLoading}
               />
 
               <Box sx={{ mb: 2, mt: 2 }}>
@@ -469,14 +469,16 @@ const CandidateSignupPage: React.FC = () => {
                   helperText={
                     errors.confirmPassword 
                       ? errors.confirmPassword 
-                      : (formData.confirmPassword && formData.password === formData.confirmPassword 
-                          ? 'Passwords match.' 
-                          : '')
+                      : formData.confirmPassword 
+                        ? (formData.password === formData.confirmPassword 
+                            ? 'Password match!' 
+                            : 'Password does not match')
+                        : ''
                   }
                   FormHelperTextProps={{
                     sx: {
-                      color: (!errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword) 
-                        ? '#10B981' 
+                      color: formData.confirmPassword 
+                        ? (formData.password === formData.confirmPassword ? '#10B981' : '#EF4444')
                         : undefined
                     }
                   }}
