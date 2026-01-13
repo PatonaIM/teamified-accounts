@@ -405,16 +405,16 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.password}
                 margin="normal"
                 required
-                disabled={isLoading || isCheckingEmail}
+                disabled={isLoading}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        disabled={isLoading || isCheckingEmail}
+                        disabled={isLoading}
                         sx={{
-                          color: (isLoading || isCheckingEmail) ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
                         }}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -423,7 +423,9 @@ const CandidateSignupPage: React.FC = () => {
                   ),
                 }}
               />
-              <PasswordRequirements password={formData.password} />
+              {!isPasswordValid(formData.password) && (
+                <PasswordRequirements password={formData.password} />
+              )}
 
               <TextField
                 fullWidth
@@ -432,19 +434,32 @@ const CandidateSignupPage: React.FC = () => {
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                 error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword}
+                helperText={
+                  errors.confirmPassword 
+                    ? errors.confirmPassword 
+                    : (formData.confirmPassword && formData.password === formData.confirmPassword 
+                        ? 'Passwords match.' 
+                        : '')
+                }
+                FormHelperTextProps={{
+                  sx: {
+                    color: (!errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword) 
+                      ? '#10B981' 
+                      : undefined
+                  }
+                }}
                 margin="normal"
                 required
-                disabled={isLoading || isCheckingEmail}
+                disabled={isLoading}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         edge="end"
-                        disabled={isLoading || isCheckingEmail}
+                        disabled={isLoading}
                         sx={{
-                          color: (isLoading || isCheckingEmail) ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
+                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
                         }}
                       >
                         {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
