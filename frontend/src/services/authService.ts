@@ -250,6 +250,14 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     
     return { accessToken, refreshToken, user, loginEmailType, loginEmailOrganizationSlug };
   } catch (error) {
+    // Check for unverified email error (don't count as failed attempt)
+    if (axios.isAxiosError(error) && error.response?.data?.errorCode === 'EMAIL_NOT_VERIFIED') {
+      const errorWithCode = new Error(error.response.data.message || 'Please verify your email address before logging in.');
+      (errorWithCode as any).errorCode = 'EMAIL_NOT_VERIFIED';
+      (errorWithCode as any).email = error.response.data.email;
+      throw errorWithCode;
+    }
+    
     // Record failed attempt
     recordFailedLoginAttempt();
     

@@ -165,6 +165,10 @@ const LoginPageMUI: React.FC = () => {
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   const [shakeEmail, setShakeEmail] = useState(false);
   const [portalRedirect, setPortalRedirect] = useState<{ url: string; name: string } | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [showRecoveryOptions, setShowRecoveryOptions] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationResent, setVerificationResent] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -256,6 +260,28 @@ const LoginPageMUI: React.FC = () => {
     setStep('email');
     setFormData(prev => ({ ...prev, password: '' }));
     setErrors({});
+    setUnverifiedEmail(null);
+    setVerificationResent(false);
+  };
+
+  const handleResendVerification = async (email: string) => {
+    setResendingVerification(true);
+    try {
+      await fetch('/api/v1/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+      // Always show success (OWASP compliant - same message regardless of outcome)
+      setVerificationResent(true);
+    } catch (error) {
+      // Still show success for OWASP compliance
+      setVerificationResent(true);
+    } finally {
+      setResendingVerification(false);
+    }
   };
 
   const handleModeToggle = () => {
@@ -392,8 +418,19 @@ const LoginPageMUI: React.FC = () => {
         navigate(redirectUrl);
       }
     } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
-      setErrors({ general: errorMessage });
+      // Check for unverified email error code
+      if (error?.errorCode === 'EMAIL_NOT_VERIFIED' || 
+          error?.response?.data?.errorCode === 'EMAIL_NOT_VERIFIED' ||
+          (error?.message && error.message.includes('verify your email'))) {
+        const email = error?.email || error?.response?.data?.email || formData.email;
+        setUnverifiedEmail(email);
+        setErrors({ 
+          general: 'Please verify your email address before logging in.' 
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+        setErrors({ general: errorMessage });
+      }
       setIsLoading(false);
     }
   };
@@ -792,8 +829,75 @@ const LoginPageMUI: React.FC = () => {
                 {formData.email}
               </Typography>
 
-              {/* Error Alert */}
-              {errors.general && (
+              {/* Unverified Email Alert with Resend Option */}
+              {unverifiedEmail && (
+                <Box
+                  sx={{
+                    bgcolor: '#FEF3C7',
+                    border: '1px solid #F59E0B',
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 3,
+                  }}
+                >
+                  {verificationResent ? (
+                    <>
+                      <Typography
+                        sx={{
+                          color: '#1a1a1a',
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          mb: 0.5,
+                        }}
+                      >
+                        Verification email sent!
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: '#6B7280',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        If this email is registered and unverified, you will receive a verification email shortly.
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography
+                        sx={{
+                          color: '#1a1a1a',
+                          fontSize: '0.9rem',
+                          mb: 1,
+                        }}
+                      >
+                        Please verify your email address before logging in.
+                      </Typography>
+                      <Button
+                        variant="text"
+                        size="small"
+                        disabled={resendingVerification}
+                        onClick={() => handleResendVerification(unverifiedEmail)}
+                        sx={{
+                          color: '#9333EA',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          p: 0,
+                          minWidth: 'auto',
+                          '&:hover': {
+                            bgcolor: 'transparent',
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        {resendingVerification ? 'Sending...' : 'Resend verification email'}
+                      </Button>
+                    </>
+                  )}
+                </Box>
+              )}
+
+              {/* General Error Alert */}
+              {errors.general && !unverifiedEmail && (
                 <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
                   {errors.general}
                 </Alert>
@@ -936,21 +1040,106 @@ const LoginPageMUI: React.FC = () => {
                 </Button>
               </Box>
 
+              {/* Having trouble accessing your account? */}
               <Box sx={{ textAlign: 'center' }}>
-                <Link
-                  href="/forgot-password"
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setShowRecoveryOptions(!showRecoveryOptions)}
                   sx={{
+                    background: 'none',
+                    border: 'none',
                     color: '#6b7280',
-                    textDecoration: 'none',
                     fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
                     '&:hover': {
                       color: '#9333EA',
-                      textDecoration: 'underline',
                     },
                   }}
                 >
-                  Forgot password?
-                </Link>
+                  Having trouble accessing your account?
+                  <Box
+                    component="span"
+                    sx={{
+                      transform: showRecoveryOptions ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    ▼
+                  </Box>
+                </Box>
+                
+                {showRecoveryOptions && (
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      bgcolor: '#F9FAFB',
+                      borderRadius: 2,
+                      border: '1px solid #E5E7EB',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Link
+                        href="/forgot-password"
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        🔑 Forgot password
+                      </Link>
+                      <Box
+                        component="button"
+                        type="button"
+                        disabled={resendingVerification}
+                        onClick={() => handleResendVerification(formData.email)}
+                        sx={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#9333EA',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          cursor: resendingVerification ? 'default' : 'pointer',
+                          opacity: resendingVerification ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          textAlign: 'left',
+                          p: 0,
+                          '&:hover': {
+                            textDecoration: resendingVerification ? 'none' : 'underline',
+                          },
+                        }}
+                      >
+                        📧 {resendingVerification ? 'Sending...' : 'Resend email verification'}
+                      </Box>
+                      {verificationResent && (
+                        <Typography
+                          sx={{
+                            color: '#10B981',
+                            fontSize: '0.8rem',
+                            mt: 0.5,
+                          }}
+                        >
+                          ✓ Verification email sent
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
               </Box>
             </form>
           )}

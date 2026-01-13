@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsEmail } from 'class-validator';
 
 export class VerifyEmailDto {
   @ApiProperty({
@@ -24,6 +24,43 @@ export class VerifyEmailResponseDto {
     example: true,
   })
   verified: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Token status for expired/invalid tokens',
+    example: 'expired',
+    enum: ['expired', 'invalid', 'already_verified'],
+  })
+  tokenStatus?: 'expired' | 'invalid' | 'already_verified';
+
+  @ApiPropertyOptional({
+    description: 'Email address associated with the token (for resend flow)',
+    example: 'user@example.com',
+  })
+  email?: string;
+}
+
+export class ResendVerificationDto {
+  @ApiProperty({
+    description: 'Email address to resend verification to',
+    example: 'user@example.com',
+  })
+  @IsNotEmpty({ message: 'Email is required' })
+  @IsEmail({}, { message: 'Please provide a valid email address' })
+  email: string;
+}
+
+export class ResendVerificationResponseDto {
+  @ApiProperty({
+    description: 'OWASP-compliant success message (always the same regardless of account state)',
+    example: 'Thank you. If this email is registered and unverified, you will receive a verification email shortly.',
+  })
+  message: string;
+
+  @ApiProperty({
+    description: 'Always true for OWASP compliance (no enumeration)',
+    example: true,
+  })
+  success: boolean;
 }
 
 export class ProfileCompletionStatusDto {

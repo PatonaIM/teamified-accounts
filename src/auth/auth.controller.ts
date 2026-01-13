@@ -42,7 +42,9 @@ import {
 import { 
   VerifyEmailDto, 
   VerifyEmailResponseDto, 
-  ProfileCompletionStatusDto 
+  ProfileCompletionStatusDto,
+  ResendVerificationDto,
+  ResendVerificationResponseDto,
 } from './dto/verify-email.dto';
 import { ClientAdminSignupDto, ClientAdminSignupResponseDto } from './dto/client-admin-signup.dto';
 import { CandidateSignupDto, CandidateSignupResponseDto } from './dto/candidate-signup.dto';
@@ -219,6 +221,74 @@ export class AuthController {
       req.ip,
       req.get('user-agent'),
     );
+  }
+
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 6, ttl: 3600000 } }) // 6 attempts per hour (above app rate limit, real limit is in service)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend email verification (OWASP-compliant)',
+    description: `
+      Resend email verification link to a user's email address.
+      
+      ## OWASP Compliance:
+      - Always returns the same success message regardless of account state
+      - Rate limited to 3 per email per hour (prevents email bombing)
+      - Invalidates previous verification tokens when generating new ones
+      - No email enumeration possible
+      
+      ## Process Flow:
+      1. Validate email format
+      2. Check rate limit for this email
+      3. If user exists and unverified, generate new token and send email
+      4. Return generic success message regardless of outcome
+    `,
+  })
+  @ApiBody({
+    type: ResendVerificationDto,
+    description: 'Email address to resend verification to',
+    examples: {
+      valid: {
+        summary: 'Resend verification request',
+        value: {
+          email: 'user@example.com'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OWASP-compliant success response (always the same)',
+    type: ResendVerificationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid email format',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async resendVerification(
+    @Body() resendDto: ResendVerificationDto,
+    @Request() req: any,
+  ): Promise<ResendVerificationResponseDto> {
+    try {
+      return await this.emailVerificationService.resendVerificationEmail(
+        resendDto.email,
+        req.ip,
+        req.get('user-agent'),
+      );
+    } catch (error) {
+      // OWASP: Always return same response regardless of error type
+      // This prevents email enumeration and other information leakage
+      return {
+        success: true,
+        message: 'Thank you. If this email is registered and unverified, you will receive a verification email shortly.',
+      };
+    }
   }
 
   @Post('check-email')
