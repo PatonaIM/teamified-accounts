@@ -576,6 +576,14 @@ This is an automated message from Teamified.
     // Extract theme preference from profileData if available
     const themePreference = user.profileData?.themePreference?.themeMode || 'light';
 
+    // Determine preferred portal for routing
+    const { preferredPortal, preferredPortalOrgSlug } = await this.determinePreferredPortal(
+      user.id,
+      roles,
+      loginEmailType,
+      loginEmailOrganizationSlug,
+    );
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -589,6 +597,8 @@ This is an automated message from Teamified.
         roles: roles,
         themePreference: themePreference,
         mustChangePassword: user.mustChangePassword || false,
+        preferredPortal,
+        preferredPortalOrgSlug,
       },
       loginEmailType,
       loginEmailOrganizationSlug,

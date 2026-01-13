@@ -35,6 +35,8 @@ export class LoginResponseDto {
     roles: string[];
     themePreference?: 'light' | 'dark' | 'teamified' | 'custom';
     mustChangePassword?: boolean;
+    preferredPortal?: 'accounts' | 'ats' | 'jobseeker';
+    preferredPortalOrgSlug?: string | null;
   };
 
   @ApiProperty({ description: 'Type of email used for login', enum: ['personal', 'work'] })
