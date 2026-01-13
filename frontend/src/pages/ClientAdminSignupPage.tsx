@@ -1290,7 +1290,9 @@ const ClientAdminSignupPage: React.FC = () => {
                     phoneNumber={formData.mobileNumber}
                     onCountryChange={(value) => {
                       handleInputChange('mobileCountryCode', value);
-                      validateMobileNumber(formData.mobileNumber, value);
+                      if (formData.mobileNumber) {
+                        validateMobileNumber(formData.mobileNumber, value);
+                      }
                     }}
                     onPhoneChange={(value) => handleInputChange('mobileNumber', value)}
                     onBlur={() => validateMobileNumber(formData.mobileNumber, formData.mobileCountryCode)}
