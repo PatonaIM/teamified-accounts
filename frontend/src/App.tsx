@@ -76,6 +76,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SuperAdminRoute from './components/SuperAdminRoute';
 import RoleBasedRoute from './components/RoleBasedRoute';
 import SessionAwareRedirect from './components/SessionAwareRedirect';
+import PortalRedirectEnforcer from './components/PortalRedirectEnforcer';
 import AccountLayout from './components/AccountLayout';
 import HomePage from './pages/account/HomePage';
 import MyAppsPage from './pages/account/MyAppsPage';
@@ -166,6 +167,7 @@ function App() {
       <ThemeProvider>
         <SnackbarProvider>
           <Router>
+            <PortalRedirectEnforcer />
             <div className="App">
               <Routes>
                 <Route 
