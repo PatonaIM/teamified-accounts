@@ -19,19 +19,62 @@ import DownloadMarkdownButton from '../../../components/docs/DownloadMarkdownBut
 
 const markdownContent = `# Password Reset API
 
-API reference for password reset operations, including self-service reset, administrative reset, and forced password change handling.
+API reference for password reset operations, including OTP-based self-service reset, administrative reset, and forced password change handling.
 
 ## Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | \`/auth/forgot-password\` | Request password reset email (self-service) |
-| POST | \`/auth/reset-password\` | Reset password using token from email |
+| POST | \`/auth/password-reset/otp\` | Request password reset OTP (recommended) |
+| POST | \`/auth/password-reset/otp/verify\` | Verify OTP and get reset token |
+| POST | \`/auth/forgot-password\` | Request password reset email (legacy) |
+| POST | \`/auth/reset-password\` | Reset password using token |
 | POST | \`/users/:id/password-reset\` | Admin: send password reset link |
 | PUT | \`/users/:id/password\` | Admin: set password directly |
 | POST | \`/auth/force-change-password\` | User: change forced temporary password |
 
-## Self-Service Reset Request
+## OTP-Based Password Reset (Recommended)
+
+### Step 1: Request OTP
+
+\`\`\`
+POST /auth/password-reset/otp
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+\`\`\`
+
+Sends a 6-digit OTP code to the user's email. OTP expires after 10 minutes.
+
+### Step 2: Verify OTP
+
+\`\`\`
+POST /auth/password-reset/otp/verify
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+\`\`\`
+
+Returns a reset token upon successful verification. OTP is cleared after verification.
+
+### Step 3: Complete Password Reset
+
+\`\`\`
+POST /auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-otp-verification",
+  "newPassword": "NewSecureP@ssw0rd!"
+}
+\`\`\`
+
+## Legacy: Link-Based Reset
 
 \`\`\`
 POST /auth/forgot-password
@@ -43,18 +86,6 @@ Content-Type: application/json
 \`\`\`
 
 Returns 200 OK regardless of whether the email exists (prevents user enumeration).
-
-## Complete Password Reset
-
-\`\`\`
-POST /auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "reset-token-from-email",
-  "newPassword": "NewSecureP@ssw0rd!"
-}
-\`\`\`
 
 ## Admin: Send Reset Link
 
@@ -138,14 +169,24 @@ export default function PasswordResetApiPage() {
               </TableHead>
               <TableBody>
                 <TableRow>
+                  <TableCell><Chip label="POST" color="success" size="small" /></TableCell>
+                  <TableCell><code>/auth/password-reset/otp</code></TableCell>
+                  <TableCell>Request password reset OTP (recommended)</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell><Chip label="POST" color="success" size="small" /></TableCell>
+                  <TableCell><code>/auth/password-reset/otp/verify</code></TableCell>
+                  <TableCell>Verify OTP and get reset token</TableCell>
+                </TableRow>
+                <TableRow>
                   <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
                   <TableCell><code>/auth/forgot-password</code></TableCell>
-                  <TableCell>Request password reset email (self-service)</TableCell>
+                  <TableCell>Request password reset email (legacy)</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
                   <TableCell><code>/auth/reset-password</code></TableCell>
-                  <TableCell>Reset password using token from email</TableCell>
+                  <TableCell>Reset password using token</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell><Chip label="POST" color="warning" size="small" /></TableCell>
@@ -158,7 +199,7 @@ export default function PasswordResetApiPage() {
                   <TableCell>Admin: set password directly</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell><Chip label="POST" color="success" size="small" /></TableCell>
+                  <TableCell><Chip label="POST" color="primary" size="small" /></TableCell>
                   <TableCell><code>/auth/force-change-password</code></TableCell>
                   <TableCell>User: change forced temporary password</TableCell>
                 </TableRow>
@@ -171,7 +212,71 @@ export default function PasswordResetApiPage() {
 
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-            Self-Service Reset Request
+            OTP-Based Password Reset (Recommended)
+          </Typography>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>Enhanced Security:</strong> The OTP-based flow provides better protection against 
+              phishing attacks compared to clickable links.
+            </Typography>
+          </Alert>
+          
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            Step 1: Request OTP
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 2 }}>
+            <pre style={{ margin: 0 }}>
+{`POST ${apiUrl}/auth/password-reset/otp
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}`}
+            </pre>
+          </Paper>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Sends a 6-digit OTP code to the user's email. OTP expires after 10 minutes.
+          </Typography>
+
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            Step 2: Verify OTP
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto', mb: 2 }}>
+            <pre style={{ margin: 0 }}>
+{`POST ${apiUrl}/auth/password-reset/otp/verify
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}`}
+            </pre>
+          </Paper>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Returns a reset token upon successful verification. OTP is cleared after verification.
+          </Typography>
+
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            Step 3: Complete Password Reset
+          </Typography>
+          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto' }}>
+            <pre style={{ margin: 0 }}>
+{`POST ${apiUrl}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-otp-verification",
+  "newPassword": "NewSecureP@ssw0rd!"
+}`}
+            </pre>
+          </Paper>
+        </Box>
+
+        <Divider />
+
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            Legacy: Link-Based Reset
           </Typography>
           <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto' }}>
             <pre style={{ margin: 0 }}>
@@ -186,23 +291,6 @@ Content-Type: application/json
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Returns 200 OK regardless of whether the email exists (prevents user enumeration).
           </Typography>
-        </Box>
-
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-            Complete Password Reset
-          </Typography>
-          <Paper sx={{ p: 2, bgcolor: 'grey.900', color: 'grey.100', fontFamily: 'monospace', overflow: 'auto' }}>
-            <pre style={{ margin: 0 }}>
-{`POST ${apiUrl}/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "reset-token-from-email",
-  "newPassword": "NewSecureP@ssw0rd!"
-}`}
-            </pre>
-          </Paper>
         </Box>
 
         <Divider />

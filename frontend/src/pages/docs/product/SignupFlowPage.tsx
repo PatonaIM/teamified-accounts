@@ -372,12 +372,27 @@ export default function SignupFlowPage() {
                   </List>
                 </Paper>
 
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>AI-Powered Business Description:</strong> When you enter your company website URL 
+                    and move to the next field, AI automatically analyzes your site and generates a professional 
+                    business description. A loading indicator shows "AI is analyzing your website..." while processing. 
+                    The generated description is fully editable - you can modify or replace it as needed.
+                  </Typography>
+                </Alert>
                 <List dense>
                   <ListItem>
                     <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
                     <ListItemText
-                      primary="AI-Powered Website Analysis"
-                      secondary="When you enter your company website, AI automatically analyzes it and suggests a business description"
+                      primary="Smart URL Handling"
+                      secondary="URLs are automatically normalized (https:// is added if missing) for seamless AI analysis"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon><CheckCircle color="success" fontSize="small" /></ListItemIcon>
+                    <ListItemText
+                      primary="Graceful Error Handling"
+                      secondary="If AI analysis fails, a helpful message prompts you to enter the description manually"
                     />
                   </ListItem>
                   <ListItem>
