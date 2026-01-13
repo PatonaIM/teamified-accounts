@@ -18,17 +18,8 @@ import { countries, type Country } from './CountrySelect';
 
 const POPULAR_COUNTRY_CODES = ['AU', 'GB', 'US'];
 
-const PHONE_LENGTH_BY_COUNTRY: Record<string, { min: number; max: number }> = {
-  AU: { min: 9, max: 9 },
-  GB: { min: 10, max: 10 },
-  US: { min: 10, max: 10 },
-  CA: { min: 10, max: 10 },
-  IN: { min: 10, max: 10 },
-  NZ: { min: 9, max: 10 },
-  SG: { min: 8, max: 8 },
-  PH: { min: 10, max: 10 },
-  DEFAULT: { min: 6, max: 15 },
-};
+// Max input length per country (generous to allow typing, validation is the final gate)
+const PHONE_MAX_LENGTH = 15; // ITU-T E.164 max is 15 digits
 
 const getFlagUrl = (countryCode: string) => 
   `https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`;
@@ -157,8 +148,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
           value={phoneNumber}
           onChange={(e) => {
             const digitsOnly = e.target.value.replace(/\D/g, '');
-            const phoneConfig = PHONE_LENGTH_BY_COUNTRY[countryCode] || PHONE_LENGTH_BY_COUNTRY.DEFAULT;
-            const limitedValue = digitsOnly.slice(0, phoneConfig.max);
+            const limitedValue = digitsOnly.slice(0, PHONE_MAX_LENGTH);
             onPhoneChange(limitedValue);
           }}
           onBlur={onBlur}
