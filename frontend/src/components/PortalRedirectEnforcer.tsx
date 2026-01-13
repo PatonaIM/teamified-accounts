@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, ReactNode, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
-import { isPortalRedirectEnabled } from '../utils/featureFlags';
-import { isPortalConfigValid, getPortalName, getPortalUrl } from '../config/portalUrls';
-import { computePortalRedirect, inferFallbackPortal } from '../utils/portalRedirect';
+import { getPortalName, getPortalUrl, type PortalType } from '../config/portalUrls';
+import { inferFallbackPortal } from '../utils/portalRedirect';
 import { fetchCurrentUser } from '../services/authService';
 
 const ALLOWED_PATHS = [
@@ -34,13 +33,13 @@ function isAllowedPath(pathname: string): boolean {
   return ALLOWED_PATHS.some(path => pathname.startsWith(path));
 }
 
-type GuardState = 'loading' | 'resolving' | 'redirecting' | 'allow_accounts' | 'redirect_to_login';
+type GuardState = 'loading' | 'resolving' | 'redirecting' | 'allow_accounts';
 
 interface PortalRedirectEnforcerProps {
   children: ReactNode;
 }
 
-export default function PortalRedirectEnforcer({ children }: PortalRedirectEnforcerProps): JSX.Element {
+export default function PortalRedirectEnforcer({ children }: PortalRedirectEnforcerProps): React.ReactElement {
   const location = useLocation();
   const { user, loading, setUser } = useAuth();
   const fetchAttemptedRef = useRef(false);
@@ -49,11 +48,11 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
   const [redirectPortal, setRedirectPortal] = useState<string | null>(null);
 
   const isAllowed = useMemo(() => isAllowedPath(location.pathname), [location.pathname]);
-  const portalRedirectEnabled = isPortalRedirectEnabled() && isPortalConfigValid();
 
-  const decision = useMemo(() => {
-    if (!user) return null;
-    return computePortalRedirect(user);
+  const isSuperAdmin = useMemo(() => {
+    return user?.roles?.some((role: string) => 
+      ['super_admin', 'system_admin'].includes(role.toLowerCase())
+    ) ?? false;
   }, [user]);
 
   const guardState = useMemo((): GuardState => {
@@ -62,19 +61,17 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
     if (resolving) return 'resolving';
     if (redirectPortal) return 'redirecting';
     
-    if (!user) return 'redirect_to_login';
-    if (!portalRedirectEnabled) return 'allow_accounts';
+    if (!user) return 'loading';
     
-    if (decision?.reason === 'super_admin') return 'allow_accounts';
-    if (decision?.reason === 'accounts_portal') return 'allow_accounts';
-    if (decision?.reason === 'feature_disabled') return 'allow_accounts';
-    if (decision?.reason === 'config_invalid') return 'allow_accounts';
+    if (isSuperAdmin) return 'allow_accounts';
+    if (user.preferredPortal === 'accounts') return 'allow_accounts';
     
-    if (decision?.shouldRedirect) return 'redirecting';
-    if (decision?.reason === 'pending_portal_decision') return 'resolving';
+    if (user.preferredPortal === 'ats' || user.preferredPortal === 'jobseeker') {
+      return 'redirecting';
+    }
     
-    return 'allow_accounts';
-  }, [isAllowed, loading, resolving, redirectPortal, user, portalRedirectEnabled, decision]);
+    return 'resolving';
+  }, [isAllowed, loading, resolving, redirectPortal, user, isSuperAdmin]);
 
   useEffect(() => {
     if (redirectInitiatedRef.current) return;
@@ -88,12 +85,34 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
       return;
     }
     
-    if (!portalRedirectEnabled) return;
+    if (isSuperAdmin) {
+      console.log('[PortalRedirectEnforcer] Super admin, allowing access');
+      return;
+    }
+    
+    if (user.preferredPortal === 'accounts') {
+      console.log('[PortalRedirectEnforcer] preferredPortal=accounts, allowing access');
+      return;
+    }
 
-    console.log('[PortalRedirectEnforcer] Decision:', decision);
+    if (user.preferredPortal === 'ats' || user.preferredPortal === 'jobseeker') {
+      const portalUrl = getPortalUrl(user.preferredPortal);
+      if (portalUrl) {
+        console.log('[PortalRedirectEnforcer] Redirecting to portal:', user.preferredPortal);
+        redirectInitiatedRef.current = true;
+        setRedirectPortal(user.preferredPortal);
+        window.location.replace(portalUrl);
+        return;
+      } else {
+        console.warn('[PortalRedirectEnforcer] Portal URL not configured for:', user.preferredPortal, '- redirecting to logout');
+        redirectInitiatedRef.current = true;
+        window.location.replace('/logout');
+        return;
+      }
+    }
 
-    if (decision?.reason === 'pending_portal_decision' && !fetchAttemptedRef.current && !resolving) {
-      console.log('[PortalRedirectEnforcer] preferredPortal missing, force-fetching /me');
+    if (!fetchAttemptedRef.current && !resolving) {
+      console.log('[PortalRedirectEnforcer] preferredPortal missing/invalid, force-fetching /me');
       fetchAttemptedRef.current = true;
       setResolving(true);
       
@@ -101,8 +120,25 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
         console.log('[PortalRedirectEnforcer] Fresh user data:', freshUser);
         
         if (freshUser && setUser) {
-          if (freshUser.preferredPortal && freshUser.preferredPortal !== 'accounts') {
+          const isFreshSuperAdmin = freshUser.roles?.some((role: string) => 
+            ['super_admin', 'system_admin'].includes(role.toLowerCase())
+          );
+          
+          if (isFreshSuperAdmin) {
+            console.log('[PortalRedirectEnforcer] Fresh user is super admin, allowing access');
             setUser(freshUser);
+            setResolving(false);
+            return;
+          }
+          
+          if (freshUser.preferredPortal === 'accounts') {
+            console.log('[PortalRedirectEnforcer] Fresh user has preferredPortal=accounts');
+            setUser(freshUser);
+            setResolving(false);
+            return;
+          }
+          
+          if (freshUser.preferredPortal === 'ats' || freshUser.preferredPortal === 'jobseeker') {
             const portalUrl = getPortalUrl(freshUser.preferredPortal);
             if (portalUrl) {
               console.log('[PortalRedirectEnforcer] Redirecting to portal from fresh data:', freshUser.preferredPortal);
@@ -124,9 +160,16 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
             window.location.replace(fallbackUrl);
             return;
           }
+          
+          console.warn('[PortalRedirectEnforcer] No portal URL available, redirecting to logout');
+          redirectInitiatedRef.current = true;
+          window.location.replace('/logout');
+          return;
         }
         
-        setResolving(false);
+        console.warn('[PortalRedirectEnforcer] Fetch returned no user, redirecting to logout');
+        redirectInitiatedRef.current = true;
+        window.location.replace('/logout');
       }).catch(err => {
         console.error('[PortalRedirectEnforcer] Failed to fetch fresh user:', err);
         const fallbackPortal = inferFallbackPortal(user);
@@ -137,36 +180,30 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
           setRedirectPortal(fallbackPortal);
           window.location.replace(fallbackUrl);
         } else {
-          setResolving(false);
+          console.warn('[PortalRedirectEnforcer] Fetch failed and no fallback URL, redirecting to logout');
+          redirectInitiatedRef.current = true;
+          window.location.replace('/logout');
         }
       });
       return;
     }
-
-    if (decision?.shouldRedirect && decision.portalUrl) {
-      console.log('[PortalRedirectEnforcer] Redirecting to portal:', decision.portalType);
-      redirectInitiatedRef.current = true;
-      setRedirectPortal(decision.portalType);
-      window.location.replace(decision.portalUrl);
-    }
-  }, [location.pathname, location.search, user, loading, decision, isAllowed, portalRedirectEnabled, resolving, setUser]);
+  }, [location.pathname, location.search, user, loading, isAllowed, resolving, setUser, isSuperAdmin]);
 
   if (guardState === 'allow_accounts') {
     return <>{children}</>;
   }
 
   const getMessage = () => {
+    if (redirectPortal) {
+      return `Redirecting you to ${getPortalName(redirectPortal as PortalType)}...`;
+    }
     switch (guardState) {
       case 'redirecting':
-        return redirectPortal 
-          ? `Redirecting you to ${getPortalName(redirectPortal)}...`
-          : decision?.portalType 
-            ? `Redirecting you to ${getPortalName(decision.portalType)}...`
-            : 'Redirecting...';
+        return user?.preferredPortal 
+          ? `Redirecting you to ${getPortalName(user.preferredPortal)}...`
+          : 'Redirecting...';
       case 'resolving':
         return 'Checking your access...';
-      case 'redirect_to_login':
-        return 'Redirecting to login...';
       default:
         return 'Loading...';
     }

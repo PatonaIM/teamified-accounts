@@ -1,4 +1,4 @@
-type PortalType = 'accounts' | 'ats' | 'jobseeker';
+export type PortalType = 'accounts' | 'ats' | 'jobseeker';
 
 interface PortalConfig {
   url: string | null;
