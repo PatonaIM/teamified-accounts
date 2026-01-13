@@ -395,79 +395,116 @@ const CandidateSignupPage: React.FC = () => {
                 disabled={isLoading || isCheckingEmail}
               />
 
-              <TextField
-                fullWidth
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                error={!!errors.password}
-                helperText={errors.password}
-                margin="normal"
-                required
-                disabled={isLoading}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        disabled={isLoading}
-                        sx={{
-                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                        }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              <Box sx={{ mb: 2, mt: 2 }}>
+                <Typography
+                  component="label"
+                  sx={{
+                    display: 'block',
+                    mb: 1,
+                    fontWeight: 500,
+                    color: '#1a1a1a',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Password *
+                </Typography>
+                <TextField
+                  fullWidth
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          sx={{ color: '#9CA3AF' }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: 'white',
+                      borderRadius: 2,
+                      '& fieldset': { borderColor: '#E5E7EB' },
+                      '&:hover fieldset': { borderColor: '#9333EA' },
+                      '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                    },
+                  }}
+                />
+              </Box>
+
               {!isPasswordValid(formData.password) && (
                 <PasswordRequirements password={formData.password} />
               )}
 
-              <TextField
-                fullWidth
-                label="Confirm Password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                error={!!errors.confirmPassword}
-                helperText={
-                  errors.confirmPassword 
-                    ? errors.confirmPassword 
-                    : (formData.confirmPassword && formData.password === formData.confirmPassword 
-                        ? 'Passwords match.' 
-                        : '')
-                }
-                FormHelperTextProps={{
-                  sx: {
-                    color: (!errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword) 
-                      ? '#10B981' 
-                      : undefined
+              <Box sx={{ mb: 2, mt: 2 }}>
+                <Typography
+                  component="label"
+                  sx={{
+                    display: 'block',
+                    mb: 1,
+                    fontWeight: 500,
+                    color: '#1a1a1a',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Confirm Password *
+                </Typography>
+                <TextField
+                  fullWidth
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  error={!!errors.confirmPassword}
+                  helperText={
+                    errors.confirmPassword 
+                      ? errors.confirmPassword 
+                      : (formData.confirmPassword && formData.password === formData.confirmPassword 
+                          ? 'Passwords match.' 
+                          : '')
                   }
-                }}
-                margin="normal"
-                required
-                disabled={isLoading}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        edge="end"
-                        disabled={isLoading}
-                        sx={{
-                          color: isLoading ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                        }}
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
+                  FormHelperTextProps={{
+                    sx: {
+                      color: (!errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword) 
+                        ? '#10B981' 
+                        : undefined
+                    }
+                  }}
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                          sx={{ color: '#9CA3AF' }}
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: 'white',
+                      borderRadius: 2,
+                      '& fieldset': { borderColor: '#E5E7EB' },
+                      '&:hover fieldset': { borderColor: '#9333EA' },
+                      '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                    },
+                  }}
+                />
+              </Box>
 
               <Box sx={{ mt: 3 }}>
                 <FormControlLabel
