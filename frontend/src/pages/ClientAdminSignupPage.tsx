@@ -105,7 +105,7 @@ const ClientAdminSignupPage: React.FC = () => {
     slug: '',
     industry: '',
     companySize: '',
-    country: 'US',
+    country: '',
     mobileCountryCode: 'AU',
     mobileNumber: '',
     phoneCountryCode: 'AU',
