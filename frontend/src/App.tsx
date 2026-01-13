@@ -23,6 +23,7 @@ import InternalTeamInvitationManagementPage from './pages/InternalTeamInvitation
 import IntegratedTestSuite from './pages/test/IntegratedTestSuite';
 import TestLogoutCallback from './pages/test/TestLogoutCallback';
 import PortalRedirectPage from './pages/PortalRedirectPage';
+import LogoutPage from './pages/LogoutPage';
 import DocsLayout from './components/docs/DocsLayout';
 import OverviewPage from './pages/docs/product/OverviewPage';
 import SsoProductPage from './pages/docs/product/SsoPage';
@@ -170,6 +171,10 @@ function App() {
                 <Route 
                   path="/login" 
                   element={<LoginPageMUI />} 
+                />
+                <Route 
+                  path="/logout" 
+                  element={<LogoutPage />} 
                 />
                 <Route 
                   path="/callback" 
