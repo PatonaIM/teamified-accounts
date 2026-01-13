@@ -482,12 +482,7 @@ This is an automated message from Teamified.
         ip,
         userAgent,
       });
-      // Throw specific error code for frontend to handle
-      throw new UnauthorizedException({
-        message: 'Please verify your email address before logging in.',
-        errorCode: 'EMAIL_NOT_VERIFIED',
-        email: user.email,
-      });
+      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification link.');
     }
 
     // Determine email type and organization for login redirect BEFORE saving
