@@ -97,11 +97,16 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
 
     if (user.preferredPortal === 'ats' || user.preferredPortal === 'jobseeker') {
       const portalUrl = getPortalUrl(user.preferredPortal);
+      console.log('[PortalRedirectEnforcer] Portal URL lookup result:', { preferredPortal: user.preferredPortal, portalUrl });
       if (portalUrl) {
-        console.log('[PortalRedirectEnforcer] Redirecting to portal:', user.preferredPortal);
+        console.log('[PortalRedirectEnforcer] Initiating redirect to portal:', user.preferredPortal, portalUrl);
         redirectInitiatedRef.current = true;
         setRedirectPortal(user.preferredPortal);
-        window.location.replace(portalUrl);
+        // Use setTimeout to ensure state updates are flushed before redirect
+        setTimeout(() => {
+          console.log('[PortalRedirectEnforcer] Executing redirect to:', portalUrl);
+          window.location.href = portalUrl;
+        }, 100);
         return;
       } else {
         console.warn('[PortalRedirectEnforcer] Portal URL not configured for:', user.preferredPortal, '- allowing access to Accounts');
@@ -138,11 +143,15 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
           
           if (freshUser.preferredPortal === 'ats' || freshUser.preferredPortal === 'jobseeker') {
             const portalUrl = getPortalUrl(freshUser.preferredPortal);
+            console.log('[PortalRedirectEnforcer] Fresh data portal URL lookup:', { preferredPortal: freshUser.preferredPortal, portalUrl });
             if (portalUrl) {
-              console.log('[PortalRedirectEnforcer] Redirecting to portal from fresh data:', freshUser.preferredPortal);
+              console.log('[PortalRedirectEnforcer] Redirecting to portal from fresh data:', freshUser.preferredPortal, portalUrl);
               redirectInitiatedRef.current = true;
               setRedirectPortal(freshUser.preferredPortal);
-              window.location.replace(portalUrl);
+              setTimeout(() => {
+                console.log('[PortalRedirectEnforcer] Executing redirect from fresh data to:', portalUrl);
+                window.location.href = portalUrl;
+              }, 100);
               return;
             }
           }
@@ -150,12 +159,15 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
           const fallbackPortal = inferFallbackPortal(freshUser);
           const fallbackUrl = getPortalUrl(fallbackPortal);
           if (fallbackUrl) {
-            console.log('[PortalRedirectEnforcer] Using fallback portal:', fallbackPortal);
+            console.log('[PortalRedirectEnforcer] Using fallback portal:', fallbackPortal, fallbackUrl);
             freshUser.preferredPortal = fallbackPortal;
             setUser(freshUser);
             redirectInitiatedRef.current = true;
             setRedirectPortal(fallbackPortal);
-            window.location.replace(fallbackUrl);
+            setTimeout(() => {
+              console.log('[PortalRedirectEnforcer] Executing fallback redirect to:', fallbackUrl);
+              window.location.href = fallbackUrl;
+            }, 100);
             return;
           }
           
@@ -172,10 +184,13 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
         const fallbackPortal = inferFallbackPortal(user);
         const fallbackUrl = getPortalUrl(fallbackPortal);
         if (fallbackUrl) {
-          console.log('[PortalRedirectEnforcer] Fetch failed, using fallback portal:', fallbackPortal);
+          console.log('[PortalRedirectEnforcer] Fetch failed, using fallback portal:', fallbackPortal, fallbackUrl);
           redirectInitiatedRef.current = true;
           setRedirectPortal(fallbackPortal);
-          window.location.replace(fallbackUrl);
+          setTimeout(() => {
+            console.log('[PortalRedirectEnforcer] Executing error fallback redirect to:', fallbackUrl);
+            window.location.href = fallbackUrl;
+          }, 100);
         } else {
           console.warn('[PortalRedirectEnforcer] Fetch failed and no fallback URL, allowing access to Accounts');
           setResolving(false);
