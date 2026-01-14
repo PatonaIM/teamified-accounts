@@ -6,6 +6,23 @@ interface PortalConfig {
   required: boolean;
 }
 
+const PRODUCTION_PORTAL_URLS = {
+  ats: 'https://teamified-ats.replit.app',
+  jobseeker: 'https://teamified-jobseeker.replit.app',
+};
+
+const getPortalUrlFromEnv = (portal: 'ats' | 'jobseeker'): string | null => {
+  const envVar = portal === 'ats' 
+    ? import.meta.env.VITE_PORTAL_URL_ATS 
+    : import.meta.env.VITE_PORTAL_URL_JOBSEEKER;
+  
+  if (envVar) {
+    return envVar;
+  }
+  
+  return PRODUCTION_PORTAL_URLS[portal];
+};
+
 const portalConfigs: Record<PortalType, PortalConfig> = {
   accounts: {
     url: null,
@@ -13,12 +30,12 @@ const portalConfigs: Record<PortalType, PortalConfig> = {
     required: false,
   },
   ats: {
-    url: import.meta.env.VITE_PORTAL_URL_ATS || null,
+    url: getPortalUrlFromEnv('ats'),
     name: 'ATS Portal',
     required: true,
   },
   jobseeker: {
-    url: import.meta.env.VITE_PORTAL_URL_JOBSEEKER || null,
+    url: getPortalUrlFromEnv('jobseeker'),
     name: 'Jobseeker Portal',
     required: true,
   },
