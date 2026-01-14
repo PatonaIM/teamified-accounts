@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, useMemo, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
-import { getPortalName, getPortalUrl, type PortalType } from '../config/portalUrls';
+import { getPortalName, getPortalUrl, type PortalType, isPortalConfigValid, getMissingPortalVariables } from '../config/portalUrls';
 import { inferFallbackPortal } from '../utils/portalRedirect';
 import { fetchCurrentUser, isAuthenticated as checkIsAuthenticated } from '../services/authService';
+import ConfigurationErrorPage from './ConfigurationErrorPage';
 
 const ALLOWED_PATHS = [
   '/logout',
@@ -48,6 +49,19 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
   const [redirectPortal, setRedirectPortal] = useState<string | null>(null);
 
   const isAllowed = useMemo(() => isAllowedPath(location.pathname), [location.pathname]);
+  
+  const portalConfigValid = useMemo(() => isPortalConfigValid(), []);
+  const missingVariables = useMemo(() => getMissingPortalVariables(), []);
+  
+  if (!portalConfigValid) {
+    return (
+      <ConfigurationErrorPage
+        title="Portal Configuration Error"
+        message="The application cannot redirect users to their designated portals because required environment variables are missing."
+        details={missingVariables}
+      />
+    );
+  }
 
   const isSuperAdmin = useMemo(() => {
     return user?.roles?.some((role: string) => 
