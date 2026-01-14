@@ -20,6 +20,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { login, getAccessToken, isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton';
+import HelpSection from '../components/HelpSection';
 import { getLastPath } from '../components/SessionAwareRedirect';
 import { preserveMarketingSourceFromUrl, isMarketingSource } from '../services/marketingRedirectService';
 import { isPortalRedirectEnabled } from '../utils/featureFlags';
@@ -37,7 +38,6 @@ const LoginPageMUI: React.FC = () => {
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [showResendSuccess, setShowResendSuccess] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [showAccountRecoveryOptions, setShowAccountRecoveryOptions] = useState(false);
   
   // Ref to prevent multiple cookie verification attempts (prevents infinite loop)
   const cookieVerificationAttempted = useRef(false);
@@ -795,29 +795,7 @@ const LoginPageMUI: React.FC = () => {
 
               <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
 
-              <Box sx={{ textAlign: 'center', mt: 4 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: '#6b7280',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Need help? Send us an email at{' '}
-                  <Link
-                    href="mailto:hello@teamified.com"
-                    sx={{
-                      color: '#9333EA',
-                      textDecoration: 'none',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
-                  >
-                    hello@teamified.com
-                  </Link>
-                </Typography>
-              </Box>
+              <HelpSection variant="login" />
             </form>
           )}
 
@@ -1031,94 +1009,7 @@ const LoginPageMUI: React.FC = () => {
               </Box>
 
               {/* Having trouble accessing your account? */}
-              <Box sx={{ textAlign: 'center' }}>
-                <Link
-                  component="button"
-                  type="button"
-                  onClick={() => setShowAccountRecoveryOptions(!showAccountRecoveryOptions)}
-                  sx={{
-                    color: '#6b7280',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: '#9333EA',
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Having trouble accessing your account?
-                </Link>
-                
-                {showAccountRecoveryOptions && (
-                  <Box 
-                    sx={{ 
-                      mt: 2, 
-                      p: 2, 
-                      bgcolor: '#F9FAFB', 
-                      borderRadius: 2,
-                      border: '1px solid #E5E7EB',
-                    }}
-                  >
-                    <Typography 
-                      sx={{ 
-                        fontSize: '0.875rem', 
-                        color: '#374151', 
-                        mb: 2,
-                        fontWeight: 500,
-                      }}
-                    >
-                      Get help with your account:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Link
-                        href="/forgot-password"
-                        sx={{
-                          color: '#9333EA',
-                          textDecoration: 'none',
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
-                          '&:hover': {
-                            textDecoration: 'underline',
-                          },
-                        }}
-                      >
-                        → I forgot my password
-                      </Link>
-                      <Link
-                        href="/resend-verification"
-                        sx={{
-                          color: '#9333EA',
-                          textDecoration: 'none',
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
-                          '&:hover': {
-                            textDecoration: 'underline',
-                          },
-                        }}
-                      >
-                        → Resend Email Verification
-                      </Link>
-                      <Link
-                        href="mailto:hello@teamified.com"
-                        sx={{
-                          color: '#9333EA',
-                          textDecoration: 'none',
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
-                          '&:hover': {
-                            textDecoration: 'underline',
-                          },
-                        }}
-                      >
-                        → Contact Support
-                      </Link>
-                    </Box>
-                  </Box>
-                )}
-              </Box>
+              <HelpSection variant="login" />
             </form>
           )}
         </Box>
