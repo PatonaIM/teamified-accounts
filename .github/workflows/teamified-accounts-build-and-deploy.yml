@@ -20,6 +20,9 @@ env:
   CONTAINER_REGISTRY: 'tmfregistryprod.azurecr.io'
   RESOURCE_GROUP: 'rg-teamified-prod'
   IMAGE_NAME: 'teamified-accounts'
+  # Portal Redirect Configuration
+  VITE_PORTAL_URL_ATS: 'https://ats.teamified.com'
+  VITE_PORTAL_URL_JOBSEEKER: 'https://jobseeker.teamified.com'
 
 jobs:
   build:
@@ -70,6 +73,8 @@ jobs:
           build-args: |
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+            VITE_PORTAL_URL_ATS=${{ env.VITE_PORTAL_URL_ATS }}
+            VITE_PORTAL_URL_JOBSEEKER=${{ env.VITE_PORTAL_URL_JOBSEEKER }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
