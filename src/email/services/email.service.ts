@@ -299,22 +299,32 @@ If you didn't create this account, please contact our support team.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Teamified</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #3498db; 
-            color: white; 
-            padding: 12px 30px; 
+            background-color: #9333EA; 
+            color: white !important; 
+            padding: 14px 32px; 
             text-decoration: none; 
-            border-radius: 5px; 
+            border-radius: 6px; 
             margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
         }
+        .cta-button:hover { background-color: #7C3AED; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .expiry-warning { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 5px; margin: 15px 0; }
+        .expiry-warning { background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; color: #4B5563; }
     </style>
 </head>
 <body>
@@ -333,14 +343,14 @@ If you didn't create this account, please contact our support team.
             </div>
             
             <div class="expiry-warning">
-                <strong>⏰ Important:</strong> This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}. 
+                <strong>Important:</strong> This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}. 
                 Please complete your registration before this date.
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f1f1f1; padding: 10px; border-radius: 3px;">
+            <div class="link-box">
                 ${inviteLink}
-            </p>
+            </div>
             
             <h3>What's next?</h3>
             <ul>
@@ -354,7 +364,7 @@ If you didn't create this account, please contact our support team.
         </div>
         <div class="footer">
             <p>This is an automated message from Teamified.</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -396,35 +406,45 @@ This is an automated message from Teamified.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please verify your email address</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #e74c3c; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #27ae60; 
-            color: white; 
-            padding: 12px 30px; 
+            background-color: #9333EA; 
+            color: white !important; 
+            padding: 14px 32px; 
             text-decoration: none; 
-            border-radius: 5px; 
+            border-radius: 6px; 
             margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
         }
+        .cta-button:hover { background-color: #7C3AED; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .warning { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .info-box { background-color: #F3E8FF; border-left: 4px solid #9333EA; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; color: #4B5563; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📧 Email Verification Required</h1>
+            <h1>Email Verification Required</h1>
         </div>
         <div class="content">
             <h2>Hello ${firstName},</h2>
-            <p>We noticed that you haven't verified your email address yet. Email verification is required to access all features of the Teamified.</p>
+            <p>We noticed that you haven't verified your email address yet. Email verification is required to access all features of Teamified.</p>
             
-            <div class="warning">
-                <strong>⚠️ Action Required:</strong> Please verify your email address to complete your account setup and access the full portal functionality.
+            <div class="info-box">
+                <strong>Action Required:</strong> Please verify your email address to complete your account setup and access the full portal functionality.
             </div>
             
             <div style="text-align: center;">
@@ -432,25 +452,25 @@ This is an automated message from Teamified.
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f1f1f1; padding: 10px; border-radius: 3px;">
+            <div class="link-box">
                 ${verificationLink}
-            </p>
+            </div>
             
             <h3>Why verify your email?</h3>
             <ul>
-                <li>✅ Complete your account setup</li>
-                <li>✅ Access all portal features</li>
-                <li>✅ Receive important notifications</li>
-                <li>✅ Ensure account security</li>
+                <li>Complete your account setup</li>
+                <li>Access all portal features</li>
+                <li>Receive important notifications</li>
+                <li>Ensure account security</li>
             </ul>
             
-            <p><strong>Note:</strong> This verification link will expire in 24 hours for security reasons.</p>
+            <p style="color: #6B7280;"><strong>Note:</strong> This verification link will expire in 24 hours for security reasons.</p>
             
             <p>If you have any questions or need assistance, please contact our support team.</p>
         </div>
         <div class="footer">
-            <p>This is an automated reminder from Teamified.</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p>This is an automated message from Teamified.</p>
+            <p>&copy; ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -493,40 +513,46 @@ This is an automated reminder from Teamified.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Teamified</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #27ae60; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .success-box { background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .success-box { background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; margin-top: 25px; }
+        ul, ol { padding-left: 20px; }
+        li { margin-bottom: 8px; color: #4B5563; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 Welcome to Teamified!</h1>
+            <h1>Welcome to Teamified!</h1>
         </div>
         <div class="content">
             <h2>Congratulations, ${firstName}!</h2>
             
             <div class="success-box">
-                <strong>✅ Email Verified Successfully!</strong><br>
+                <strong>Email Verified Successfully!</strong><br>
                 Your email address has been verified and your account is now fully activated.
             </div>
             
-            <p>You now have access to all the features of the Teamified, including:</p>
+            <p>You now have access to all the features of Teamified, including:</p>
             
-            <h3>🚀 What's available to you:</h3>
+            <h3>What's available to you:</h3>
             <ul>
-                <li>📊 Dashboard with important updates</li>
-                <li>👤 Profile management</li>
-                <li>⏰ Timesheet submission</li>
-                <li>🏖️ Leave request management</li>
-                <li>📄 Document access and payslips</li>
+                <li>Dashboard with important updates</li>
+                <li>Profile management</li>
+                <li>Timesheet submission</li>
+                <li>Leave request management</li>
+                <li>Document access and payslips</li>
             </ul>
             
-            <h3>🎯 Next steps:</h3>
+            <h3>Next steps:</h3>
             <ol>
                 <li>Complete your profile information</li>
                 <li>Explore the dashboard</li>
@@ -540,7 +566,7 @@ This is an automated reminder from Teamified.
         </div>
         <div class="footer">
             <p>Welcome to the Teamified family!</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -588,15 +614,17 @@ Welcome to the Teamified family!
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Your Password</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #4CAF50;
-            color: white; 
+            background-color: #9333EA;
+            color: white !important; 
             padding: 14px 36px; 
             text-decoration: none; 
             border-radius: 6px; 
@@ -604,9 +632,12 @@ Welcome to the Teamified family!
             font-weight: 600;
             font-size: 16px;
         }
+        .cta-button:hover { background-color: #7C3AED; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .expiry-warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0; }
-        .link-box { background-color: #e8eaf6; padding: 15px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border-left: 4px solid #667eea; }
+        .expiry-warning { background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; }
         .security-note { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin: 20px 0; }
     </style>
 </head>
