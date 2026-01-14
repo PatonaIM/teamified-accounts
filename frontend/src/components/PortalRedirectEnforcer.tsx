@@ -104,9 +104,7 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
         window.location.replace(portalUrl);
         return;
       } else {
-        console.warn('[PortalRedirectEnforcer] Portal URL not configured for:', user.preferredPortal, '- redirecting to logout');
-        redirectInitiatedRef.current = true;
-        window.location.replace('/logout');
+        console.warn('[PortalRedirectEnforcer] Portal URL not configured for:', user.preferredPortal, '- allowing access to Accounts');
         return;
       }
     }
@@ -161,15 +159,14 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
             return;
           }
           
-          console.warn('[PortalRedirectEnforcer] No portal URL available, redirecting to logout');
-          redirectInitiatedRef.current = true;
-          window.location.replace('/logout');
+          console.warn('[PortalRedirectEnforcer] No portal URL available, allowing access to Accounts');
+          setResolving(false);
           return;
         }
         
-        console.warn('[PortalRedirectEnforcer] Fetch returned no user, redirecting to logout');
+        console.warn('[PortalRedirectEnforcer] Fetch returned no user, redirecting to login');
         redirectInitiatedRef.current = true;
-        window.location.replace('/logout');
+        window.location.replace(`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`);
       }).catch(err => {
         console.error('[PortalRedirectEnforcer] Failed to fetch fresh user:', err);
         const fallbackPortal = inferFallbackPortal(user);
@@ -180,9 +177,8 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
           setRedirectPortal(fallbackPortal);
           window.location.replace(fallbackUrl);
         } else {
-          console.warn('[PortalRedirectEnforcer] Fetch failed and no fallback URL, redirecting to logout');
-          redirectInitiatedRef.current = true;
-          window.location.replace('/logout');
+          console.warn('[PortalRedirectEnforcer] Fetch failed and no fallback URL, allowing access to Accounts');
+          setResolving(false);
         }
       });
       return;

@@ -117,14 +117,15 @@ api.interceptors.response.use(
           
           return api(originalRequest);
         } else {
-          // No refresh token available - session expired
-          logoutDueToSessionExpiry();
+          // No refresh token available - session expired, redirect to login
+          console.warn('[authService] No refresh token available, session expired');
+          removeTokens();
           return Promise.reject(new Error('No refresh token available'));
         }
       } catch (refreshError: any) {
-        // Refresh failed - handle various error cases
-        // Token not found, expired, or any other refresh error
-        logoutDueToSessionExpiry();
+        // Refresh failed - redirect to login instead of logout
+        console.warn('[authService] Token refresh failed:', refreshError.message);
+        removeTokens();
         return Promise.reject(refreshError);
       }
     }
