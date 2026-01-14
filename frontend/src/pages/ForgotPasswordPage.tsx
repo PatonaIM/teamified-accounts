@@ -551,9 +551,11 @@ const ForgotPasswordPage: React.FC = () => {
           }}
         />
 
-        <Box sx={{ mb: 3 }}>
-          <PasswordRequirements password={password} />
-        </Box>
+        {!isPasswordValid(password) && (
+          <Box sx={{ mb: 2 }}>
+            <PasswordRequirements password={password} />
+          </Box>
+        )}
 
         <TextField
           fullWidth
@@ -580,7 +582,22 @@ const ForgotPasswordPage: React.FC = () => {
             ),
           }}
           error={confirmPassword !== '' && password !== confirmPassword}
-          helperText={confirmPassword !== '' && password !== confirmPassword ? 'Passwords do not match' : ''}
+          helperText={
+            confirmPassword !== '' && password === confirmPassword 
+              ? 'Passwords match!' 
+              : (confirmPassword !== '' && password !== confirmPassword) 
+                ? 'Passwords do not match' 
+                : ''
+          }
+          FormHelperTextProps={{
+            sx: {
+              color: confirmPassword !== '' && password === confirmPassword 
+                ? '#10B981' 
+                : (confirmPassword !== '' && password !== confirmPassword)
+                  ? '#EF4444'
+                  : undefined
+            }
+          }}
           sx={{
             mb: 3,
             '& .MuiOutlinedInput-root': {
