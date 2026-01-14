@@ -1236,4 +1236,80 @@ This is an automated message from Teamified.
 © ${new Date().getFullYear()} Teamified. All rights reserved.
 `;
   }
+
+  async sendPasswordUpdatedEmail(user: { email: string; firstName: string }): Promise<boolean> {
+    const htmlTemplate = this.generatePasswordUpdatedHtmlTemplate(user.firstName);
+    const textTemplate = this.generatePasswordUpdatedTextTemplate(user.firstName);
+
+    return this.sendEmail({
+      to: user.email,
+      subject: 'Password updated — Teamified',
+      html: htmlTemplate,
+      text: textTemplate,
+    });
+  }
+
+  private generatePasswordUpdatedHtmlTemplate(firstName: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Updated</title>
+</head>
+<body style="font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 28px; font-family: 'Nunito Sans', Arial, sans-serif;">Password Updated</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95; font-family: 'Nunito Sans', Arial, sans-serif;">Your account security has been updated</p>
+        </div>
+        <div style="padding: 30px 20px; background-color: #f8f9fa;">
+            <h2 style="margin-top: 0; color: #9333EA; font-family: 'Nunito Sans', Arial, sans-serif;">Hello ${firstName},</h2>
+            
+            <p style="font-size: 16px; font-family: 'Nunito Sans', Arial, sans-serif;">Your Teamified password has been updated successfully.</p>
+            
+            <div style="background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 25px 0;">
+                <strong style="font-family: 'Nunito Sans', Arial, sans-serif;">⚠️ Didn't make this change?</strong>
+                <p style="margin: 10px 0 0 0; font-family: 'Nunito Sans', Arial, sans-serif;">If you did not make this change, please contact us at <a href="mailto:hello@teamified.com.au" style="color: #9333EA; font-weight: 600;">hello@teamified.com.au</a> immediately.</p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; margin-top: 25px; font-family: 'Nunito Sans', Arial, sans-serif;">For your security, we recommend:</p>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8; font-family: 'Nunito Sans', Arial, sans-serif;">
+                <li>Using a unique password for each of your accounts</li>
+                <li>Not sharing your password with anyone</li>
+                <li>Logging out from shared devices</li>
+            </ul>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px; font-family: 'Nunito Sans', Arial, sans-serif;">
+            <p style="margin: 5px 0;">Thanks,</p>
+            <p style="margin: 5px 0; font-weight: 600;">Teamified Support</p>
+            <p style="margin: 15px 0 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generatePasswordUpdatedTextTemplate(firstName: string): string {
+    return `
+Password updated — Teamified
+
+Hello ${firstName},
+
+Your Teamified password has been updated successfully.
+
+If you did not make this change, please contact us at hello@teamified.com.au immediately.
+
+For your security, we recommend:
+- Using a unique password for each of your accounts
+- Not sharing your password with anyone
+- Logging out from shared devices
+
+Thanks,
+Teamified Support
+
+© ${new Date().getFullYear()} Teamified. All rights reserved.
+`;
+  }
 }

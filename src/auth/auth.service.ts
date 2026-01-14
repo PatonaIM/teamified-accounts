@@ -1403,6 +1403,17 @@ This is an automated message from Teamified.
 
     this.logger.log(`Password successfully reset for user: ${user.email}`);
 
+    // Send password updated notification email
+    try {
+      await this.emailService.sendPasswordUpdatedEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+      });
+      this.logger.log(`Password updated notification email sent to: ${user.email}`);
+    } catch (emailError) {
+      this.logger.error(`Failed to send password updated email to ${user.email}:`, emailError);
+    }
+
     return { message: 'Your password has been reset successfully' };
   }
 
@@ -1502,6 +1513,17 @@ This is an automated message from Teamified.
     });
 
     this.logger.log(`Password successfully changed for user: ${user.email}`);
+
+    // Send password updated notification email
+    try {
+      await this.emailService.sendPasswordUpdatedEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+      });
+      this.logger.log(`Password updated notification email sent to: ${user.email}`);
+    } catch (emailError) {
+      this.logger.error(`Failed to send password updated email to ${user.email}:`, emailError);
+    }
 
     return { 
       message: 'Your password has been changed successfully',
@@ -1891,6 +1913,17 @@ This is an automated message from Teamified.
     });
 
     this.logger.log(`User ${user.email} changed password after admin reset`);
+
+    // Send password updated notification email
+    try {
+      await this.emailService.sendPasswordUpdatedEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+      });
+      this.logger.log(`Password updated notification email sent to: ${user.email}`);
+    } catch (emailError) {
+      this.logger.error(`Failed to send password updated email to ${user.email}:`, emailError);
+    }
 
     return { 
       message: 'Password changed successfully',
