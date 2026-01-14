@@ -6,21 +6,12 @@ interface PortalConfig {
   required: boolean;
 }
 
-const PRODUCTION_PORTAL_URLS = {
-  ats: 'https://ats.teamified.com',
-  jobseeker: 'https://jobseeker.teamified.com',
-};
-
 const getPortalUrlFromEnv = (portal: 'ats' | 'jobseeker'): string | null => {
   const envVar = portal === 'ats' 
     ? import.meta.env.VITE_PORTAL_URL_ATS 
     : import.meta.env.VITE_PORTAL_URL_JOBSEEKER;
   
-  if (envVar) {
-    return envVar;
-  }
-  
-  return PRODUCTION_PORTAL_URLS[portal];
+  return envVar || null;
 };
 
 const portalConfigs: Record<PortalType, PortalConfig> = {
