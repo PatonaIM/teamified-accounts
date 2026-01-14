@@ -9,6 +9,7 @@ import GoogleAuthCallbackPage from './pages/GoogleAuthCallbackPage';
 import GoogleSignupPathPage from './pages/GoogleSignupPathPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResendVerificationPage from './pages/ResendVerificationPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
@@ -194,6 +195,10 @@ function App() {
                 <Route 
                   path="/forgot-password" 
                   element={<ForgotPasswordPage />} 
+                />
+                <Route 
+                  path="/resend-verification" 
+                  element={<ResendVerificationPage />} 
                 />
                 <Route 
                   path="/force-change-password" 

@@ -381,7 +381,7 @@ export class EmailVerificationService {
   ): Promise<{ message: string }> {
     const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
     const MAX_RESENDS_PER_HOUR = 3;
-    const GENERIC_SUCCESS_MESSAGE = 'If an account exists with this email, we have sent a verification email.';
+    const GENERIC_SUCCESS_MESSAGE = 'We have sent a verification link to this email address. Please check your email.';
 
     // Add random timing jitter (200-500ms) to prevent timing attacks
     const jitter = Math.floor(Math.random() * 300) + 200;

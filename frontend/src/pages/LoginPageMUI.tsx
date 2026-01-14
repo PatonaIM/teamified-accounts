@@ -1085,31 +1085,35 @@ const LoginPageMUI: React.FC = () => {
                           },
                         }}
                       >
-                        → Forgot password
+                        → I forgot my password
                       </Link>
                       <Link
-                        component="button"
-                        type="button"
-                        onClick={() => {
-                          handleResendVerification();
-                          setShowAccountRecoveryOptions(false);
-                        }}
+                        href="/resend-verification"
                         sx={{
                           color: '#9333EA',
                           textDecoration: 'none',
                           fontSize: '0.875rem',
                           fontWeight: 500,
-                          border: 'none',
-                          background: 'none',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          p: 0,
                           '&:hover': {
                             textDecoration: 'underline',
                           },
                         }}
                       >
-                        → Resend email verification
+                        → Resend Email Verification
+                      </Link>
+                      <Link
+                        href="mailto:hello@teamified.com"
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        → Contact Support
                       </Link>
                     </Box>
                   </Box>
