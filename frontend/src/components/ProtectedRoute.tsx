@@ -3,7 +3,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { saveLastPath } from './SessionAwareRedirect';
-import { isPortalRedirectEnabled } from '../utils/featureFlags';
 import { getPortalUrl, getPortalName, isPortalConfigValid } from '../config/portalUrls';
 
 interface ProtectedRouteProps {
@@ -25,10 +24,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Check if user should be redirected to external portal
   useEffect(() => {
     if (user && !loading && !redirectStarted.current) {
-      if (!isPortalRedirectEnabled()) {
-        console.log('[ProtectedRoute] Portal redirects are disabled by feature flag');
-        return;
-      }
       if (!isPortalConfigValid()) {
         console.error('[ProtectedRoute] Portal config invalid, missing environment variables. Portal redirects disabled.');
         return;

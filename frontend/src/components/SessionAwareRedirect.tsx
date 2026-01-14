@@ -3,7 +3,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken, getAccessToken, getCurrentUser } from '../services/authService';
 import type { User } from '../services/authService';
-import { isPortalRedirectEnabled } from '../utils/featureFlags';
 import { getPortalUrl, getPortalName, isPortalConfigValid } from '../config/portalUrls';
 
 const LAST_PATH_KEY = 'teamified_last_path';
@@ -184,7 +183,7 @@ const SessionAwareRedirect: React.FC = () => {
     if (!isLoggedIn || checking || needsRoleSelection || !userData) {
       return null;
     }
-    if (!isPortalRedirectEnabled() || !isPortalConfigValid()) {
+    if (!isPortalConfigValid()) {
       return null;
     }
     const url = getPortalUrl(userData.preferredPortal);

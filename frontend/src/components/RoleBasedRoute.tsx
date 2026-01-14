@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Alert, Button } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
-import { isPortalRedirectEnabled } from '../utils/featureFlags';
 import { getPortalUrl, getPortalName, isPortalConfigValid } from '../config/portalUrls';
 
 interface RoleBasedRouteProps {
@@ -28,11 +27,6 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
 
   useEffect(() => {
     if (user && !loading && !hasPermission && !redirectStarted.current) {
-      if (!isPortalRedirectEnabled()) {
-        console.log('[RoleBasedRoute] Portal redirects are disabled by feature flag');
-        setShowAccessDenied(true);
-        return;
-      }
       if (!isPortalConfigValid()) {
         console.error('[RoleBasedRoute] Portal config invalid, missing environment variables.');
         setShowAccessDenied(true);

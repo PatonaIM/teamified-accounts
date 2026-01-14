@@ -82,4 +82,3 @@ The data model uses PostgreSQL with TypeORM, including a flexible JSONB field fo
 
 *   `VITE_PORTAL_URL_JOBSEEKER`: Jobseeker Portal URL.
 *   `VITE_PORTAL_URL_ATS`: ATS Portal URL.
-*   `VITE_ENABLE_PORTAL_REDIRECTS`: Enables/disables portal redirects.

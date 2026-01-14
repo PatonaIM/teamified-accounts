@@ -1,4 +1,3 @@
-import { isPortalRedirectEnabled } from './featureFlags';
 import { getPortalUrl, isPortalConfigValid } from '../config/portalUrls';
 
 export interface PortalRedirectDecision {
@@ -11,10 +10,6 @@ export interface PortalRedirectDecision {
 export function computePortalRedirect(user: any): PortalRedirectDecision {
   if (!user) {
     return { shouldRedirect: false, portalUrl: null, portalType: null, reason: 'no_user' };
-  }
-
-  if (!isPortalRedirectEnabled()) {
-    return { shouldRedirect: false, portalUrl: null, portalType: null, reason: 'feature_disabled' };
   }
 
   if (!isPortalConfigValid()) {
@@ -62,7 +57,6 @@ export function computePortalRedirect(user: any): PortalRedirectDecision {
 
 export function isPortalDecisionPending(user: any): boolean {
   if (!user) return true;
-  if (!isPortalRedirectEnabled()) return false;
   if (!isPortalConfigValid()) return false;
   
   const isSuperAdmin = user.roles?.some((role: string) => 

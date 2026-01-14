@@ -22,7 +22,6 @@ import { useAuth } from '../hooks/useAuth';
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton';
 import { getLastPath } from '../components/SessionAwareRedirect';
 import { preserveMarketingSourceFromUrl, isMarketingSource } from '../services/marketingRedirectService';
-import { isPortalRedirectEnabled } from '../utils/featureFlags';
 
 const LoginPageMUI: React.FC = () => {
   const navigate = useNavigate();
@@ -355,10 +354,6 @@ const LoginPageMUI: React.FC = () => {
         // Super admin logging in with Teamified Internal work email stays in Teamified Accounts
         redirectUrl = '/account/profile';
         console.log('[LoginPageMUI] Super admin with Teamified Internal email - staying in Teamified Accounts');
-      } else if (!isPortalRedirectEnabled()) {
-        // Portal redirects are disabled by feature flag - stay in Teamified Accounts
-        redirectUrl = '/account/profile';
-        console.log('[LoginPageMUI] Portal redirects disabled by feature flag - staying in Teamified Accounts');
       } else if (loginEmailType === 'personal') {
         // Personal email login - redirect to Jobseeker Portal
         redirectUrl = 'https://teamified-jobseeker.replit.app';
