@@ -29,16 +29,20 @@ export class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       const fromEmail = this.configService.get('EMAIL_FROM', 'noreply@teamified.com.au');
+      const fromName = this.configService.get('EMAIL_FROM_NAME', 'Teamified NoReply');
 
       this.logger.log(`📧 Attempting to send email:`, {
         to: options.to,
-        from: fromEmail,
+        from: `${fromName} <${fromEmail}>`,
         subject: options.subject,
       });
 
       const msg = {
         to: options.to,
-        from: fromEmail,
+        from: {
+          email: fromEmail,
+          name: fromName,
+        },
         subject: options.subject,
         text: options.text || '',
         html: options.html,
@@ -60,7 +64,7 @@ export class EmailService {
 
       return true;
     } catch (error) {
-      this.logger.error(`❌ SendGrid Error - FROM: ${this.configService.get('EMAIL_FROM', 'noreply@teamified.com.au')}:`, {
+      this.logger.error(`❌ SendGrid Error - FROM: ${this.configService.get('EMAIL_FROM_NAME', 'Teamified NoReply')} <${this.configService.get('EMAIL_FROM', 'noreply@teamified.com.au')}>:`, {
         message: error.message,
         code: error.code,
         statusCode: error.response?.statusCode,
