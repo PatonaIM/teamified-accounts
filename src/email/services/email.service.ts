@@ -156,23 +156,30 @@ export class EmailService {
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
         .content { padding: 30px 20px; background-color: #f8f9fa; }
-        .email-box { 
-            background-color: #ffffff; 
-            border: 1px solid #e5e7eb; 
-            border-radius: 8px; 
-            padding: 16px 20px; 
-            margin: 20px 0;
-            text-align: center;
+        .cta-button { 
+            display: inline-block; 
+            background-color: #9333EA;
+            color: white; 
+            padding: 14px 28px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
         }
-        .email-label { color: #666; font-size: 14px; margin-bottom: 4px; }
-        .email-value { color: #9333EA; font-weight: 600; font-size: 16px; }
-        .tertiary-cta { 
+        .cta-button-outline { 
+            display: inline-block; 
+            background-color: white;
             color: #9333EA; 
-            text-decoration: underline; 
-            font-size: 14px; 
-            font-weight: 500;
+            padding: 12px 26px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid #9333EA;
         }
-        .tertiary-cta:hover { text-decoration: none; }
+        .email-line { color: #666; font-size: 14px; margin: 15px 0; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
     </style>
 </head>
@@ -185,18 +192,21 @@ export class EmailService {
         <div class="content">
             <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
             
-            <p style="font-size: 16px;">Your employer account has been successfully set up.</p>
+            <p style="font-size: 16px;">Your employer account is now ready! Start building your team today.</p>
             
-            <div class="email-box">
-                <p class="email-label" style="margin: 0;">You're signed in with the email address:</p>
-                <p class="email-value" style="margin: 8px 0 0 0;">${userEmail}</p>
+            <p class="email-line">You're signed in with: <strong>${userEmail}</strong></p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://ats.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Post Your First Job</a>
+                <a href="https://hris.teamified.com.au" class="cta-button-outline" style="color: #9333EA !important; text-decoration: none;">Set Up Your Organization</a>
             </div>
             
-            <p style="color: #666; font-size: 15px;">You can now explore Teamified and start building your global team at your own pace.</p>
-            
-            <p style="text-align: center; margin-top: 24px;">
-                <a href="https://ats.teamified.com.au" class="tertiary-cta">Go to your dashboard</a>
-            </p>
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
+                <li>Post job openings and attract top talent</li>
+                <li>Manage your hiring pipeline</li>
+                <li>Onboard and manage your team members</li>
+            </ul>
         </div>
         <div class="footer">
             <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
@@ -212,14 +222,17 @@ export class EmailService {
 
 Welcome to Teamified, ${displayName}!
 
-Your employer account has been successfully set up.
+Your employer account is now ready! Start building your team today.
 
-You're signed in with the email address:
-${userEmail}
+You're signed in with: ${userEmail}
 
-You can now explore Teamified and start building your global team at your own pace.
+Post Your First Job: https://ats.teamified.com.au
+Set Up Your Organization: https://hris.teamified.com.au
 
-Go to your dashboard: https://ats.teamified.com.au
+With Teamified, you can:
+- Post job openings and attract top talent
+- Manage your hiring pipeline
+- Onboard and manage your team members
 
 If you didn't create this account, please contact our support team.
 © ${new Date().getFullYear()} Teamified. All rights reserved.`;
