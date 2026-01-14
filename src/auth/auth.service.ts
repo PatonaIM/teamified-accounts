@@ -739,11 +739,13 @@ This is an automated message from Teamified.
   }
 
   /**
-   * Determines the preferred portal for a user based on their last login email context.
-   * Uses stored lastLoginEmailType and lastLoginEmailOrgSlug from the user record.
-   * - Super admins with Teamified Internal work email → accounts
-   * - Personal email users → jobseeker
-   * - Work email users (any organization) → ats
+   * Determines the preferred portal for a user based on their roles and login context.
+   * Priority order:
+   * 1. Super admin → accounts
+   * 2. Internal users (internal_member, internal_admin) → ats
+   * 3. Client users (client_admin, client_user) → ats
+   * 4. Candidate → jobseeker
+   * 5. Fallback based on email type if no role match
    */
   private async determinePreferredPortal(
     userId: string, 
@@ -752,55 +754,75 @@ This is an automated message from Teamified.
     lastLoginEmailOrgSlug: string | null,
   ): Promise<{ preferredPortal: 'accounts' | 'ats' | 'jobseeker'; preferredPortalOrgSlug: string | null }> {
     const isSuperAdmin = roles.includes('super_admin');
-    console.log('determinePreferredPortal:', { userId, roles, isSuperAdmin, lastLoginEmailType, lastLoginEmailOrgSlug });
+    const isInternalUser = roles.some(r => ['internal_member', 'internal_admin'].includes(r));
+    const isClientUser = roles.some(r => ['client_admin', 'client_user'].includes(r));
+    const isCandidate = roles.includes('candidate');
     
-    // Use stored login email context if available (set during login based on which email was used)
+    console.log('determinePreferredPortal:', { userId, roles, isSuperAdmin, isInternalUser, isClientUser, isCandidate, lastLoginEmailType, lastLoginEmailOrgSlug });
+    
+    // 1. Super admin always stays in accounts
+    if (isSuperAdmin) {
+      console.log('determinePreferredPortal: super_admin detected, returning accounts');
+      return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
+    }
+    
+    // 2. Internal users (non-super admin) go to ATS
+    if (isInternalUser) {
+      console.log('determinePreferredPortal: internal user detected, returning ats');
+      // Try to get org slug from login context or primary email
+      const orgSlug = lastLoginEmailOrgSlug || await this.getOrgSlugFromPrimaryEmail(userId);
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: orgSlug };
+    }
+    
+    // 3. Client users go to ATS
+    if (isClientUser) {
+      console.log('determinePreferredPortal: client user detected, returning ats');
+      const orgSlug = lastLoginEmailOrgSlug || await this.getOrgSlugFromPrimaryEmail(userId);
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: orgSlug };
+    }
+    
+    // 4. Candidates go to jobseeker
+    if (isCandidate) {
+      console.log('determinePreferredPortal: candidate detected, returning jobseeker');
+      return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+    }
+    
+    // 5. Fallback: use email type if no role match
     if (lastLoginEmailType === 'work' && lastLoginEmailOrgSlug) {
-      // Work email with organization
-      if (isSuperAdmin && lastLoginEmailOrgSlug === 'teamified-internal') {
-        // Super admin logged in with Teamified Internal work email stays in accounts
-        console.log('determinePreferredPortal: Work email + super_admin + teamified-internal, returning accounts');
-        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
-      }
-      // Other work email users go to ATS
-      console.log('determinePreferredPortal: Work email, returning ats');
+      console.log('determinePreferredPortal: Work email fallback, returning ats');
       return { preferredPortal: 'ats', preferredPortalOrgSlug: lastLoginEmailOrgSlug };
     }
 
     if (lastLoginEmailType === 'personal') {
-      // Personal email users go to jobseeker
-      console.log('determinePreferredPortal: Personal email, returning jobseeker');
+      console.log('determinePreferredPortal: Personal email fallback, returning jobseeker');
       return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
     }
 
-    // Fallback: if no stored context, check primary email (for legacy sessions or seed data)
+    // Final fallback: check primary email
     const primaryEmail = await this.userEmailRepository.findOne({
       where: { userId, isPrimary: true },
       relations: ['organization'],
     });
-    console.log('determinePreferredPortal fallback - primaryEmail:', primaryEmail ? { email: primaryEmail.email, emailType: primaryEmail.emailType, hasOrg: !!primaryEmail.organization } : null);
+    console.log('determinePreferredPortal final fallback - primaryEmail:', primaryEmail ? { email: primaryEmail.email, emailType: primaryEmail.emailType, hasOrg: !!primaryEmail.organization } : null);
 
-    if (!primaryEmail) {
-      // No primary email and no stored context - default to accounts for super_admin, jobseeker for others
-      if (isSuperAdmin) {
-        console.log('determinePreferredPortal: No context, super_admin detected, returning accounts');
-        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
-      }
-      console.log('determinePreferredPortal: No primary email, returning jobseeker');
-      return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+    if (primaryEmail?.emailType === 'work') {
+      console.log('determinePreferredPortal: Work email in final fallback, returning ats');
+      return { preferredPortal: 'ats', preferredPortalOrgSlug: primaryEmail.organization?.slug || null };
     }
 
-    if (primaryEmail.emailType === 'work' && primaryEmail.organization) {
-      if (isSuperAdmin && primaryEmail.organization.slug === 'teamified-internal') {
-        console.log('determinePreferredPortal: Work email + super_admin + teamified-internal, returning accounts');
-        return { preferredPortal: 'accounts', preferredPortalOrgSlug: null };
-      }
-      console.log('determinePreferredPortal: Work email, returning ats');
-      return { preferredPortal: 'ats', preferredPortalOrgSlug: primaryEmail.organization.slug };
-    }
-
-    console.log('determinePreferredPortal: Personal email, returning jobseeker');
+    console.log('determinePreferredPortal: No match, defaulting to jobseeker');
     return { preferredPortal: 'jobseeker', preferredPortalOrgSlug: null };
+  }
+  
+  /**
+   * Helper to get organization slug from user's primary email
+   */
+  private async getOrgSlugFromPrimaryEmail(userId: string): Promise<string | null> {
+    const primaryEmail = await this.userEmailRepository.findOne({
+      where: { userId, isPrimary: true },
+      relations: ['organization'],
+    });
+    return primaryEmail?.organization?.slug || null;
   }
 
   async getProfileData(userId: string): Promise<{ profileData: any; passwordUpdatedAt: Date | null }> {
