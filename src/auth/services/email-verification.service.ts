@@ -10,17 +10,23 @@ import * as crypto from 'crypto';
 import { User } from '../entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { EmailService } from '../../email/services/email.service';
+import { RedisRateLimiterService } from '../../common/services/redis-rate-limiter.service';
 import { VerifyEmailResponseDto, ProfileCompletionStatusDto } from '../dto/verify-email.dto';
 
 @Injectable()
 export class EmailVerificationService {
   private readonly logger = new Logger(EmailVerificationService.name);
+  
+  // IP-based rate limiter constants
+  private readonly IP_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+  private readonly IP_MAX_ATTEMPTS_PER_HOUR = 10; // More generous than per-user limit
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
+    private readonly rateLimiter: RedisRateLimiterService,
   ) {}
 
   async verifyEmail(
@@ -387,21 +393,51 @@ export class EmailVerificationService {
     const jitter = Math.floor(Math.random() * 300) + 200;
     await new Promise(resolve => setTimeout(resolve, jitter));
 
-    // Find user by email
+    // Normalize email first
     const normalizedEmail = email.toLowerCase().trim();
+
+    // IP-based rate limiting (prevents enumeration probing)
+    if (ip) {
+      const ipRateLimitKey = `resend_verification_ip:${ip}`;
+      const ipRateLimit = await this.rateLimiter.checkRateLimit(
+        ipRateLimitKey,
+        this.IP_MAX_ATTEMPTS_PER_HOUR,
+        this.IP_RATE_LIMIT_WINDOW_MS,
+      );
+      
+      if (!ipRateLimit.allowed) {
+        this.logger.warn(`[RATE_LIMITED_NO_SEND] IP rate limit exceeded for resend verification: ${ip} (${ipRateLimit.currentCount} attempts)`);
+        await this.auditService.log({
+          action: 'email_verification_resend_ip_rate_limited',
+          entityType: 'System',
+          entityId: null,
+          actorUserId: null,
+          actorRole: null,
+          changes: { 
+            ip,
+            attemptCount: ipRateLimit.currentCount,
+          },
+          ip,
+          userAgent,
+        });
+        return { message: GENERIC_SUCCESS_MESSAGE };
+      }
+    }
+
+    // Find user by email
     const user = await this.userRepository.findOne({
       where: { email: normalizedEmail },
     });
 
     // OWASP: Always return same message - don't reveal if account exists
     if (!user) {
-      this.logger.log(`Resend verification requested for non-existent email: ${normalizedEmail.substring(0, 5)}...`);
+      this.logger.log(`[NOOP_NOT_FOUND] Resend verification requested for non-existent email: ${normalizedEmail.substring(0, 5)}...`);
       return { message: GENERIC_SUCCESS_MESSAGE };
     }
 
     // If email already verified, return success (don't reveal status)
     if (user.emailVerified) {
-      this.logger.log(`Resend verification requested for already-verified email: ${user.id}`);
+      this.logger.log(`[NOOP_ALREADY_VERIFIED] Resend verification requested for already-verified email: ${user.id}`);
       return { message: GENERIC_SUCCESS_MESSAGE };
     }
 
@@ -418,7 +454,7 @@ export class EmailVerificationService {
 
     // Check if rate limit exceeded
     if (user.emailVerificationResendCount >= MAX_RESENDS_PER_HOUR) {
-      this.logger.warn(`Rate limit exceeded for verification resend: ${user.id}`);
+      this.logger.warn(`[RATE_LIMITED_NO_SEND] Rate limit exceeded for verification resend: ${user.id}`);
       await this.auditService.log({
         action: 'email_verification_resend_rate_limited',
         entityType: 'User',
@@ -465,7 +501,7 @@ export class EmailVerificationService {
         userAgent,
       });
 
-      this.logger.log(`Verification email resent to user: ${user.id} (count: ${user.emailVerificationResendCount})`);
+      this.logger.log(`[SENT] Verification email resent to user: ${user.id} (count: ${user.emailVerificationResendCount})`);
     } catch (error) {
       this.logger.error(`Failed to resend verification email to ${user.id}:`, error);
       // Still return success to prevent enumeration
