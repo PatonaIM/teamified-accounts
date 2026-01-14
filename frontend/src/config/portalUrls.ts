@@ -7,8 +7,8 @@ interface PortalConfig {
 }
 
 const PRODUCTION_PORTAL_URLS = {
-  ats: 'https://teamified-ats.replit.app',
-  jobseeker: 'https://teamified-jobseeker.replit.app',
+  ats: 'https://ats.teamified.com',
+  jobseeker: 'https://jobseeker.teamified.com',
 };
 
 const getPortalUrlFromEnv = (portal: 'ats' | 'jobseeker'): string | null => {
