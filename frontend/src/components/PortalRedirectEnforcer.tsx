@@ -219,6 +219,12 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
   }
 
   const getMessage = () => {
+    // Never show redirect message without valid authentication
+    const hasValidToken = checkIsAuthenticated();
+    if (!hasValidToken) {
+      return 'Loading...';
+    }
+    
     if (redirectPortal) {
       return `Redirecting you to ${getPortalName(redirectPortal as PortalType)}...`;
     }
