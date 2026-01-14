@@ -74,15 +74,43 @@ export function isPortalDecisionPending(user: any): boolean {
 }
 
 export function inferFallbackPortal(user: any): 'ats' | 'jobseeker' {
-  if (!user?.email) return 'jobseeker';
+  if (!user) return 'jobseeker';
+  
+  const roles = user.roles || [];
+  
+  const isCandidate = roles.some((role: string) => role.toLowerCase() === 'candidate');
+  if (isCandidate) {
+    console.log('[inferFallbackPortal] User has candidate role, returning jobseeker');
+    return 'jobseeker';
+  }
+  
+  const isInternalUser = roles.some((role: string) => 
+    ['internal_member', 'internal_admin'].includes(role.toLowerCase())
+  );
+  if (isInternalUser) {
+    console.log('[inferFallbackPortal] User has internal role, returning ats');
+    return 'ats';
+  }
+  
+  const isClientUser = roles.some((role: string) => 
+    ['client_admin', 'client_user', 'client_employee'].includes(role.toLowerCase())
+  );
+  if (isClientUser) {
+    console.log('[inferFallbackPortal] User has client role, returning ats');
+    return 'ats';
+  }
+  
+  if (!user.email) return 'jobseeker';
   
   const email = user.email.toLowerCase();
   const personalDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'protonmail.com', 'mail.com'];
   const domain = email.split('@')[1];
   
   if (personalDomains.includes(domain)) {
+    console.log('[inferFallbackPortal] Personal email domain, returning jobseeker');
     return 'jobseeker';
   }
   
+  console.log('[inferFallbackPortal] Work email domain, returning ats');
   return 'ats';
 }
