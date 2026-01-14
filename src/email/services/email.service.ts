@@ -122,6 +122,113 @@ export class EmailService {
     });
   }
 
+  async sendEmployerWelcomeEmail(
+    email: string, 
+    firstName: string, 
+    companyName?: string
+  ): Promise<boolean> {
+    const displayName = companyName || firstName || 'there';
+    const htmlTemplate = this.generateEmployerWelcomeHtmlTemplate(displayName);
+    const textTemplate = this.generateEmployerWelcomeTextTemplate(displayName);
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Welcome to Teamified!',
+      html: htmlTemplate,
+      text: textTemplate,
+    });
+  }
+
+  private generateEmployerWelcomeHtmlTemplate(displayName: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Teamified</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .cta-button { 
+            display: inline-block; 
+            background-color: #9333EA;
+            color: white; 
+            padding: 14px 28px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .cta-button-outline { 
+            display: inline-block; 
+            background-color: white;
+            color: #9333EA; 
+            padding: 12px 26px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid #9333EA;
+        }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Welcome to Teamified!</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your employer account is ready</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
+            
+            <p style="font-size: 16px;">Your employer account is now ready! Start building your team today.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://ats.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Post Your First Job</a>
+                <a href="https://hris.teamified.com.au" class="cta-button-outline" style="color: #9333EA !important; text-decoration: none;">Set Up Your Organization</a>
+            </div>
+            
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
+                <li>Post job openings and attract top talent</li>
+                <li>Manage your hiring pipeline</li>
+                <li>Onboard and manage your team members</li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generateEmployerWelcomeTextTemplate(displayName: string): string {
+    return `Welcome to Teamified!
+
+Welcome to Teamified, ${displayName}!
+
+Your employer account is now ready! Start building your team today.
+
+Post Your First Job: https://ats.teamified.com.au
+Set Up Your Organization: https://hris.teamified.com.au
+
+With Teamified, you can:
+- Post job openings and attract top talent
+- Manage your hiring pipeline
+- Onboard and manage your team members
+
+If you didn't create this account, please contact our support team.
+© ${new Date().getFullYear()} Teamified. All rights reserved.`;
+  }
+
   async sendPasswordResetEmail(user: { email: string; firstName: string }, resetToken: string): Promise<boolean> {
     const resetLink = this.generatePasswordResetLink(resetToken);
     

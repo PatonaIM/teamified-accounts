@@ -1605,9 +1605,9 @@ This is an automated message from Teamified.
       lastName,
       passwordHash: hashedPassword,
       isActive: true,
-      emailVerified: false,
-      emailVerificationToken: uuidv4(),
-      emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      emailVerified: true, // Business users are auto-verified - no email verification required
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -1642,11 +1642,11 @@ This is an automated message from Teamified.
 
     await this.organizationMemberRepository.save(orgMember);
 
-    const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
+    // Send welcome email (no verification required for business users)
     try {
-      await this.sendEmailVerification(savedUser, baseUrl, 'client_admin', companyName);
+      await this.emailService.sendEmployerWelcomeEmail(savedUser.email, savedUser.firstName, companyName);
     } catch (error) {
-      this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
+      this.logger.warn(`Failed to send welcome email to ${savedUser.email}: ${error.message}`);
     }
 
     await this.auditService.log({
@@ -1659,12 +1659,13 @@ This is an automated message from Teamified.
         email: savedUser.email,
         organizationId: savedOrg.id,
         organizationName: savedOrg.name,
+        emailVerificationRequired: false, // Business users are auto-verified
       },
       ip,
       userAgent,
     });
 
-    this.logger.log(`Client admin signup successful: ${savedUser.email}, Org: ${savedOrg.name}`);
+    this.logger.log(`Client admin signup successful: ${savedUser.email}, Org: ${savedOrg.name} (auto-verified)`);
 
     // Create HubSpot contact asynchronously (non-blocking)
     let hubspotContactCreated = false;
@@ -1723,8 +1724,8 @@ This is an automated message from Teamified.
     }
 
     return {
-      message: 'Account created successfully. Please check your email to verify your account.',
-      emailVerificationRequired: true,
+      message: 'Account created successfully. Welcome to Teamified!',
+      emailVerificationRequired: false, // Business users are auto-verified
       email: savedUser.email,
       organizationSlug: savedOrg.slug,
       hubspotContactCreated,
