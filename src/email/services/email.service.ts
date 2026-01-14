@@ -339,10 +339,10 @@ If you didn't create this account, please contact our support team.
             <p>To complete your registration and access your account, please click the button below:</p>
             
             <div style="text-align: center;">
-                <a href="${inviteLink}" class="cta-button">Accept Invitation</a>
+                <a href="${inviteLink}" class="cta-button" style="display: inline-block; background-color: #9333EA; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; border: none;">Accept Invitation</a>
             </div>
             
-            <div class="expiry-warning">
+            <div class="expiry-warning" style="background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0;">
                 <strong>Important:</strong> This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}. 
                 Please complete your registration before this date.
             </div>
@@ -415,18 +415,19 @@ This is an automated message from Teamified.
         .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #9333EA; 
-            color: white !important; 
+            background: #9333EA !important;
+            color: #ffffff !important; 
             padding: 14px 32px; 
-            text-decoration: none; 
+            text-decoration: none !important; 
             border-radius: 6px; 
             margin: 20px 0;
             font-weight: 600;
             font-size: 16px;
+            border: none;
+            mso-padding-alt: 0;
         }
-        .cta-button:hover { background-color: #7C3AED; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .info-box { background-color: #F3E8FF; border-left: 4px solid #9333EA; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .info-box { background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0; }
         .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
         h2 { color: #1F2937; margin-top: 0; }
         h3 { color: #9333EA; }
@@ -443,12 +444,12 @@ This is an automated message from Teamified.
             <h2>Hello ${firstName},</h2>
             <p>We noticed that you haven't verified your email address yet. Email verification is required to access all features of Teamified.</p>
             
-            <div class="info-box">
+            <div class="info-box" style="background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0;">
                 <strong>Action Required:</strong> Please verify your email address to complete your account setup and access the full portal functionality.
             </div>
             
             <div style="text-align: center;">
-                <a href="${verificationLink}" class="cta-button">Verify My Email Address</a>
+                <a href="${verificationLink}" class="cta-button" style="display: inline-block; background-color: #9333EA; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; border: none;">Verify My Email Address</a>
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
