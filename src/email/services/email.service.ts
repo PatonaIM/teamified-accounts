@@ -166,8 +166,13 @@ export class EmailService {
         }
         .email-label { color: #666; font-size: 14px; margin-bottom: 4px; }
         .email-value { color: #9333EA; font-weight: 600; font-size: 16px; }
-        .soft-link { color: #9333EA; text-decoration: none; font-size: 14px; }
-        .soft-link:hover { text-decoration: underline; }
+        .tertiary-cta { 
+            color: #9333EA; 
+            text-decoration: underline; 
+            font-size: 14px; 
+            font-weight: 500;
+        }
+        .tertiary-cta:hover { text-decoration: none; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
     </style>
 </head>
@@ -190,7 +195,7 @@ export class EmailService {
             <p style="color: #666; font-size: 15px;">You can now explore Teamified and start building your global team at your own pace.</p>
             
             <p style="text-align: center; margin-top: 24px;">
-                <a href="https://ats.teamified.com.au" class="soft-link">Go to your dashboard</a>
+                <a href="https://ats.teamified.com.au" class="tertiary-cta">Go to your dashboard</a>
             </p>
         </div>
         <div class="footer">
