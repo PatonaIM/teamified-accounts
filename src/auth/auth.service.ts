@@ -171,7 +171,8 @@ export class AuthService {
     // Hash the password
     const hashedPassword = await this.passwordService.hashPassword(password);
 
-    // Create or update user
+    // Create or update user - Mark email as verified for invitation flow
+    // Invited users don't need to verify email since they received the invite at that address
     if (!user) {
       user = this.userRepository.create({
         email: invitation.email,
@@ -179,41 +180,29 @@ export class AuthService {
         lastName: invitation.lastName,
         passwordHash: hashedPassword,
         isActive: true,
-        emailVerified: false,
-        emailVerificationToken: uuidv4(),
-        emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        emailVerified: true, // Mark as verified - invited users don't need verification
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
       });
     } else {
       user.passwordHash = hashedPassword;
       user.isActive = true;
-      user.emailVerified = false;
-      user.emailVerificationToken = uuidv4();
-      user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      user.emailVerified = true; // Mark as verified - invited users don't need verification
+      user.emailVerificationToken = null;
+      user.emailVerificationTokenExpiry = null;
     }
 
     const savedUser = await this.userRepository.save(user);
 
-    // Update invitation status
+    // Update invitation status and invalidate the token
     invitation.status = InvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();
     invitation.acceptedBy = savedUser.id;
 
     await this.invitationRepository.save(invitation);
 
-    // Send email verification
-    // Map invitation role to user type for email personalization
-    const userType: 'client_admin' | 'candidate' = 
-      invitation.role?.toLowerCase().includes('client') || 
-      invitation.role?.toLowerCase().includes('admin') 
-        ? 'client_admin' 
-        : 'candidate';
-    
-    try {
-      await this.sendEmailVerification(savedUser, baseUrl, userType);
-    } catch (error) {
-      this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
-      // Don't fail the process if email sending fails
-    }
+    // NOTE: No verification email is sent for invited users - they are auto-verified
+    // The invite email itself served as the email verification
 
     // Create audit logs
     await Promise.all([
@@ -263,7 +252,7 @@ export class AuthService {
       lastName: savedUser.lastName,
       isActive: savedUser.isActive,
       emailVerified: savedUser.emailVerified,
-      message: 'Account activated successfully. Please check your email to verify your email address.',
+      message: 'Account activated successfully. You can now log in with your credentials.',
     };
   }
 
@@ -466,7 +455,7 @@ This is an automated message from Teamified.
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Check if email is verified
+    // Check if email is verified - return specific error for unverified accounts
     if (!user.emailVerified) {
       const userRole = await this.getUserPrimaryRole(user.id);
       await this.auditService.log({
@@ -482,7 +471,13 @@ This is an automated message from Teamified.
         ip,
         userAgent,
       });
-      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification link.');
+      // Return specific error code that frontend can detect
+      const error: any = new UnauthorizedException({
+        message: 'Your email address has not been verified. Please check your inbox for the verification link or request a new one.',
+        errorCode: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
+      });
+      throw error;
     }
 
     // Determine email type and organization for login redirect BEFORE saving

@@ -122,6 +122,12 @@ export class User {
   @Column({ name: 'global_logout_at', type: 'timestamptz', nullable: true })
   globalLogoutAt: Date | null;
 
+  @Column({ name: 'email_verification_resend_count', type: 'int', default: 0 })
+  emailVerificationResendCount: number;
+
+  @Column({ name: 'email_verification_resend_window_start', type: 'timestamptz', nullable: true })
+  emailVerificationResendWindowStart: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

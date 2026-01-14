@@ -33,6 +33,12 @@ const LoginPageMUI: React.FC = () => {
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   const sourceParam = searchParams.get('source');
   
+  // State for unverified email handling
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [showResendSuccess, setShowResendSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [showAccountRecoveryOptions, setShowAccountRecoveryOptions] = useState(false);
+  
   // Ref to prevent multiple cookie verification attempts (prevents infinite loop)
   const cookieVerificationAttempted = useRef(false);
 
@@ -175,6 +181,14 @@ const LoginPageMUI: React.FC = () => {
       if (emailAlreadyRegistered) {
         setEmailAlreadyRegistered(false);
       }
+    }
+    // Clear resend success message when user edits any credential
+    if (showResendSuccess) {
+      setShowResendSuccess(false);
+    }
+    // Clear unverified email state when editing credentials
+    if (unverifiedEmail) {
+      setUnverifiedEmail(null);
     }
   };
 
@@ -322,6 +336,10 @@ const LoginPageMUI: React.FC = () => {
     }
 
     setIsLoading(true);
+    // Clear any previous resend success message so new errors can be displayed
+    setShowResendSuccess(false);
+    setUnverifiedEmail(null);
+    setErrors({});
     
     try {
       const loginResponse = await login({
@@ -392,9 +410,47 @@ const LoginPageMUI: React.FC = () => {
         navigate(redirectUrl);
       }
     } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
-      setErrors({ general: errorMessage });
+      // Check if this is an unverified email error
+      if (error?.response?.data?.errorCode === 'EMAIL_NOT_VERIFIED' || 
+          (error instanceof Error && error.message.includes('not been verified'))) {
+        const email = error?.response?.data?.email || formData.email;
+        setUnverifiedEmail(email);
+        setErrors({ 
+          general: 'Your email address has not been verified. Please check your inbox for the verification link or request a new one below.'
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+        setErrors({ general: errorMessage });
+      }
       setIsLoading(false);
+    }
+  };
+
+  // Handle resending verification email
+  const handleResendVerification = async () => {
+    const emailToResend = unverifiedEmail || formData.email;
+    if (!emailToResend) return;
+    
+    setResendLoading(true);
+    try {
+      await fetch('/api/v1/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailToResend }),
+      });
+      // Always show success message (OWASP compliant - same response regardless of result)
+      setShowResendSuccess(true);
+      setUnverifiedEmail(null);
+      setErrors({});
+    } catch (error) {
+      // Still show success for OWASP compliance
+      setShowResendSuccess(true);
+      setUnverifiedEmail(null);
+      setErrors({});
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -792,10 +848,48 @@ const LoginPageMUI: React.FC = () => {
                 {formData.email}
               </Typography>
 
-              {/* Error Alert */}
-              {errors.general && (
-                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-                  {errors.general}
+              {/* Resend Success Message */}
+              {showResendSuccess && (
+                <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+                  If an account exists with this email, we have sent a verification email. Please check your inbox.
+                </Alert>
+              )}
+
+              {/* Error Alert with Resend Option for Unverified Email */}
+              {errors.general && !showResendSuccess && (
+                <Alert 
+                  severity={unverifiedEmail ? 'warning' : 'error'} 
+                  sx={{ mb: 3, borderRadius: 2 }}
+                >
+                  <Box>
+                    <Typography sx={{ mb: unverifiedEmail ? 1 : 0, fontSize: '0.875rem' }}>
+                      {errors.general}
+                    </Typography>
+                    {unverifiedEmail && (
+                      <Button
+                        onClick={handleResendVerification}
+                        disabled={resendLoading}
+                        size="small"
+                        sx={{
+                          mt: 1,
+                          color: '#9333EA',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          p: 0,
+                          minWidth: 'auto',
+                          '&:hover': {
+                            bgcolor: 'transparent',
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        {resendLoading ? (
+                          <CircularProgress size={16} sx={{ color: '#9333EA', mr: 1 }} />
+                        ) : null}
+                        Resend verification email
+                      </Button>
+                    )}
+                  </Box>
                 </Alert>
               )}
 
@@ -936,21 +1030,90 @@ const LoginPageMUI: React.FC = () => {
                 </Button>
               </Box>
 
+              {/* Having trouble accessing your account? */}
               <Box sx={{ textAlign: 'center' }}>
                 <Link
-                  href="/forgot-password"
+                  component="button"
+                  type="button"
+                  onClick={() => setShowAccountRecoveryOptions(!showAccountRecoveryOptions)}
                   sx={{
                     color: '#6b7280',
                     textDecoration: 'none',
                     fontSize: '0.875rem',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
                     '&:hover': {
                       color: '#9333EA',
                       textDecoration: 'underline',
                     },
                   }}
                 >
-                  Forgot password?
+                  Having trouble accessing your account?
                 </Link>
+                
+                {showAccountRecoveryOptions && (
+                  <Box 
+                    sx={{ 
+                      mt: 2, 
+                      p: 2, 
+                      bgcolor: '#F9FAFB', 
+                      borderRadius: 2,
+                      border: '1px solid #E5E7EB',
+                    }}
+                  >
+                    <Typography 
+                      sx={{ 
+                        fontSize: '0.875rem', 
+                        color: '#374151', 
+                        mb: 2,
+                        fontWeight: 500,
+                      }}
+                    >
+                      Get help with your account:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Link
+                        href="/forgot-password"
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        → Forgot password
+                      </Link>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={() => {
+                          handleResendVerification();
+                          setShowAccountRecoveryOptions(false);
+                        }}
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          p: 0,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        → Resend email verification
+                      </Link>
+                    </Box>
+                  </Box>
+                )}
               </Box>
             </form>
           )}

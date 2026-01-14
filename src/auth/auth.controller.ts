@@ -221,6 +221,71 @@ export class AuthController {
     );
   }
 
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute (additional rate limiting in service)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend email verification (OWASP-compliant)',
+    description: `
+      Request a new verification email to be sent to the specified address.
+      
+      ## Security Features (OWASP-compliant):
+      - Always returns the same success message regardless of account state
+      - Rate limited to 3 resends per email per hour (tracked per user)
+      - Additional rate limiting of 5 requests per minute per IP
+      - New verification tokens invalidate all previous tokens
+      - Random timing jitter to prevent timing attacks
+      - All attempts are logged for security monitoring
+    `,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'user@example.com'
+        }
+      },
+      required: ['email']
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email request processed (same response regardless of account state)',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'If an account exists with this email, we have sent a verification email.'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - Rate limit exceeded',
+    type: ErrorResponseDto,
+  })
+  async resendVerification(
+    @Body() body: { email: string },
+    @Request() req: any,
+  ): Promise<{ message: string }> {
+    const baseUrl = process.env.FRONTEND_URL 
+      || (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : `${req.protocol}://${req.get('host')}`);
+    
+    return this.emailVerificationService.resendVerificationEmail(
+      body.email,
+      baseUrl,
+      req.ip,
+      req.get('user-agent'),
+    );
+  }
+
   @Post('check-email')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @HttpCode(HttpStatus.OK)

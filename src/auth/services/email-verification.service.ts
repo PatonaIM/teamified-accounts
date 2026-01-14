@@ -363,4 +363,212 @@ export class EmailVerificationService {
     user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await this.userRepository.save(user);
   }
+
+  /**
+   * OWASP-compliant resend verification email
+   * - Always returns same success message regardless of account state (prevents enumeration)
+   * - Rate limited to 3 per email per hour
+   * - Invalidates previous tokens when new token is generated
+   */
+  async resendVerificationEmail(
+    email: string,
+    baseUrl: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+    const MAX_RESENDS_PER_HOUR = 3;
+    const GENERIC_SUCCESS_MESSAGE = 'If an account exists with this email, we have sent a verification email.';
+
+    // Add random timing jitter (200-500ms) to prevent timing attacks
+    const jitter = Math.floor(Math.random() * 300) + 200;
+    await new Promise(resolve => setTimeout(resolve, jitter));
+
+    // Find user by email
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await this.userRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    // OWASP: Always return same message - don't reveal if account exists
+    if (!user) {
+      this.logger.log(`Resend verification requested for non-existent email: ${normalizedEmail.substring(0, 5)}...`);
+      return { message: GENERIC_SUCCESS_MESSAGE };
+    }
+
+    // If email already verified, return success (don't reveal status)
+    if (user.emailVerified) {
+      this.logger.log(`Resend verification requested for already-verified email: ${user.id}`);
+      return { message: GENERIC_SUCCESS_MESSAGE };
+    }
+
+    // Check rate limiting
+    const now = new Date();
+    const windowStart = user.emailVerificationResendWindowStart;
+    
+    // Check if we're in a new rate limit window
+    if (!windowStart || now.getTime() - windowStart.getTime() > RATE_LIMIT_WINDOW_MS) {
+      // Start new rate limit window
+      user.emailVerificationResendCount = 0;
+      user.emailVerificationResendWindowStart = now;
+    }
+
+    // Check if rate limit exceeded
+    if (user.emailVerificationResendCount >= MAX_RESENDS_PER_HOUR) {
+      this.logger.warn(`Rate limit exceeded for verification resend: ${user.id}`);
+      await this.auditService.log({
+        action: 'email_verification_resend_rate_limited',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: null,
+        actorRole: null,
+        changes: { 
+          email: user.email,
+          attemptCount: user.emailVerificationResendCount,
+        },
+        ip,
+        userAgent,
+      });
+      // OWASP: Still return success message
+      return { message: GENERIC_SUCCESS_MESSAGE };
+    }
+
+    // Invalidate previous token and generate new one
+    user.emailVerificationToken = crypto.randomUUID();
+    user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    user.emailVerificationResendCount += 1;
+    
+    await this.userRepository.save(user);
+
+    // Send verification email
+    try {
+      await this.emailService.sendEmailVerificationReminder(
+        user.email,
+        user.firstName || 'there',
+        user.emailVerificationToken,
+      );
+
+      await this.auditService.log({
+        action: 'email_verification_resend_success',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: null,
+        actorRole: null,
+        changes: { 
+          email: user.email,
+          resendCount: user.emailVerificationResendCount,
+        },
+        ip,
+        userAgent,
+      });
+
+      this.logger.log(`Verification email resent to user: ${user.id} (count: ${user.emailVerificationResendCount})`);
+    } catch (error) {
+      this.logger.error(`Failed to resend verification email to ${user.id}:`, error);
+      // Still return success to prevent enumeration
+    }
+
+    return { message: GENERIC_SUCCESS_MESSAGE };
+  }
+
+  /**
+   * Verify email with enhanced error handling for expired/invalid tokens
+   * Returns specific error codes that frontend can use to show appropriate UI
+   */
+  async verifyEmailWithDetailedResponse(
+    token: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<{ 
+    verified: boolean; 
+    message: string; 
+    errorCode?: 'INVALID_TOKEN' | 'EXPIRED_TOKEN' | 'ALREADY_VERIFIED';
+    email?: string;
+  }> {
+    this.logger.log(`Email verification attempt for token: ${token.substring(0, 8)}...`);
+
+    // Find user by token
+    const user = await this.userRepository.findOne({
+      where: { emailVerificationToken: token },
+    });
+
+    if (!user) {
+      // Token not found - could be invalid or already used/invalidated
+      await this.auditService.log({
+        action: 'email_verification_failed',
+        entityType: 'User',
+        entityId: null,
+        actorUserId: null,
+        actorRole: null,
+        changes: { reason: 'Invalid token' },
+        ip,
+        userAgent,
+      });
+      return {
+        verified: false,
+        message: 'This verification link is invalid or has expired. Please request a new verification email.',
+        errorCode: 'INVALID_TOKEN',
+      };
+    }
+
+    // Check if token is expired
+    if (user.emailVerificationTokenExpiry && user.emailVerificationTokenExpiry < new Date()) {
+      await this.auditService.log({
+        action: 'email_verification_failed',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: user.id,
+        actorRole: 'User',
+        changes: { reason: 'Token expired' },
+        ip,
+        userAgent,
+      });
+      return {
+        verified: false,
+        message: 'This verification link has expired. Please request a new verification email.',
+        errorCode: 'EXPIRED_TOKEN',
+        email: user.email,
+      };
+    }
+
+    // Check if email is already verified
+    if (user.emailVerified) {
+      return {
+        verified: true,
+        message: 'Your email is already verified.',
+        errorCode: 'ALREADY_VERIFIED',
+        email: user.email,
+      };
+    }
+
+    // Verify the email
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationTokenExpiry = null;
+    await this.userRepository.save(user);
+
+    // Log successful verification
+    await this.auditService.logUserEmailVerified(
+      user.id,
+      'user',
+      user.id,
+      {
+        email: user.email,
+        verifiedAt: new Date().toISOString(),
+      },
+      ip,
+      userAgent,
+    );
+
+    this.logger.log(`Email verification successful for user: ${user.email}`);
+
+    // Send welcome email after successful verification
+    await this.sendWelcomeEmail(user.id);
+
+    return {
+      verified: true,
+      message: 'Email verified successfully',
+      email: user.email,
+    };
+  }
 }
