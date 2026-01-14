@@ -131,71 +131,18 @@ export class EmailVerificationService {
       }
 
       const roleType = user.userRoles?.[0]?.roleType || 'candidate';
-      const subject = 'Welcome to Teamified!';
       
-      let htmlContent: string;
-      let textContent: string;
-      const displayName = user.firstName || 'there';
-
+      // Skip welcome email for candidates/job seekers - they only receive verification email
       if (roleType === 'candidate') {
-        htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Teamified</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
-        .cta-button { 
-            display: inline-block; 
-            background-color: #9333EA;
-            color: white; 
-            padding: 14px 36px; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            margin: 20px 0;
-            font-weight: 600;
-            font-size: 16px;
-        }
-        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">Welcome to Teamified!</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your account is ready</p>
-        </div>
-        <div class="content">
-            <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
-            
-            <p style="font-size: 16px;">Your email has been verified. Your candidate account is now ready!</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="https://jobseeker.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Browse Jobs</a>
-            </div>
-            
-            <p style="color: #666;">With Teamified, you can:</p>
-            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
-                <li>Browse and apply for exciting job opportunities</li>
-                <li>Track your application status</li>
-                <li>Build your professional profile</li>
-            </ul>
-        </div>
-        <div class="footer">
-            <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
-            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>`;
-        textContent = `Welcome to Teamified, ${displayName}!\n\nYour email has been verified. Your candidate account is now ready!\n\nBrowse Jobs: https://jobseeker.teamified.com.au\n\nWith Teamified, you can:\n- Browse and apply for exciting job opportunities\n- Track your application status\n- Build your professional profile\n\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
-      } else {
-        htmlContent = `
+        this.logger.log(`Skipping welcome email for candidate user: ${user.email} (candidates only receive verification email)`);
+        return;
+      }
+
+      const subject = 'Welcome to Teamified!';
+      const displayName = user.firstName || 'there';
+      
+      // Business/employer welcome email
+      const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -266,8 +213,7 @@ export class EmailVerificationService {
     </div>
 </body>
 </html>`;
-        textContent = `Welcome to Teamified, ${displayName}!\n\nYour employer account is now ready! Start building your team today.\n\nYou're signed in with: ${user.email}\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\nIf you didn't create this account, please contact our support team.\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
-      }
+      const textContent = `Welcome to Teamified, ${displayName}!\n\nYour employer account is now ready! Start building your team today.\n\nYou're signed in with: ${user.email}\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\nIf you didn't create this account, please contact our support team.\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
 
       await this.emailService.sendEmail({
         to: user.email,
