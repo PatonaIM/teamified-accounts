@@ -4,7 +4,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { getPortalName, getPortalUrl, type PortalType } from '../config/portalUrls';
 import { inferFallbackPortal } from '../utils/portalRedirect';
-import { fetchCurrentUser } from '../services/authService';
+import { fetchCurrentUser, isAuthenticated as checkIsAuthenticated } from '../services/authService';
 
 const ALLOWED_PATHS = [
   '/logout',
@@ -61,7 +61,9 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
     if (resolving) return 'resolving';
     if (redirectPortal) return 'redirecting';
     
-    if (!user) return 'loading';
+    // Check for valid authentication before making any redirect decisions
+    const hasValidToken = checkIsAuthenticated();
+    if (!user || !hasValidToken) return 'loading';
     
     if (isSuperAdmin) return 'allow_accounts';
     if (user.preferredPortal === 'accounts') return 'allow_accounts';
@@ -78,8 +80,12 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
     if (loading) return;
     if (isAllowed) return;
     
-    if (!user) {
-      console.log('[PortalRedirectEnforcer] No user, redirecting to login');
+    // CRITICAL: Verify token is still valid before making any redirect decisions
+    // This prevents redirect loops caused by stale localStorage user data
+    const hasValidToken = checkIsAuthenticated();
+    
+    if (!user || !hasValidToken) {
+      console.log('[PortalRedirectEnforcer] No user or invalid token, redirecting to login', { user: !!user, hasValidToken });
       redirectInitiatedRef.current = true;
       window.location.replace(`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`);
       return;
@@ -102,7 +108,6 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
         console.log('[PortalRedirectEnforcer] Initiating redirect to portal:', user.preferredPortal, portalUrl);
         redirectInitiatedRef.current = true;
         setRedirectPortal(user.preferredPortal);
-        // Use setTimeout to ensure state updates are flushed before redirect
         setTimeout(() => {
           console.log('[PortalRedirectEnforcer] Executing redirect to:', portalUrl);
           window.location.href = portalUrl;
@@ -181,6 +186,15 @@ export default function PortalRedirectEnforcer({ children }: PortalRedirectEnfor
         window.location.replace(`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`);
       }).catch(err => {
         console.error('[PortalRedirectEnforcer] Failed to fetch fresh user:', err);
+        
+        // If token is no longer valid, redirect to login instead of using stale fallback
+        if (!checkIsAuthenticated()) {
+          console.log('[PortalRedirectEnforcer] Token invalid after fetch failure, redirecting to login');
+          redirectInitiatedRef.current = true;
+          window.location.replace(`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`);
+          return;
+        }
+        
         const fallbackPortal = inferFallbackPortal(user);
         const fallbackUrl = getPortalUrl(fallbackPortal);
         if (fallbackUrl) {
