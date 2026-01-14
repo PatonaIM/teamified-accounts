@@ -22,6 +22,7 @@ import { useAuth } from '../hooks/useAuth';
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton';
 import { getLastPath } from '../components/SessionAwareRedirect';
 import { preserveMarketingSourceFromUrl, isMarketingSource } from '../services/marketingRedirectService';
+import { getPortalUrl } from '../config/portalUrls';
 
 const LoginPageMUI: React.FC = () => {
   const navigate = useNavigate();
@@ -356,16 +357,30 @@ const LoginPageMUI: React.FC = () => {
         console.log('[LoginPageMUI] Super admin with Teamified Internal email - staying in Teamified Accounts');
       } else if (loginEmailType === 'personal') {
         // Personal email login - redirect to Jobseeker Portal
-        redirectUrl = 'https://teamified-jobseeker.replit.app';
-        portalName = 'Jobseeker Portal';
-        isExternalRedirect = true;
-        console.log('[LoginPageMUI] Personal email - redirecting to Jobseeker Portal');
+        const jobseekerUrl = getPortalUrl('jobseeker');
+        if (jobseekerUrl) {
+          redirectUrl = jobseekerUrl;
+          portalName = 'Jobseeker Portal';
+          isExternalRedirect = true;
+          console.log('[LoginPageMUI] Personal email - redirecting to Jobseeker Portal:', jobseekerUrl);
+        } else {
+          // Fallback to profile if portal URL not configured
+          redirectUrl = '/account/profile';
+          console.log('[LoginPageMUI] Personal email - Jobseeker Portal URL not configured, staying in Accounts');
+        }
       } else {
         // Work email login (any organization) - redirect to ATS Portal
-        redirectUrl = 'https://teamified-ats.replit.app';
-        portalName = 'ATS Portal';
-        isExternalRedirect = true;
-        console.log('[LoginPageMUI] Work email - redirecting to ATS Portal');
+        const atsUrl = getPortalUrl('ats');
+        if (atsUrl) {
+          redirectUrl = atsUrl;
+          portalName = 'ATS Portal';
+          isExternalRedirect = true;
+          console.log('[LoginPageMUI] Work email - redirecting to ATS Portal:', atsUrl);
+        } else {
+          // Fallback to profile if portal URL not configured
+          redirectUrl = '/account/profile';
+          console.log('[LoginPageMUI] Work email - ATS Portal URL not configured, staying in Accounts');
+        }
       }
       
       // Set pending flag BEFORE refreshUser to prevent authenticated-user redirect race

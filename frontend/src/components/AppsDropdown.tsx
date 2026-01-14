@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Popover,
@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import { userAppPermissionsService } from '../services/userAppPermissionsService';
 import type { UserAppAccess } from '../services/userAppPermissionsService';
+import { getPortalUrl } from '../config/portalUrls';
 
 interface AppConfig {
   name: string;
@@ -15,38 +16,38 @@ interface AppConfig {
   baseUrl: string;
 }
 
-const APP_CONFIG: Record<string, AppConfig> = {
+const getAppConfig = (): Record<string, AppConfig> => ({
   candidate_portal: {
     name: 'Jobseeker Portal',
     emoji: '🔍',
     description: 'Search and apply for job opportunities',
-    baseUrl: 'https://teamified-jobseeker.replit.app',
+    baseUrl: getPortalUrl('jobseeker') || '',
   },
   ats: {
     name: 'ATS Portal',
     emoji: '📋',
     description: 'Manage job postings and track applicants',
-    baseUrl: 'https://teamified-ats.replit.app',
+    baseUrl: getPortalUrl('ats') || '',
   },
   hris: {
     name: 'HRIS Portal',
     emoji: '👥',
     description: 'HR information system for employee management',
-    baseUrl: 'https://teamified-hris.replit.app',
+    baseUrl: import.meta.env.VITE_PORTAL_URL_HRIS || '',
   },
   team_connect: {
     name: 'Team Connect',
     emoji: '💬',
     description: 'Connect with your team and collaborate',
-    baseUrl: 'https://convo-scribe-simonjones10.replit.app',
+    baseUrl: import.meta.env.VITE_PORTAL_URL_TEAM_CONNECT || '',
   },
   alexia_ai: {
     name: 'Alexia AI',
     emoji: '🤖',
     description: 'AI-powered assistant for productivity',
-    baseUrl: 'https://alexiaai.replit.app',
+    baseUrl: import.meta.env.VITE_PORTAL_URL_ALEXIA_AI || '',
   },
-};
+});
 
 interface AppsDropdownProps {
   anchorEl: HTMLElement | null;
@@ -59,6 +60,8 @@ export default function AppsDropdown({ anchorEl, open, onClose }: AppsDropdownPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
+  
+  const appConfig = useMemo(() => getAppConfig(), []);
 
   useEffect(() => {
     if (open && !hasFetched) {
@@ -82,10 +85,10 @@ export default function AppsDropdown({ anchorEl, open, onClose }: AppsDropdownPr
   };
 
   const accessibleApps = apps
-    .filter((app) => app.canAccess && APP_CONFIG[app.appKey])
+    .filter((app) => app.canAccess && appConfig[app.appKey] && appConfig[app.appKey].baseUrl)
     .map((app) => ({
       ...app,
-      config: APP_CONFIG[app.appKey],
+      config: appConfig[app.appKey],
     }));
 
   const handleAppClick = (config: AppConfig) => {
