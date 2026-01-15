@@ -8,6 +8,7 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  LinearProgress,
   Paper,
   Container,
   Fade,
@@ -1680,27 +1681,17 @@ const ClientAdminSignupPage: React.FC = () => {
                       )}
                     </Box>
 
-                    {/* Analysis Status Feedback */}
+                    {/* Subtle loading indicator */}
                     {websiteAnalysisStatus === 'analyzing' && (
-                      <Box sx={{ 
-                        mb: 3, 
-                        p: 2, 
-                        bgcolor: '#F5F3FF', 
-                        borderRadius: 2, 
-                        border: '1px solid #9333EA',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2
-                      }}>
-                        <CircularProgress size={20} sx={{ color: '#9333EA' }} />
-                        <Box>
-                          <Typography sx={{ fontWeight: 600, color: '#9333EA', fontSize: '0.875rem' }}>
-                            Analyzing your website...
-                          </Typography>
-                          <Typography sx={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                            We're using AI to understand your business and generate a description
-                          </Typography>
-                        </Box>
+                      <Box sx={{ mb: 2, mt: -1 }}>
+                        <LinearProgress sx={{ 
+                          height: 2, 
+                          borderRadius: 1,
+                          bgcolor: '#E9D5FF',
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: '#9333EA'
+                          }
+                        }} />
                       </Box>
                     )}
 
