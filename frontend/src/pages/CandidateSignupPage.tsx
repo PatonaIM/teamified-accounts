@@ -208,7 +208,7 @@ const CandidateSignupPage: React.FC = () => {
         lastName: formData.lastName,
       });
 
-      navigate('/signup-success', { replace: true });
+      navigate(`/check-your-email?email=${encodeURIComponent(formData.email)}`, { replace: true });
     } catch (error: any) {
       console.error('Candidate signup error:', error);
       setErrors({

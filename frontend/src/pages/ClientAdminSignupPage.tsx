@@ -621,9 +621,9 @@ const ClientAdminSignupPage: React.FC = () => {
 
       console.log('Client admin signup response:', response);
 
-      if (response.atsProvisioningSuccess && response.atsRedirectUrl) {
-        console.log('Redirecting to ATS portal:', response.atsRedirectUrl);
-        window.location.href = response.atsRedirectUrl;
+      if (response.atsProvisioningSuccess) {
+        console.log('Signup successful, redirecting to check email page');
+        navigate(`/check-your-email?email=${encodeURIComponent(formData.email)}`, { replace: true });
       } else {
         setPendingAtsRetry(response);
         setErrors({

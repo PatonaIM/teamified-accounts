@@ -17,6 +17,7 @@ const ALLOWED_PATHS = [
   '/signup-success',
   '/google-signup-success',
   '/verify-email',
+  '/check-your-email',
   '/reset-password',
   '/forgot-password',
   '/resend-verification',

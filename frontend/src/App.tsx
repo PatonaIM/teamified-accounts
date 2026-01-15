@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResendVerificationPage from './pages/ResendVerificationPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import CheckYourEmailPage from './pages/CheckYourEmailPage';
 import AcceptInternalInvitationPage from './pages/AcceptInternalInvitationPage';
 import SignupPathSelectionPage from './pages/SignupPathSelectionPage';
 import CandidateSignupPage from './pages/CandidateSignupPage';
@@ -218,6 +219,10 @@ function App() {
                 <Route 
                   path="/verify-email" 
                   element={<VerifyEmailPage />} 
+                />
+                <Route 
+                  path="/check-your-email" 
+                  element={<CheckYourEmailPage />} 
                 />
                 <Route 
                   path="/accept-invitation" 

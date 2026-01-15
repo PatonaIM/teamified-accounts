@@ -19,6 +19,7 @@ const PUBLIC_PATHS = [
   '/reset-password',
   '/force-change-password',
   '/verify-email',
+  '/check-your-email',
   '/callback',
   '/auth/callback',
   '/auth/google/callback',
