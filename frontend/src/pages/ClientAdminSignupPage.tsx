@@ -1704,34 +1704,6 @@ const ClientAdminSignupPage: React.FC = () => {
                       </Box>
                     )}
 
-                    {websiteAnalysisStatus === 'completed' && (
-                      <Box sx={{ 
-                        mb: 3, 
-                        p: 2, 
-                        bgcolor: '#F0FDF4', 
-                        borderRadius: 2, 
-                        border: '1px solid #10B981',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2
-                      }}>
-                        <Box sx={{ 
-                          width: 24, 
-                          height: 24, 
-                          borderRadius: '50%', 
-                          bgcolor: '#10B981', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center' 
-                        }}>
-                          <Typography sx={{ color: 'white', fontSize: '0.875rem', fontWeight: 600 }}>✓</Typography>
-                        </Box>
-                        <Typography sx={{ fontWeight: 600, color: '#10B981', fontSize: '0.875rem' }}>
-                          Website analyzed successfully! Click Next to continue.
-                        </Typography>
-                      </Box>
-                    )}
-
                     <Box sx={{ mb: 3 }}>
                       <Link
                         component="button"
