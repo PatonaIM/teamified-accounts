@@ -20,6 +20,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { login, getAccessToken, isAuthenticated, getRefreshToken, refreshAccessToken, setAccessToken } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { GoogleLoginButton } from '../components/auth/GoogleLoginButton';
+import HelpSection from '../components/HelpSection';
 import { getLastPath } from '../components/SessionAwareRedirect';
 import { preserveMarketingSourceFromUrl, isMarketingSource } from '../services/marketingRedirectService';
 import { getPortalUrl } from '../config/portalUrls';
@@ -32,6 +33,11 @@ const LoginPageMUI: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const returnUrl = searchParams.get('returnUrl') || '/account/profile';
   const sourceParam = searchParams.get('source');
+  
+  // State for unverified email handling
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [showResendSuccess, setShowResendSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   
   // Ref to prevent multiple cookie verification attempts (prevents infinite loop)
   const cookieVerificationAttempted = useRef(false);
@@ -175,6 +181,14 @@ const LoginPageMUI: React.FC = () => {
       if (emailAlreadyRegistered) {
         setEmailAlreadyRegistered(false);
       }
+    }
+    // Clear resend success message when user edits any credential
+    if (showResendSuccess) {
+      setShowResendSuccess(false);
+    }
+    // Clear unverified email state when editing credentials
+    if (unverifiedEmail) {
+      setUnverifiedEmail(null);
     }
   };
 
@@ -322,6 +336,10 @@ const LoginPageMUI: React.FC = () => {
     }
 
     setIsLoading(true);
+    // Clear any previous resend success message so new errors can be displayed
+    setShowResendSuccess(false);
+    setUnverifiedEmail(null);
+    setErrors({});
     
     try {
       const loginResponse = await login({
@@ -402,9 +420,47 @@ const LoginPageMUI: React.FC = () => {
         navigate(redirectUrl);
       }
     } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
-      setErrors({ general: errorMessage });
+      // Check if this is an unverified email error
+      if (error?.response?.data?.errorCode === 'EMAIL_NOT_VERIFIED' || 
+          (error instanceof Error && error.message.includes('not been verified'))) {
+        const email = error?.response?.data?.email || formData.email;
+        setUnverifiedEmail(email);
+        setErrors({ 
+          general: 'Your email address has not been verified. Please check your inbox for the verification link or request a new one below.'
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
+        setErrors({ general: errorMessage });
+      }
       setIsLoading(false);
+    }
+  };
+
+  // Handle resending verification email
+  const handleResendVerification = async () => {
+    const emailToResend = unverifiedEmail || formData.email;
+    if (!emailToResend) return;
+    
+    setResendLoading(true);
+    try {
+      await fetch('/api/v1/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: emailToResend }),
+      });
+      // Always show success message (OWASP compliant - same response regardless of result)
+      setShowResendSuccess(true);
+      setUnverifiedEmail(null);
+      setErrors({});
+    } catch (error) {
+      // Still show success for OWASP compliance
+      setShowResendSuccess(true);
+      setUnverifiedEmail(null);
+      setErrors({});
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -621,10 +677,10 @@ const LoginPageMUI: React.FC = () => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 error={!!errors.email || emailAlreadyRegistered}
-                helperText={errors.email || (emailAlreadyRegistered ? 'This email is already registered.' : '')}
+                helperText={errors.email}
                 disabled={isLoading}
                 sx={{
-                  mb: 3,
+                  mb: emailAlreadyRegistered ? 1.5 : 3,
                   animation: shakeEmail ? 'shake 0.5s ease-in-out' : 'none',
                   '@keyframes shake': {
                     '0%, 100%': { transform: 'translateX(0)' },
@@ -675,34 +731,38 @@ const LoginPageMUI: React.FC = () => {
               />
 
 
-              {/* Friendly Already Registered Message */}
+              {/* Inline Error: Account Already Exists */}
               {emailAlreadyRegistered && mode === 'signup' && (
                 <Box
                   sx={{
                     bgcolor: '#FEF3C7',
+                    border: '1px solid #FCD34D',
                     borderRadius: 2,
-                    p: 2.5,
+                    p: 2,
                     mb: 3,
-                    textAlign: 'center',
                   }}
                 >
                   <Typography
                     sx={{
                       color: '#1a1a1a',
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      mb: 0.5,
-                    }}
-                  >
-                    You've signed up before using this email.
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: '#4a4a4a',
                       fontSize: '0.9rem',
                     }}
                   >
-                    Try sign in instead.
+                    Account exists. Are you trying to{' '}
+                    <Link
+                      href="/login"
+                      sx={{
+                        color: '#9333EA',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
+                      }}
+                    >
+                      login
+                    </Link>
+                    ?
                   </Typography>
                 </Box>
               )}
@@ -745,29 +805,7 @@ const LoginPageMUI: React.FC = () => {
 
               <GoogleLoginButton returnUrl={returnUrl !== '/account/profile' ? returnUrl : undefined} />
 
-              <Box sx={{ textAlign: 'center', mt: 4 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: '#6b7280',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Need help? Send us an email at{' '}
-                  <Link
-                    href="mailto:hello@teamified.com"
-                    sx={{
-                      color: '#9333EA',
-                      textDecoration: 'none',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
-                  >
-                    hello@teamified.com
-                  </Link>
-                </Typography>
-              </Box>
+              <HelpSection variant="login" />
             </form>
           )}
 
@@ -798,10 +836,48 @@ const LoginPageMUI: React.FC = () => {
                 {formData.email}
               </Typography>
 
-              {/* Error Alert */}
-              {errors.general && (
-                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
-                  {errors.general}
+              {/* Resend Success Message */}
+              {showResendSuccess && (
+                <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+                  If an account exists with this email, we have sent a verification email. Please check your inbox.
+                </Alert>
+              )}
+
+              {/* Error Alert with Resend Option for Unverified Email */}
+              {errors.general && !showResendSuccess && (
+                <Alert 
+                  severity={unverifiedEmail ? 'warning' : 'error'} 
+                  sx={{ mb: 3, borderRadius: 2 }}
+                >
+                  <Box>
+                    <Typography sx={{ mb: unverifiedEmail ? 1 : 0, fontSize: '0.875rem' }}>
+                      {errors.general}
+                    </Typography>
+                    {unverifiedEmail && (
+                      <Button
+                        onClick={handleResendVerification}
+                        disabled={resendLoading}
+                        size="small"
+                        sx={{
+                          mt: 1,
+                          color: '#9333EA',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          p: 0,
+                          minWidth: 'auto',
+                          '&:hover': {
+                            bgcolor: 'transparent',
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        {resendLoading ? (
+                          <CircularProgress size={16} sx={{ color: '#9333EA', mr: 1 }} />
+                        ) : null}
+                        Resend verification email
+                      </Button>
+                    )}
+                  </Box>
                 </Alert>
               )}
 
@@ -942,22 +1018,8 @@ const LoginPageMUI: React.FC = () => {
                 </Button>
               </Box>
 
-              <Box sx={{ textAlign: 'center' }}>
-                <Link
-                  href="/forgot-password"
-                  sx={{
-                    color: '#6b7280',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    '&:hover': {
-                      color: '#9333EA',
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Forgot password?
-                </Link>
-              </Box>
+              {/* Having trouble accessing your account? */}
+              <HelpSection variant="login" />
             </form>
           )}
         </Box>

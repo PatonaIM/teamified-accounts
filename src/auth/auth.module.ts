@@ -26,6 +26,7 @@ import { OrganizationMember } from '../organizations/entities/organization-membe
 import { UserEmail } from '../user-emails/entities/user-email.entity';
 import { UserRolesModule } from '../user-roles/user-roles.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RedisRateLimiterService } from '../common/services/redis-rate-limiter.service';
 import { EmailModule } from '../email/email.module';
 import { AuditModule } from '../audit/audit.module';
 import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
@@ -61,6 +62,7 @@ import { OAuthClientsModule } from '../oauth-clients/oauth-clients.module';
     HubSpotService,
     AtsProvisioningService,
     JwtAuthGuard,
+    RedisRateLimiterService,
   ],
   exports: [
     AuthService, 

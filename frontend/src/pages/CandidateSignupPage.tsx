@@ -45,6 +45,7 @@ const CandidateSignupPage: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
@@ -330,56 +331,41 @@ const CandidateSignupPage: React.FC = () => {
                 }}
               />
 
-              {/* Email Exists Warning */}
+              {/* Email Exists Inline Error */}
               {emailExists && (
                 <Box
                   sx={{
                     bgcolor: '#FEF3C7',
-                    borderRadius: 2,
-                    p: 2.5,
-                    mb: 2,
                     border: '1px solid #FCD34D',
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 2,
+                    mt: 1,
                   }}
                 >
                   <Typography
                     sx={{
-                      color: '#92400E',
-                      fontWeight: 500,
+                      color: '#1a1a1a',
                       fontSize: '0.9rem',
-                      mb: 2,
                     }}
                   >
-                    This email ID is already present with us. Please log in or use a different email ID.
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<LoginIcon />}
-                      onClick={handleLoginRedirect}
+                    Account exists. Are you trying to{' '}
+                    <Box
+                      component="a"
+                      href="/login"
                       sx={{
-                        bgcolor: '#9333EA',
-                        '&:hover': { bgcolor: '#7C3AED' },
-                        textTransform: 'none',
-                      }}
-                    >
-                      Login
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<RefreshIcon />}
-                      onClick={handleUseDifferentEmail}
-                      sx={{
-                        borderColor: '#9333EA',
                         color: '#9333EA',
-                        '&:hover': { borderColor: '#7C3AED', bgcolor: 'rgba(147, 51, 234, 0.04)' },
-                        textTransform: 'none',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
                       }}
                     >
-                      Use different email
-                    </Button>
-                  </Box>
+                      login
+                    </Box>
+                    ?
+                  </Typography>
                 </Box>
               )}
 
@@ -395,7 +381,7 @@ const CandidateSignupPage: React.FC = () => {
                     helperText={errors.firstName}
                     margin="normal"
                     required
-                    disabled={isLoading || isCheckingEmail}
+                    disabled={isLoading}
                   />
 
               <TextField
@@ -407,67 +393,124 @@ const CandidateSignupPage: React.FC = () => {
                 helperText={errors.lastName}
                 margin="normal"
                 required
-                disabled={isLoading || isCheckingEmail}
+                disabled={isLoading}
               />
 
-              <TextField
-                fullWidth
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                error={!!errors.password}
-                helperText={errors.password}
-                margin="normal"
-                required
-                disabled={isLoading || isCheckingEmail}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        disabled={isLoading || isCheckingEmail}
-                        sx={{
-                          color: (isLoading || isCheckingEmail) ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                        }}
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <PasswordRequirements password={formData.password} />
+              <Box sx={{ mb: 2, mt: 2 }}>
+                <Typography
+                  component="label"
+                  sx={{
+                    display: 'block',
+                    mb: 1,
+                    fontWeight: 500,
+                    color: '#1a1a1a',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Password *
+                </Typography>
+                <TextField
+                  fullWidth
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          sx={{ color: '#9CA3AF' }}
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: 'white',
+                      borderRadius: 2,
+                      '& fieldset': { borderColor: '#E5E7EB' },
+                      '&:hover fieldset': { borderColor: '#9333EA' },
+                      '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                    },
+                  }}
+                />
+              </Box>
 
-              <TextField
-                fullWidth
-                label="Confirm Password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword}
-                margin="normal"
-                required
-                disabled={isLoading || isCheckingEmail}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        edge="end"
-                        disabled={isLoading || isCheckingEmail}
-                        sx={{
-                          color: (isLoading || isCheckingEmail) ? 'rgba(0, 0, 0, 0.26)' : 'inherit',
-                        }}
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
+              {!isPasswordValid(formData.password) && (
+                <PasswordRequirements password={formData.password} />
+              )}
+
+              <Box sx={{ mb: 2, mt: 2 }}>
+                <Typography
+                  component="label"
+                  sx={{
+                    display: 'block',
+                    mb: 1,
+                    fontWeight: 500,
+                    color: '#1a1a1a',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Confirm Password *
+                </Typography>
+                <TextField
+                  fullWidth
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  onBlur={() => setConfirmPasswordTouched(true)}
+                  error={!!errors.confirmPassword}
+                  helperText={
+                    errors.confirmPassword 
+                      ? errors.confirmPassword 
+                      : formData.confirmPassword && formData.password === formData.confirmPassword 
+                        ? 'Password match!' 
+                        : (confirmPasswordTouched && formData.confirmPassword && formData.password !== formData.confirmPassword)
+                          ? 'Password does not match'
+                          : ''
+                  }
+                  FormHelperTextProps={{
+                    sx: {
+                      color: formData.confirmPassword && formData.password === formData.confirmPassword 
+                        ? '#10B981' 
+                        : (confirmPasswordTouched && formData.confirmPassword && formData.password !== formData.confirmPassword)
+                          ? '#EF4444'
+                          : undefined
+                    }
+                  }}
+                  disabled={isLoading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                          sx={{ color: '#9CA3AF' }}
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: 'white',
+                      borderRadius: 2,
+                      '& fieldset': { borderColor: '#E5E7EB' },
+                      '&:hover fieldset': { borderColor: '#9333EA' },
+                      '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                    },
+                  }}
+                />
+              </Box>
 
               <Box sx={{ mt: 3 }}>
                 <FormControlLabel

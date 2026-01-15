@@ -29,16 +29,20 @@ export class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       const fromEmail = this.configService.get('EMAIL_FROM', 'noreply@teamified.com.au');
+      const fromName = this.configService.get('EMAIL_FROM_NAME', 'Teamified NoReply');
 
       this.logger.log(`📧 Attempting to send email:`, {
         to: options.to,
-        from: fromEmail,
+        from: `${fromName} <${fromEmail}>`,
         subject: options.subject,
       });
 
       const msg = {
         to: options.to,
-        from: fromEmail,
+        from: {
+          email: fromEmail,
+          name: fromName,
+        },
         subject: options.subject,
         text: options.text || '',
         html: options.html,
@@ -60,7 +64,7 @@ export class EmailService {
 
       return true;
     } catch (error) {
-      this.logger.error(`❌ SendGrid Error - FROM: ${this.configService.get('EMAIL_FROM', 'noreply@teamified.com.au')}:`, {
+      this.logger.error(`❌ SendGrid Error - FROM: ${this.configService.get('EMAIL_FROM_NAME', 'Teamified NoReply')} <${this.configService.get('EMAIL_FROM', 'noreply@teamified.com.au')}>:`, {
         message: error.message,
         code: error.code,
         statusCode: error.response?.statusCode,
@@ -120,6 +124,118 @@ export class EmailService {
       html: htmlTemplate,
       text: textTemplate,
     });
+  }
+
+  async sendEmployerWelcomeEmail(
+    email: string, 
+    firstName: string, 
+    companyName?: string
+  ): Promise<boolean> {
+    const displayName = companyName || firstName || 'there';
+    const htmlTemplate = this.generateEmployerWelcomeHtmlTemplate(displayName, email);
+    const textTemplate = this.generateEmployerWelcomeTextTemplate(displayName, email);
+
+    return this.sendEmail({
+      to: email,
+      subject: 'Welcome to Teamified!',
+      html: htmlTemplate,
+      text: textTemplate,
+    });
+  }
+
+  private generateEmployerWelcomeHtmlTemplate(displayName: string, userEmail: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Teamified</title>
+    <style>
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .cta-button { 
+            display: inline-block; 
+            background-color: #9333EA;
+            color: white; 
+            padding: 14px 28px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .cta-button-outline { 
+            display: inline-block; 
+            background-color: white;
+            color: #9333EA; 
+            padding: 12px 26px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin: 10px 5px;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid #9333EA;
+        }
+        .email-line { color: #666; font-size: 14px; margin: 15px 0; }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Welcome to Teamified!</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your employer account is ready</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
+            
+            <p style="font-size: 16px;">Your employer account is now ready! Start building your team today.</p>
+            
+            <p class="email-line">You're signed in with: <strong>${userEmail}</strong></p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="https://ats.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Post Your First Job</a>
+                <a href="https://hris.teamified.com.au" class="cta-button-outline" style="color: #9333EA !important; text-decoration: none;">Set Up Your Organization</a>
+            </div>
+            
+            <p style="color: #666;">With Teamified, you can:</p>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
+                <li>Post job openings and attract top talent</li>
+                <li>Manage your hiring pipeline</li>
+                <li>Onboard and manage your team members</li>
+            </ul>
+        </div>
+        <div class="footer">
+            <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
+            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generateEmployerWelcomeTextTemplate(displayName: string, userEmail: string): string {
+    return `Welcome to Teamified!
+
+Welcome to Teamified, ${displayName}!
+
+Your employer account is now ready! Start building your team today.
+
+You're signed in with: ${userEmail}
+
+Post Your First Job: https://ats.teamified.com.au
+Set Up Your Organization: https://hris.teamified.com.au
+
+With Teamified, you can:
+- Post job openings and attract top talent
+- Manage your hiring pipeline
+- Onboard and manage your team members
+
+If you didn't create this account, please contact our support team.
+© ${new Date().getFullYear()} Teamified. All rights reserved.`;
   }
 
   async sendPasswordResetEmail(user: { email: string; firstName: string }, resetToken: string): Promise<boolean> {
@@ -183,22 +299,32 @@ export class EmailService {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Teamified</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #3498db; 
-            color: white; 
-            padding: 12px 30px; 
+            background-color: #9333EA; 
+            color: white !important; 
+            padding: 14px 32px; 
             text-decoration: none; 
-            border-radius: 5px; 
+            border-radius: 6px; 
             margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
         }
+        .cta-button:hover { background-color: #7C3AED; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .expiry-warning { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 5px; margin: 15px 0; }
+        .expiry-warning { background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; color: #4B5563; }
     </style>
 </head>
 <body>
@@ -213,18 +339,18 @@ export class EmailService {
             <p>To complete your registration and access your account, please click the button below:</p>
             
             <div style="text-align: center;">
-                <a href="${inviteLink}" class="cta-button">Accept Invitation</a>
+                <a href="${inviteLink}" class="cta-button" style="display: inline-block; background-color: #9333EA; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; border: none;">Accept Invitation</a>
             </div>
             
-            <div class="expiry-warning">
-                <strong>⏰ Important:</strong> This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}. 
+            <div class="expiry-warning" style="background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0;">
+                <strong>Important:</strong> This invitation will expire on ${invitation.expiresAt.toLocaleDateString()}. 
                 Please complete your registration before this date.
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f1f1f1; padding: 10px; border-radius: 3px;">
+            <div class="link-box">
                 ${inviteLink}
-            </p>
+            </div>
             
             <h3>What's next?</h3>
             <ul>
@@ -238,7 +364,7 @@ export class EmailService {
         </div>
         <div class="footer">
             <p>This is an automated message from Teamified.</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -280,61 +406,72 @@ This is an automated message from Teamified.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Please verify your email address</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #e74c3c; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #27ae60; 
-            color: white; 
-            padding: 12px 30px; 
-            text-decoration: none; 
-            border-radius: 5px; 
+            background: #9333EA !important;
+            color: #ffffff !important; 
+            padding: 14px 32px; 
+            text-decoration: none !important; 
+            border-radius: 6px; 
             margin: 20px 0;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            mso-padding-alt: 0;
         }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .warning { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .info-box { background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; color: #4B5563; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📧 Email Verification Required</h1>
+            <h1>Email Verification Required</h1>
         </div>
         <div class="content">
             <h2>Hello ${firstName},</h2>
-            <p>We noticed that you haven't verified your email address yet. Email verification is required to access all features of the Teamified.</p>
+            <p>We noticed that you haven't verified your email address yet. Email verification is required to access all features of Teamified.</p>
             
-            <div class="warning">
-                <strong>⚠️ Action Required:</strong> Please verify your email address to complete your account setup and access the full portal functionality.
+            <div class="info-box" style="background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 15px 0;">
+                <strong>Action Required:</strong> Please verify your email address to complete your account setup and access the full portal functionality.
             </div>
             
             <div style="text-align: center;">
-                <a href="${verificationLink}" class="cta-button">Verify My Email Address</a>
+                <a href="${verificationLink}" class="cta-button" style="display: inline-block; background-color: #9333EA; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; border: none;">Verify My Email Address</a>
             </div>
             
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; background-color: #f1f1f1; padding: 10px; border-radius: 3px;">
+            <div class="link-box">
                 ${verificationLink}
-            </p>
+            </div>
             
             <h3>Why verify your email?</h3>
             <ul>
-                <li>✅ Complete your account setup</li>
-                <li>✅ Access all portal features</li>
-                <li>✅ Receive important notifications</li>
-                <li>✅ Ensure account security</li>
+                <li>Complete your account setup</li>
+                <li>Access all portal features</li>
+                <li>Receive important notifications</li>
+                <li>Ensure account security</li>
             </ul>
             
-            <p><strong>Note:</strong> This verification link will expire in 24 hours for security reasons.</p>
+            <p style="color: #6B7280;"><strong>Note:</strong> This verification link will expire in 24 hours for security reasons.</p>
             
             <p>If you have any questions or need assistance, please contact our support team.</p>
         </div>
         <div class="footer">
-            <p>This is an automated reminder from Teamified.</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p>This is an automated message from Teamified.</p>
+            <p>&copy; ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -377,40 +514,46 @@ This is an automated reminder from Teamified.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Teamified</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #27ae60; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .success-box { background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .success-box { background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; border-radius: 4px; margin: 15px 0; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; margin-top: 25px; }
+        ul, ol { padding-left: 20px; }
+        li { margin-bottom: 8px; color: #4B5563; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 Welcome to Teamified!</h1>
+            <h1>Welcome to Teamified!</h1>
         </div>
         <div class="content">
             <h2>Congratulations, ${firstName}!</h2>
             
             <div class="success-box">
-                <strong>✅ Email Verified Successfully!</strong><br>
+                <strong>Email Verified Successfully!</strong><br>
                 Your email address has been verified and your account is now fully activated.
             </div>
             
-            <p>You now have access to all the features of the Teamified, including:</p>
+            <p>You now have access to all the features of Teamified, including:</p>
             
-            <h3>🚀 What's available to you:</h3>
+            <h3>What's available to you:</h3>
             <ul>
-                <li>📊 Dashboard with important updates</li>
-                <li>👤 Profile management</li>
-                <li>⏰ Timesheet submission</li>
-                <li>🏖️ Leave request management</li>
-                <li>📄 Document access and payslips</li>
+                <li>Dashboard with important updates</li>
+                <li>Profile management</li>
+                <li>Timesheet submission</li>
+                <li>Leave request management</li>
+                <li>Document access and payslips</li>
             </ul>
             
-            <h3>🎯 Next steps:</h3>
+            <h3>Next steps:</h3>
             <ol>
                 <li>Complete your profile information</li>
                 <li>Explore the dashboard</li>
@@ -424,7 +567,7 @@ This is an automated reminder from Teamified.
         </div>
         <div class="footer">
             <p>Welcome to the Teamified family!</p>
-            <p>© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Teamified. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -472,15 +615,17 @@ Welcome to the Teamified family!
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Your Password</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #F5F7F8; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
+        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+        .content { padding: 30px 20px; background-color: #ffffff; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .cta-button { 
             display: inline-block; 
-            background-color: #4CAF50;
-            color: white; 
+            background-color: #9333EA;
+            color: white !important; 
             padding: 14px 36px; 
             text-decoration: none; 
             border-radius: 6px; 
@@ -488,9 +633,12 @@ Welcome to the Teamified family!
             font-weight: 600;
             font-size: 16px;
         }
+        .cta-button:hover { background-color: #7C3AED; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-        .expiry-warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0; }
-        .link-box { background-color: #e8eaf6; padding: 15px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border-left: 4px solid #667eea; }
+        .expiry-warning { background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .link-box { background-color: #F5F7F8; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 13px; margin: 15px 0; border: 1px solid #E5E7EB; }
+        h2 { color: #1F2937; margin-top: 0; }
+        h3 { color: #9333EA; }
         .security-note { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin: 20px 0; }
     </style>
 </head>
@@ -1085,6 +1233,82 @@ What's next:
 If you have any questions or didn't expect this invitation, please contact the administrator at ${organizationName}.
 
 This is an automated message from Teamified.
+© ${new Date().getFullYear()} Teamified. All rights reserved.
+`;
+  }
+
+  async sendPasswordUpdatedEmail(user: { email: string; firstName: string }): Promise<boolean> {
+    const htmlTemplate = this.generatePasswordUpdatedHtmlTemplate(user.firstName);
+    const textTemplate = this.generatePasswordUpdatedTextTemplate(user.firstName);
+
+    return this.sendEmail({
+      to: user.email,
+      subject: 'Password updated — Teamified',
+      html: htmlTemplate,
+      text: textTemplate,
+    });
+  }
+
+  private generatePasswordUpdatedHtmlTemplate(firstName: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Updated</title>
+</head>
+<body style="font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 28px; font-family: 'Nunito Sans', Arial, sans-serif;">Password Updated</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95; font-family: 'Nunito Sans', Arial, sans-serif;">Your account security has been updated</p>
+        </div>
+        <div style="padding: 30px 20px; background-color: #f8f9fa;">
+            <h2 style="margin-top: 0; color: #9333EA; font-family: 'Nunito Sans', Arial, sans-serif;">Hello ${firstName},</h2>
+            
+            <p style="font-size: 16px; font-family: 'Nunito Sans', Arial, sans-serif;">Your Teamified password has been updated successfully.</p>
+            
+            <div style="background-color: #FEF3C7; border-left: 4px solid #FFA500; padding: 15px; border-radius: 4px; margin: 25px 0;">
+                <strong style="font-family: 'Nunito Sans', Arial, sans-serif;">⚠️ Didn't make this change?</strong>
+                <p style="margin: 10px 0 0 0; font-family: 'Nunito Sans', Arial, sans-serif;">If you did not make this change, please contact us at <a href="mailto:hello@teamified.com.au" style="color: #9333EA; font-weight: 600;">hello@teamified.com.au</a> immediately.</p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; margin-top: 25px; font-family: 'Nunito Sans', Arial, sans-serif;">For your security, we recommend:</p>
+            <ul style="color: #666; padding-left: 20px; line-height: 1.8; font-family: 'Nunito Sans', Arial, sans-serif;">
+                <li>Using a unique password for each of your accounts</li>
+                <li>Not sharing your password with anyone</li>
+                <li>Logging out from shared devices</li>
+            </ul>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px; font-family: 'Nunito Sans', Arial, sans-serif;">
+            <p style="margin: 5px 0;">Thanks,</p>
+            <p style="margin: 5px 0; font-weight: 600;">Teamified Support</p>
+            <p style="margin: 15px 0 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generatePasswordUpdatedTextTemplate(firstName: string): string {
+    return `
+Password updated — Teamified
+
+Hello ${firstName},
+
+Your Teamified password has been updated successfully.
+
+If you did not make this change, please contact us at hello@teamified.com.au immediately.
+
+For your security, we recommend:
+- Using a unique password for each of your accounts
+- Not sharing your password with anyone
+- Logging out from shared devices
+
+Thanks,
+Teamified Support
+
 © ${new Date().getFullYear()} Teamified. All rights reserved.
 `;
   }

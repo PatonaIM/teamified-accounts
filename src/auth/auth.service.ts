@@ -171,7 +171,8 @@ export class AuthService {
     // Hash the password
     const hashedPassword = await this.passwordService.hashPassword(password);
 
-    // Create or update user
+    // Create or update user - Mark email as verified for invitation flow
+    // Invited users don't need to verify email since they received the invite at that address
     if (!user) {
       user = this.userRepository.create({
         email: invitation.email,
@@ -179,41 +180,29 @@ export class AuthService {
         lastName: invitation.lastName,
         passwordHash: hashedPassword,
         isActive: true,
-        emailVerified: false,
-        emailVerificationToken: uuidv4(),
-        emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        emailVerified: true, // Mark as verified - invited users don't need verification
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
       });
     } else {
       user.passwordHash = hashedPassword;
       user.isActive = true;
-      user.emailVerified = false;
-      user.emailVerificationToken = uuidv4();
-      user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      user.emailVerified = true; // Mark as verified - invited users don't need verification
+      user.emailVerificationToken = null;
+      user.emailVerificationTokenExpiry = null;
     }
 
     const savedUser = await this.userRepository.save(user);
 
-    // Update invitation status
+    // Update invitation status and invalidate the token
     invitation.status = InvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();
     invitation.acceptedBy = savedUser.id;
 
     await this.invitationRepository.save(invitation);
 
-    // Send email verification
-    // Map invitation role to user type for email personalization
-    const userType: 'client_admin' | 'candidate' = 
-      invitation.role?.toLowerCase().includes('client') || 
-      invitation.role?.toLowerCase().includes('admin') 
-        ? 'client_admin' 
-        : 'candidate';
-    
-    try {
-      await this.sendEmailVerification(savedUser, baseUrl, userType);
-    } catch (error) {
-      this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
-      // Don't fail the process if email sending fails
-    }
+    // NOTE: No verification email is sent for invited users - they are auto-verified
+    // The invite email itself served as the email verification
 
     // Create audit logs
     await Promise.all([
@@ -263,7 +252,7 @@ export class AuthService {
       lastName: savedUser.lastName,
       isActive: savedUser.isActive,
       emailVerified: savedUser.emailVerified,
-      message: 'Account activated successfully. Please check your email to verify your email address.',
+      message: 'Account activated successfully. You can now log in with your credentials.',
     };
   }
 
@@ -466,7 +455,7 @@ This is an automated message from Teamified.
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Check if email is verified
+    // Check if email is verified - return specific error for unverified accounts
     if (!user.emailVerified) {
       const userRole = await this.getUserPrimaryRole(user.id);
       await this.auditService.log({
@@ -482,7 +471,13 @@ This is an automated message from Teamified.
         ip,
         userAgent,
       });
-      throw new UnauthorizedException('Please verify your email address before logging in. Check your inbox for the verification link.');
+      // Return specific error code that frontend can detect
+      const error: any = new UnauthorizedException({
+        message: 'Your email address has not been verified. Please check your inbox for the verification link or request a new one.',
+        errorCode: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
+      });
+      throw error;
     }
 
     // Determine email type and organization for login redirect BEFORE saving
@@ -1440,6 +1435,17 @@ This is an automated message from Teamified.
 
     this.logger.log(`Password successfully reset for user: ${user.email}`);
 
+    // Send password updated notification email
+    try {
+      await this.emailService.sendPasswordUpdatedEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+      });
+      this.logger.log(`Password updated notification email sent to: ${user.email}`);
+    } catch (emailError) {
+      this.logger.error(`Failed to send password updated email to ${user.email}:`, emailError);
+    }
+
     return { message: 'Your password has been reset successfully' };
   }
 
@@ -1540,6 +1546,17 @@ This is an automated message from Teamified.
 
     this.logger.log(`Password successfully changed for user: ${user.email}`);
 
+    // Send password updated notification email
+    try {
+      await this.emailService.sendPasswordUpdatedEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+      });
+      this.logger.log(`Password updated notification email sent to: ${user.email}`);
+    } catch (emailError) {
+      this.logger.error(`Failed to send password updated email to ${user.email}:`, emailError);
+    }
+
     return { 
       message: 'Your password has been changed successfully',
       success: true,
@@ -1636,15 +1653,19 @@ This is an automated message from Teamified.
 
     const hashedPassword = await this.passwordService.hashPassword(password);
 
+    // Generate verification token for email/password business signup
+    const verificationToken = crypto.randomUUID();
+    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     const user = this.userRepository.create({
       email,
       firstName,
       lastName,
       passwordHash: hashedPassword,
       isActive: true,
-      emailVerified: false,
-      emailVerificationToken: uuidv4(),
-      emailVerificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      emailVerified: false, // Business email/password signup requires email verification
+      emailVerificationToken: verificationToken,
+      emailVerificationTokenExpiry: verificationTokenExpiry,
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -1679,11 +1700,13 @@ This is an automated message from Teamified.
 
     await this.organizationMemberRepository.save(orgMember);
 
+    // Send verification email for business email/password signup
+    // Welcome email will be sent AFTER verification via email-verification.service
     const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5000';
     try {
       await this.sendEmailVerification(savedUser, baseUrl, 'client_admin', companyName);
     } catch (error) {
-      this.logger.warn(`Failed to send email verification to ${savedUser.email}: ${error.message}`);
+      this.logger.warn(`Failed to send verification email to ${savedUser.email}: ${error.message}`);
     }
 
     await this.auditService.log({
@@ -1696,12 +1719,13 @@ This is an automated message from Teamified.
         email: savedUser.email,
         organizationId: savedOrg.id,
         organizationName: savedOrg.name,
+        emailVerificationRequired: true, // Business email/password signup requires verification
       },
       ip,
       userAgent,
     });
 
-    this.logger.log(`Client admin signup successful: ${savedUser.email}, Org: ${savedOrg.name}`);
+    this.logger.log(`Client admin signup successful: ${savedUser.email}, Org: ${savedOrg.name} (email verification required)`);
 
     // Create HubSpot contact asynchronously (non-blocking)
     let hubspotContactCreated = false;
@@ -1761,7 +1785,7 @@ This is an automated message from Teamified.
 
     return {
       message: 'Account created successfully. Please check your email to verify your account.',
-      emailVerificationRequired: true,
+      emailVerificationRequired: true, // Business email/password signup requires verification
       email: savedUser.email,
       organizationSlug: savedOrg.slug,
       hubspotContactCreated,
@@ -1921,6 +1945,17 @@ This is an automated message from Teamified.
     });
 
     this.logger.log(`User ${user.email} changed password after admin reset`);
+
+    // Send password updated notification email
+    try {
+      await this.emailService.sendPasswordUpdatedEmail({
+        email: user.email,
+        firstName: user.firstName || 'there',
+      });
+      this.logger.log(`Password updated notification email sent to: ${user.email}`);
+    } catch (emailError) {
+      this.logger.error(`Failed to send password updated email to ${user.email}:`, emailError);
+    }
 
     return { 
       message: 'Password changed successfully',

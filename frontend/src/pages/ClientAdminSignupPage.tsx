@@ -32,6 +32,7 @@ import type { SignupResponse } from '../services/authService';
 import CountrySelect, { countries } from '../components/CountrySelect';
 import PhoneInput from '../components/PhoneInput';
 import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 import RolesMultiSelect from '../components/RolesMultiSelect';
 
 const COMPANY_SIZES = [
@@ -68,8 +69,19 @@ const getServiceAgreementUrl = (countryCode: string): string => {
     GB: 'uk',
     US: 'us',
   };
-  const region = regionMap[countryCode] || 'us';
+  // Default to AU for any other country
+  const region = regionMap[countryCode] || 'au';
   return `https://teamified.com/service-agreement?region=${region}`;
+};
+
+const getServiceAgreementLabel = (countryCode: string): string => {
+  const labelMap: Record<string, string> = {
+    AU: 'Service Agreement (AU)',
+    GB: 'Service Agreement (UK)',
+    US: 'Service Agreement (US)',
+  };
+  // Default to AU for any other country
+  return labelMap[countryCode] || 'Service Agreement (AU)';
 };
 
 const isValidUrl = (url: string): boolean => {
@@ -105,7 +117,7 @@ const ClientAdminSignupPage: React.FC = () => {
     slug: '',
     industry: '',
     companySize: '',
-    country: 'US',
+    country: '',
     mobileCountryCode: 'AU',
     mobileNumber: '',
     phoneCountryCode: 'AU',
@@ -134,6 +146,8 @@ const ClientAdminSignupPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
+  const [websiteAnalysisStatus, setWebsiteAnalysisStatus] = useState<'idle' | 'analyzing' | 'completed' | 'failed'>('idle');
+  const userTypedDescriptionRef = useRef(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [pendingAtsRetry, setPendingAtsRetry] = useState<SignupResponse | null>(null);
@@ -184,9 +198,17 @@ const ClientAdminSignupPage: React.FC = () => {
   }, []);
 
   const handleEmailBlur = () => {
-    if (formData.email && /\S+@\S+\.\S+/.test(formData.email)) {
-      checkEmailExists(formData.email);
+    // Validate email format first
+    if (!formData.email) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return;
     }
+    setErrors(prev => ({ ...prev, email: '' }));
+    // Check if email exists
+    checkEmailExists(formData.email);
   };
 
   const handleLoginRedirect = () => {
@@ -211,6 +233,7 @@ const ClientAdminSignupPage: React.FC = () => {
     if (!isValidUrl(formData.website) || isAnalyzingWebsite) return;
     
     setIsAnalyzingWebsite(true);
+    setWebsiteAnalysisStatus('analyzing');
     setAiAnalysisError(false);
     try {
       let normalizedUrl = formData.website.trim();
@@ -219,16 +242,22 @@ const ClientAdminSignupPage: React.FC = () => {
       }
       const result = await analyzeWebsite(normalizedUrl);
       if (result.success && result.businessDescription) {
-        setFormData(prev => ({
-          ...prev,
-          businessDescription: result.businessDescription || '',
-        }));
+        // Only set description if user hasn't manually typed anything
+        if (!userTypedDescriptionRef.current) {
+          setFormData(prev => ({
+            ...prev,
+            businessDescription: result.businessDescription || '',
+          }));
+        }
+        setWebsiteAnalysisStatus('completed');
       } else {
         setAiAnalysisError(true);
+        setWebsiteAnalysisStatus('failed');
       }
     } catch (error) {
       console.error('Website analysis failed:', error);
       setAiAnalysisError(true);
+      setWebsiteAnalysisStatus('failed');
     } finally {
       setIsAnalyzingWebsite(false);
     }
@@ -250,6 +279,11 @@ const ClientAdminSignupPage: React.FC = () => {
       slugManuallyEditedRef.current = true;
     }
 
+    // Track if user has manually typed in business description
+    if (field === 'businessDescription' && typeof value === 'string' && value.trim()) {
+      userTypedDescriptionRef.current = true;
+    }
+
     if (field === 'companyName' && !slugManuallyEditedRef.current && typeof value === 'string') {
       const slugValue = value
         .toLowerCase()
@@ -261,25 +295,162 @@ const ClientAdminSignupPage: React.FC = () => {
     }
   };
 
+  // Field-level blur validation handlers
+  const validateEmailField = () => {
+    if (!formData.email) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: 'Enter a valid email address.' }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, email: '' }));
+    return true;
+  };
+
+  const validatePasswordField = () => {
+    if (!formData.password) {
+      setErrors(prev => ({ ...prev, password: 'Password is required.' }));
+      return false;
+    } else if (!isPasswordValid(formData.password)) {
+      setErrors(prev => ({ ...prev, password: 'Password does not meet requirements.' }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, password: '' }));
+    return true;
+  };
+
+  const validateConfirmPasswordField = () => {
+    if (!formData.confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Please confirm your password.' }));
+      return false;
+    } else if (formData.password !== formData.confirmPassword) {
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match.' }));
+      return false;
+    }
+    setErrors(prev => ({ ...prev, confirmPassword: '' }));
+    return true;
+  };
+
+  // Check if email step is valid (for button disabled state)
+  const isEmailStepValid = () => {
+    const emailValid = formData.email && /\S+@\S+\.\S+/.test(formData.email);
+    const passwordValid = formData.password && isPasswordValid(formData.password);
+    const confirmPasswordValid = formData.confirmPassword && formData.password === formData.confirmPassword;
+    return emailValid && passwordValid && confirmPasswordValid && !emailExists && !isCheckingEmail;
+  };
+
+  // Mobile number validation using libphonenumber-js
+  const validateMobileNumber = (phoneNumber: string, countryCode: string): boolean => {
+    if (!phoneNumber) {
+      setErrors(prev => ({ ...prev, mobileNumber: 'Mobile number is required.' }));
+      return false;
+    }
+
+    // Check for digits only
+    if (!/^\d+$/.test(phoneNumber)) {
+      setErrors(prev => ({ ...prev, mobileNumber: 'Mobile number must contain digits only.' }));
+      return false;
+    }
+
+    // Validate using libphonenumber-js - pass national number with country code
+    try {
+      const country = countries.find(c => c.code === countryCode);
+      // isValidPhoneNumber expects national number when country is provided
+      const isValid = isValidPhoneNumber(phoneNumber, countryCode as any);
+      
+      if (!isValid) {
+        const countryName = country?.name || countryCode;
+        setErrors(prev => ({ ...prev, mobileNumber: `Enter a valid mobile number for ${countryName}.` }));
+        return false;
+      }
+    } catch {
+      // Fallback: basic length validation if libphonenumber fails
+      if (phoneNumber.length < 6 || phoneNumber.length > 15) {
+        setErrors(prev => ({ ...prev, mobileNumber: 'Enter a valid mobile number.' }));
+        return false;
+      }
+    }
+
+    setErrors(prev => ({ ...prev, mobileNumber: '' }));
+    return true;
+  };
+
+  // Phone number validation (optional field) using libphonenumber-js
+  const validatePhoneNumber = (phoneNumber: string, countryCode: string): boolean => {
+    // Phone is optional, so empty is valid
+    if (!phoneNumber) {
+      setErrors(prev => ({ ...prev, phoneNumber: '' }));
+      return true;
+    }
+
+    // Check for digits only
+    if (!/^\d+$/.test(phoneNumber)) {
+      setErrors(prev => ({ ...prev, phoneNumber: 'Phone number must contain digits only.' }));
+      return false;
+    }
+
+    // Validate using libphonenumber-js - pass national number with country code
+    try {
+      const country = countries.find(c => c.code === countryCode);
+      // isValidPhoneNumber expects national number when country is provided
+      const isValid = isValidPhoneNumber(phoneNumber, countryCode as any);
+      
+      if (!isValid) {
+        const countryName = country?.name || countryCode;
+        setErrors(prev => ({ ...prev, phoneNumber: `Enter a valid phone number for ${countryName}.` }));
+        return false;
+      }
+    } catch {
+      // Fallback: basic length validation if libphonenumber fails
+      if (phoneNumber.length < 6 || phoneNumber.length > 15) {
+        setErrors(prev => ({ ...prev, phoneNumber: 'Enter a valid phone number.' }));
+        return false;
+      }
+    }
+
+    setErrors(prev => ({ ...prev, phoneNumber: '' }));
+    return true;
+  };
+
+  // Check if name step is valid (for button disabled state)
+  const isNameStepValid = () => {
+    const firstNameValid = formData.firstName && formData.firstName.length <= 50;
+    const lastNameValid = formData.lastName && formData.lastName.length <= 50;
+    const mobileValid = formData.mobileNumber && validateMobileNumberSilent(formData.mobileNumber, formData.mobileCountryCode);
+    return firstNameValid && lastNameValid && mobileValid;
+  };
+
+  // Silent validation (doesn't set errors)
+  const validateMobileNumberSilent = (phoneNumber: string, countryCode: string): boolean => {
+    if (!phoneNumber || !/^\d+$/.test(phoneNumber)) return false;
+    try {
+      // isValidPhoneNumber expects national number when country is provided
+      return isValidPhoneNumber(phoneNumber, countryCode as any);
+    } catch {
+      return phoneNumber.length >= 6 && phoneNumber.length <= 15;
+    }
+  };
+
   const validateEmailStep = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Enter a valid email address.';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Enter a valid email address.';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Password is required.';
     } else if (!isPasswordValid(formData.password)) {
-      newErrors.password = 'Password does not meet all requirements';
+      newErrors.password = 'Password does not meet requirements.';
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = 'Please confirm your password.';
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = 'Passwords do not match.';
     }
 
     setErrors(newErrors);
@@ -301,8 +472,25 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.lastName = 'Last name must not exceed 50 characters';
     }
 
+    // Mobile number validation
     if (!formData.mobileNumber) {
-      newErrors.mobileNumber = 'Mobile number is required';
+      newErrors.mobileNumber = 'Mobile number is required.';
+    } else if (!/^\d+$/.test(formData.mobileNumber)) {
+      newErrors.mobileNumber = 'Mobile number must contain digits only.';
+    } else {
+      try {
+        const country = countries.find(c => c.code === formData.mobileCountryCode);
+        // isValidPhoneNumber expects national number when country is provided
+        const isValid = isValidPhoneNumber(formData.mobileNumber, formData.mobileCountryCode as any);
+        if (!isValid) {
+          const countryName = country?.name || formData.mobileCountryCode;
+          newErrors.mobileNumber = `Enter a valid mobile number for ${countryName}.`;
+        }
+      } catch {
+        if (formData.mobileNumber.length < 6 || formData.mobileNumber.length > 15) {
+          newErrors.mobileNumber = 'Enter a valid mobile number.';
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -793,57 +981,35 @@ const ClientAdminSignupPage: React.FC = () => {
                   />
                 </Box>
 
-                {/* Email Exists Warning */}
+                {/* Email Exists Inline Error */}
                 {emailExists && (
-                  <Box
+                  <Typography
                     sx={{
-                      bgcolor: '#FEF3C7',
-                      borderRadius: 2,
-                      p: 2.5,
-                      mb: 2,
-                      border: '1px solid #FCD34D',
+                      color: '#d32f2f',
+                      fontSize: '0.75rem',
+                      mt: 0.5,
+                      mb: 1,
+                      ml: 1.75,
                     }}
                   >
-                    <Typography
+                    Account exists. Are you trying to{' '}
+                    <Box
+                      component="a"
+                      href="/login"
+                      onClick={handleLoginRedirect}
                       sx={{
-                        color: '#92400E',
-                        fontWeight: 500,
-                        fontSize: '0.9rem',
-                        mb: 2,
+                        color: '#9333EA',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
                       }}
                     >
-                      This email ID is already present with us. Please log in or use a different email ID.
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<LoginIcon />}
-                        onClick={handleLoginRedirect}
-                        sx={{
-                          bgcolor: '#9333EA',
-                          '&:hover': { bgcolor: '#7C3AED' },
-                          textTransform: 'none',
-                        }}
-                      >
-                        Login
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<RefreshIcon />}
-                        onClick={handleUseDifferentEmail}
-                        sx={{
-                          borderColor: '#9333EA',
-                          color: '#9333EA',
-                          '&:hover': { borderColor: '#7C3AED', bgcolor: 'rgba(147, 51, 234, 0.04)' },
-                          textTransform: 'none',
-                        }}
-                      >
-                        Use different email
-                      </Button>
+                      login
                     </Box>
-                  </Box>
+                    ?
+                  </Typography>
                 )}
 
                 {/* Only show remaining fields if email doesn't exist - keep visible during check but disabled */}
@@ -869,9 +1035,10 @@ const ClientAdminSignupPage: React.FC = () => {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
+                    onBlur={validatePasswordField}
                     error={!!errors.password}
                     helperText={errors.password}
-                    disabled={isLoading || isCheckingEmail}
+                    disabled={isLoading}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -904,8 +1071,10 @@ const ClientAdminSignupPage: React.FC = () => {
                   />
                 </Box>
 
-                {/* Password Requirements */}
-                <PasswordRequirements password={formData.password} />
+                {/* Password Requirements - hide when password is valid */}
+                {!isPasswordValid(formData.password) && (
+                  <PasswordRequirements password={formData.password} />
+                )}
 
                 {/* Confirm Password Field */}
                 <Box sx={{ mb: 2, mt: 2 }}>
@@ -927,9 +1096,23 @@ const ClientAdminSignupPage: React.FC = () => {
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    error={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword}
-                    helperText={formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword ? 'Passwords do not match' : ''}
-                    disabled={isLoading || isCheckingEmail}
+                    onBlur={validateConfirmPasswordField}
+                    error={!!errors.confirmPassword}
+                    helperText={
+                      errors.confirmPassword 
+                        ? errors.confirmPassword 
+                        : (formData.confirmPassword && formData.password === formData.confirmPassword 
+                            ? 'Passwords match.' 
+                            : '')
+                    }
+                    FormHelperTextProps={{
+                      sx: {
+                        color: (!errors.confirmPassword && formData.confirmPassword && formData.password === formData.confirmPassword) 
+                          ? '#10B981' 
+                          : undefined
+                      }
+                    }}
+                    disabled={isLoading}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -991,7 +1174,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={isLoading}
+                    disabled={isLoading || !isEmailStepValid()}
                     sx={{
                       flex: 1,
                       py: 1.5,
@@ -1129,8 +1312,15 @@ const ClientAdminSignupPage: React.FC = () => {
                   <PhoneInput
                     countryCode={formData.mobileCountryCode}
                     phoneNumber={formData.mobileNumber}
-                    onCountryChange={(value) => handleInputChange('mobileCountryCode', value)}
+                    onCountryChange={(value) => {
+                      handleInputChange('mobileCountryCode', value);
+                      if (formData.mobileNumber) {
+                        validateMobileNumber(formData.mobileNumber, value);
+                      }
+                    }}
                     onPhoneChange={(value) => handleInputChange('mobileNumber', value)}
+                    onBlur={() => validateMobileNumber(formData.mobileNumber, formData.mobileCountryCode)}
+                    label=""
                     error={!!errors.mobileNumber}
                     helperText={errors.mobileNumber}
                     disabled={isLoading}
@@ -1156,8 +1346,17 @@ const ClientAdminSignupPage: React.FC = () => {
                   <PhoneInput
                     countryCode={formData.phoneCountryCode}
                     phoneNumber={formData.phoneNumber}
-                    onCountryChange={(value) => handleInputChange('phoneCountryCode', value)}
+                    onCountryChange={(value) => {
+                      handleInputChange('phoneCountryCode', value);
+                      if (formData.phoneNumber) {
+                        validatePhoneNumber(formData.phoneNumber, value);
+                      }
+                    }}
                     onPhoneChange={(value) => handleInputChange('phoneNumber', value)}
+                    onBlur={() => validatePhoneNumber(formData.phoneNumber, formData.phoneCountryCode)}
+                    label=""
+                    error={!!errors.phoneNumber}
+                    helperText={errors.phoneNumber}
                     disabled={isLoading}
                   />
                 </Box>
@@ -1214,7 +1413,7 @@ const ClientAdminSignupPage: React.FC = () => {
                     <Button
                       type="submit"
                       variant="contained"
-                      disabled={isLoading}
+                      disabled={isLoading || !isNameStepValid()}
                       sx={{
                         flex: 1,
                         py: 1.5,
@@ -1448,15 +1647,21 @@ const ClientAdminSignupPage: React.FC = () => {
                         fullWidth
                         placeholder="www.example.com"
                         value={formData.website}
-                        onChange={(e) => handleInputChange('website', e.target.value)}
+                        onChange={(e) => {
+                          handleInputChange('website', e.target.value);
+                          // Reset analysis status when URL changes
+                          if (websiteAnalysisStatus !== 'idle') {
+                            setWebsiteAnalysisStatus('idle');
+                          }
+                        }}
                         onBlur={() => {
-                          if (isValidUrl(formData.website) && !formData.businessDescription) {
+                          if (isValidUrl(formData.website) && websiteAnalysisStatus === 'idle') {
                             handleAnalyzeWebsite();
                           }
                         }}
                         error={!!errors.website}
                         helperText={errors.website}
-                        disabled={isLoading}
+                        disabled={isLoading || isAnalyzingWebsite}
                         inputRef={websiteInputRef}
                         sx={{
                           '& .MuiOutlinedInput-root': {
@@ -1468,21 +1673,79 @@ const ClientAdminSignupPage: React.FC = () => {
                           },
                         }}
                       />
+                      {websiteAnalysisStatus === 'failed' && (
+                        <Typography sx={{ color: '#EF4444', fontSize: '0.75rem', mt: 0.5 }}>
+                          We couldn't fetch your website.
+                        </Typography>
+                      )}
                     </Box>
+
+                    {/* Analysis Status Feedback */}
+                    {websiteAnalysisStatus === 'analyzing' && (
+                      <Box sx={{ 
+                        mb: 3, 
+                        p: 2, 
+                        bgcolor: '#F5F3FF', 
+                        borderRadius: 2, 
+                        border: '1px solid #9333EA',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}>
+                        <CircularProgress size={20} sx={{ color: '#9333EA' }} />
+                        <Box>
+                          <Typography sx={{ fontWeight: 600, color: '#9333EA', fontSize: '0.875rem' }}>
+                            Analyzing your website...
+                          </Typography>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                            We're using AI to understand your business and generate a description
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+
+                    {websiteAnalysisStatus === 'completed' && (
+                      <Box sx={{ 
+                        mb: 3, 
+                        p: 2, 
+                        bgcolor: '#F0FDF4', 
+                        borderRadius: 2, 
+                        border: '1px solid #10B981',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                      }}>
+                        <Box sx={{ 
+                          width: 24, 
+                          height: 24, 
+                          borderRadius: '50%', 
+                          bgcolor: '#10B981', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center' 
+                        }}>
+                          <Typography sx={{ color: 'white', fontSize: '0.875rem', fontWeight: 600 }}>✓</Typography>
+                        </Box>
+                        <Typography sx={{ fontWeight: 600, color: '#10B981', fontSize: '0.875rem' }}>
+                          Website analyzed successfully! Click Next to continue.
+                        </Typography>
+                      </Box>
+                    )}
 
                     <Box sx={{ mb: 3 }}>
                       <Link
                         component="button"
                         type="button"
                         onClick={handleNoWebsiteToggle}
+                        disabled={isAnalyzingWebsite}
                         sx={{
-                          color: '#9333EA',
+                          color: isAnalyzingWebsite ? '#9CA3AF' : '#9333EA',
                           textDecoration: 'none',
                           fontSize: '0.875rem',
                           fontWeight: 500,
-                          cursor: 'pointer',
+                          cursor: isAnalyzingWebsite ? 'not-allowed' : 'pointer',
                           '&:hover': {
-                            textDecoration: 'underline',
+                            textDecoration: isAnalyzingWebsite ? 'none' : 'underline',
                           },
                         }}
                       >
@@ -1519,7 +1782,7 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     variant="outlined"
                     onClick={handleBack}
-                    disabled={isLoading}
+                    disabled={isLoading || isAnalyzingWebsite}
                     startIcon={<ArrowBack />}
                     sx={{
                       flex: 1,
@@ -1541,7 +1804,12 @@ const ClientAdminSignupPage: React.FC = () => {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={isLoading}
+                    disabled={
+                      isLoading || 
+                      isAnalyzingWebsite || 
+                      (!noWebsite && formData.website && !isValidUrl(formData.website)) ||
+                      (!noWebsite && websiteAnalysisStatus === 'failed')
+                    }
                     sx={{
                       flex: 1,
                       py: 1.5,
@@ -1563,7 +1831,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    Next
+                    {isAnalyzingWebsite ? 'Analyzing...' : 'Next'}
                   </Button>
                 </Box>
               </Box>
@@ -1596,31 +1864,23 @@ const ClientAdminSignupPage: React.FC = () => {
                 )}
 
                 <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography
-                      component="label"
-                      sx={{
-                        fontWeight: 500,
-                        color: '#1a1a1a',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Business Description
-                    </Typography>
-                    {isAnalyzingWebsite && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={14} sx={{ color: '#9333EA' }} />
-                        <Typography sx={{ fontSize: '0.75rem', color: '#9333EA', fontWeight: 500 }}>
-                          AI is analyzing your website...
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
+                  <Typography
+                    component="label"
+                    sx={{
+                      display: 'block',
+                      mb: 1,
+                      fontWeight: 500,
+                      color: '#1a1a1a',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Business Description
+                  </Typography>
                   <TextField
                     fullWidth
                     multiline
                     rows={4}
-                    placeholder={isAnalyzingWebsite ? "Generating description from your website..." : "Tell us what your company does..."}
+                    placeholder="Tell us what your company does..."
                     value={formData.businessDescription}
                     onChange={(e) => {
                       handleInputChange('businessDescription', e.target.value);
@@ -1629,21 +1889,16 @@ const ClientAdminSignupPage: React.FC = () => {
                     disabled={isLoading}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: isAnalyzingWebsite ? '#F9FAFB' : 'white',
+                        bgcolor: 'white',
                         borderRadius: 2,
-                        '& fieldset': { borderColor: isAnalyzingWebsite ? '#9333EA' : '#E5E7EB' },
+                        '& fieldset': { borderColor: '#E5E7EB' },
                         '&:hover fieldset': { borderColor: '#9333EA' },
                         '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
                       },
                     }}
                   />
-                  {aiAnalysisError && !isAnalyzingWebsite && (
-                    <Typography variant="caption" sx={{ color: '#EF4444', mt: 0.5, display: 'block' }}>
-                      Could not analyze website. Please enter a description manually.
-                    </Typography>
-                  )}
-                  {formData.businessDescription && !isAnalyzingWebsite && !aiAnalysisError && formData.website && isValidUrl(formData.website) && (
-                    <Typography variant="caption" sx={{ color: '#9CA3AF', mt: 0.5, display: 'block' }}>
+                  {formData.businessDescription && !userTypedDescriptionRef.current && formData.website && isValidUrl(formData.website) && (
+                    <Typography variant="caption" sx={{ color: '#10B981', mt: 0.5, display: 'block' }}>
                       AI-generated from your website. Feel free to edit.
                     </Typography>
                   )}
@@ -2166,7 +2421,7 @@ const ClientAdminSignupPage: React.FC = () => {
                           target="_blank"
                           sx={{ color: '#9333EA' }}
                         >
-                          Service Agreement (AU)
+                          {getServiceAgreementLabel(formData.country)}
                         </Link>
                         ,{' '}
                         <Link href="https://teamified.com/terms" target="_blank" sx={{ color: '#9333EA' }}>

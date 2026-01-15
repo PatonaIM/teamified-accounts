@@ -10,17 +10,23 @@ import * as crypto from 'crypto';
 import { User } from '../entities/user.entity';
 import { AuditService } from '../../audit/audit.service';
 import { EmailService } from '../../email/services/email.service';
+import { RedisRateLimiterService } from '../../common/services/redis-rate-limiter.service';
 import { VerifyEmailResponseDto, ProfileCompletionStatusDto } from '../dto/verify-email.dto';
 
 @Injectable()
 export class EmailVerificationService {
   private readonly logger = new Logger(EmailVerificationService.name);
+  
+  // IP-based rate limiter constants
+  private readonly IP_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+  private readonly IP_MAX_ATTEMPTS_PER_HOUR = 10; // More generous than per-user limit
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly auditService: AuditService,
     private readonly emailService: EmailService,
+    private readonly rateLimiter: RedisRateLimiterService,
   ) {}
 
   async verifyEmail(
@@ -125,14 +131,18 @@ export class EmailVerificationService {
       }
 
       const roleType = user.userRoles?.[0]?.roleType || 'candidate';
-      const subject = 'Welcome to Teamified!';
       
-      let htmlContent: string;
-      let textContent: string;
-      const displayName = user.firstName || 'there';
-
+      // Skip welcome email for candidates/job seekers - they only receive verification email
       if (roleType === 'candidate') {
-        htmlContent = `
+        this.logger.log(`Skipping welcome email for candidate user: ${user.email} (candidates only receive verification email)`);
+        return;
+      }
+
+      const subject = 'Welcome to Teamified!';
+      const displayName = user.firstName || 'there';
+      
+      // Business/employer welcome email
+      const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -140,64 +150,7 @@ export class EmailVerificationService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Teamified</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
-        .content { padding: 30px 20px; background-color: #f8f9fa; }
-        .cta-button { 
-            display: inline-block; 
-            background-color: #9333EA;
-            color: white; 
-            padding: 14px 36px; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            margin: 20px 0;
-            font-weight: 600;
-            font-size: 16px;
-        }
-        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 style="margin: 0; font-size: 28px;">Welcome to Teamified!</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.95;">Your account is ready</p>
-        </div>
-        <div class="content">
-            <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
-            
-            <p style="font-size: 16px;">Your email has been verified. Your candidate account is now ready!</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="https://jobseeker.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Browse Jobs</a>
-            </div>
-            
-            <p style="color: #666;">With Teamified, you can:</p>
-            <ul style="color: #666; padding-left: 20px; line-height: 1.8;">
-                <li>Browse and apply for exciting job opportunities</li>
-                <li>Track your application status</li>
-                <li>Build your professional profile</li>
-            </ul>
-        </div>
-        <div class="footer">
-            <p style="margin: 5px 0;">If you didn't create this account, please contact our support team.</p>
-            <p style="margin: 5px 0;">© ${new Date().getFullYear()} Teamified. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>`;
-        textContent = `Welcome to Teamified, ${displayName}!\n\nYour email has been verified. Your candidate account is now ready!\n\nBrowse Jobs: https://jobseeker.teamified.com.au\n\nWith Teamified, you can:\n- Browse and apply for exciting job opportunities\n- Track your application status\n- Build your professional profile\n\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
-      } else {
-        htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Teamified</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        body { font-family: 'Nunito Sans', Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #9333EA 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
         .content { padding: 30px 20px; background-color: #f8f9fa; }
@@ -224,6 +177,7 @@ export class EmailVerificationService {
             font-size: 16px;
             border: 2px solid #9333EA;
         }
+        .email-line { color: #666; font-size: 14px; margin: 15px 0; }
         .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
     </style>
 </head>
@@ -236,7 +190,9 @@ export class EmailVerificationService {
         <div class="content">
             <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
             
-            <p style="font-size: 16px;">Your email has been verified. Your employer account is now ready!</p>
+            <p style="font-size: 16px;">Your employer account is now ready! Start building your team today.</p>
+            
+            <p class="email-line">You're signed in with: <strong>${user.email}</strong></p>
             
             <div style="text-align: center; margin: 30px 0;">
                 <a href="https://ats.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Post Your First Job</a>
@@ -257,8 +213,7 @@ export class EmailVerificationService {
     </div>
 </body>
 </html>`;
-        textContent = `Welcome to Teamified, ${displayName}!\n\nYour email has been verified. Your employer account is now ready!\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
-      }
+      const textContent = `Welcome to Teamified, ${displayName}!\n\nYour employer account is now ready! Start building your team today.\n\nYou're signed in with: ${user.email}\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\nIf you didn't create this account, please contact our support team.\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
 
       await this.emailService.sendEmail({
         to: user.email,
@@ -362,5 +317,243 @@ export class EmailVerificationService {
     user.emailVerificationToken = crypto.randomUUID();
     user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await this.userRepository.save(user);
+  }
+
+  /**
+   * OWASP-compliant resend verification email
+   * - Always returns same success message regardless of account state (prevents enumeration)
+   * - Rate limited to 3 per email per hour
+   * - Invalidates previous tokens when new token is generated
+   */
+  async resendVerificationEmail(
+    email: string,
+    baseUrl: string,
+    ip?: string,
+    userAgent?: string,
+  ): Promise<{ message: string }> {
+    const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+    const MAX_RESENDS_PER_HOUR = 3;
+    const GENERIC_SUCCESS_MESSAGE = 'We have sent a verification link to this email address. Please check your email.';
+
+    // Add random timing jitter (200-500ms) to prevent timing attacks
+    const jitter = Math.floor(Math.random() * 300) + 200;
+    await new Promise(resolve => setTimeout(resolve, jitter));
+
+    // Normalize email first
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // IP-based rate limiting (prevents enumeration probing)
+    if (ip) {
+      const ipRateLimitKey = `resend_verification_ip:${ip}`;
+      const ipRateLimit = await this.rateLimiter.checkRateLimit(
+        ipRateLimitKey,
+        this.IP_MAX_ATTEMPTS_PER_HOUR,
+        this.IP_RATE_LIMIT_WINDOW_MS,
+      );
+      
+      if (!ipRateLimit.allowed) {
+        this.logger.warn(`[RATE_LIMITED_NO_SEND] IP rate limit exceeded for resend verification: ${ip} (${ipRateLimit.currentCount} attempts)`);
+        await this.auditService.log({
+          action: 'email_verification_resend_ip_rate_limited',
+          entityType: 'System',
+          entityId: null,
+          actorUserId: null,
+          actorRole: null,
+          changes: { 
+            ip,
+            attemptCount: ipRateLimit.currentCount,
+          },
+          ip,
+          userAgent,
+        });
+        return { message: GENERIC_SUCCESS_MESSAGE };
+      }
+    }
+
+    // Find user by email
+    const user = await this.userRepository.findOne({
+      where: { email: normalizedEmail },
+    });
+
+    // OWASP: Always return same message - don't reveal if account exists
+    if (!user) {
+      this.logger.log(`[NOOP_NOT_FOUND] Resend verification requested for non-existent email: ${normalizedEmail.substring(0, 5)}...`);
+      return { message: GENERIC_SUCCESS_MESSAGE };
+    }
+
+    // If email already verified, return success (don't reveal status)
+    if (user.emailVerified) {
+      this.logger.log(`[NOOP_ALREADY_VERIFIED] Resend verification requested for already-verified email: ${user.id}`);
+      return { message: GENERIC_SUCCESS_MESSAGE };
+    }
+
+    // Check rate limiting
+    const now = new Date();
+    const windowStart = user.emailVerificationResendWindowStart;
+    
+    // Check if we're in a new rate limit window
+    if (!windowStart || now.getTime() - windowStart.getTime() > RATE_LIMIT_WINDOW_MS) {
+      // Start new rate limit window
+      user.emailVerificationResendCount = 0;
+      user.emailVerificationResendWindowStart = now;
+    }
+
+    // Check if rate limit exceeded
+    if (user.emailVerificationResendCount >= MAX_RESENDS_PER_HOUR) {
+      this.logger.warn(`[RATE_LIMITED_NO_SEND] Rate limit exceeded for verification resend: ${user.id}`);
+      await this.auditService.log({
+        action: 'email_verification_resend_rate_limited',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: null,
+        actorRole: null,
+        changes: { 
+          email: user.email,
+          attemptCount: user.emailVerificationResendCount,
+        },
+        ip,
+        userAgent,
+      });
+      // OWASP: Still return success message
+      return { message: GENERIC_SUCCESS_MESSAGE };
+    }
+
+    // Invalidate previous token and generate new one
+    user.emailVerificationToken = crypto.randomUUID();
+    user.emailVerificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    user.emailVerificationResendCount += 1;
+    
+    await this.userRepository.save(user);
+
+    // Send verification email
+    try {
+      await this.emailService.sendEmailVerificationReminder(
+        user.email,
+        user.firstName || 'there',
+        user.emailVerificationToken,
+      );
+
+      await this.auditService.log({
+        action: 'email_verification_resend_success',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: null,
+        actorRole: null,
+        changes: { 
+          email: user.email,
+          resendCount: user.emailVerificationResendCount,
+        },
+        ip,
+        userAgent,
+      });
+
+      this.logger.log(`[SENT] Verification email resent to user: ${user.id} (count: ${user.emailVerificationResendCount})`);
+    } catch (error) {
+      this.logger.error(`Failed to resend verification email to ${user.id}:`, error);
+      // Still return success to prevent enumeration
+    }
+
+    return { message: GENERIC_SUCCESS_MESSAGE };
+  }
+
+  /**
+   * Verify email with enhanced error handling for expired/invalid tokens
+   * Returns specific error codes that frontend can use to show appropriate UI
+   */
+  async verifyEmailWithDetailedResponse(
+    token: string,
+    ip: string,
+    userAgent: string,
+  ): Promise<{ 
+    verified: boolean; 
+    message: string; 
+    errorCode?: 'INVALID_TOKEN' | 'EXPIRED_TOKEN' | 'ALREADY_VERIFIED';
+    email?: string;
+  }> {
+    this.logger.log(`Email verification attempt for token: ${token.substring(0, 8)}...`);
+
+    // Find user by token
+    const user = await this.userRepository.findOne({
+      where: { emailVerificationToken: token },
+    });
+
+    if (!user) {
+      // Token not found - could be invalid or already used/invalidated
+      await this.auditService.log({
+        action: 'email_verification_failed',
+        entityType: 'User',
+        entityId: null,
+        actorUserId: null,
+        actorRole: null,
+        changes: { reason: 'Invalid token' },
+        ip,
+        userAgent,
+      });
+      return {
+        verified: false,
+        message: 'This verification link is invalid or has expired. Please request a new verification email.',
+        errorCode: 'INVALID_TOKEN',
+      };
+    }
+
+    // Check if token is expired
+    if (user.emailVerificationTokenExpiry && user.emailVerificationTokenExpiry < new Date()) {
+      await this.auditService.log({
+        action: 'email_verification_failed',
+        entityType: 'User',
+        entityId: user.id,
+        actorUserId: user.id,
+        actorRole: 'User',
+        changes: { reason: 'Token expired' },
+        ip,
+        userAgent,
+      });
+      return {
+        verified: false,
+        message: 'This verification link has expired. Please request a new verification email.',
+        errorCode: 'EXPIRED_TOKEN',
+        email: user.email,
+      };
+    }
+
+    // Check if email is already verified
+    if (user.emailVerified) {
+      return {
+        verified: true,
+        message: 'Your email is already verified.',
+        errorCode: 'ALREADY_VERIFIED',
+        email: user.email,
+      };
+    }
+
+    // Verify the email
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationTokenExpiry = null;
+    await this.userRepository.save(user);
+
+    // Log successful verification
+    await this.auditService.logUserEmailVerified(
+      user.id,
+      'user',
+      user.id,
+      {
+        email: user.email,
+        verifiedAt: new Date().toISOString(),
+      },
+      ip,
+      userAgent,
+    );
+
+    this.logger.log(`Email verification successful for user: ${user.email}`);
+
+    // Send welcome email after successful verification
+    await this.sendWelcomeEmail(user.id);
+
+    return {
+      verified: true,
+      message: 'Email verified successfully',
+      email: user.email,
+    };
   }
 }

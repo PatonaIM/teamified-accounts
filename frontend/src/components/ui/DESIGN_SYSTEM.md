@@ -65,22 +65,132 @@ import {
 
 ## Typography
 
-**Font Family:** Nunito Sans
+### Overview
+Typography follows a clear hierarchy using the Nunito Sans font family for a friendly yet professional appearance.
+
+### Font Family
+
+```css
+font-family: 'Nunito Sans', sans-serif;
+```
+
+### Heading Hierarchy
 
 ```tsx
-// Headings
-<h1 className="text-4xl font-bold">Heading 1</h1>
-<h2 className="text-3xl font-semibold">Heading 2</h2>
-<h3 className="text-2xl font-semibold">Heading 3</h3>
-<h4 className="text-xl font-semibold">Heading 4</h4>
-<h5 className="text-lg font-medium">Heading 5</h5>
-<h6 className="text-base font-medium">Heading 6</h6>
+<h1 className="text-4xl font-bold">Heading 1 (36px)</h1>
+<h2 className="text-3xl font-semibold">Heading 2 (30px)</h2>
+<h3 className="text-2xl font-semibold">Heading 3 (24px)</h3>
+<h4 className="text-xl font-semibold">Heading 4 (20px)</h4>
+<h5 className="text-lg font-medium">Heading 5 (18px)</h5>
+<h6 className="text-base font-medium">Heading 6 (16px)</h6>
+```
 
-// Body text
-<p className="text-lg">Large body text</p>
-<p className="text-base">Default body text</p>
-<p className="text-sm">Small text</p>
-<p className="text-xs">Extra small text</p>
+### Body Text
+
+```tsx
+// Large body text
+<p className="text-lg">Large body text for emphasis.</p>
+
+// Default body text
+<p className="text-base">Default body text for main content.</p>
+
+// Small text
+<p className="text-sm">Small text for secondary information.</p>
+
+// Extra small text
+<p className="text-xs">Extra small text for captions and labels.</p>
+```
+
+### Text Colors
+
+```tsx
+// Primary text
+<p className="text-foreground">Primary text color</p>
+
+// Secondary text
+<p className="text-muted-foreground">Secondary/muted text</p>
+
+// Accent text
+<p className="text-primary">Accent/link text</p>
+
+// Error text
+<p className="text-destructive">Error text</p>
+
+// Success text
+<p className="text-success">Success text</p>
+```
+
+### Font Weights
+
+```tsx
+<p className="font-light">Light (300)</p>
+<p className="font-normal">Regular (400)</p>
+<p className="font-medium">Medium (500)</p>
+<p className="font-semibold">Semibold (600)</p>
+<p className="font-bold">Bold (700)</p>
+```
+
+### Text Styles
+
+```tsx
+// Uppercase
+<p className="uppercase tracking-wide">Uppercase text</p>
+
+// Italic
+<p className="italic">Italic text</p>
+
+// Underline
+<p className="underline">Underlined text</p>
+
+// Line through
+<p className="line-through">Strikethrough text</p>
+
+// Truncate
+<p className="truncate w-48">This is a very long text that will be truncated</p>
+```
+
+### Links
+
+```tsx
+<a href="#" className="text-primary hover:underline">Standard link</a>
+
+<a href="#" className="text-primary hover:text-primary-dark transition-colors">
+  Link with hover color
+</a>
+```
+
+### Lists
+
+```tsx
+// Unordered list
+<ul className="list-disc list-inside space-y-1">
+  <li>First item</li>
+  <li>Second item</li>
+  <li>Third item</li>
+</ul>
+
+// Ordered list
+<ol className="list-decimal list-inside space-y-1">
+  <li>First step</li>
+  <li>Second step</li>
+  <li>Third step</li>
+</ol>
+```
+
+### Code Text
+
+```tsx
+// Inline code
+<code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">
+  inline code
+</code>
+
+// Code block
+<pre className="bg-muted p-4 rounded-md overflow-x-auto">
+  <code className="text-sm font-mono">
+    const greeting = "Hello, World!";
+  </code>
+</pre>
 ```
 
 ## Component Usage

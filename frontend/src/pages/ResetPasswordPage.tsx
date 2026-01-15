@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Lock, Person } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import PasswordRequirements, { isPasswordValid } from '../components/PasswordRequirements';
 
 interface UserInfo {
   firstName: string;
@@ -33,6 +34,7 @@ const ResetPasswordPage: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -82,8 +84,8 @@ const ResetPasswordPage: React.FC = () => {
 
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (!isPasswordValid(formData.password)) {
+      newErrors.password = 'Password does not meet all requirements';
     }
 
     if (!formData.confirmPassword) {
@@ -262,7 +264,7 @@ const ResetPasswordPage: React.FC = () => {
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     error={!!errors.password}
-                    helperText={errors.password || 'At least 8 characters'}
+                    helperText={errors.password}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -283,6 +285,10 @@ const ResetPasswordPage: React.FC = () => {
                     }}
                   />
 
+                  {!isPasswordValid(formData.password) && (
+                    <PasswordRequirements password={formData.password} />
+                  )}
+
                   <TextField
                     margin="normal"
                     required
@@ -294,8 +300,26 @@ const ResetPasswordPage: React.FC = () => {
                     autoComplete="new-password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    onBlur={() => setConfirmPasswordTouched(true)}
                     error={!!errors.confirmPassword}
-                    helperText={errors.confirmPassword}
+                    helperText={
+                      errors.confirmPassword 
+                        ? errors.confirmPassword 
+                        : formData.confirmPassword && formData.password === formData.confirmPassword 
+                          ? 'Passwords match!' 
+                          : (confirmPasswordTouched && formData.confirmPassword && formData.password !== formData.confirmPassword)
+                            ? 'Passwords do not match'
+                            : ''
+                    }
+                    FormHelperTextProps={{
+                      sx: {
+                        color: formData.confirmPassword && formData.password === formData.confirmPassword 
+                          ? '#10B981' 
+                          : (confirmPasswordTouched && formData.confirmPassword && formData.password !== formData.confirmPassword)
+                            ? '#EF4444'
+                            : undefined
+                      }
+                    }}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
