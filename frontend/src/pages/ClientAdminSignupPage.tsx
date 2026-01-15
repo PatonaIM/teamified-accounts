@@ -507,6 +507,10 @@ const ClientAdminSignupPage: React.FC = () => {
       newErrors.companyName = 'Company name must not exceed 255 characters';
     }
 
+    if (!formData.country) {
+      newErrors.country = 'Country is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -1513,13 +1517,19 @@ const ClientAdminSignupPage: React.FC = () => {
                       fontSize: '0.875rem',
                     }}
                   >
-                    Country
+                    Country <span style={{ color: '#EF4444' }}>*</span>
                   </Typography>
                   <CountrySelect
                     value={formData.country}
                     onChange={(value) => handleInputChange('country', value)}
                     disabled={isLoading}
+                    error={!!errors.country}
                   />
+                  {errors.country && (
+                    <Typography sx={{ color: '#d32f2f', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
+                      {errors.country}
+                    </Typography>
+                  )}
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
