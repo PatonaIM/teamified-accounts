@@ -19,6 +19,7 @@ const ALLOWED_PATHS = [
   '/verify-email',
   '/reset-password',
   '/forgot-password',
+  '/resend-verification',
   '/invitations/preview',
   '/invitations/accept',
   '/accept-invitation',
