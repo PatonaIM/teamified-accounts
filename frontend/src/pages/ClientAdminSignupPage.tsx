@@ -1794,7 +1794,7 @@ const ClientAdminSignupPage: React.FC = () => {
                       },
                     }}
                   >
-                    {isAnalyzingWebsite ? 'Analyzing...' : 'Next'}
+                    Next
                   </Button>
                 </Box>
               </Box>
