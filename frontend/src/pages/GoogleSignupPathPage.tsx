@@ -12,6 +12,11 @@ import {
   Alert,
   CardActionArea,
   Button,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormHelperText,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -56,8 +61,9 @@ const GoogleSignupPathPage: React.FC = () => {
   const [phoneCountryCode, setPhoneCountryCode] = useState('AU');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [country, setCountry] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; mobileNumber?: string }>({});
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; mobileNumber?: string; country?: string }>({});
 
   useEffect(() => {
     if (!user) {
@@ -170,6 +176,10 @@ const GoogleSignupPathPage: React.FC = () => {
       setError('Please enter your organization name');
       return;
     }
+    if (!country) {
+      setErrors(prev => ({ ...prev, country: 'Please select a country' }));
+      return;
+    }
     setIsLoading(true);
     setLoadingType('employer');
     setError(null);
@@ -177,6 +187,7 @@ const GoogleSignupPathPage: React.FC = () => {
       const response = await api.post('/v1/auth/google/assign-role', {
         roleType: 'client_admin',
         organizationName: orgName.trim(),
+        country,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         mobileCountryCode,
@@ -225,6 +236,59 @@ const GoogleSignupPathPage: React.FC = () => {
     setBusinessStep('name');
     setError(null);
   };
+
+  const countries = [
+    { code: 'AU', name: 'Australia' },
+    { code: 'US', name: 'United States' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'NZ', name: 'New Zealand' },
+    { code: 'SG', name: 'Singapore' },
+    { code: 'IN', name: 'India' },
+    { code: 'PH', name: 'Philippines' },
+    { code: 'MY', name: 'Malaysia' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'FR', name: 'France' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'KR', name: 'South Korea' },
+    { code: 'HK', name: 'Hong Kong' },
+    { code: 'AE', name: 'United Arab Emirates' },
+    { code: 'IE', name: 'Ireland' },
+    { code: 'NL', name: 'Netherlands' },
+    { code: 'CH', name: 'Switzerland' },
+    { code: 'SE', name: 'Sweden' },
+    { code: 'DK', name: 'Denmark' },
+    { code: 'NO', name: 'Norway' },
+    { code: 'FI', name: 'Finland' },
+    { code: 'ES', name: 'Spain' },
+    { code: 'IT', name: 'Italy' },
+    { code: 'BR', name: 'Brazil' },
+    { code: 'MX', name: 'Mexico' },
+    { code: 'AR', name: 'Argentina' },
+    { code: 'ZA', name: 'South Africa' },
+    { code: 'ID', name: 'Indonesia' },
+    { code: 'TH', name: 'Thailand' },
+    { code: 'VN', name: 'Vietnam' },
+    { code: 'TW', name: 'Taiwan' },
+    { code: 'IL', name: 'Israel' },
+    { code: 'PL', name: 'Poland' },
+    { code: 'AT', name: 'Austria' },
+    { code: 'BE', name: 'Belgium' },
+    { code: 'PT', name: 'Portugal' },
+    { code: 'CZ', name: 'Czech Republic' },
+    { code: 'RO', name: 'Romania' },
+    { code: 'HU', name: 'Hungary' },
+    { code: 'GR', name: 'Greece' },
+    { code: 'CL', name: 'Chile' },
+    { code: 'CO', name: 'Colombia' },
+    { code: 'PE', name: 'Peru' },
+    { code: 'PK', name: 'Pakistan' },
+    { code: 'BD', name: 'Bangladesh' },
+    { code: 'LK', name: 'Sri Lanka' },
+    { code: 'NG', name: 'Nigeria' },
+    { code: 'KE', name: 'Kenya' },
+    { code: 'EG', name: 'Egypt' },
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   const jobSeekerFeatures = [
     { icon: <Public fontSize="small" />, text: 'Global opportunities' },
@@ -806,69 +870,160 @@ const GoogleSignupPathPage: React.FC = () => {
                   backgroundColor: 'white',
                 }}
               >
-                <Box textAlign="center" mb={3}>
-                  <Typography
-                    variant="h4"
-                    component="h1"
-                    fontWeight="bold"
-                    sx={{ color: '#1a1a1a', mb: 1 }}
-                  >
-                    Tell us about your organization
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    This helps us set up your hiring workspace
-                  </Typography>
+                <Box component="form" onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleEmployerSubmit(); }} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      Your company details?
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      Tell us about your organization
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Company Name
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="Your company name"
+                      value={orgName}
+                      onChange={(e) => setOrgName(e.target.value)}
+                      autoFocus
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 4 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Country <span style={{ color: '#EF4444' }}>*</span>
+                    </Typography>
+                    <FormControl 
+                      fullWidth 
+                      error={!!errors.country}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    >
+                      <Select
+                        value={country}
+                        onChange={(e) => {
+                          setCountry(e.target.value);
+                          if (errors.country) {
+                            setErrors(prev => ({ ...prev, country: undefined }));
+                          }
+                        }}
+                        displayEmpty
+                        disabled={isLoading}
+                      >
+                        <MenuItem value="" disabled>
+                          <span style={{ color: '#9CA3AF' }}>Country</span>
+                        </MenuItem>
+                        {countries.map((c) => (
+                          <MenuItem key={c.code} value={c.code}>
+                            {c.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      {errors.country && <FormHelperText>{errors.country}</FormHelperText>}
+                    </FormControl>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={handleBackToNameStep}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        borderColor: '#E5E7EB',
+                        color: '#9333EA',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: '#9333EA',
+                          bgcolor: '#F5F7F8',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      fullWidth
+                      disabled={isLoading || !orgName.trim() || !country}
+                      endIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : undefined}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        backgroundColor: '#9333EA',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 14px rgba(147, 51, 234, 0.4)',
+                        '&:hover': {
+                          backgroundColor: '#7C3AED',
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: '#D8B4FE',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? 'Creating...' : 'Next'}
+                    </Button>
+                  </Box>
                 </Box>
-
-                {error && (
-                  <Alert severity="error" sx={{ mb: 3 }}>
-                    {error}
-                  </Alert>
-                )}
-
-                <TextField
-                  fullWidth
-                  label="Organization Name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="e.g., Acme Corporation"
-                  sx={{ mb: 3 }}
-                  autoFocus
-                  disabled={isLoading}
-                />
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  endIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
-                  onClick={handleEmployerSubmit}
-                  disabled={isLoading || !orgName.trim()}
-                  sx={{
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    mb: 2,
-                    backgroundColor: '#9333EA',
-                    '&:hover': { backgroundColor: '#7C3AED' },
-                  }}
-                >
-                  {isLoading ? 'Setting up...' : 'Continue'}
-                </Button>
-                <Button
-                  fullWidth
-                  variant="text"
-                  startIcon={<ArrowBack />}
-                  onClick={handleBackToNameStep}
-                  disabled={isLoading}
-                  sx={{ 
-                    textTransform: 'none', 
-                    color: '#9333EA',
-                    '&:hover': { backgroundColor: 'rgba(147, 51, 234, 0.08)' },
-                  }}
-                >
-                  Back
-                </Button>
               </Card>
             </Fade>
           </Container>

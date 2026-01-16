@@ -445,6 +445,7 @@ export class GoogleOAuthService {
     userId: string,
     roleType: string,
     organizationName?: string,
+    country?: string,
     firstName?: string,
     lastName?: string,
     mobileCountryCode?: string,
@@ -532,6 +533,7 @@ export class GoogleOAuthService {
         slug,
         subscriptionTier: 'free',
         subscriptionStatus: 'active',
+        settings: country ? { country } : {},
       });
 
       const savedOrg = await this.organizationsRepository.save(organization);

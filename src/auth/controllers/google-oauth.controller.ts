@@ -163,6 +163,7 @@ export class GoogleOAuthController {
       properties: {
         roleType: { type: 'string', enum: ['candidate', 'client_admin'] },
         organizationName: { type: 'string', description: 'Required for client_admin role' },
+        country: { type: 'string', description: 'Required for client_admin role: Country code (e.g., AU)' },
         firstName: { type: 'string', description: 'Optional: Update user first name' },
         lastName: { type: 'string', description: 'Optional: Update user last name' },
         mobileCountryCode: { type: 'string', description: 'Optional: Mobile country code (e.g., AU)' },
@@ -180,6 +181,7 @@ export class GoogleOAuthController {
     @CurrentUser() user: User,
     @Body('roleType') roleType: string,
     @Body('organizationName') organizationName?: string,
+    @Body('country') country?: string,
     @Body('firstName') firstName?: string,
     @Body('lastName') lastName?: string,
     @Body('mobileCountryCode') mobileCountryCode?: string,
@@ -192,6 +194,7 @@ export class GoogleOAuthController {
       user.id,
       roleType,
       organizationName,
+      country,
       firstName,
       lastName,
       mobileCountryCode,
