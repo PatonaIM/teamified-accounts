@@ -1193,7 +1193,7 @@ const GoogleSignupPathPage: React.FC = () => {
                       Welcome to Teamified, {firstName}!
                     </Typography>
                     <Typography variant="body1" sx={{ color: '#6b7280' }}>
-                      Share your website so we can learn more about your business
+                      We'll use AI to understand your business and create a tailored job description
                     </Typography>
                   </Box>
 
