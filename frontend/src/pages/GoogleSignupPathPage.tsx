@@ -37,7 +37,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
-import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../services/authService';
+import { setAccessToken, setRefreshToken, removeTokens, setUserData, analyzeWebsite } from '../services/authService';
 import jobSeekerImage from '../assets/images/job-seeker.png';
 import businessImage from '../assets/images/business.png';
 import PhoneInput from '../components/PhoneInput';
@@ -129,6 +129,9 @@ const GoogleSignupPathPage: React.FC = () => {
   
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
+  const [websiteAnalyzed, setWebsiteAnalyzed] = useState(false);
   
   const [editMode, setEditMode] = useState(false);
   const [originalValues, setOriginalValues] = useState<{
@@ -344,6 +347,32 @@ const GoogleSignupPathPage: React.FC = () => {
 
   const handleHaveWebsiteToggle = () => {
     setNoWebsite(false);
+  };
+  
+  const handleWebsiteBlur = async () => {
+    if (!website.trim() || websiteAnalyzed || isAnalyzingWebsite) return;
+    
+    if (!isValidUrl(website)) {
+      setErrors(prev => ({ ...prev, website: 'Please enter a valid website URL' }));
+      return;
+    }
+    
+    setIsAnalyzingWebsite(true);
+    setErrors(prev => ({ ...prev, website: '' }));
+    
+    try {
+      const result = await analyzeWebsite(website);
+      if (result.success && result.businessDescription) {
+        setBusinessDescription(result.businessDescription);
+        setWebsiteAnalyzed(true);
+      } else if (!result.success && result.error) {
+        setErrors(prev => ({ ...prev, website: result.error || 'Unable to analyze website' }));
+      }
+    } catch {
+      // Silently fail - don't show error to user
+    } finally {
+      setIsAnalyzingWebsite(false);
+    }
   };
 
   const handleEditSection = (section: string) => {
@@ -1320,13 +1349,15 @@ const GoogleSignupPathPage: React.FC = () => {
                           value={website}
                           onChange={(e) => {
                             setWebsite(e.target.value);
+                            setWebsiteAnalyzed(false);
                             if (errors.website) {
                               setErrors(prev => ({ ...prev, website: '' }));
                             }
                           }}
+                          onBlur={handleWebsiteBlur}
                           error={!!errors.website}
                           helperText={errors.website}
-                          disabled={isLoading}
+                          disabled={isLoading || isAnalyzingWebsite}
                           sx={{
                             '& .MuiOutlinedInput-root': {
                               bgcolor: 'white',
