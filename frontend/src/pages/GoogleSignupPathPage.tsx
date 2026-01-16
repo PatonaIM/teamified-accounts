@@ -992,9 +992,6 @@ const GoogleSignupPathPage: React.FC = () => {
                     >
                       Your company details?
                     </Typography>
-                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
-                      Tell us about your organization
-                    </Typography>
                   </Box>
 
                   {error && (
