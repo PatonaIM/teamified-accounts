@@ -12,6 +12,10 @@ import {
   Alert,
   CardActionArea,
   Button,
+  MenuItem,
+  Link,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -37,9 +41,59 @@ import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../s
 import jobSeekerImage from '../assets/images/job-seeker.png';
 import businessImage from '../assets/images/business.png';
 import PhoneInput from '../components/PhoneInput';
+import CountrySelect, { countries } from '../components/CountrySelect';
+import RolesMultiSelect from '../components/RolesMultiSelect';
 
-type BusinessStep = 'name' | 'organization';
+type BusinessStep = 'name' | 'details' | 'website' | 'business' | 'hiring' | 'review';
 type SignupFlow = 'selection' | 'candidate' | 'business';
+
+const COMPANY_SIZES = [
+  '1-20 employees',
+  '21-50 employees',
+  '51-100 employees',
+  '101-200 employees',
+  '201-500 employees',
+  '501-1000 employees',
+  '1000+ employees',
+];
+
+const INDUSTRIES = [
+  'Technology',
+  'Healthcare',
+  'Finance',
+  'Manufacturing',
+  'Retail',
+  'Education',
+  'Consulting',
+  'Real Estate',
+  'Media & Entertainment',
+  'Other',
+];
+
+const isValidUrl = (url: string): boolean => {
+  if (!url) return false;
+  const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
+  return urlPattern.test(url);
+};
+
+const getServiceAgreementUrl = (countryCode: string): string => {
+  const regionMap: Record<string, string> = {
+    AU: 'au',
+    GB: 'uk',
+    US: 'us',
+  };
+  const region = regionMap[countryCode] || 'au';
+  return `https://teamified.com/service-agreement?region=${region}`;
+};
+
+const getServiceAgreementLabel = (countryCode: string): string => {
+  const labelMap: Record<string, string> = {
+    AU: 'Service Agreement (AU)',
+    GB: 'Service Agreement (UK)',
+    US: 'Service Agreement (US)',
+  };
+  return labelMap[countryCode] || 'Service Agreement (AU)';
+};
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +103,7 @@ const GoogleSignupPathPage: React.FC = () => {
   const [showBusinessFlow, setShowBusinessFlow] = useState(false);
   const [businessStep, setBusinessStep] = useState<BusinessStep>('name');
   const [currentFlow, setCurrentFlow] = useState<SignupFlow>('selection');
+  
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [mobileCountryCode, setMobileCountryCode] = useState('AU');
@@ -56,8 +111,24 @@ const GoogleSignupPathPage: React.FC = () => {
   const [phoneCountryCode, setPhoneCountryCode] = useState('AU');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [orgName, setOrgName] = useState('');
+  
+  const [companyName, setCompanyName] = useState('');
+  const [country, setCountry] = useState('');
+  
+  const [website, setWebsite] = useState('');
+  const [noWebsite, setNoWebsite] = useState(false);
+  
+  const [businessDescription, setBusinessDescription] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [selectedCompanySize, setSelectedCompanySize] = useState('');
+  
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [howCanWeHelp, setHowCanWeHelp] = useState('');
+  
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; mobileNumber?: string }>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (!user) {
@@ -67,7 +138,6 @@ const GoogleSignupPathPage: React.FC = () => {
     if (user.roles && user.roles.length > 0) {
       navigate('/dashboard', { replace: true });
     }
-    // Pre-fill name from Google profile
     if (user.firstName) {
       setFirstName(user.firstName);
     }
@@ -83,7 +153,7 @@ const GoogleSignupPathPage: React.FC = () => {
   };
 
   const validateCandidateNameStep = (): boolean => {
-    const newErrors: { firstName?: string; lastName?: string } = {};
+    const newErrors: { [key: string]: string } = {};
     
     if (!firstName.trim()) {
       newErrors.firstName = 'First name is required';
@@ -141,7 +211,7 @@ const GoogleSignupPathPage: React.FC = () => {
   };
 
   const validateNameStep = (): boolean => {
-    const newErrors: { firstName?: string; lastName?: string; mobileNumber?: string } = {};
+    const newErrors: { [key: string]: string } = {};
     
     if (!firstName.trim()) {
       newErrors.firstName = 'First name is required';
@@ -160,29 +230,124 @@ const GoogleSignupPathPage: React.FC = () => {
   const handleNameContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateNameStep()) {
-      setBusinessStep('organization');
+      setBusinessStep('details');
       setError(null);
     }
   };
 
+  const validateDetailsStep = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!companyName.trim()) {
+      newErrors.companyName = 'Company name is required';
+    } else if (companyName.length > 255) {
+      newErrors.companyName = 'Company name must not exceed 255 characters';
+    }
+    
+    if (!country) {
+      newErrors.country = 'Country is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleDetailsContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateDetailsStep()) {
+      setBusinessStep('website');
+      setError(null);
+    }
+  };
+
+  const validateWebsiteStep = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!noWebsite && !website) {
+      newErrors.website = 'Website URL is required.';
+    } else if (!noWebsite && website && !isValidUrl(website)) {
+      newErrors.website = 'Please enter a valid website URL (e.g., https://company.com).';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleWebsiteContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateWebsiteStep()) {
+      setBusinessStep('business');
+      setError(null);
+    }
+  };
+
+  const handleBusinessContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusinessStep('hiring');
+    setError(null);
+  };
+
+  const handleHiringContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusinessStep('review');
+    setError(null);
+  };
+
+  const handleCompanySizeSelect = (size: string) => {
+    setSelectedCompanySize(size);
+  };
+
+  const handleNoWebsiteToggle = () => {
+    setNoWebsite(true);
+    setWebsite('');
+    setErrors(prev => ({ ...prev, website: '' }));
+  };
+
+  const handleHaveWebsiteToggle = () => {
+    setNoWebsite(false);
+  };
+
+  const handleEditSection = (section: string) => {
+    if (section === 'contact') {
+      setBusinessStep('name');
+    } else if (section === 'company') {
+      setBusinessStep('details');
+    } else if (section === 'business') {
+      setBusinessStep('business');
+    } else if (section === 'hiring') {
+      setBusinessStep('hiring');
+    }
+  };
+
   const handleEmployerSubmit = async () => {
-    if (!orgName.trim()) {
-      setError('Please enter your organization name');
+    if (!termsAccepted) {
+      setErrors(prev => ({ ...prev, terms: 'You must accept the terms to continue' }));
       return;
     }
+    
     setIsLoading(true);
     setLoadingType('employer');
     setError(null);
     try {
+      const mobileDialCode = countries.find(c => c.code === mobileCountryCode)?.dialCode || '';
+      const phoneDialCode = countries.find(c => c.code === phoneCountryCode)?.dialCode || '';
+      
       const response = await api.post('/v1/auth/google/assign-role', {
         roleType: 'client_admin',
-        organizationName: orgName.trim(),
+        organizationName: companyName.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         mobileCountryCode,
-        mobileNumber: mobileNumber.trim(),
+        mobileNumber: mobileNumber.trim() ? `${mobileDialCode}${mobileNumber.replace(/\s/g, '')}` : undefined,
         phoneCountryCode: phoneNumber.trim() ? phoneCountryCode : undefined,
-        phoneNumber: phoneNumber.trim() || undefined,
+        phoneNumber: phoneNumber.trim() ? `${phoneDialCode}${phoneNumber.replace(/\s/g, '')}` : undefined,
+        country: country || undefined,
+        website: website || undefined,
+        businessDescription: businessDescription || undefined,
+        industry: industry || undefined,
+        companySize: selectedCompanySize || undefined,
+        rolesNeeded: selectedRoles.join(', ') || undefined,
+        howCanWeHelp: howCanWeHelp || undefined,
       });
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
@@ -221,9 +386,23 @@ const GoogleSignupPathPage: React.FC = () => {
     setErrors({});
   };
 
-  const handleBackToNameStep = () => {
-    setBusinessStep('name');
+  const handleBack = () => {
     setError(null);
+    setErrors({});
+    
+    if (businessStep === 'name') {
+      handleBackToSelection();
+    } else if (businessStep === 'details') {
+      setBusinessStep('name');
+    } else if (businessStep === 'website') {
+      setBusinessStep('details');
+    } else if (businessStep === 'business') {
+      setBusinessStep('website');
+    } else if (businessStep === 'hiring') {
+      setBusinessStep('business');
+    } else if (businessStep === 'review') {
+      setBusinessStep('hiring');
+    }
   };
 
   const jobSeekerFeatures = [
@@ -245,6 +424,9 @@ const GoogleSignupPathPage: React.FC = () => {
     { icon: <BarChart />, text: '1,000+ Roles Filled' },
     { icon: <Favorite />, text: '50+ Countries' },
   ];
+
+  const hasBusinessData = businessDescription.trim() !== '' || industry !== '' || selectedCompanySize !== '';
+  const hasHiringData = selectedRoles.length > 0 || howCanWeHelp.trim() !== '';
 
   if (!user) {
     return (
@@ -275,7 +457,6 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
-  // Candidate flow - Name step (no phone numbers)
   if (currentFlow === 'candidate') {
     return (
       <Box
@@ -371,7 +552,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         onChange={(e) => {
                           setFirstName(e.target.value);
                           if (errors.firstName) {
-                            setErrors(prev => ({ ...prev, firstName: undefined }));
+                            setErrors(prev => ({ ...prev, firstName: '' }));
                           }
                         }}
                         error={!!errors.firstName}
@@ -409,7 +590,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         onChange={(e) => {
                           setLastName(e.target.value);
                           if (errors.lastName) {
-                            setErrors(prev => ({ ...prev, lastName: undefined }));
+                            setErrors(prev => ({ ...prev, lastName: '' }));
                           }
                         }}
                         error={!!errors.lastName}
@@ -484,7 +665,6 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
-  // Business flow - Step 1: Name
   if (showBusinessFlow && businessStep === 'name') {
     return (
       <Box
@@ -580,7 +760,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         onChange={(e) => {
                           setFirstName(e.target.value);
                           if (errors.firstName) {
-                            setErrors(prev => ({ ...prev, firstName: undefined }));
+                            setErrors(prev => ({ ...prev, firstName: '' }));
                           }
                         }}
                         error={!!errors.firstName}
@@ -618,7 +798,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         onChange={(e) => {
                           setLastName(e.target.value);
                           if (errors.lastName) {
-                            setErrors(prev => ({ ...prev, lastName: undefined }));
+                            setErrors(prev => ({ ...prev, lastName: '' }));
                           }
                         }}
                         error={!!errors.lastName}
@@ -657,7 +837,7 @@ const GoogleSignupPathPage: React.FC = () => {
                       onPhoneChange={(value) => {
                         setMobileNumber(value);
                         if (errors.mobileNumber) {
-                          setErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                          setErrors(prev => ({ ...prev, mobileNumber: '' }));
                         }
                       }}
                       label=""
@@ -694,23 +874,22 @@ const GoogleSignupPathPage: React.FC = () => {
                     />
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
                     <Button
                       variant="outlined"
+                      fullWidth
                       onClick={handleBackToSelection}
                       disabled={isLoading}
                       startIcon={<ArrowBack />}
                       sx={{
-                        flex: 1,
                         py: 1.5,
                         borderRadius: 2,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
                         textTransform: 'none',
-                        fontSize: '1rem',
                         fontWeight: 600,
-                        borderColor: '#E5E7EB',
-                        color: '#1a1a1a',
                         '&:hover': {
-                          borderColor: '#9333EA',
+                          borderColor: '#7E22CE',
                           bgcolor: 'rgba(147, 51, 234, 0.04)',
                         },
                       }}
@@ -720,25 +899,20 @@ const GoogleSignupPathPage: React.FC = () => {
                     <Button
                       type="submit"
                       variant="contained"
+                      fullWidth
                       disabled={isLoading || !firstName.trim() || !lastName.trim() || !mobileNumber.trim()}
-                      endIcon={<ArrowForward />}
                       sx={{
-                        flex: 1,
                         py: 1.5,
                         borderRadius: 2,
+                        backgroundColor: '#9333EA',
                         textTransform: 'none',
-                        fontSize: '1rem',
                         fontWeight: 600,
-                        bgcolor: '#9333EA',
                         boxShadow: 'none',
                         '&:hover': {
-                          bgcolor: '#A855F7',
+                          backgroundColor: '#A855F7',
                         },
-                        '&:active': {
-                          bgcolor: '#7E22CE',
-                        },
-                        '&:disabled': {
-                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                        '&.Mui-disabled': {
+                          backgroundColor: 'rgba(147, 51, 234, 0.5)',
                           color: 'white',
                         },
                       }}
@@ -755,8 +929,7 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
-  // Business flow - Step 2: Organization
-  if (showBusinessFlow && businessStep === 'organization') {
+  if (showBusinessFlow && businessStep === 'details') {
     return (
       <Box
         sx={{
@@ -806,69 +979,148 @@ const GoogleSignupPathPage: React.FC = () => {
                   backgroundColor: 'white',
                 }}
               >
-                <Box textAlign="center" mb={3}>
-                  <Typography
-                    variant="h4"
-                    component="h1"
-                    fontWeight="bold"
-                    sx={{ color: '#1a1a1a', mb: 1 }}
-                  >
-                    Tell us about your organization
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary">
-                    This helps us set up your hiring workspace
-                  </Typography>
+                <Box component="form" onSubmit={handleDetailsContinue} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      Your company details?
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      Tell us about your organization
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Company Name
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="Your company name"
+                      value={companyName}
+                      onChange={(e) => {
+                        setCompanyName(e.target.value);
+                        if (errors.companyName) {
+                          setErrors(prev => ({ ...prev, companyName: '' }));
+                        }
+                      }}
+                      error={!!errors.companyName}
+                      helperText={errors.companyName}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Country <span style={{ color: '#EF4444' }}>*</span>
+                    </Typography>
+                    <CountrySelect
+                      value={country}
+                      onChange={(value) => {
+                        setCountry(value);
+                        if (errors.country) {
+                          setErrors(prev => ({ ...prev, country: '' }));
+                        }
+                      }}
+                      disabled={isLoading}
+                      error={!!errors.country}
+                    />
+                    {errors.country && (
+                      <Typography sx={{ color: '#d32f2f', fontSize: '0.75rem', mt: 0.5, ml: 1.75 }}>
+                        {errors.country}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </Box>
                 </Box>
-
-                {error && (
-                  <Alert severity="error" sx={{ mb: 3 }}>
-                    {error}
-                  </Alert>
-                )}
-
-                <TextField
-                  fullWidth
-                  label="Organization Name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="e.g., Acme Corporation"
-                  sx={{ mb: 3 }}
-                  autoFocus
-                  disabled={isLoading}
-                />
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  endIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
-                  onClick={handleEmployerSubmit}
-                  disabled={isLoading || !orgName.trim()}
-                  sx={{
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    mb: 2,
-                    backgroundColor: '#9333EA',
-                    '&:hover': { backgroundColor: '#7C3AED' },
-                  }}
-                >
-                  {isLoading ? 'Setting up...' : 'Continue'}
-                </Button>
-                <Button
-                  fullWidth
-                  variant="text"
-                  startIcon={<ArrowBack />}
-                  onClick={handleBackToNameStep}
-                  disabled={isLoading}
-                  sx={{ 
-                    textTransform: 'none', 
-                    color: '#9333EA',
-                    '&:hover': { backgroundColor: 'rgba(147, 51, 234, 0.08)' },
-                  }}
-                >
-                  Back
-                </Button>
               </Card>
             </Fade>
           </Container>
@@ -877,7 +1129,960 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
-  // Main selection screen
+  if (showBusinessFlow && businessStep === 'website') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box component="form" onSubmit={handleWebsiteContinue} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      Welcome to Teamified, {firstName}!
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      Share your website so we can learn more about your business
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  {!noWebsite ? (
+                    <>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography
+                          component="label"
+                          sx={{
+                            display: 'block',
+                            mb: 1,
+                            fontWeight: 500,
+                            color: '#1a1a1a',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          Website URL
+                        </Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="www.example.com"
+                          value={website}
+                          onChange={(e) => {
+                            setWebsite(e.target.value);
+                            if (errors.website) {
+                              setErrors(prev => ({ ...prev, website: '' }));
+                            }
+                          }}
+                          error={!!errors.website}
+                          helperText={errors.website}
+                          disabled={isLoading}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              bgcolor: 'white',
+                              borderRadius: 2,
+                              '& fieldset': { borderColor: '#E5E7EB' },
+                              '&:hover fieldset': { borderColor: '#9333EA' },
+                              '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                            },
+                          }}
+                        />
+                      </Box>
+
+                      <Box sx={{ mb: 3 }}>
+                        <Link
+                          component="button"
+                          type="button"
+                          onClick={handleNoWebsiteToggle}
+                          sx={{
+                            color: '#9333EA',
+                            textDecoration: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          I don't have a website
+                        </Link>
+                      </Box>
+                    </>
+                  ) : (
+                    <Box sx={{ mb: 3, p: 3, bgcolor: '#F9FAFB', borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                      <Typography sx={{ color: '#6b7280', mb: 2 }}>
+                        No problem! We'll help you create a great job description without it.
+                      </Typography>
+                      <Link
+                        component="button"
+                        type="button"
+                        onClick={handleHaveWebsiteToggle}
+                        sx={{
+                          color: '#9333EA',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        Actually, I have a website
+                      </Link>
+                    </Box>
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading || (!noWebsite && website && !isValidUrl(website))}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (showBusinessFlow && businessStep === 'business') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box component="form" onSubmit={handleBusinessContinue} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      Tell us about your business
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      This helps us match you with the right candidates
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Business Description
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      placeholder="Tell us what your company does..."
+                      value={businessDescription}
+                      onChange={(e) => setBusinessDescription(e.target.value)}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Industry
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      value={industry}
+                      onChange={(e) => setIndustry(e.target.value)}
+                      disabled={isLoading}
+                      SelectProps={{
+                        displayEmpty: true,
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        <Typography sx={{ color: '#9CA3AF' }}>Select your industry</Typography>
+                      </MenuItem>
+                      {INDUSTRIES.map((ind) => (
+                        <MenuItem key={ind} value={ind}>
+                          {ind}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1.5,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Company Size
+                    </Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+                      {COMPANY_SIZES.map((size) => (
+                        <Box
+                          key={size}
+                          onClick={() => !isLoading && handleCompanySizeSelect(size)}
+                          sx={{
+                            p: 2,
+                            border: '1px solid',
+                            borderColor: selectedCompanySize === size ? '#9333EA' : '#E5E7EB',
+                            borderRadius: 2,
+                            cursor: isLoading ? 'default' : 'pointer',
+                            bgcolor: selectedCompanySize === size ? 'rgba(147, 51, 234, 0.04)' : 'white',
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              borderColor: isLoading ? undefined : '#9333EA',
+                              bgcolor: isLoading ? undefined : 'rgba(147, 51, 234, 0.02)',
+                            },
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontWeight: selectedCompanySize === size ? 600 : 400,
+                              color: selectedCompanySize === size ? '#9333EA' : '#1a1a1a',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            {size}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {hasBusinessData ? 'Next' : 'Skip'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (showBusinessFlow && businessStep === 'hiring') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box component="form" onSubmit={handleHiringContinue} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      What are you looking for?
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      Help us understand your hiring needs
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1.5,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      What role/s do you need?
+                    </Typography>
+                    <RolesMultiSelect
+                      selectedRoles={selectedRoles}
+                      onChange={setSelectedRoles}
+                      disabled={isLoading}
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      How can we help you?
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      placeholder="Tell us about your hiring goals, timeline, or any specific requirements..."
+                      value={howCanWeHelp}
+                      onChange={(e) => setHowCanWeHelp(e.target.value)}
+                      disabled={isLoading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          bgcolor: 'white',
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#E5E7EB' },
+                          '&:hover fieldset': { borderColor: '#9333EA' },
+                          '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {hasHiringData ? 'Next' : 'Skip'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (showBusinessFlow && businessStep === 'review') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      Review Your Information
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      Please confirm your details and accept our terms
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ maxHeight: 400, overflowY: 'auto', pr: 1 }}>
+                    <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Contact Details</Typography>
+                        <Link
+                          component="button"
+                          type="button"
+                          onClick={() => handleEditSection('contact')}
+                          sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </Link>
+                      </Box>
+                      <Box sx={{ display: 'grid', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Name</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{firstName} {lastName}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Email</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{user?.email}</Typography>
+                        </Box>
+                        {mobileNumber && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Mobile</Typography>
+                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                              {countries.find(c => c.code === mobileCountryCode)?.dialCode} {mobileNumber}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Company Details</Typography>
+                        <Link
+                          component="button"
+                          type="button"
+                          onClick={() => handleEditSection('company')}
+                          sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </Link>
+                      </Box>
+                      <Box sx={{ display: 'grid', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Company</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{companyName || 'Not provided'}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Country</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                            {countries.find(c => c.code === country)?.name || country}
+                          </Typography>
+                        </Box>
+                        {website && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Website</Typography>
+                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{website}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Business Details</Typography>
+                        <Link
+                          component="button"
+                          type="button"
+                          onClick={() => handleEditSection('business')}
+                          sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </Link>
+                      </Box>
+                      <Box sx={{ display: 'grid', gap: 0.5 }}>
+                        {businessDescription && (
+                          <Box>
+                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Description</Typography>
+                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem', mt: 0.5 }}>
+                              {businessDescription}
+                            </Typography>
+                          </Box>
+                        )}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Industry</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{industry || 'Not specified'}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Size</Typography>
+                          <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{selectedCompanySize || 'Not specified'}</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Hiring Needs</Typography>
+                        <Link
+                          component="button"
+                          type="button"
+                          onClick={() => handleEditSection('hiring')}
+                          sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </Link>
+                      </Box>
+                      {selectedRoles.length > 0 ? (
+                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                          {selectedRoles.join(', ')}
+                        </Typography>
+                      ) : (
+                        <Typography sx={{ color: '#9CA3AF', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                          No hiring needs specified
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ mt: 3, p: 2, bgcolor: '#F9FAFB', borderRadius: 2 }}>
+                    <Typography sx={{ fontWeight: 600, color: '#1a1a1a', mb: 2 }}>Legal Agreement</Typography>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={termsAccepted}
+                          onChange={(e) => {
+                            setTermsAccepted(e.target.checked);
+                            if (errors.terms) {
+                              setErrors(prev => ({ ...prev, terms: '' }));
+                            }
+                          }}
+                          disabled={isLoading}
+                          sx={{
+                            color: '#D1D5DB',
+                            '&.Mui-checked': {
+                              color: '#9333EA',
+                            },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography sx={{ fontSize: '0.875rem', color: '#1a1a1a' }}>
+                          I accept the{' '}
+                          <Link
+                            href={getServiceAgreementUrl(country)}
+                            target="_blank"
+                            sx={{ color: '#9333EA' }}
+                          >
+                            {getServiceAgreementLabel(country)}
+                          </Link>
+                          ,{' '}
+                          <Link href="https://teamified.com/terms" target="_blank" sx={{ color: '#9333EA' }}>
+                            Terms
+                          </Link>
+                          , and{' '}
+                          <Link href="https://teamified.com/privacy" target="_blank" sx={{ color: '#9333EA' }}>
+                            Privacy Policy
+                          </Link>
+                        </Typography>
+                      }
+                    />
+                    {errors.terms && (
+                      <Typography sx={{ color: '#DC2626', fontSize: '0.75rem', mt: 1 }}>
+                        {errors.terms}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBack}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#9333EA',
+                        color: '#9333EA',
+                        '&:hover': {
+                          borderColor: '#7E22CE',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleEmployerSubmit}
+                      disabled={isLoading || !termsAccepted}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create My Account'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
@@ -912,7 +2117,6 @@ const GoogleSignupPathPage: React.FC = () => {
         sx={{
           flex: 1,
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: { xs: 2, md: 4 },
@@ -920,38 +2124,40 @@ const GoogleSignupPathPage: React.FC = () => {
       >
         <Container maxWidth="lg">
           <Fade in timeout={600}>
-            <Box>
-              <Box textAlign="center" mb={5}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Box sx={{ mb: 6 }}>
                 <Typography
                   variant="h3"
                   component="h1"
-                  gutterBottom
                   sx={{
-                    fontWeight: 700,
+                    fontWeight: 800,
+                    mb: 2,
+                    fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
                     color: '#1a1a1a',
-                    fontSize: { xs: '2rem', md: '2.75rem' },
                   }}
                 >
-                  Let's get started
+                  How would you like to use Teamified?
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 400, color: '#6b7280' }}>
-                  Tell us who you are
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: '#666',
+                    fontWeight: 400,
+                    maxWidth: 600,
+                    mx: 'auto',
+                  }}
+                >
+                  Choose your path to get started with the global talent platform
                 </Typography>
               </Box>
 
-              {error && (
-                <Alert severity="error" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
-                  {error}
-                </Alert>
-              )}
-
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  flexDirection: { xs: 'column', md: 'row' }, 
-                  gap: 4,
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: 3,
                   justifyContent: 'center',
-                  mb: 3,
+                  mb: 6,
                 }}
               >
                 <Card

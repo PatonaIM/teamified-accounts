@@ -169,6 +169,13 @@ export class GoogleOAuthController {
         mobileNumber: { type: 'string', description: 'Optional: Mobile phone number' },
         phoneCountryCode: { type: 'string', description: 'Optional: Phone country code (e.g., AU)' },
         phoneNumber: { type: 'string', description: 'Optional: Phone number' },
+        country: { type: 'string', description: 'Optional: Country code' },
+        website: { type: 'string', description: 'Optional: Company website URL' },
+        businessDescription: { type: 'string', description: 'Optional: Business description' },
+        industry: { type: 'string', description: 'Optional: Industry' },
+        companySize: { type: 'string', description: 'Optional: Company size' },
+        rolesNeeded: { type: 'string', description: 'Optional: Comma-separated list of roles needed' },
+        howCanWeHelp: { type: 'string', description: 'Optional: How can we help description' },
       },
       required: ['roleType'],
     },
@@ -186,6 +193,13 @@ export class GoogleOAuthController {
     @Body('mobileNumber') mobileNumber?: string,
     @Body('phoneCountryCode') phoneCountryCode?: string,
     @Body('phoneNumber') phoneNumber?: string,
+    @Body('country') country?: string,
+    @Body('website') website?: string,
+    @Body('businessDescription') businessDescription?: string,
+    @Body('industry') industry?: string,
+    @Body('companySize') companySize?: string,
+    @Body('rolesNeeded') rolesNeeded?: string,
+    @Body('howCanWeHelp') howCanWeHelp?: string,
     @Req() req?: Request,
   ) {
     return this.googleOAuthService.assignRoleToNewUser(
@@ -200,6 +214,15 @@ export class GoogleOAuthController {
       phoneNumber,
       req?.ip,
       req?.get('user-agent'),
+      {
+        country,
+        website,
+        businessDescription,
+        industry,
+        companySize,
+        rolesNeeded,
+        howCanWeHelp,
+      },
     );
   }
 }

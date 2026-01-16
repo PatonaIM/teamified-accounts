@@ -453,6 +453,15 @@ export class GoogleOAuthService {
     phoneNumber?: string,
     ip?: string,
     userAgent?: string,
+    businessProfile?: {
+      country?: string;
+      website?: string;
+      businessDescription?: string;
+      industry?: string;
+      companySize?: string;
+      rolesNeeded?: string;
+      howCanWeHelp?: string;
+    },
   ): Promise<{
     success: boolean;
     message: string;
@@ -532,6 +541,15 @@ export class GoogleOAuthService {
         slug,
         subscriptionTier: 'free',
         subscriptionStatus: 'active',
+        industry: businessProfile?.industry || null,
+        companySize: businessProfile?.companySize || null,
+        website: businessProfile?.website || null,
+        settings: {
+          country: businessProfile?.country || null,
+          businessDescription: businessProfile?.businessDescription || null,
+          rolesNeeded: businessProfile?.rolesNeeded || null,
+          howCanWeHelp: businessProfile?.howCanWeHelp || null,
+        },
       });
 
       const savedOrg = await this.organizationsRepository.save(organization);
