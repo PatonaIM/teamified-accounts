@@ -3,30 +3,37 @@ import {
   Box,
   Typography,
   Button,
-  Paper,
   Container,
   Card,
   CardContent,
-  CardActions,
   Fade,
   CircularProgress,
   TextField,
   Alert,
 } from '@mui/material';
 import {
-  PersonAdd,
-  Business,
+  Public,
+  AutoAwesome,
+  Verified,
+  TrendingUp,
+  Videocam,
+  Groups,
+  Language,
+  CalendarToday,
   ArrowForward,
 } from '@mui/icons-material';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../services/authService';
+import jobSeekerImage from '../assets/images/job-seeker-hero.jpg';
+import businessImage from '../assets/images/business-hero.jpg';
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<'candidate' | 'employer' | null>(null);
   const [showEmployerForm, setShowEmployerForm] = useState(false);
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +50,7 @@ const GoogleSignupPathPage: React.FC = () => {
 
   const handleCandidateSignup = async () => {
     setIsLoading(true);
+    setLoadingType('candidate');
     setError(null);
     try {
       const response = await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
@@ -54,7 +62,6 @@ const GoogleSignupPathPage: React.FC = () => {
         }
       }
       await refreshUser();
-      
       navigate('/google-signup-success', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
@@ -67,6 +74,7 @@ const GoogleSignupPathPage: React.FC = () => {
         setError(errorMessage);
       }
       setIsLoading(false);
+      setLoadingType(null);
     }
   };
 
@@ -80,6 +88,7 @@ const GoogleSignupPathPage: React.FC = () => {
       return;
     }
     setIsLoading(true);
+    setLoadingType('employer');
     setError(null);
     try {
       const response = await api.post('/v1/auth/google/assign-role', {
@@ -94,7 +103,6 @@ const GoogleSignupPathPage: React.FC = () => {
         }
       }
       await refreshUser();
-      
       navigate('/google-signup-success', { replace: true });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
@@ -107,6 +115,7 @@ const GoogleSignupPathPage: React.FC = () => {
         setError(errorMessage);
       }
       setIsLoading(false);
+      setLoadingType(null);
     }
   };
 
@@ -114,6 +123,20 @@ const GoogleSignupPathPage: React.FC = () => {
     removeTokens();
     navigate('/login', { replace: true });
   };
+
+  const jobSeekerBenefits = [
+    { icon: <Public sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'Global opportunities' },
+    { icon: <AutoAwesome sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'AI job matching' },
+    { icon: <Verified sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'Verified employers' },
+    { icon: <TrendingUp sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'Career growth' },
+  ];
+
+  const businessBenefits = [
+    { icon: <Videocam sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'AI video screening' },
+    { icon: <Groups sx={{ fontSize: 18, color: '#9333EA' }} />, text: '250,000+ candidates' },
+    { icon: <Language sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'Hire in 50+ countries' },
+    { icon: <CalendarToday sx={{ fontSize: 18, color: '#9333EA' }} />, text: 'Hire in days, not weeks' },
+  ];
 
   if (!user) {
     return (
@@ -124,16 +147,16 @@ const GoogleSignupPathPage: React.FC = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          backgroundColor: '#f5f5f5',
           gap: 3,
         }}
       >
-        <CircularProgress sx={{ color: 'white' }} />
+        <CircularProgress sx={{ color: '#9333EA' }} />
         <Button
           variant="text"
           onClick={handleBackToLogin}
           sx={{ 
-            color: 'white', 
+            color: '#9333EA', 
             textTransform: 'none',
             '&:hover': { textDecoration: 'underline', backgroundColor: 'transparent' }
           }}
@@ -144,236 +167,361 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
+  if (showEmployerForm) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f5f5f5',
+          padding: 3,
+        }}
+      >
+        <Container maxWidth="sm">
+          <Fade in timeout={400}>
+            <Card
+              elevation={0}
+              sx={{
+                padding: { xs: 3, sm: 4 },
+                borderRadius: 3,
+                backgroundColor: 'white',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              }}
+            >
+              <Box textAlign="center" mb={3}>
+                <Typography
+                  variant="h4"
+                  component="h1"
+                  fontWeight="bold"
+                  sx={{ color: '#1a1a1a', mb: 1 }}
+                >
+                  Tell us about your organization
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  This helps us set up your hiring workspace
+                </Typography>
+              </Box>
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+
+              <TextField
+                fullWidth
+                label="Organization Name"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                placeholder="e.g., Acme Corporation"
+                sx={{ mb: 3 }}
+                autoFocus
+                disabled={isLoading}
+              />
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                endIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
+                onClick={handleEmployerSubmit}
+                disabled={isLoading || !orgName.trim()}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  mb: 2,
+                  backgroundColor: '#9333EA',
+                  '&:hover': { backgroundColor: '#7C3AED' },
+                }}
+              >
+                {isLoading ? 'Setting up...' : 'Continue'}
+              </Button>
+              <Button
+                fullWidth
+                variant="text"
+                onClick={() => {
+                  setShowEmployerForm(false);
+                  setError(null);
+                }}
+                disabled={isLoading}
+                sx={{ textTransform: 'none', color: '#666' }}
+              >
+                Back to options
+              </Button>
+            </Card>
+          </Fade>
+        </Container>
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: 2,
+        backgroundColor: '#f5f5f5',
+        padding: 3,
       }}
     >
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         <Fade in timeout={600}>
-          <Paper
-            elevation={24}
-            sx={{
-              padding: { xs: 3, sm: 4, md: 5 },
-              borderRadius: 3,
-              backgroundColor: 'rgba(255, 255, 255, 0.98)',
-            }}
-          >
-            <Box textAlign="center" mb={4}>
+          <Box>
+            <Box textAlign="center" mb={5}>
               <Typography
-                variant="h4"
+                variant="h3"
                 component="h1"
-                gutterBottom
                 fontWeight="bold"
-                color="primary"
+                sx={{ 
+                  color: '#1a1a1a',
+                  mb: 1,
+                  fontSize: { xs: '2rem', md: '2.5rem' },
+                }}
               >
-                Welcome to Teamified, {user.firstName}!
+                Let's get started
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                {showEmployerForm
-                  ? 'Tell us about your organization'
-                  : "Let's get you set up. Choose the option that best describes you:"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {user.email}
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: '#666',
+                  fontWeight: 400,
+                }}
+              >
+                Tell us who you are
               </Typography>
             </Box>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
                 {error}
               </Alert>
             )}
 
-            {showEmployerForm ? (
-              <Box sx={{ maxWidth: 400, mx: 'auto' }}>
-                <TextField
-                  fullWidth
-                  label="Organization Name"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="e.g., Acme Corporation"
-                  sx={{ mb: 3 }}
-                  autoFocus
-                  disabled={isLoading}
-                />
-                <Button
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  color="secondary"
-                  startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
-                  onClick={handleEmployerSubmit}
-                  disabled={isLoading || !orgName.trim()}
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', md: 'row' }, 
+                gap: 4,
+                justifyContent: 'center',
+                alignItems: 'stretch',
+              }}
+            >
+              <Card
+                elevation={0}
+                sx={{
+                  flex: 1,
+                  maxWidth: { md: 400 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  backgroundColor: 'white',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                    transform: 'translateY(-4px)',
+                  },
+                }}
+              >
+                <Box
                   sx={{
-                    py: 1.5,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    mb: 2,
+                    height: 200,
+                    backgroundImage: `url(${jobSeekerImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                   }}
-                >
-                  {isLoading ? 'Setting up...' : 'Continue'}
-                </Button>
-                <Button
-                  fullWidth
-                  variant="text"
-                  onClick={() => setShowEmployerForm(false)}
-                  disabled={isLoading}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Back to options
-                </Button>
-              </Box>
-            ) : (
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Card
-                    elevation={4}
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: 8,
-                      },
+                />
+                <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                  <Typography 
+                    variant="h5" 
+                    component="h2" 
+                    fontWeight="bold"
+                    sx={{ color: '#1a1a1a', mb: 1 }}
+                  >
+                    I'm a Job Seeker
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ color: '#666', mb: 3 }}
+                  >
+                    Find your next global opportunity with AI-powered matching
+                  </Typography>
+                  
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: 1.5,
+                      mb: 3,
                     }}
                   >
-                    <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
+                    {jobSeekerBenefits.map((benefit, index) => (
                       <Box
+                        key={index}
                         sx={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: '50%',
-                          backgroundColor: 'primary.main',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          margin: '0 auto 16px',
-                        }}
-                      >
-                        <PersonAdd sx={{ fontSize: 40, color: 'white' }} />
-                      </Box>
-                      <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
-                        I'm a Candidate
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Looking for job opportunities? Get started instantly.
-                      </Typography>
-                      <Box component="ul" sx={{ textAlign: 'left', mt: 2, pl: 2 }}>
-                        <Typography component="li" variant="body2" color="text.secondary">
-                          Browse and apply for jobs
-                        </Typography>
-                        <Typography component="li" variant="body2" color="text.secondary">
-                          Track your applications
-                        </Typography>
-                        <Typography component="li" variant="body2" color="text.secondary">
-                          Build your professional profile
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                    <CardActions sx={{ p: 2, pt: 0 }}>
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        size="large"
-                        startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PersonAdd />}
-                        onClick={handleCandidateSignup}
-                        disabled={isLoading}
-                        sx={{
-                          py: 1.5,
+                          gap: 0.5,
+                          backgroundColor: '#f8f5ff',
                           borderRadius: 2,
-                          textTransform: 'none',
-                          fontSize: '1rem',
+                          px: 1.5,
+                          py: 0.75,
                         }}
                       >
-                        {isLoading ? 'Setting up...' : 'Continue as Candidate'}
-                      </Button>
-                    </CardActions>
-                  </Card>
-                </Box>
+                        {benefit.icon}
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.85rem' }}>
+                          {benefit.text}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
 
-                <Box sx={{ flex: 1 }}>
-                  <Card
-                    elevation={4}
+                  <Button
+                    onClick={handleCandidateSignup}
+                    disabled={isLoading}
                     sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: 8,
+                      color: '#9333EA',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      p: 0,
+                      '&:hover': { 
+                        backgroundColor: 'transparent',
+                        textDecoration: 'none',
                       },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
                     }}
                   >
-                    <CardContent sx={{ flexGrow: 1, textAlign: 'center', p: 3 }}>
+                    {loadingType === 'candidate' ? (
+                      <>
+                        <CircularProgress size={16} sx={{ color: '#9333EA' }} />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        Get Started
+                        <ArrowForward sx={{ fontSize: 18 }} />
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card
+                elevation={0}
+                sx={{
+                  flex: 1,
+                  maxWidth: { md: 400 },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  backgroundColor: 'white',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                    transform: 'translateY(-4px)',
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    height: 200,
+                    backgroundImage: `url(${businessImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+                <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                  <Typography 
+                    variant="h5" 
+                    component="h2" 
+                    fontWeight="bold"
+                    sx={{ color: '#1a1a1a', mb: 1 }}
+                  >
+                    We're a Business
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ color: '#666', mb: 3 }}
+                  >
+                    Build your dream team with pre-screened global talent
+                  </Typography>
+                  
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: 1.5,
+                      mb: 3,
+                    }}
+                  >
+                    {businessBenefits.map((benefit, index) => (
                       <Box
+                        key={index}
                         sx={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: '50%',
-                          backgroundColor: 'secondary.main',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          margin: '0 auto 16px',
-                        }}
-                      >
-                        <Business sx={{ fontSize: 40, color: 'white' }} />
-                      </Box>
-                      <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
-                        I'm an Employer
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                        Set up your organization to post jobs and manage your team.
-                      </Typography>
-                      <Box component="ul" sx={{ textAlign: 'left', mt: 2, pl: 2 }}>
-                        <Typography component="li" variant="body2" color="text.secondary">
-                          Post job openings
-                        </Typography>
-                        <Typography component="li" variant="body2" color="text.secondary">
-                          Manage your team
-                        </Typography>
-                        <Typography component="li" variant="body2" color="text.secondary">
-                          Track hiring progress
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                    <CardActions sx={{ p: 2, pt: 0 }}>
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        size="large"
-                        color="secondary"
-                        startIcon={<Business />}
-                        onClick={handleEmployerClick}
-                        disabled={isLoading}
-                        sx={{
-                          py: 1.5,
+                          gap: 0.5,
+                          backgroundColor: '#f8f5ff',
                           borderRadius: 2,
-                          textTransform: 'none',
-                          fontSize: '1rem',
+                          px: 1.5,
+                          py: 0.75,
                         }}
                       >
-                        Continue as Employer
-                      </Button>
-                    </CardActions>
-                  </Card>
-                </Box>
-              </Box>
-            )}
+                        {benefit.icon}
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.85rem' }}>
+                          {benefit.text}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
 
-            {/* Back to Login link for users stuck in a loop */}
-            <Box textAlign="center" mt={3}>
+                  <Button
+                    onClick={handleEmployerClick}
+                    disabled={isLoading}
+                    sx={{
+                      color: '#9333EA',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      p: 0,
+                      '&:hover': { 
+                        backgroundColor: 'transparent',
+                        textDecoration: 'none',
+                      },
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    {loadingType === 'employer' ? (
+                      <>
+                        <CircularProgress size={16} sx={{ color: '#9333EA' }} />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        Get Started
+                        <ArrowForward sx={{ fontSize: 18 }} />
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </Box>
+
+            <Box textAlign="center" mt={4}>
               <Typography variant="body2" color="text.secondary">
                 Having trouble?{' '}
                 <Button
@@ -385,14 +533,15 @@ const GoogleSignupPathPage: React.FC = () => {
                     p: 0, 
                     minWidth: 'auto',
                     verticalAlign: 'baseline',
-                    '&:hover': { textDecoration: 'underline' }
+                    color: '#9333EA',
+                    '&:hover': { textDecoration: 'underline', backgroundColor: 'transparent' }
                   }}
                 >
                   Go back to Login
                 </Button>
               </Typography>
             </Box>
-          </Paper>
+          </Box>
         </Fade>
       </Container>
     </Box>
