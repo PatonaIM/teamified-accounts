@@ -1493,6 +1493,9 @@ const GoogleSignupPathPage: React.FC = () => {
                         </MenuItem>
                       ))}
                     </TextField>
+                    <Typography sx={{ mt: 0.5, fontSize: '0.75rem', color: '#9CA3AF' }}>
+                      Select the industry your company operates in
+                    </Typography>
                   </Box>
 
                   <Box sx={{ mb: 3 }}>
