@@ -1937,14 +1937,6 @@ const GoogleSignupPathPage: React.FC = () => {
                         </Link>
                       </Box>
                       <Box sx={{ display: 'grid', gap: 0.5 }}>
-                        {businessDescription && (
-                          <Box>
-                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Description</Typography>
-                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem', mt: 0.5 }}>
-                              {businessDescription}
-                            </Typography>
-                          </Box>
-                        )}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Industry</Typography>
                           <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{industry || 'Not specified'}</Typography>
@@ -1954,29 +1946,6 @@ const GoogleSignupPathPage: React.FC = () => {
                           <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{selectedCompanySize || 'Not specified'}</Typography>
                         </Box>
                       </Box>
-                    </Box>
-
-                    <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Hiring Needs</Typography>
-                        <Link
-                          component="button"
-                          type="button"
-                          onClick={() => handleEditSection('hiring')}
-                          sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
-                        >
-                          Edit
-                        </Link>
-                      </Box>
-                      {selectedRoles.length > 0 ? (
-                        <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
-                          {selectedRoles.join(', ')}
-                        </Typography>
-                      ) : (
-                        <Typography sx={{ color: '#9CA3AF', fontSize: '0.875rem', fontStyle: 'italic' }}>
-                          No hiring needs specified
-                        </Typography>
-                      )}
                     </Box>
                   </Box>
 
