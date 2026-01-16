@@ -445,8 +445,6 @@ export class GoogleOAuthService {
     userId: string,
     roleType: string,
     organizationName?: string,
-    country?: string,
-    website?: string,
     firstName?: string,
     lastName?: string,
     mobileCountryCode?: string,
@@ -529,17 +527,11 @@ export class GoogleOAuthService {
         throw new BadRequestException('An organization with a similar name already exists. Please choose a different name.');
       }
 
-      const settings: Record<string, any> = {};
-      if (country) settings.country = country;
-      if (website) settings.website = website.trim();
-      
       const organization = this.organizationsRepository.create({
         name: organizationName.trim(),
         slug,
         subscriptionTier: 'free',
         subscriptionStatus: 'active',
-        settings,
-        website: website?.trim() || null,
       });
 
       const savedOrg = await this.organizationsRepository.save(organization);
