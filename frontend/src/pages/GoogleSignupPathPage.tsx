@@ -357,7 +357,12 @@ const GoogleSignupPathPage: React.FC = () => {
         }
       }
       await refreshUser();
-      navigate('/google-signup-success', { replace: true });
+      const atsPortalUrl = import.meta.env.VITE_PORTAL_URL_ATS;
+      if (atsPortalUrl) {
+        window.location.href = atsPortalUrl;
+      } else {
+        navigate('/google-signup-success', { replace: true });
+      }
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete signup';
       if (err?.response?.status === 401) {
