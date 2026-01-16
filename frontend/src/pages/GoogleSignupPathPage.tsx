@@ -43,7 +43,7 @@ import jobSeekerImage from '../assets/images/job-seeker.png';
 import businessImage from '../assets/images/business.png';
 import PhoneInput from '../components/PhoneInput';
 
-type BusinessStep = 'name' | 'organization';
+type BusinessStep = 'name' | 'organization' | 'website';
 type SignupFlow = 'selection' | 'candidate' | 'business';
 
 const GoogleSignupPathPage: React.FC = () => {
@@ -62,6 +62,8 @@ const GoogleSignupPathPage: React.FC = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [orgName, setOrgName] = useState('');
   const [country, setCountry] = useState('');
+  const [website, setWebsite] = useState('');
+  const [noWebsite, setNoWebsite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; mobileNumber?: string; country?: string }>({});
 
@@ -171,6 +173,25 @@ const GoogleSignupPathPage: React.FC = () => {
     }
   };
 
+  const handleOrganizationContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orgName.trim()) {
+      setError('Please enter your organization name');
+      return;
+    }
+    if (!country) {
+      setErrors(prev => ({ ...prev, country: 'Please select a country' }));
+      return;
+    }
+    setBusinessStep('website');
+    setError(null);
+  };
+
+  const handleBackToOrganizationStep = () => {
+    setBusinessStep('organization');
+    setError(null);
+  };
+
   const handleEmployerSubmit = async () => {
     if (!orgName.trim()) {
       setError('Please enter your organization name');
@@ -188,6 +209,7 @@ const GoogleSignupPathPage: React.FC = () => {
         roleType: 'client_admin',
         organizationName: orgName.trim(),
         country,
+        website: noWebsite ? undefined : (website.trim() || undefined),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         mobileCountryCode,
@@ -870,7 +892,7 @@ const GoogleSignupPathPage: React.FC = () => {
                   backgroundColor: 'white',
                 }}
               >
-                <Box component="form" onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleEmployerSubmit(); }} noValidate>
+                <Box component="form" onSubmit={handleOrganizationContinue} noValidate>
                   <Box mb={4}>
                     <Typography
                       variant="h4"
@@ -1002,7 +1024,219 @@ const GoogleSignupPathPage: React.FC = () => {
                       type="submit"
                       variant="contained"
                       fullWidth
-                      disabled={isLoading || !orgName.trim() || !country}
+                      disabled={!orgName.trim() || !country}
+                      endIcon={<ArrowForward />}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        backgroundColor: '#9333EA',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 14px rgba(147, 51, 234, 0.4)',
+                        '&:hover': {
+                          backgroundColor: '#7C3AED',
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: '#D8B4FE',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Business flow - Step 3: Website (Tell us about your business)
+  if (showBusinessFlow && businessStep === 'website') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box component="form" onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleEmployerSubmit(); }} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      Welcome to Teamified, {firstName}!
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      We'll use AI to understand your business and create a tailored job description
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  {!noWebsite ? (
+                    <>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography
+                          component="label"
+                          sx={{
+                            display: 'block',
+                            mb: 1,
+                            fontWeight: 500,
+                            color: '#1a1a1a',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          Website URL
+                        </Typography>
+                        <TextField
+                          fullWidth
+                          placeholder="www.example.com"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          disabled={isLoading}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              bgcolor: 'white',
+                              borderRadius: 2,
+                              '& fieldset': { borderColor: '#E5E7EB' },
+                              '&:hover fieldset': { borderColor: '#9333EA' },
+                              '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                            },
+                          }}
+                        />
+                      </Box>
+
+                      <Box sx={{ mb: 3 }}>
+                        <Button
+                          variant="text"
+                          onClick={() => setNoWebsite(true)}
+                          disabled={isLoading}
+                          sx={{
+                            color: '#9333EA',
+                            textTransform: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            p: 0,
+                            minWidth: 'auto',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                              backgroundColor: 'transparent',
+                            },
+                          }}
+                        >
+                          I don't have a website
+                        </Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <Box sx={{ mb: 3, p: 3, bgcolor: '#F9FAFB', borderRadius: 2, border: '1px solid #E5E7EB' }}>
+                      <Typography sx={{ color: '#6b7280', mb: 2 }}>
+                        No problem! We'll help you create a great job description without it.
+                      </Typography>
+                      <Button
+                        variant="text"
+                        onClick={() => setNoWebsite(false)}
+                        sx={{
+                          color: '#9333EA',
+                          textTransform: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          p: 0,
+                          minWidth: 'auto',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                            backgroundColor: 'transparent',
+                          },
+                        }}
+                      >
+                        Actually, I have a website
+                      </Button>
+                    </Box>
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={handleBackToOrganizationStep}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        borderColor: '#E5E7EB',
+                        color: '#9333EA',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: '#9333EA',
+                          bgcolor: '#F5F7F8',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      fullWidth
+                      disabled={isLoading}
                       endIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : undefined}
                       sx={{
                         py: 1.5,
