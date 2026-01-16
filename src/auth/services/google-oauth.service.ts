@@ -760,9 +760,7 @@ export class GoogleOAuthService {
         <div class="content">
             <h2 style="margin-top: 0; color: #9333EA;">Welcome to Teamified, ${displayName}!</h2>
             
-            <p style="font-size: 16px;">Your employer account is now ready! Start building your team today.</p>
-            
-            <p class="email-line">You're signed in with: <strong>${user.email}</strong></p>
+            <p style="font-size: 16px;">Your email has been verified. Your employer account is now ready!</p>
             
             <div style="text-align: center; margin: 30px 0;">
                 <a href="https://ats.teamified.com.au" class="cta-button" style="color: white !important; text-decoration: none;">Post Your First Job</a>
@@ -783,7 +781,7 @@ export class GoogleOAuthService {
     </div>
 </body>
 </html>`;
-        textContent = `Welcome to Teamified, ${displayName}!\n\nYour employer account is now ready! Start building your team today.\n\nYou're signed in with: ${user.email}\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\nIf you didn't create this account, please contact our support team.\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
+        textContent = `Welcome to Teamified, ${displayName}!\n\nYour email has been verified. Your employer account is now ready!\n\nPost Your First Job: https://ats.teamified.com.au\nSet Up Your Organization: https://hris.teamified.com.au\n\nWith Teamified, you can:\n- Post job openings and attract top talent\n- Manage your hiring pipeline\n- Onboard and manage your team members\n\nIf you didn't create this account, please contact our support team.\n© ${new Date().getFullYear()} Teamified. All rights reserved.`;
       }
 
       await this.emailService.sendEmail({
