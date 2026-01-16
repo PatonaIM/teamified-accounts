@@ -129,6 +129,25 @@ const GoogleSignupPathPage: React.FC = () => {
   
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  
+  const [editMode, setEditMode] = useState(false);
+  const [originalValues, setOriginalValues] = useState<{
+    firstName: string;
+    lastName: string;
+    mobileCountryCode: string;
+    mobileNumber: string;
+    phoneCountryCode: string;
+    phoneNumber: string;
+    companyName: string;
+    country: string;
+    website: string;
+    noWebsite: boolean;
+    businessDescription: string;
+    industry: string;
+    selectedCompanySize: string;
+    selectedRoles: string[];
+    howCanWeHelp: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -230,7 +249,11 @@ const GoogleSignupPathPage: React.FC = () => {
   const handleNameContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateNameStep()) {
-      setBusinessStep('details');
+      if (editMode) {
+        handleEditComplete();
+      } else {
+        setBusinessStep('details');
+      }
       setError(null);
     }
   };
@@ -255,7 +278,11 @@ const GoogleSignupPathPage: React.FC = () => {
   const handleDetailsContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateDetailsStep()) {
-      setBusinessStep('website');
+      if (editMode) {
+        handleEditComplete();
+      } else {
+        setBusinessStep('website');
+      }
       setError(null);
     }
   };
@@ -276,20 +303,32 @@ const GoogleSignupPathPage: React.FC = () => {
   const handleWebsiteContinue = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateWebsiteStep()) {
-      setBusinessStep('business');
+      if (editMode) {
+        handleEditComplete();
+      } else {
+        setBusinessStep('business');
+      }
       setError(null);
     }
   };
 
   const handleBusinessContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    setBusinessStep('hiring');
+    if (editMode) {
+      handleEditComplete();
+    } else {
+      setBusinessStep('hiring');
+    }
     setError(null);
   };
 
   const handleHiringContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    setBusinessStep('review');
+    if (editMode) {
+      handleEditComplete();
+    } else {
+      setBusinessStep('review');
+    }
     setError(null);
   };
 
@@ -308,6 +347,25 @@ const GoogleSignupPathPage: React.FC = () => {
   };
 
   const handleEditSection = (section: string) => {
+    setEditMode(true);
+    setOriginalValues({
+      firstName,
+      lastName,
+      mobileCountryCode,
+      mobileNumber,
+      phoneCountryCode,
+      phoneNumber,
+      companyName,
+      country,
+      website,
+      noWebsite,
+      businessDescription,
+      industry,
+      selectedCompanySize,
+      selectedRoles,
+      howCanWeHelp,
+    });
+    
     if (section === 'contact') {
       setBusinessStep('name');
     } else if (section === 'company') {
@@ -317,6 +375,39 @@ const GoogleSignupPathPage: React.FC = () => {
     } else if (section === 'hiring') {
       setBusinessStep('hiring');
     }
+  };
+  
+  const hasChangesInSection = (section: string): boolean => {
+    if (!originalValues) return false;
+    
+    if (section === 'name') {
+      return firstName !== originalValues.firstName ||
+        lastName !== originalValues.lastName ||
+        mobileCountryCode !== originalValues.mobileCountryCode ||
+        mobileNumber !== originalValues.mobileNumber ||
+        phoneCountryCode !== originalValues.phoneCountryCode ||
+        phoneNumber !== originalValues.phoneNumber;
+    } else if (section === 'details') {
+      return companyName !== originalValues.companyName ||
+        country !== originalValues.country;
+    } else if (section === 'website') {
+      return website !== originalValues.website ||
+        noWebsite !== originalValues.noWebsite;
+    } else if (section === 'business') {
+      return businessDescription !== originalValues.businessDescription ||
+        industry !== originalValues.industry ||
+        selectedCompanySize !== originalValues.selectedCompanySize;
+    } else if (section === 'hiring') {
+      return howCanWeHelp !== originalValues.howCanWeHelp ||
+        JSON.stringify(selectedRoles) !== JSON.stringify(originalValues.selectedRoles);
+    }
+    return false;
+  };
+  
+  const handleEditComplete = () => {
+    setEditMode(false);
+    setOriginalValues(null);
+    setBusinessStep('review');
   };
 
   const handleEmployerSubmit = async () => {
@@ -883,7 +974,7 @@ const GoogleSignupPathPage: React.FC = () => {
                     <Button
                       variant="outlined"
                       fullWidth
-                      onClick={handleBackToSelection}
+                      onClick={editMode ? handleEditComplete : handleBackToSelection}
                       disabled={isLoading}
                       startIcon={<ArrowBack />}
                       sx={{
@@ -899,7 +990,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      Back
+                      {editMode ? 'Back to Review' : 'Back'}
                     </Button>
                     <Button
                       type="submit"
@@ -922,7 +1013,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      Next
+                      {editMode ? (hasChangesInSection('name') ? 'Update' : 'Back to Review') : 'Next'}
                     </Button>
                   </Box>
                 </Box>
@@ -1080,7 +1171,7 @@ const GoogleSignupPathPage: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                     <Button
                       variant="outlined"
-                      onClick={handleBack}
+                      onClick={editMode ? handleEditComplete : handleBack}
                       disabled={isLoading}
                       startIcon={<ArrowBack />}
                       sx={{
@@ -1098,7 +1189,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      Back
+                      {editMode ? 'Back to Review' : 'Back'}
                     </Button>
                     <Button
                       type="submit"
@@ -1122,7 +1213,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      Next
+                      {editMode ? (hasChangesInSection('details') ? 'Update' : 'Back to Review') : 'Next'}
                     </Button>
                   </Box>
                 </Box>
@@ -1552,7 +1643,7 @@ const GoogleSignupPathPage: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                     <Button
                       variant="outlined"
-                      onClick={handleBack}
+                      onClick={editMode ? handleEditComplete : handleBack}
                       disabled={isLoading}
                       startIcon={<ArrowBack />}
                       sx={{
@@ -1570,7 +1661,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      Back
+                      {editMode ? 'Back to Review' : 'Back'}
                     </Button>
                     <Button
                       type="submit"
@@ -1594,7 +1685,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      {hasBusinessData ? 'Next' : 'Skip'}
+                      {editMode ? (hasChangesInSection('business') ? 'Update' : 'Back to Review') : (hasBusinessData ? 'Next' : 'Skip')}
                     </Button>
                   </Box>
                 </Box>
