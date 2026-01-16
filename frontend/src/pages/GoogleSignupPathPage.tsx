@@ -1492,7 +1492,7 @@ const GoogleSignupPathPage: React.FC = () => {
                     <Button
                       type="submit"
                       variant="contained"
-                      disabled={isLoading || (!noWebsite && website && !isValidUrl(website))}
+                      disabled={isLoading || isAnalyzingWebsite || (!noWebsite && website.trim() && (!isValidUrl(website) || !websiteAnalyzed))}
                       sx={{
                         flex: 1,
                         py: 1.5,
@@ -1511,7 +1511,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         },
                       }}
                     >
-                      Next
+                      {isAnalyzingWebsite ? 'Analyzing...' : 'Next'}
                     </Button>
                   </Box>
                 </Box>
@@ -2188,6 +2188,14 @@ const GoogleSignupPathPage: React.FC = () => {
                             <Typography sx={{ color: '#6b7280', fontSize: '0.875rem', mb: 0.5 }}>Roles Looking For</Typography>
                             <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
                               {selectedRoles.join(', ')}
+                            </Typography>
+                          </Box>
+                        )}
+                        {howCanWeHelp && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem', mb: 0.5 }}>How Can We Help</Typography>
+                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>
+                              {howCanWeHelp.length > 150 ? `${howCanWeHelp.substring(0, 150)}...` : howCanWeHelp}
                             </Typography>
                           </Box>
                         )}
