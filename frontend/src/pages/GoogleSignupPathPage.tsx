@@ -1000,50 +1000,75 @@ const GoogleSignupPathPage: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      onClick={editMode ? handleEditComplete : handleBackToSelection}
-                      disabled={isLoading}
-                      startIcon={<ArrowBack />}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        borderColor: '#9333EA',
-                        color: '#9333EA',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        '&:hover': {
-                          borderColor: '#7E22CE',
-                          bgcolor: 'rgba(147, 51, 234, 0.04)',
-                        },
-                      }}
-                    >
-                      {editMode ? 'Back to Review' : 'Back'}
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      fullWidth
-                      disabled={isLoading || !firstName.trim() || !lastName.trim() || !mobileNumber.trim()}
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        backgroundColor: '#9333EA',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        boxShadow: 'none',
-                        '&:hover': {
-                          backgroundColor: '#A855F7',
-                        },
-                        '&.Mui-disabled': {
-                          backgroundColor: 'rgba(147, 51, 234, 0.5)',
-                          color: 'white',
-                        },
-                      }}
-                    >
-                      {editMode ? (hasChangesInSection('name') ? 'Update' : 'Back to Review') : 'Next'}
-                    </Button>
+                    {editMode && !hasChangesInSection('name') ? (
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={handleEditComplete}
+                        disabled={isLoading}
+                        startIcon={<ArrowBack />}
+                        sx={{
+                          py: 1.5,
+                          borderRadius: 2,
+                          backgroundColor: '#9333EA',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          boxShadow: 'none',
+                          '&:hover': {
+                            backgroundColor: '#A855F7',
+                          },
+                        }}
+                      >
+                        Back to Review
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          onClick={editMode ? handleEditComplete : handleBackToSelection}
+                          disabled={isLoading}
+                          startIcon={<ArrowBack />}
+                          sx={{
+                            py: 1.5,
+                            borderRadius: 2,
+                            borderColor: '#9333EA',
+                            color: '#9333EA',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            '&:hover': {
+                              borderColor: '#7E22CE',
+                              bgcolor: 'rgba(147, 51, 234, 0.04)',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Back to Review' : 'Back'}
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          fullWidth
+                          disabled={isLoading || !firstName.trim() || !lastName.trim() || !mobileNumber.trim()}
+                          sx={{
+                            py: 1.5,
+                            borderRadius: 2,
+                            backgroundColor: '#9333EA',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            boxShadow: 'none',
+                            '&:hover': {
+                              backgroundColor: '#A855F7',
+                            },
+                            '&.Mui-disabled': {
+                              backgroundColor: 'rgba(147, 51, 234, 0.5)',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Update' : 'Next'}
+                        </Button>
+                      </>
+                    )}
                   </Box>
                 </Box>
               </Card>
@@ -1198,52 +1223,78 @@ const GoogleSignupPathPage: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={editMode ? handleEditComplete : handleBack}
-                      disabled={isLoading}
-                      startIcon={<ArrowBack />}
-                      sx={{
-                        flex: 1,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        borderColor: '#9333EA',
-                        color: '#9333EA',
-                        '&:hover': {
-                          borderColor: '#7E22CE',
-                          bgcolor: 'rgba(147, 51, 234, 0.04)',
-                        },
-                      }}
-                    >
-                      {editMode ? 'Back to Review' : 'Back'}
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={isLoading}
-                      sx={{
-                        flex: 1,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        bgcolor: '#9333EA',
-                        boxShadow: 'none',
-                        '&:hover': {
-                          bgcolor: '#A855F7',
-                        },
-                        '&:disabled': {
-                          bgcolor: 'rgba(147, 51, 234, 0.5)',
-                          color: 'white',
-                        },
-                      }}
-                    >
-                      {editMode ? (hasChangesInSection('details') ? 'Update' : 'Back to Review') : 'Next'}
-                    </Button>
+                    {editMode && !hasChangesInSection('details') ? (
+                      <Button
+                        variant="contained"
+                        onClick={handleEditComplete}
+                        disabled={isLoading}
+                        startIcon={<ArrowBack />}
+                        sx={{
+                          flex: 1,
+                          py: 1.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          bgcolor: '#9333EA',
+                          boxShadow: 'none',
+                          '&:hover': {
+                            bgcolor: '#A855F7',
+                          },
+                        }}
+                      >
+                        Back to Review
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outlined"
+                          onClick={editMode ? handleEditComplete : handleBack}
+                          disabled={isLoading}
+                          startIcon={<ArrowBack />}
+                          sx={{
+                            flex: 1,
+                            py: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            borderColor: '#9333EA',
+                            color: '#9333EA',
+                            '&:hover': {
+                              borderColor: '#7E22CE',
+                              bgcolor: 'rgba(147, 51, 234, 0.04)',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Back to Review' : 'Back'}
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          disabled={isLoading}
+                          sx={{
+                            flex: 1,
+                            py: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            bgcolor: '#9333EA',
+                            boxShadow: 'none',
+                            '&:hover': {
+                              bgcolor: '#A855F7',
+                            },
+                            '&:disabled': {
+                              bgcolor: 'rgba(147, 51, 234, 0.5)',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Update' : 'Next'}
+                        </Button>
+                      </>
+                    )}
                   </Box>
                 </Box>
               </Card>
@@ -1672,52 +1723,78 @@ const GoogleSignupPathPage: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={editMode ? handleEditComplete : handleBack}
-                      disabled={isLoading}
-                      startIcon={<ArrowBack />}
-                      sx={{
-                        flex: 1,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        borderColor: '#9333EA',
-                        color: '#9333EA',
-                        '&:hover': {
-                          borderColor: '#7E22CE',
-                          bgcolor: 'rgba(147, 51, 234, 0.04)',
-                        },
-                      }}
-                    >
-                      {editMode ? 'Back to Review' : 'Back'}
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={isLoading}
-                      sx={{
-                        flex: 1,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        bgcolor: '#9333EA',
-                        boxShadow: 'none',
-                        '&:hover': {
-                          bgcolor: '#A855F7',
-                        },
-                        '&:disabled': {
-                          bgcolor: 'rgba(147, 51, 234, 0.5)',
-                          color: 'white',
-                        },
-                      }}
-                    >
-                      {editMode ? (hasChangesInSection('business') ? 'Update' : 'Back to Review') : (hasBusinessData ? 'Next' : 'Skip')}
-                    </Button>
+                    {editMode && !hasChangesInSection('business') ? (
+                      <Button
+                        variant="contained"
+                        onClick={handleEditComplete}
+                        disabled={isLoading}
+                        startIcon={<ArrowBack />}
+                        sx={{
+                          flex: 1,
+                          py: 1.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          bgcolor: '#9333EA',
+                          boxShadow: 'none',
+                          '&:hover': {
+                            bgcolor: '#A855F7',
+                          },
+                        }}
+                      >
+                        Back to Review
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outlined"
+                          onClick={editMode ? handleEditComplete : handleBack}
+                          disabled={isLoading}
+                          startIcon={<ArrowBack />}
+                          sx={{
+                            flex: 1,
+                            py: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            borderColor: '#9333EA',
+                            color: '#9333EA',
+                            '&:hover': {
+                              borderColor: '#7E22CE',
+                              bgcolor: 'rgba(147, 51, 234, 0.04)',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Back to Review' : 'Back'}
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          disabled={isLoading}
+                          sx={{
+                            flex: 1,
+                            py: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            bgcolor: '#9333EA',
+                            boxShadow: 'none',
+                            '&:hover': {
+                              bgcolor: '#A855F7',
+                            },
+                            '&:disabled': {
+                              bgcolor: 'rgba(147, 51, 234, 0.5)',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Update' : (hasBusinessData ? 'Next' : 'Skip')}
+                        </Button>
+                      </>
+                    )}
                   </Box>
                 </Box>
               </Card>
@@ -1856,52 +1933,78 @@ const GoogleSignupPathPage: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleBack}
-                      disabled={isLoading}
-                      startIcon={<ArrowBack />}
-                      sx={{
-                        flex: 1,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        borderColor: '#9333EA',
-                        color: '#9333EA',
-                        '&:hover': {
-                          borderColor: '#7E22CE',
-                          bgcolor: 'rgba(147, 51, 234, 0.04)',
-                        },
-                      }}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={isLoading}
-                      sx={{
-                        flex: 1,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        bgcolor: '#9333EA',
-                        boxShadow: 'none',
-                        '&:hover': {
-                          bgcolor: '#A855F7',
-                        },
-                        '&:disabled': {
-                          bgcolor: 'rgba(147, 51, 234, 0.5)',
-                          color: 'white',
-                        },
-                      }}
-                    >
-                      {hasHiringData ? 'Next' : 'Skip'}
-                    </Button>
+                    {editMode && !hasChangesInSection('hiring') ? (
+                      <Button
+                        variant="contained"
+                        onClick={handleEditComplete}
+                        disabled={isLoading}
+                        startIcon={<ArrowBack />}
+                        sx={{
+                          flex: 1,
+                          py: 1.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          bgcolor: '#9333EA',
+                          boxShadow: 'none',
+                          '&:hover': {
+                            bgcolor: '#A855F7',
+                          },
+                        }}
+                      >
+                        Back to Review
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outlined"
+                          onClick={editMode ? handleEditComplete : handleBack}
+                          disabled={isLoading}
+                          startIcon={<ArrowBack />}
+                          sx={{
+                            flex: 1,
+                            py: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            borderColor: '#9333EA',
+                            color: '#9333EA',
+                            '&:hover': {
+                              borderColor: '#7E22CE',
+                              bgcolor: 'rgba(147, 51, 234, 0.04)',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Back to Review' : 'Back'}
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          disabled={isLoading}
+                          sx={{
+                            flex: 1,
+                            py: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            bgcolor: '#9333EA',
+                            boxShadow: 'none',
+                            '&:hover': {
+                              bgcolor: '#A855F7',
+                            },
+                            '&:disabled': {
+                              bgcolor: 'rgba(147, 51, 234, 0.5)',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          {editMode ? 'Update' : (hasHiringData ? 'Next' : 'Skip')}
+                        </Button>
+                      </>
+                    )}
                   </Box>
                 </Box>
               </Card>
@@ -2072,6 +2175,22 @@ const GoogleSignupPathPage: React.FC = () => {
                           <Typography sx={{ color: '#6b7280', fontSize: '0.875rem' }}>Size</Typography>
                           <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>{selectedCompanySize || 'Not specified'}</Typography>
                         </Box>
+                        {businessDescription && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem', mb: 0.5 }}>Business Description</Typography>
+                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>
+                              {businessDescription.length > 150 ? `${businessDescription.substring(0, 150)}...` : businessDescription}
+                            </Typography>
+                          </Box>
+                        )}
+                        {selectedRoles.length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography sx={{ color: '#6b7280', fontSize: '0.875rem', mb: 0.5 }}>Roles Looking For</Typography>
+                            <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                              {selectedRoles.join(', ')}
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     </Box>
                   </Box>
