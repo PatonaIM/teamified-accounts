@@ -1421,6 +1421,24 @@ const GoogleSignupPathPage: React.FC = () => {
                         />
                       </Box>
 
+                      {isAnalyzingWebsite && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 1.5, 
+                          mb: 3,
+                          p: 2,
+                          bgcolor: '#F3E8FF',
+                          borderRadius: 2,
+                          border: '1px solid #DDD6FE'
+                        }}>
+                          <CircularProgress size={20} sx={{ color: '#9333EA' }} />
+                          <Typography sx={{ color: '#7C3AED', fontSize: '0.875rem', fontWeight: 500 }}>
+                            Analyzing your website...
+                          </Typography>
+                        </Box>
+                      )}
+
                       <Box sx={{ mb: 3 }}>
                         <Link
                           component="button"
