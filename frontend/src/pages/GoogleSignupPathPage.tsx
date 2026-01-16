@@ -2183,8 +2183,26 @@ const GoogleSignupPathPage: React.FC = () => {
                             </Typography>
                           </Box>
                         )}
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {(selectedRoles.length > 0 || howCanWeHelp) && (
+                    <Box sx={{ mb: 2, p: 2, border: '1px solid #E5E7EB', borderRadius: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography sx={{ fontWeight: 600, color: '#1a1a1a' }}>Hiring Needs</Typography>
+                        <Link
+                          component="button"
+                          type="button"
+                          onClick={() => handleEditSection('hiring')}
+                          sx={{ color: '#9333EA', fontSize: '0.875rem', cursor: 'pointer' }}
+                        >
+                          Edit
+                        </Link>
+                      </Box>
+                      <Box sx={{ display: 'grid', gap: 0.5 }}>
                         {selectedRoles.length > 0 && (
-                          <Box sx={{ mt: 1 }}>
+                          <Box>
                             <Typography sx={{ color: '#6b7280', fontSize: '0.875rem', mb: 0.5 }}>Roles Looking For</Typography>
                             <Typography sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
                               {selectedRoles.join(', ')}
@@ -2201,7 +2219,7 @@ const GoogleSignupPathPage: React.FC = () => {
                         )}
                       </Box>
                     </Box>
-                  </Box>
+                  )}
 
                   <Box sx={{ mt: 3, p: 2, bgcolor: '#F9FAFB', borderRadius: 2 }}>
                     <Typography sx={{ fontWeight: 600, color: '#1a1a1a', mb: 2 }}>Legal Agreement</Typography>
