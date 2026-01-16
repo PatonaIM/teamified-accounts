@@ -39,6 +39,7 @@ import businessImage from '../assets/images/business.png';
 import PhoneInput from '../components/PhoneInput';
 
 type BusinessStep = 'name' | 'organization';
+type SignupFlow = 'selection' | 'candidate' | 'business';
 
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ const GoogleSignupPathPage: React.FC = () => {
   const [loadingType, setLoadingType] = useState<'candidate' | 'employer' | null>(null);
   const [showBusinessFlow, setShowBusinessFlow] = useState(false);
   const [businessStep, setBusinessStep] = useState<BusinessStep>('name');
+  const [currentFlow, setCurrentFlow] = useState<SignupFlow>('selection');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [mobileCountryCode, setMobileCountryCode] = useState('AU');
@@ -74,12 +76,39 @@ const GoogleSignupPathPage: React.FC = () => {
     }
   }, [user, navigate]);
 
-  const handleCandidateSignup = async () => {
+  const handleCandidateClick = () => {
+    setCurrentFlow('candidate');
+    setError(null);
+    setErrors({});
+  };
+
+  const validateCandidateNameStep = (): boolean => {
+    const newErrors: { firstName?: string; lastName?: string } = {};
+    
+    if (!firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCandidateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateCandidateNameStep()) return;
+
     setIsLoading(true);
     setLoadingType('candidate');
     setError(null);
     try {
-      const response = await api.post('/v1/auth/google/assign-role', { roleType: 'candidate' });
+      const response = await api.post('/v1/auth/google/assign-role', {
+        roleType: 'candidate',
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
         setRefreshToken(response.data.refreshToken);
@@ -105,6 +134,7 @@ const GoogleSignupPathPage: React.FC = () => {
   };
 
   const handleBusinessClick = () => {
+    setCurrentFlow('business');
     setShowBusinessFlow(true);
     setBusinessStep('name');
     setError(null);
@@ -184,6 +214,7 @@ const GoogleSignupPathPage: React.FC = () => {
   };
 
   const handleBackToSelection = () => {
+    setCurrentFlow('selection');
     setShowBusinessFlow(false);
     setBusinessStep('name');
     setError(null);
@@ -240,6 +271,215 @@ const GoogleSignupPathPage: React.FC = () => {
         >
           Go back to Login
         </Button>
+      </Box>
+    );
+  }
+
+  // Candidate flow - Name step (no phone numbers)
+  if (currentFlow === 'candidate') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box component="form" onSubmit={handleCandidateSubmit} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      What's your name?
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      We'd love to know who we're working with
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 4 }}>
+                    <Box>
+                      <Typography
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          mb: 1,
+                          fontWeight: 500,
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        First Name
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="John"
+                        value={firstName}
+                        onChange={(e) => {
+                          setFirstName(e.target.value);
+                          if (errors.firstName) {
+                            setErrors(prev => ({ ...prev, firstName: undefined }));
+                          }
+                        }}
+                        error={!!errors.firstName}
+                        helperText={errors.firstName}
+                        disabled={isLoading}
+                        autoFocus
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            '& fieldset': { borderColor: '#E5E7EB' },
+                            '&:hover fieldset': { borderColor: '#9333EA' },
+                            '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                          },
+                        }}
+                      />
+                    </Box>
+                    <Box>
+                      <Typography
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          mb: 1,
+                          fontWeight: 500,
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        Last Name
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="Smith"
+                        value={lastName}
+                        onChange={(e) => {
+                          setLastName(e.target.value);
+                          if (errors.lastName) {
+                            setErrors(prev => ({ ...prev, lastName: undefined }));
+                          }
+                        }}
+                        error={!!errors.lastName}
+                        helperText={errors.lastName}
+                        disabled={isLoading}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            '& fieldset': { borderColor: '#E5E7EB' },
+                            '&:hover fieldset': { borderColor: '#9333EA' },
+                            '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={handleBackToSelection}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        borderColor: '#E5E7EB',
+                        color: '#9333EA',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: '#9333EA',
+                          bgcolor: '#F5F7F8',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      fullWidth
+                      disabled={isLoading || !firstName.trim() || !lastName.trim()}
+                      endIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
+                      sx={{
+                        py: 1.5,
+                        borderRadius: 2,
+                        backgroundColor: '#9333EA',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 14px rgba(147, 51, 234, 0.4)',
+                        '&:hover': {
+                          backgroundColor: '#7C3AED',
+                        },
+                        '&.Mui-disabled': {
+                          backgroundColor: '#D8B4FE',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      {isLoading ? 'Creating account...' : 'Get Started'}
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
       </Box>
     );
   }
@@ -730,7 +970,7 @@ const GoogleSignupPathPage: React.FC = () => {
                     },
                   }}
                 >
-                  <CardActionArea onClick={handleCandidateSignup} sx={{ height: '100%' }} disabled={isLoading}>
+                  <CardActionArea onClick={handleCandidateClick} sx={{ height: '100%' }} disabled={isLoading}>
                     <Box
                       sx={{
                         position: 'relative',
