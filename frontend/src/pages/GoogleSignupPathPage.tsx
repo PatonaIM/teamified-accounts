@@ -36,6 +36,7 @@ import api from '../services/api';
 import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../services/authService';
 import jobSeekerImage from '../assets/images/job-seeker.png';
 import businessImage from '../assets/images/business.png';
+import PhoneInput from '../components/PhoneInput';
 
 type BusinessStep = 'name' | 'organization';
 
@@ -48,9 +49,13 @@ const GoogleSignupPathPage: React.FC = () => {
   const [businessStep, setBusinessStep] = useState<BusinessStep>('name');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [mobileCountryCode, setMobileCountryCode] = useState('AU');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState('AU');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string }>({});
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; mobileNumber?: string }>({});
 
   useEffect(() => {
     if (!user) {
@@ -106,13 +111,16 @@ const GoogleSignupPathPage: React.FC = () => {
   };
 
   const validateNameStep = (): boolean => {
-    const newErrors: { firstName?: string; lastName?: string } = {};
+    const newErrors: { firstName?: string; lastName?: string; mobileNumber?: string } = {};
     
     if (!firstName.trim()) {
       newErrors.firstName = 'First name is required';
     }
     if (!lastName.trim()) {
       newErrors.lastName = 'Last name is required';
+    }
+    if (!mobileNumber.trim()) {
+      newErrors.mobileNumber = 'Mobile number is required';
     }
     
     setErrors(newErrors);
@@ -141,6 +149,10 @@ const GoogleSignupPathPage: React.FC = () => {
         organizationName: orgName.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        mobileCountryCode,
+        mobileNumber: mobileNumber.trim(),
+        phoneCountryCode: phoneNumber.trim() ? phoneCountryCode : undefined,
+        phoneNumber: phoneNumber.trim() || undefined,
       });
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
@@ -385,6 +397,63 @@ const GoogleSignupPathPage: React.FC = () => {
                     </Box>
                   </Box>
 
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Mobile Number
+                    </Typography>
+                    <PhoneInput
+                      countryCode={mobileCountryCode}
+                      phoneNumber={mobileNumber}
+                      onCountryChange={setMobileCountryCode}
+                      onPhoneChange={(value) => {
+                        setMobileNumber(value);
+                        if (errors.mobileNumber) {
+                          setErrors(prev => ({ ...prev, mobileNumber: undefined }));
+                        }
+                      }}
+                      label=""
+                      error={!!errors.mobileNumber}
+                      helperText={errors.mobileNumber}
+                      disabled={isLoading}
+                      required
+                    />
+                  </Box>
+
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      component="label"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        fontWeight: 500,
+                        color: '#1a1a1a',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Phone Number{' '}
+                      <Typography component="span" sx={{ color: '#9CA3AF', fontWeight: 400 }}>
+                        (optional)
+                      </Typography>
+                    </Typography>
+                    <PhoneInput
+                      countryCode={phoneCountryCode}
+                      phoneNumber={phoneNumber}
+                      onCountryChange={setPhoneCountryCode}
+                      onPhoneChange={setPhoneNumber}
+                      label=""
+                      disabled={isLoading}
+                    />
+                  </Box>
+
                   <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
                     <Button
                       variant="outlined"
@@ -411,7 +480,7 @@ const GoogleSignupPathPage: React.FC = () => {
                     <Button
                       type="submit"
                       variant="contained"
-                      disabled={isLoading || !firstName.trim() || !lastName.trim()}
+                      disabled={isLoading || !firstName.trim() || !lastName.trim() || !mobileNumber.trim()}
                       endIcon={<ArrowForward />}
                       sx={{
                         flex: 1,

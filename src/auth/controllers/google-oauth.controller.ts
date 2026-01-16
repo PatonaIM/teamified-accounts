@@ -165,6 +165,10 @@ export class GoogleOAuthController {
         organizationName: { type: 'string', description: 'Required for client_admin role' },
         firstName: { type: 'string', description: 'Optional: Update user first name' },
         lastName: { type: 'string', description: 'Optional: Update user last name' },
+        mobileCountryCode: { type: 'string', description: 'Optional: Mobile country code (e.g., AU)' },
+        mobileNumber: { type: 'string', description: 'Optional: Mobile phone number' },
+        phoneCountryCode: { type: 'string', description: 'Optional: Phone country code (e.g., AU)' },
+        phoneNumber: { type: 'string', description: 'Optional: Phone number' },
       },
       required: ['roleType'],
     },
@@ -178,6 +182,10 @@ export class GoogleOAuthController {
     @Body('organizationName') organizationName?: string,
     @Body('firstName') firstName?: string,
     @Body('lastName') lastName?: string,
+    @Body('mobileCountryCode') mobileCountryCode?: string,
+    @Body('mobileNumber') mobileNumber?: string,
+    @Body('phoneCountryCode') phoneCountryCode?: string,
+    @Body('phoneNumber') phoneNumber?: string,
     @Req() req?: Request,
   ) {
     return this.googleOAuthService.assignRoleToNewUser(
@@ -186,6 +194,10 @@ export class GoogleOAuthController {
       organizationName,
       firstName,
       lastName,
+      mobileCountryCode,
+      mobileNumber,
+      phoneCountryCode,
+      phoneNumber,
       req?.ip,
       req?.get('user-agent'),
     );

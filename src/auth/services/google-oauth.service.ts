@@ -447,6 +447,10 @@ export class GoogleOAuthService {
     organizationName?: string,
     firstName?: string,
     lastName?: string,
+    mobileCountryCode?: string,
+    mobileNumber?: string,
+    phoneCountryCode?: string,
+    phoneNumber?: string,
     ip?: string,
     userAgent?: string,
   ): Promise<{
@@ -456,7 +460,7 @@ export class GoogleOAuthService {
     organizationId?: string;
     accessToken: string;
     refreshToken: string;
-    user: { id: string; email: string; firstName: string; lastName: string; roles: string[] };
+    user: { id: string; email: string; firstName: string; lastName: string; roles: string[]; preferredPortal: 'ats' | 'jobseeker' };
   }> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
@@ -475,16 +479,35 @@ export class GoogleOAuthService {
       throw new BadRequestException('Invalid role type. Must be "candidate" or "client_admin"');
     }
 
-    // Update user's name if provided
-    if (firstName?.trim() || lastName?.trim()) {
-      if (firstName?.trim()) {
-        user.firstName = firstName.trim();
+    // Update user's profile data if provided
+    let profileUpdated = false;
+    if (firstName?.trim()) {
+      user.firstName = firstName.trim();
+      profileUpdated = true;
+    }
+    if (lastName?.trim()) {
+      user.lastName = lastName.trim();
+      profileUpdated = true;
+    }
+    
+    // Update phone numbers in profileData JSONB
+    if (mobileNumber?.trim() || phoneNumber?.trim()) {
+      const currentProfile = user.profileData || {};
+      if (mobileCountryCode && mobileNumber?.trim()) {
+        currentProfile.mobileCountryCode = mobileCountryCode;
+        currentProfile.mobileNumber = mobileNumber.trim();
       }
-      if (lastName?.trim()) {
-        user.lastName = lastName.trim();
+      if (phoneCountryCode && phoneNumber?.trim()) {
+        currentProfile.phoneCountryCode = phoneCountryCode;
+        currentProfile.phoneNumber = phoneNumber.trim();
       }
+      user.profileData = currentProfile;
+      profileUpdated = true;
+    }
+    
+    if (profileUpdated) {
       await this.usersRepository.save(user);
-      this.logger.log(`Updated name for user ${user.email}: ${user.firstName} ${user.lastName}`);
+      this.logger.log(`Updated profile for user ${user.email}: ${user.firstName} ${user.lastName}`);
     }
 
     let organizationId: string | undefined;
@@ -572,6 +595,9 @@ export class GoogleOAuthService {
     const roles = updatedUser.userRoles?.map(r => r.roleType) || [roleType];
     const { accessToken, refreshToken } = await this.jwtTokenService.generateTokenPair(updatedUser);
 
+    // Determine preferred portal based on role
+    const preferredPortal = roleType === 'candidate' ? 'jobseeker' : 'ats';
+
     return {
       success: true,
       message: roleType === 'candidate' 
@@ -587,6 +613,7 @@ export class GoogleOAuthService {
         firstName: updatedUser.firstName,
         lastName: updatedUser.lastName,
         roles,
+        preferredPortal,
       },
     };
   }
