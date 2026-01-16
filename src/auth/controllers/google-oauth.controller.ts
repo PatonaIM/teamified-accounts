@@ -163,6 +163,8 @@ export class GoogleOAuthController {
       properties: {
         roleType: { type: 'string', enum: ['candidate', 'client_admin'] },
         organizationName: { type: 'string', description: 'Required for client_admin role' },
+        firstName: { type: 'string', description: 'Optional: Update user first name' },
+        lastName: { type: 'string', description: 'Optional: Update user last name' },
       },
       required: ['roleType'],
     },
@@ -174,12 +176,16 @@ export class GoogleOAuthController {
     @CurrentUser() user: User,
     @Body('roleType') roleType: string,
     @Body('organizationName') organizationName?: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
     @Req() req?: Request,
   ) {
     return this.googleOAuthService.assignRoleToNewUser(
       user.id,
       roleType,
       organizationName,
+      firstName,
+      lastName,
       req?.ip,
       req?.get('user-agent'),
     );

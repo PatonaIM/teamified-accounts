@@ -37,14 +37,20 @@ import { setAccessToken, setRefreshToken, removeTokens, setUserData } from '../s
 import jobSeekerImage from '../assets/images/job-seeker.png';
 import businessImage from '../assets/images/business.png';
 
+type BusinessStep = 'name' | 'organization';
+
 const GoogleSignupPathPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState<'candidate' | 'employer' | null>(null);
-  const [showEmployerForm, setShowEmployerForm] = useState(false);
+  const [showBusinessFlow, setShowBusinessFlow] = useState(false);
+  const [businessStep, setBusinessStep] = useState<BusinessStep>('name');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [orgName, setOrgName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string }>({});
 
   useEffect(() => {
     if (!user) {
@@ -53,6 +59,13 @@ const GoogleSignupPathPage: React.FC = () => {
     }
     if (user.roles && user.roles.length > 0) {
       navigate('/dashboard', { replace: true });
+    }
+    // Pre-fill name from Google profile
+    if (user.firstName) {
+      setFirstName(user.firstName);
+    }
+    if (user.lastName) {
+      setLastName(user.lastName);
     }
   }, [user, navigate]);
 
@@ -86,8 +99,32 @@ const GoogleSignupPathPage: React.FC = () => {
     }
   };
 
-  const handleEmployerClick = () => {
-    setShowEmployerForm(true);
+  const handleBusinessClick = () => {
+    setShowBusinessFlow(true);
+    setBusinessStep('name');
+    setError(null);
+  };
+
+  const validateNameStep = (): boolean => {
+    const newErrors: { firstName?: string; lastName?: string } = {};
+    
+    if (!firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    if (!lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNameContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateNameStep()) {
+      setBusinessStep('organization');
+      setError(null);
+    }
   };
 
   const handleEmployerSubmit = async () => {
@@ -102,6 +139,8 @@ const GoogleSignupPathPage: React.FC = () => {
       const response = await api.post('/v1/auth/google/assign-role', {
         roleType: 'client_admin',
         organizationName: orgName.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
       });
       if (response.data.accessToken && response.data.refreshToken) {
         setAccessToken(response.data.accessToken);
@@ -130,6 +169,18 @@ const GoogleSignupPathPage: React.FC = () => {
   const handleBackToLogin = () => {
     removeTokens();
     navigate('/login', { replace: true });
+  };
+
+  const handleBackToSelection = () => {
+    setShowBusinessFlow(false);
+    setBusinessStep('name');
+    setError(null);
+    setErrors({});
+  };
+
+  const handleBackToNameStep = () => {
+    setBusinessStep('name');
+    setError(null);
   };
 
   const jobSeekerFeatures = [
@@ -181,7 +232,222 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
-  if (showEmployerForm) {
+  // Business flow - Step 1: Name
+  if (showBusinessFlow && businessStep === 'name') {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          bgcolor: '#F5F7F8',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            py: 2,
+            px: 4,
+            bgcolor: 'white',
+            borderBottom: '1px solid #E5E7EB',
+          }}
+        >
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: '1.25rem',
+              color: '#1a1a1a',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            teamified
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: { xs: 2, md: 4 },
+          }}
+        >
+          <Container maxWidth="sm">
+            <Fade in timeout={400}>
+              <Card
+                elevation={8}
+                sx={{
+                  padding: { xs: 3, sm: 4 },
+                  borderRadius: 3,
+                  backgroundColor: 'white',
+                }}
+              >
+                <Box component="form" onSubmit={handleNameContinue} noValidate>
+                  <Box mb={4}>
+                    <Typography
+                      variant="h4"
+                      component="h1"
+                      gutterBottom
+                      sx={{
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                      }}
+                    >
+                      What's your name?
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#6b7280' }}>
+                      We'd love to know who we're working with
+                    </Typography>
+                  </Box>
+
+                  {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {error}
+                    </Alert>
+                  )}
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mb: 3 }}>
+                    <Box>
+                      <Typography
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          mb: 1,
+                          fontWeight: 500,
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        First Name
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="John"
+                        value={firstName}
+                        onChange={(e) => {
+                          setFirstName(e.target.value);
+                          if (errors.firstName) {
+                            setErrors(prev => ({ ...prev, firstName: undefined }));
+                          }
+                        }}
+                        error={!!errors.firstName}
+                        helperText={errors.firstName}
+                        disabled={isLoading}
+                        autoFocus
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            '& fieldset': { borderColor: '#E5E7EB' },
+                            '&:hover fieldset': { borderColor: '#9333EA' },
+                            '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                          },
+                        }}
+                      />
+                    </Box>
+                    <Box>
+                      <Typography
+                        component="label"
+                        sx={{
+                          display: 'block',
+                          mb: 1,
+                          fontWeight: 500,
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        Last Name
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="Smith"
+                        value={lastName}
+                        onChange={(e) => {
+                          setLastName(e.target.value);
+                          if (errors.lastName) {
+                            setErrors(prev => ({ ...prev, lastName: undefined }));
+                          }
+                        }}
+                        error={!!errors.lastName}
+                        helperText={errors.lastName}
+                        disabled={isLoading}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'white',
+                            borderRadius: 2,
+                            '& fieldset': { borderColor: '#E5E7EB' },
+                            '&:hover fieldset': { borderColor: '#9333EA' },
+                            '&.Mui-focused fieldset': { borderColor: '#9333EA', borderWidth: 2 },
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleBackToSelection}
+                      disabled={isLoading}
+                      startIcon={<ArrowBack />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        borderColor: '#E5E7EB',
+                        color: '#1a1a1a',
+                        '&:hover': {
+                          borderColor: '#9333EA',
+                          bgcolor: 'rgba(147, 51, 234, 0.04)',
+                        },
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isLoading || !firstName.trim() || !lastName.trim()}
+                      endIcon={<ArrowForward />}
+                      sx={{
+                        flex: 1,
+                        py: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        bgcolor: '#9333EA',
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: '#A855F7',
+                        },
+                        '&:active': {
+                          bgcolor: '#7E22CE',
+                        },
+                        '&:disabled': {
+                          bgcolor: 'rgba(147, 51, 234, 0.5)',
+                          color: 'white',
+                        },
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Fade>
+          </Container>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Business flow - Step 2: Organization
+  if (showBusinessFlow && businessStep === 'organization') {
     return (
       <Box
         sx={{
@@ -284,10 +550,7 @@ const GoogleSignupPathPage: React.FC = () => {
                   fullWidth
                   variant="text"
                   startIcon={<ArrowBack />}
-                  onClick={() => {
-                    setShowEmployerForm(false);
-                    setError(null);
-                  }}
+                  onClick={handleBackToNameStep}
                   disabled={isLoading}
                   sx={{ 
                     textTransform: 'none', 
@@ -295,7 +558,7 @@ const GoogleSignupPathPage: React.FC = () => {
                     '&:hover': { backgroundColor: 'rgba(147, 51, 234, 0.08)' },
                   }}
                 >
-                  Back to options
+                  Back
                 </Button>
               </Card>
             </Fade>
@@ -305,6 +568,7 @@ const GoogleSignupPathPage: React.FC = () => {
     );
   }
 
+  // Main selection screen
   return (
     <Box
       sx={{
@@ -494,7 +758,7 @@ const GoogleSignupPathPage: React.FC = () => {
                     },
                   }}
                 >
-                  <CardActionArea onClick={handleEmployerClick} sx={{ height: '100%' }} disabled={isLoading}>
+                  <CardActionArea onClick={handleBusinessClick} sx={{ height: '100%' }} disabled={isLoading}>
                     <Box
                       sx={{
                         position: 'relative',

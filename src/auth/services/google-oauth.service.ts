@@ -445,6 +445,8 @@ export class GoogleOAuthService {
     userId: string,
     roleType: string,
     organizationName?: string,
+    firstName?: string,
+    lastName?: string,
     ip?: string,
     userAgent?: string,
   ): Promise<{
@@ -471,6 +473,18 @@ export class GoogleOAuthService {
 
     if (roleType !== 'candidate' && roleType !== 'client_admin') {
       throw new BadRequestException('Invalid role type. Must be "candidate" or "client_admin"');
+    }
+
+    // Update user's name if provided
+    if (firstName?.trim() || lastName?.trim()) {
+      if (firstName?.trim()) {
+        user.firstName = firstName.trim();
+      }
+      if (lastName?.trim()) {
+        user.lastName = lastName.trim();
+      }
+      await this.usersRepository.save(user);
+      this.logger.log(`Updated name for user ${user.email}: ${user.firstName} ${user.lastName}`);
     }
 
     let organizationId: string | undefined;
