@@ -171,9 +171,20 @@ async function validateSession() {
 
 ## Logout Implementation
 
-Proper logout requires clearing both client-side storage AND server-side sessions. Use the unified SSO logout endpoint for complete session termination.
+Proper logout requires two steps: first clear all local tokens and cookies in your client app, then redirect the user to the Teamified Accounts logout page to terminate the server-side session.
+
+### Logout URLs by Environment
+
+When implementing logout, use the appropriate URL based on your deployment environment:
+
+| Environment | Logout URL |
+|-------------|------------|
+| **Replit Published App** | \`https://teamified-accounts.replit.app/logout\` |
+| **Azure Container Apps** | \`https://accounts.teamified.com/logout\` |
 
 ### Step 1: Clear Client-Side Storage
+
+Before redirecting to the logout page, clear all local tokens and session data:
 
 \`\`\`javascript
 function clearLocalSession() {
@@ -187,42 +198,70 @@ function clearLocalSession() {
   // Clear any session storage items
   sessionStorage.removeItem('pkce_code_verifier');
   sessionStorage.removeItem('oauth_state');
+  
+  // Clear any cookies your app may have set
+  document.cookie.split(';').forEach(cookie => {
+    const name = cookie.split('=')[0].trim();
+    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+  });
 }
 \`\`\`
 
-### Step 2: Call SSO Logout Endpoint
+### Step 2: Redirect to Teamified Accounts Logout Page
+
+After clearing local storage, redirect the user to the Teamified Accounts logout page:
 
 \`\`\`javascript
-async function logout() {
-  // 1. Clear local tokens first
+function logout() {
+  // 1. Clear local tokens and cookies first
   clearLocalSession();
   
-  // 2. Build logout URL with redirect
-  const logoutUrl = new URL('https://accounts.teamified.com/api/v1/sso/logout');
-  logoutUrl.searchParams.set('post_logout_redirect_uri', 'https://yourapp.com/logged-out');
-  logoutUrl.searchParams.set('client_id', 'your-client-id'); // Optional: for redirect validation
+  // 2. Redirect to Teamified Accounts logout page
+  // Use the appropriate URL for your environment:
   
-  // 3. Redirect to SSO logout (clears httpOnly cookies & revokes sessions)
-  window.location.href = logoutUrl.toString();
+  // For Replit Published App:
+  window.location.href = 'https://teamified-accounts.replit.app/logout';
+  
+  // For Azure Container Apps:
+  // window.location.href = 'https://accounts.teamified.com/logout';
 }
 \`\`\`
 
-### SSO Logout Endpoint Reference
+### Complete Logout Implementation Example
 
-\`GET /api/v1/sso/logout\`
+Here's a complete example with environment-aware logout:
 
-Centralized logout endpoint that clears all user sessions and redirects back to the client.
+\`\`\`javascript
+// Configuration - set based on your deployment environment
+const TEAMIFIED_ACCOUNTS_URL = process.env.REACT_APP_TEAMIFIED_ACCOUNTS_URL 
+  || 'https://teamified-accounts.replit.app'; // Default to Replit
 
-**Query Parameters:**
-- \`post_logout_redirect_uri\` - URL to redirect after logout (optional)
-- \`client_id\` - OAuth client ID for redirect validation (optional)
-- \`state\` - State parameter passed back to client (optional)
+function clearLocalSession() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user_data');
+  sessionStorage.removeItem('pkce_code_verifier');
+  sessionStorage.removeItem('oauth_state');
+}
 
-**What the logout endpoint does:**
-- Clears httpOnly authentication cookies
-- Revokes all user sessions in the database
-- Invalidates all refresh token families
-- Redirects to post_logout_redirect_uri (if provided)
+function logout() {
+  // Step 1: Clear all local tokens and cookies
+  clearLocalSession();
+  
+  // Step 2: Redirect to Teamified Accounts logout page
+  window.location.href = \\\`\\\${TEAMIFIED_ACCOUNTS_URL}/logout\\\`;
+}
+\`\`\`
+
+### What Happens on the Logout Page
+
+When the user is redirected to the Teamified Accounts \`/logout\` page:
+
+1. **Session Termination** - The user's server-side session is terminated
+2. **Global Logout Timestamp** - A \`globalLogoutAt\` timestamp is recorded, immediately invalidating all tokens issued before this time
+3. **Cookie Cleanup** - All httpOnly authentication cookies are cleared
+4. **Front-Channel Logout** - If configured, logout notifications are sent to all connected applications via iframes
+5. **Redirect** - The user is shown a logout confirmation page
 
 ### Global SSO Logout
 
@@ -537,12 +576,44 @@ async function validateSession() {
               </Typography>
             </Stack>
             <Typography variant="body1" paragraph>
-              Proper logout requires clearing both client-side storage AND server-side sessions.
-              Use the unified SSO logout endpoint for complete session termination.
+              Proper logout requires two steps: first clear all local tokens and cookies in your client app,
+              then redirect the user to the Teamified Accounts logout page to terminate the server-side session.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Logout URLs by Environment
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover', mb: 3 }}>
+              <Typography variant="body2" paragraph>
+                When implementing logout, use the appropriate URL based on your deployment environment:
+              </Typography>
+              <List dense disablePadding>
+                <ListItem sx={{ py: 0.5 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={<><strong>Replit Published App:</strong> <code>https://teamified-accounts.replit.app/logout</code></>}
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.5 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={<><strong>Azure Container Apps:</strong> <code>https://accounts.teamified.com/logout</code></>}
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+              </List>
+            </Paper>
+
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
               Step 1: Clear Client-Side Storage
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Before redirecting to the logout page, clear all local tokens and session data:
             </Typography>
             <SyntaxHighlighter language="javascript" style={codeStyle}>
 {`function clearLocalSession() {
@@ -556,76 +627,79 @@ async function validateSession() {
   // Clear any session storage items
   sessionStorage.removeItem('pkce_code_verifier');
   sessionStorage.removeItem('oauth_state');
+  
+  // Clear any cookies your app may have set
+  document.cookie.split(';').forEach(cookie => {
+    const name = cookie.split('=')[0].trim();
+    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+  });
 }`}
             </SyntaxHighlighter>
 
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
-              Step 2: Call SSO Logout Endpoint
+              Step 2: Redirect to Teamified Accounts Logout Page
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              After clearing local storage, redirect the user to the Teamified Accounts logout page:
             </Typography>
             <SyntaxHighlighter language="javascript" style={codeStyle}>
-{`async function logout() {
-  // 1. Clear local tokens first
+{`function logout() {
+  // 1. Clear local tokens and cookies first
   clearLocalSession();
   
-  // 2. Build logout URL with redirect
-  const logoutUrl = new URL('https://accounts.teamified.com/api/v1/sso/logout');
-  logoutUrl.searchParams.set('post_logout_redirect_uri', 'https://yourapp.com/logged-out');
-  logoutUrl.searchParams.set('client_id', 'your-client-id'); // Optional: for redirect validation
+  // 2. Redirect to Teamified Accounts logout page
+  // Use the appropriate URL for your environment:
   
-  // 3. Redirect to SSO logout (clears httpOnly cookies & revokes sessions)
-  window.location.href = logoutUrl.toString();
+  // For Replit Published App:
+  window.location.href = 'https://teamified-accounts.replit.app/logout';
+  
+  // For Azure Container Apps:
+  // window.location.href = 'https://accounts.teamified.com/logout';
 }`}
             </SyntaxHighlighter>
 
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
-              SSO Logout Endpoint Reference
+              Complete Logout Implementation Example
             </Typography>
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1 }}>
-                <strong>GET</strong> /api/v1/sso/logout
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Centralized logout endpoint that clears all user sessions and redirects back to the client.
-              </Typography>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                Query Parameters:
-              </Typography>
-              <List dense disablePadding>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemText 
-                    primary={<code>post_logout_redirect_uri</code>}
-                    secondary="URL to redirect after logout (optional)"
-                    primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }}
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemText 
-                    primary={<code>client_id</code>}
-                    secondary="OAuth client ID for redirect validation (optional)"
-                    primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }}
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemText 
-                    primary={<code>state</code>}
-                    secondary="State parameter passed back to client (optional)"
-                    primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }}
-                  />
-                </ListItem>
-              </List>
-            </Paper>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Here's a complete example with environment-aware logout:
+            </Typography>
+            <SyntaxHighlighter language="javascript" style={codeStyle}>
+{`// Configuration - set based on your deployment environment
+const TEAMIFIED_ACCOUNTS_URL = process.env.REACT_APP_TEAMIFIED_ACCOUNTS_URL 
+  || 'https://teamified-accounts.replit.app'; // Default to Replit
 
-            <Alert severity="success" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>What the logout endpoint does:</strong>
-              </Typography>
-              <List dense disablePadding sx={{ mt: 1 }}>
+function clearLocalSession() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user_data');
+  sessionStorage.removeItem('pkce_code_verifier');
+  sessionStorage.removeItem('oauth_state');
+}
+
+function logout() {
+  // Step 1: Clear all local tokens and cookies
+  clearLocalSession();
+  
+  // Step 2: Redirect to Teamified Accounts logout page
+  window.location.href = \`\${TEAMIFIED_ACCOUNTS_URL}/logout\`;
+}`}
+            </SyntaxHighlighter>
+
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, mt: 3 }}>
+              What Happens on the Logout Page
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              When the user is redirected to the Teamified Accounts <code>/logout</code> page:
+            </Typography>
+            <Alert severity="success" sx={{ mt: 1 }}>
+              <List dense disablePadding>
                 <ListItem sx={{ py: 0.25 }}>
                   <ListItemIcon sx={{ minWidth: 28 }}>
                     <CheckCircle color="success" sx={{ fontSize: 16 }} />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Clears httpOnly authentication cookies"
+                    primary="Session Termination - The user's server-side session is terminated"
                     primaryTypographyProps={{ variant: 'body2' }}
                   />
                 </ListItem>
@@ -634,7 +708,7 @@ async function validateSession() {
                     <CheckCircle color="success" sx={{ fontSize: 16 }} />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Revokes all user sessions in the database"
+                    primary="Global Logout Timestamp - A globalLogoutAt timestamp is recorded, immediately invalidating all tokens issued before this time"
                     primaryTypographyProps={{ variant: 'body2' }}
                   />
                 </ListItem>
@@ -643,7 +717,7 @@ async function validateSession() {
                     <CheckCircle color="success" sx={{ fontSize: 16 }} />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Invalidates all refresh token families"
+                    primary="Cookie Cleanup - All httpOnly authentication cookies are cleared"
                     primaryTypographyProps={{ variant: 'body2' }}
                   />
                 </ListItem>
@@ -652,7 +726,16 @@ async function validateSession() {
                     <CheckCircle color="success" sx={{ fontSize: 16 }} />
                   </ListItemIcon>
                   <ListItemText 
-                    primary="Redirects to post_logout_redirect_uri (if provided)"
+                    primary="Front-Channel Logout - If configured, logout notifications are sent to all connected applications via iframes"
+                    primaryTypographyProps={{ variant: 'body2' }}
+                  />
+                </ListItem>
+                <ListItem sx={{ py: 0.25 }}>
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <CheckCircle color="success" sx={{ fontSize: 16 }} />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Redirect - The user is shown a logout confirmation page"
                     primaryTypographyProps={{ variant: 'body2' }}
                   />
                 </ListItem>
