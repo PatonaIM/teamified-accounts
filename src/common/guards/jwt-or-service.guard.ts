@@ -6,8 +6,11 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtTokenService } from '../../auth/services/jwt.service';
 import { UserService } from '../../users/services/user.service';
+import { User } from '../../auth/entities/user.entity';
 import { REQUIRED_SCOPES_KEY } from './service-token.guard';
 
 @Injectable()
@@ -16,6 +19,8 @@ export class JwtOrServiceGuard implements CanActivate {
     private readonly jwtTokenService: JwtTokenService,
     private readonly userService: UserService,
     private readonly reflector: Reflector,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -52,14 +57,30 @@ export class JwtOrServiceGuard implements CanActivate {
   ): Promise<boolean> {
     const payload = this.jwtTokenService.validateAccessToken(token);
     
-    const user = await this.userService.findOne(payload.sub);
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+      select: ['id', 'globalLogoutAt'],
+    });
+    
     if (!user) {
+      throw new UnauthorizedException('User account not found. Please log in again.');
+    }
+
+    if (user.globalLogoutAt) {
+      const tokenIssuedAt = new Date(payload.iat * 1000);
+      if (tokenIssuedAt < user.globalLogoutAt) {
+        throw new UnauthorizedException('Session has been terminated. Please log in again.');
+      }
+    }
+
+    const fullUser = await this.userService.findOne(payload.sub);
+    if (!fullUser) {
       throw new UnauthorizedException('User not found');
     }
 
     request.user = {
       ...payload,
-      user,
+      user: fullUser,
     };
 
     return true;
