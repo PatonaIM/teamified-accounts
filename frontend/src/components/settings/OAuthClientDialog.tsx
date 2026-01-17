@@ -701,44 +701,21 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         </MenuItem>
                       </Select>
                     </FormControl>
-                    {editingUriIndex === originalIndex ? (
-                      <TextField
-                        value={editingUriValue}
-                        onChange={(e) => setEditingUriValue(e.target.value)}
-                        size="small"
-                        fullWidth
-                        autoFocus
-                        placeholder="https://app.teamified.com/auth/callback"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            handleRedirectUriChange(originalIndex, editingUriValue);
-                            setEditingUriIndex(null);
-                            setEditingUriValue('');
-                          }
-                        }}
-                        sx={{
-                          flex: 1,
-                          '& .MuiInputBase-input': {
-                            fontFamily: 'monospace',
-                            fontSize: '0.875rem',
-                          },
-                        }}
-                      />
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          flex: 1,
+                    <TextField
+                      value={uriObj.uri}
+                      onChange={(e) => handleRedirectUriChange(originalIndex, e.target.value)}
+                      size="small"
+                      fullWidth
+                      placeholder="https://app.teamified.com/auth/callback"
+                      sx={{
+                        flex: 1,
+                        '& .MuiInputBase-input': {
                           fontFamily: 'monospace',
                           fontSize: '0.875rem',
-                          wordBreak: 'break-all',
-                          color: uriObj.uri ? 'text.primary' : 'text.disabled',
-                        }}
-                      >
-                        {uriObj.uri || 'Empty URI - click edit to add'}
-                      </Typography>
-                    )}
-                    {isNewUri(originalIndex) && editingUriIndex !== originalIndex && (
+                        },
+                      }}
+                    />
+                    {isNewUri(originalIndex) && (
                       <Chip 
                         label="New" 
                         size="small" 
@@ -750,7 +727,7 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                         }} 
                       />
                     )}
-                    {isUriModified(uriObj, originalIndex) && !isNewUri(originalIndex) && editingUriIndex !== originalIndex && (
+                    {isUriModified(uriObj, originalIndex) && !isNewUri(originalIndex) && (
                       <Chip 
                         label="Edited" 
                         size="small" 
@@ -762,33 +739,6 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
                           '& .MuiChip-label': { px: 1 }
                         }} 
                       />
-                    )}
-                    {editingUriIndex === originalIndex ? (
-                      <Tooltip title="Save">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            handleRedirectUriChange(originalIndex, editingUriValue);
-                            setEditingUriIndex(null);
-                            setEditingUriValue('');
-                          }}
-                          color="success"
-                        >
-                          <Check fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    ) : (
-                      <Tooltip title="Edit">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setEditingUriIndex(originalIndex);
-                            setEditingUriValue(uriObj.uri);
-                          }}
-                        >
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
                     )}
                     <Tooltip title="Delete">
                       <IconButton
