@@ -716,7 +716,12 @@ export class SsoService {
             'http://localhost:3000',
           ]);
           
-          if (allowedOrigins.has(redirectOrigin)) {
+          // Also allow Replit dev/app domains for development
+          const isReplitOrigin = redirectOrigin.endsWith('.replit.dev') || 
+                                  redirectOrigin.endsWith('.replit.app') ||
+                                  redirectOrigin.endsWith('.repl.co');
+          
+          if (allowedOrigins.has(redirectOrigin) || isReplitOrigin) {
             validatedRedirectUri = postLogoutRedirectUri;
           } else {
             this.logger.warn(
