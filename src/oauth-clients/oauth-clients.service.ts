@@ -252,9 +252,13 @@ export class OAuthClientsService {
     if (updateDto.allowed_scopes !== undefined) {
       client.allowed_scopes = updateDto.allowed_scopes;
     }
+    console.log('[OAuthClientsService] updateDto.logout_uris:', JSON.stringify(updateDto.logout_uris));
+    console.log('[OAuthClientsService] logout_uris !== undefined:', updateDto.logout_uris !== undefined);
     if (updateDto.logout_uris !== undefined) {
       // Validate logout_uris before saving (SECURITY: prevents iframe injection)
-      client.logout_uris = this.validateLogoutUris(updateDto.logout_uris);
+      const validatedLogoutUris = this.validateLogoutUris(updateDto.logout_uris);
+      console.log('[OAuthClientsService] Validated logout_uris:', JSON.stringify(validatedLogoutUris));
+      client.logout_uris = validatedLogoutUris;
     }
 
     return this.oauthClientsRepository.save(client);

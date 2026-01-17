@@ -294,6 +294,9 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
         environment: uri.environment || 'development',
       }));
 
+    console.log('[OAuthClientDialog] logoutUris state:', JSON.stringify(logoutUris));
+    console.log('[OAuthClientDialog] filteredLogoutUrisList:', JSON.stringify(filteredLogoutUrisList));
+
     const data: CreateOAuthClientDto = {
       name,
       description: description || undefined,
@@ -304,9 +307,12 @@ const OAuthClientDialog: React.FC<Props> = ({ open, onClose, onSuccess, client }
       logout_uris: filteredLogoutUrisList.length > 0 ? filteredLogoutUrisList : undefined,
     };
 
+    console.log('[OAuthClientDialog] Full data being sent:', JSON.stringify(data));
+
     try {
       setLoading(true);
       if (client) {
+        console.log('[OAuthClientDialog] Updating client:', client.id);
         await oauthClientsService.update(client.id, data);
         showSnackbar('OAuth client updated successfully', 'success');
         onSuccess();
