@@ -261,7 +261,10 @@ export class OAuthClientsService {
       client.logout_uris = validatedLogoutUris;
     }
 
-    return this.oauthClientsRepository.save(client);
+    console.log('[OAuthClientsService] Client before save - logout_uris:', JSON.stringify(client.logout_uris));
+    const savedClient = await this.oauthClientsRepository.save(client);
+    console.log('[OAuthClientsService] Client after save - logout_uris:', JSON.stringify(savedClient.logout_uris));
+    return savedClient;
   }
 
   async regenerateSecret(id: string): Promise<OAuthClient> {
