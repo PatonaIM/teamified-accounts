@@ -128,6 +128,19 @@ export class UserService {
     return user;
   }
 
+  async checkGlobalLogoutAt(userId: string): Promise<{ exists: boolean; globalLogoutAt: Date | null }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'globalLogoutAt'],
+    });
+    
+    if (!user) {
+      return { exists: false, globalLogoutAt: null };
+    }
+    
+    return { exists: true, globalLogoutAt: user.globalLogoutAt };
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
