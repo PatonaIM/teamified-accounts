@@ -42,7 +42,6 @@ import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import { logout } from '../services/authService';
 import { useRoleBasedNavigation } from '../hooks/useRoleBasedNavigation';
 import { useAuth } from '../hooks/useAuth';
 
@@ -116,21 +115,13 @@ const SidebarMUI: React.FC<SidebarMUIProps> = ({
     return iconMap[title] || <DashboardIcon />;
   };
 
-  const handleLogout = async () => {
-    try {
-      // Clear user state immediately
-      clearUser();
-      
-      // Call logout API
-      await logout();
-      
-      navigate('/login');
-      onClose();
-    } catch (error) {
-      console.error('Logout failed:', error);
-      navigate('/login');
-      onClose();
-    }
+  const handleLogout = () => {
+    // Clear user state immediately
+    clearUser();
+    
+    // Navigate to logout page which handles full SSO logout flow
+    navigate('/logout');
+    onClose();
   };
 
   const drawerWidth = isCollapsed ? 64 : 280;
