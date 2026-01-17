@@ -58,7 +58,10 @@ export class JwtOrServiceGuard implements CanActivate {
       throw new UnauthorizedException('User account not found. Please log in again.');
     }
 
-    if (globalLogoutAt && payload.iat) {
+    if (globalLogoutAt) {
+      if (!payload.iat) {
+        throw new UnauthorizedException('Invalid token: missing issued-at claim. Please log in again.');
+      }
       const tokenIssuedAt = new Date(payload.iat * 1000);
       if (tokenIssuedAt < globalLogoutAt) {
         throw new UnauthorizedException('Session has been terminated. Please log in again.');
