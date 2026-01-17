@@ -27,7 +27,6 @@ import {
   PersonAdd,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
-import { logout } from '../services/authService';
 import { useTheme } from '../contexts/ThemeContext';
 import AppsDropdown from './AppsDropdown';
 
@@ -79,9 +78,9 @@ const AccountLayout: React.FC = () => {
     setAppsAnchorEl(null);
   };
 
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = '/login';
+  const handleLogout = () => {
+    // Navigate to logout page which handles full SSO logout flow
+    navigate('/logout');
   };
 
   const handleDeprecatedToggle = () => {
